@@ -940,7 +940,11 @@
         let recognition = null;
         let isListening = false;
 
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        // Detect in-app browsers that don't support speech
+        const ua = navigator.userAgent || '';
+        const isInAppBrowser = /Instagram|FBAN|FBAV|TikTok|Snapchat|Twitter|LinkedIn/i.test(ua);
+
+        if (!isInAppBrowser && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
             function startListening() {
