@@ -1028,8 +1028,9 @@
         }
 
         function parseQuickReplies(content) {
-            // Strip hidden summary block
+            // Strip hidden blocks
             let cleaned = content.replace(/\[SUMMARY\][\s\S]*/i, '').trim();
+            cleaned = cleaned.replace(/\[LEAD_CAPTURE\][\s\S]*?(?=\n\n|$)/i, '').trim();
             const tagMatch = cleaned.match(/\[QUICK_REPLIES:([^\]]+)\]/);
             if (!tagMatch) return { text: cleaned, replies: [] };
             const text = cleaned.replace(/\[QUICK_REPLIES:[^\]]+\]/, '').trim();
@@ -1166,7 +1167,12 @@
                 conversationHistory.push({ role: 'assistant', content: reply });
                 appendMessage('assistant', reply);
 
-                // Check for lead summary and send to backend
+                // Check for early lead capture (name, email, phone)
+                if (reply.includes('[LEAD_CAPTURE]')) {
+                    parseLeadCapture(reply);
+                }
+
+                // Check for full lead summary and send to backend
                 if (reply.includes('[SUMMARY]')) {
                     parseSummaryAndSendLead(reply);
                 }
@@ -1181,6 +1187,37 @@
             }
         }
         // ── LEAD CAPTURE ──
+        let earlyLeadSent = false;
+
+        function parseLeadCapture(text) {
+            if (earlyLeadSent) return;
+            const match = text.match(/\[LEAD_CAPTURE\]([\s\S]*?)(?=\n\n|$)/i);
+            if (!match) return;
+
+            const block = match[1];
+            const get = (key) => {
+                const m = block.match(new RegExp(key + ':\\s*(.+)', 'i'));
+                return m ? m[1].trim() : '';
+            };
+
+            const lead = {
+                name: get('Name'),
+                email: get('Email'),
+                phone: get('Phone'),
+                notes: get('Note') || get('Notes'),
+                source: 'vtm-chat-early',
+            };
+
+            if (lead.name || lead.email || lead.phone) {
+                earlyLeadSent = true;
+                fetch('/api/lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(lead),
+                }).catch(err => console.error('Early lead save failed:', err));
+            }
+        }
+
         function parseSummaryAndSendLead(text) {
             const summaryMatch = text.match(/\[SUMMARY\]([\s\S]*)/i);
             if (!summaryMatch) return;
