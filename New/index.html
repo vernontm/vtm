@@ -955,7 +955,12 @@
                 messagesEl.appendChild(repliesDiv);
             }
 
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            // Scroll to top of this message so user reads from the beginning
+            if (!isUser) {
+                msg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
         }
 
         function appendTyping() {
