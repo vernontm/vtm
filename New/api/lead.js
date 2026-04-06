@@ -12,32 +12,42 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Lead data required' });
   }
 
+  const CRM_URL = process.env.CRM_SUPABASE_URL || process.env.SUPABASE_URL;
+  const CRM_KEY = process.env.CRM_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+
   const results = { supabase: null, zapier: null };
 
-  // 1. Save to Supabase
+  // 1. Save to CRM Supabase (crm_leads table)
   try {
     const supabaseRes = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/leads`,
+      `${CRM_URL}/rest/v1/crm_leads`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': process.env.SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'apikey': CRM_KEY,
+          'Authorization': `Bearer ${CRM_KEY}`,
           'Prefer': 'return=representation',
         },
         body: JSON.stringify({
-          name: lead.name || null,
-          email: lead.email || null,
-          phone: lead.phone || null,
-          business: lead.business || null,
-          problem: lead.problem || null,
-          current_state: lead.current_state || null,
-          goal: lead.goal || null,
-          budget_tier: lead.budget_tier || null,
-          best_time: lead.best_time || null,
-          notes: lead.notes || null,
-          source: lead.source || 'vtm-chat',
+          name: lead.name || '',
+          email: lead.email || '',
+          phone: lead.phone || '',
+          company: lead.business || '',
+          lead_source: lead.source || 'vtm-chat',
+          notes: [
+            lead.problem ? `Problem: ${lead.problem}` : '',
+            lead.current_state ? `Current state: ${lead.current_state}` : '',
+            lead.goal ? `Goal: ${lead.goal}` : '',
+            lead.budget_tier ? `Budget: ${lead.budget_tier}` : '',
+            lead.best_time ? `Best time: ${lead.best_time}` : '',
+            lead.notes || '',
+          ].filter(Boolean).join('\n'),
+          status: 'New Lead',
+          lead_segment: 'warm',
+          budget: lead.budget_tier || '',
+          current_situation: lead.current_state || '',
+          financial_goal: lead.goal || '',
         }),
       }
     );
