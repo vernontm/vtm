@@ -831,8 +831,6 @@
                 recognition.interimResults = true;
                 recognition.lang = 'en-US';
 
-                const existing = input.value;
-
                 recognition.onstart = () => {
                     isListening = true;
                     micBtn.classList.add('listening');
@@ -844,7 +842,7 @@
                     for (let i = 0; i < event.results.length; i++) {
                         transcript += event.results[i][0].transcript;
                     }
-                    input.value = existing ? existing + ' ' + transcript : transcript;
+                    input.value = transcript;
                     input.style.height = 'auto';
                     input.style.height = Math.min(input.scrollHeight, 180) + 'px';
                 };
@@ -986,6 +984,14 @@
         async function sendMessage() {
             const text = input.value.trim();
             if (!text) return;
+
+            // Reset speech recognition for a fresh session
+            if (isListening && recognition) {
+                try { recognition.stop(); } catch(e) {}
+                isListening = false;
+                micBtn.classList.remove('listening');
+                input.placeholder = 'Describe what you\'re looking for...';
+            }
 
             // Hide quick links after first message
             document.getElementById('quickLinks').style.display = 'none';
