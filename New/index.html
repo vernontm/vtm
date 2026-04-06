@@ -815,15 +815,13 @@
 
         sendBtn.addEventListener('click', sendMessage);
 
-        // ── SPEECH TO TEXT ──
+        // ── SPEECH-TO-TEXT (Web Speech API) ──
         const micBtn = document.getElementById('micBtn');
         let recognition = null;
         let isListening = false;
 
-        // ── SPEECH-TO-TEXT (Web Speech API — works on HTTPS) ──
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            let recognition = null;
 
             function startListening() {
                 recognition = new SpeechRecognition();
