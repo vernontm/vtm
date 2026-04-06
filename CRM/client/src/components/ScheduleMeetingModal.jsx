@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, X, Plus, Check, Loader, Video, Clock, Users } from 'lucide-react';
 import { createMeeting, checkMeetingAvailability } from '../api';
 
-const CHIP_COLORS = ['#c8f135', '#c8f135', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
+const CHIP_COLORS = ['#ff9b26', '#ff9b26', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
 
 export default function ScheduleMeetingModal({ onClose, onComplete }) {
   const [title, setTitle]             = useState('');
@@ -112,7 +112,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #252523', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Calendar size={18} color="#c8f135" />
+            <Calendar size={18} color="#ff9b26" />
             <span style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df' }}>Schedule Meeting</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', display: 'flex', alignItems: 'center' }}>
@@ -125,13 +125,13 @@ export default function ScheduleMeetingModal({ onClose, onComplete }) {
 
           {/* Success state */}
           {success ? (
-            <div style={{ background: '#0d2e1f', border: '1px solid #c8f13550', borderRadius: 10, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ background: '#0d2e1f', border: '1px solid #ff9b2650', borderRadius: 10, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#c8f13520', border: '2px solid #c8f135', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Check size={18} color="#c8f135" />
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#ff9b2620', border: '2px solid #ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Check size={18} color="#ff9b26" />
                 </div>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#c8f135' }}>Meeting Scheduled!</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#ff9b26' }}>Meeting Scheduled!</div>
                   <div style={{ fontSize: 12, color: '#a8d5b5' }}>{success.title}</div>
                 </div>
               </div>
@@ -144,13 +144,13 @@ export default function ScheduleMeetingModal({ onClose, onComplete }) {
               </div>
               {success.meet_link ? (
                 <div style={{ background: '#111328', border: '1px solid #252523', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Video size={14} color="#c8f135" style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: '#c8f135', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <Video size={14} color="#ff9b26" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: '#ff9b26', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {success.meet_link}
                   </span>
                   <button
                     onClick={copyMeetLink}
-                    style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 5, border: '1px solid #c8f135', background: '#c8f13520', color: '#c8f135', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+                    style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 5, border: '1px solid #ff9b26', background: '#ff9b2620', color: '#ff9b26', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
                   >
                     {copied ? 'Copied!' : 'Copy Link'}
                   </button>
@@ -255,7 +255,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete }) {
                       Find Available Time
                     </button>
                     {availStatus && (
-                      <span style={{ fontSize: 11, color: availStatus.allFree ? '#c8f135' : '#ff5c5c', fontWeight: 600 }}>
+                      <span style={{ fontSize: 11, color: availStatus.allFree ? '#ff9b26' : '#ff5c5c', fontWeight: 600 }}>
                         {availStatus.allFree
                           ? '✓ All attendees are free'
                           : `✗ ${availStatus.busy.length} conflict${availStatus.busy.length > 1 ? 's' : ''}: ${availStatus.busy.map(b => b.email).join(', ')}`
@@ -293,13 +293,13 @@ export default function ScheduleMeetingModal({ onClose, onComplete }) {
                   <label className="form-label">Google Meet Link</label>
                   <div
                     onClick={() => setAddMeetLink(v => !v)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 7, border: `1px solid ${addMeetLink ? '#c8f13550' : '#252523'}`, background: addMeetLink ? '#c8f13510' : 'transparent', cursor: 'pointer' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 7, border: `1px solid ${addMeetLink ? '#ff9b2650' : '#252523'}`, background: addMeetLink ? '#ff9b2610' : 'transparent', cursor: 'pointer' }}
                   >
-                    <div style={{ width: 32, height: 18, borderRadius: 9, background: addMeetLink ? '#c8f135' : '#252523', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                    <div style={{ width: 32, height: 18, borderRadius: 9, background: addMeetLink ? '#ff9b26' : '#252523', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
                       <div style={{ position: 'absolute', top: 3, left: addMeetLink ? 15 : 3, width: 12, height: 12, borderRadius: '50%', background: '#fff', transition: 'left 0.18s' }} />
                     </div>
-                    <Video size={13} color={addMeetLink ? '#c8f135' : '#4a4845'} />
-                    <span style={{ fontSize: 12, color: addMeetLink ? '#c8f135' : '#4a4845' }}>
+                    <Video size={13} color={addMeetLink ? '#ff9b26' : '#4a4845'} />
+                    <span style={{ fontSize: 12, color: addMeetLink ? '#ff9b26' : '#4a4845' }}>
                       {addMeetLink ? 'Will be added' : 'No Meet link'}
                     </span>
                   </div>

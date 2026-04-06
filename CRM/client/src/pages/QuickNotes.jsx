@@ -3,7 +3,7 @@ import { Pin, Plus, Trash2, Edit2, Check, X, Copy, ExternalLink, Search, StickyN
 import { getQuickNotes, createQuickNote, updateQuickNote, deleteQuickNote } from '../api';
 
 // ── Accent color palette ───────────────────────────────────────────────────────
-const COLORS = ['#c8f135', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#7a7870'];
+const COLORS = ['#ff9b26', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#7a7870'];
 
 // ── Detect URLs and render them as links ──────────────────────────────────────
 function RichContent({ text }) {
@@ -19,7 +19,7 @@ function RichContent({ text }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
-            style={{ color: '#c8f135', textDecoration: 'underline', wordBreak: 'break-all' }}
+            style={{ color: '#ff9b26', textDecoration: 'underline', wordBreak: 'break-all' }}
           >
             {part}
           </a>
@@ -125,7 +125,7 @@ function NoteCard({ note, onUpdate, onDelete }) {
           </div>
           {/* Save/Cancel */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleSave} style={{ flex: 1, background: '#c8f135', color: '#0a0a08', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <button onClick={handleSave} style={{ flex: 1, background: '#ff9b26', color: '#0a0a08', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
               <Check size={13} /> Save
             </button>
             <button onClick={handleCancel} className="btn-ghost" style={{ flex: 1, fontSize: 13 }}>
@@ -152,12 +152,12 @@ function NoteCard({ note, onUpdate, onDelete }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Open link"
-                  style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: '#c8f135', cursor: 'pointer', textDecoration: 'none' }}
+                  style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: '#ff9b26', cursor: 'pointer', textDecoration: 'none' }}
                 >
                   <ExternalLink size={12} />
                 </a>
               )}
-              <button onClick={handleCopy} title="Copy content" style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: copied ? '#c8f135' : '#4a4845', cursor: 'pointer' }}>
+              <button onClick={handleCopy} title="Copy content" style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: copied ? '#ff9b26' : '#4a4845', cursor: 'pointer' }}>
                 {copied ? <Check size={12} /> : <Copy size={12} />}
               </button>
               <button onClick={handlePin} title={note.pinned ? 'Unpin' : 'Pin'} style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: note.pinned ? note.color : '#4a4845', cursor: 'pointer' }}>
@@ -192,7 +192,7 @@ export default function QuickNotes() {
   // New note form
   const [newTitle,   setNewTitle]   = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newColor,   setNewColor]   = useState('#c8f135');
+  const [newColor,   setNewColor]   = useState('#ff9b26');
   const [adding,     setAdding]     = useState(false);
   const [saving,     setSaving]     = useState(false);
   const newTextRef = useRef(null);
@@ -216,7 +216,7 @@ export default function QuickNotes() {
       setNotes(prev => [note, ...prev]);
       setNewTitle('');
       setNewContent('');
-      setNewColor('#c8f135');
+      setNewColor('#ff9b26');
       setAdding(false);
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -261,7 +261,7 @@ export default function QuickNotes() {
         </div>
         <button
           onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#c8f135', color: '#0a0a08', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ff9b26', color: '#0a0a08', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
         >
           <Plus size={15} /> New Note
         </button>
@@ -307,7 +307,7 @@ export default function QuickNotes() {
               <button
                 onClick={handleAdd}
                 disabled={!newContent.trim() || saving}
-                style={{ background: newContent.trim() ? '#c8f135' : '#252523', color: '#e8e6df', border: 'none', borderRadius: 8, padding: '7px 18px', cursor: newContent.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13 }}
+                style={{ background: newContent.trim() ? '#ff9b26' : '#252523', color: '#e8e6df', border: 'none', borderRadius: 8, padding: '7px 18px', cursor: newContent.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13 }}
               >
                 {saving ? 'Saving...' : 'Save Note'}
               </button>
@@ -339,7 +339,7 @@ export default function QuickNotes() {
             <div style={{ fontSize: 13, color: '#4a4845', marginBottom: 20 }}>Save links, credentials, snippets — anything you want to reuse.</div>
             <button
               onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
-              style={{ background: '#c8f135', color: '#0a0a08', border: 'none', borderRadius: 8, padding: '9px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+              style={{ background: '#ff9b26', color: '#0a0a08', border: 'none', borderRadius: 8, padding: '9px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
             >
               <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />Add your first note
             </button>

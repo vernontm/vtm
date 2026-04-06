@@ -74,13 +74,13 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
           padding: '16px 20px 14px', borderBottom: '1px solid #252523', flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Inbox size={16} color="#c8f135" />
+            <Inbox size={16} color="#ff9b26" />
             <span style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df' }}>
               Gmail Inbox
             </span>
             <span style={{
               fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-              background: '#c8f13520', color: '#c8f135', border: '1px solid #c8f13540',
+              background: '#ff9b2620', color: '#ff9b26', border: '1px solid #ff9b2640',
             }}>{labelName}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -145,7 +145,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
               {/* Left: reply indicator dot */}
               <div style={{ paddingTop: 3, flexShrink: 0 }}>
                 {t.hasReply
-                  ? <MessageSquare size={14} color="#c8f135" title="Has reply" />
+                  ? <MessageSquare size={14} color="#ff9b26" title="Has reply" />
                   : <ChevronRight  size={14} color="#4a4845" title="Sent only" />}
               </div>
 
@@ -216,7 +216,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
             <span style={{ fontSize: 11, color: '#4a4845' }}>
               {threads.length} thread{threads.length !== 1 ? 's' : ''} shown
               {threads.some(t => t.hasReply) && (
-                <span style={{ marginLeft: 10, color: '#c8f135' }}>
+                <span style={{ marginLeft: 10, color: '#ff9b26' }}>
                   <MessageSquare size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />
                   {threads.filter(t => t.hasReply).length} with replies
                 </span>
@@ -226,7 +226,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
               href={`https://mail.google.com/mail/u/0/#label/${encodeURIComponent(labelName)}`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#c8f135', textDecoration: 'none' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#ff9b26', textDecoration: 'none' }}
             >
               Open in Gmail <ExternalLink size={10} />
             </a>

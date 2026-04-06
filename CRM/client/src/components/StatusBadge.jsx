@@ -2,29 +2,29 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const STATUS_COLORS = {
   // Lead statuses
-  'New Lead':   { bg: '#c8f135', text: '#fff' },
+  'New Lead':   { bg: '#ff9b26', text: '#fff' },
   'Contacted':  { bg: '#fdab3d', text: '#fff' },
-  'Qualified':  { bg: '#c8f135', text: '#fff' },
+  'Qualified':  { bg: '#ff9b26', text: '#fff' },
   'Converted':  { bg: '#784bd1', text: '#fff' },
   'Cold':       { bg: '#4a4845', text: '#fff' },
-  'Warm':       { bg: '#c8f135', text: '#fff' },
+  'Warm':       { bg: '#ff9b26', text: '#fff' },
   'Hot':        { bg: '#fdab3d', text: '#0a0a08' },
   'Unqualified':{ bg: '#ff5c5c', text: '#fff' },
   // Deal stages
-  'New':        { bg: '#c8f135', text: '#fff' },
+  'New':        { bg: '#ff9b26', text: '#fff' },
   'Discovery':  { bg: '#fdab3d', text: '#fff' },
   'Proposal':   { bg: '#ffcb00', text: '#0a0a08' },
   'Negotiation':{ bg: '#784bd1', text: '#fff' },
-  'Won':        { bg: '#c8f135', text: '#fff' },
+  'Won':        { bg: '#ff9b26', text: '#fff' },
   'Lost':       { bg: '#ff5c5c', text: '#fff' },
   // Payment statuses
   'Pending':      { bg: '#f9c74f', text: '#0a0a08' },
   'Partial Paid': { bg: '#fdab3d', text: '#fff' },
-  'Paid':         { bg: '#c8f135', text: '#fff' },
+  'Paid':         { bg: '#ff9b26', text: '#fff' },
   // Project statuses
-  'Active':     { bg: '#c8f135', text: '#fff' },
+  'Active':     { bg: '#ff9b26', text: '#fff' },
   'In Progress':{ bg: '#fdab3d', text: '#fff' },
-  'Completed':  { bg: '#c8f135', text: '#fff' },
+  'Completed':  { bg: '#ff9b26', text: '#fff' },
   'On Hold':    { bg: '#4a4845', text: '#fff' },
   'Cancelled':  { bg: '#ff5c5c', text: '#fff' },
 };

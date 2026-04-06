@@ -27,11 +27,11 @@ export default function Login() {
       <div style={{ width: 360, padding: 40 }}>
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #c8f135, #9ed420)', borderRadius: 10 }} className="flex items-center justify-center">
+          <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #ff9b26, #ee4c27)', borderRadius: 10 }} className="flex items-center justify-center">
             <BarChart3 size={22} color="#0a0a08" />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#e8e6df', fontFamily: 'Syne, sans-serif' }}>Vernon Tech</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#e8e6df', fontFamily: 'Poppins, sans-serif' }}>Vernon Tech</div>
             <div style={{ fontSize: 11, color: '#4a4845', fontFamily: 'DM Mono, monospace' }}>&amp; Media CRM</div>
           </div>
         </div>
@@ -49,7 +49,7 @@ export default function Login() {
                 background: '#111110', border: '1px solid #252523', color: '#e8e6df',
                 fontSize: 14, outline: 'none', fontFamily: 'DM Mono, monospace',
               }}
-              onFocus={e => e.target.style.borderColor = 'rgba(200,241,53,0.5)'}
+              onFocus={e => e.target.style.borderColor = 'rgba(255,155,38,0.5)'}
               onBlur={e => e.target.style.borderColor = '#252523'}
             />
           </div>
@@ -66,7 +66,7 @@ export default function Login() {
                 background: '#111110', border: '1px solid #252523', color: '#e8e6df',
                 fontSize: 14, outline: 'none', fontFamily: 'DM Mono, monospace',
               }}
-              onFocus={e => e.target.style.borderColor = 'rgba(200,241,53,0.5)'}
+              onFocus={e => e.target.style.borderColor = 'rgba(255,155,38,0.5)'}
               onBlur={e => e.target.style.borderColor = '#252523'}
             />
           </div>
@@ -82,8 +82,8 @@ export default function Login() {
             disabled={loading}
             style={{
               width: '100%', padding: '10px 0', borderRadius: 8, cursor: loading ? 'wait' : 'pointer',
-              background: 'linear-gradient(135deg, #c8f135, #9ed420)', border: 'none',
-              color: '#0a0a08', fontSize: 14, fontWeight: 700, fontFamily: 'Syne, sans-serif',
+              background: 'linear-gradient(135deg, #ff9b26, #ee4c27)', border: 'none',
+              color: '#0a0a08', fontSize: 14, fontWeight: 700, fontFamily: 'Poppins, sans-serif',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               opacity: loading ? 0.7 : 1,
             }}

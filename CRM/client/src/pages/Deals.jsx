@@ -29,7 +29,7 @@ const GROUPS = [
 const PAYMENT_STATUS_COLORS = {
   'Pending':      '#4a4845',
   'Partial Paid': '#fdab3d',
-  'Paid':         '#c8f135',
+  'Paid':         '#ff9b26',
 };
 
 // ── Payment Progress Badge (Stripe) ──────────────────────────────────────────
@@ -42,9 +42,9 @@ function PaymentBadge({ dealId, allInvoices, onRefresh }) {
   const allPaid = paid.length >= totalPhases;
 
   let label, color;
-  if (allPaid)              { label = '✓ Fully Paid'; color = '#c8f135'; }
+  if (allPaid)              { label = '✓ Fully Paid'; color = '#ff9b26'; }
   else if (paid.length > 0) { label = `Phase ${paid.length}/${totalPhases} Paid`; color = '#fdab3d'; }
-  else                      { label = totalPhases > 1 ? `Phase 1/${totalPhases} Sent` : 'Invoice Sent'; color = '#c8f135'; }
+  else                      { label = totalPhases > 1 ? `Phase 1/${totalPhases} Sent` : 'Invoice Sent'; color = '#ff9b26'; }
 
   const latestUrl = inv.find(i => i.stripe_invoice_url)?.stripe_invoice_url;
 
@@ -105,7 +105,7 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
       <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, width: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
         <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #252523', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CreditCard size={18} style={{ color: '#c8f135' }} />
+          <CreditCard size={18} style={{ color: '#ff9b26' }} />
           <span style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df' }}>Send Invoice (Stripe)</span>
           <span style={{ fontSize: 13, color: '#4a4845' }}>— {deal.name}</span>
         </div>
@@ -131,9 +131,9 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
                 {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                   <button key={val} onClick={() => setStructure(val)} style={{
                     flex: 1, padding: '9px 0', borderRadius: 8,
-                    border: `1px solid ${structure === val ? '#c8f135' : '#252523'}`,
-                    background: structure === val ? '#c8f13522' : 'transparent',
-                    color: structure === val ? '#c8f135' : '#4a4845',
+                    border: `1px solid ${structure === val ? '#ff9b26' : '#252523'}`,
+                    background: structure === val ? '#ff9b2622' : 'transparent',
+                    color: structure === val ? '#ff9b26' : '#4a4845',
                     cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                   }}>{lbl}</button>
                 ))}
@@ -143,7 +143,7 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
           {structure === 'single' && (
             <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#7a7870', fontSize: 13 }}>Total invoice amount</span>
-              <span style={{ color: '#c8f135', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
+              <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
             </div>
           )}
           {structure === 'two_phase' && (
@@ -152,7 +152,7 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
                 <span style={{ color: '#7a7870', fontSize: 13 }}>Phase 1 (sent now)</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="range" min={10} max={90} value={pct1} onChange={e => setPct1(Number(e.target.value))} style={{ width: 80 }} />
-                  <span style={{ color: '#c8f135', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
+                  <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                 </div>
               </div>
               <div style={{ height: 1, background: '#252523' }} />
@@ -302,7 +302,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
 
         {/* Header */}
         <div style={{ padding: '16px 22px', borderBottom: '1px solid #252523', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-          {mode === 'manual' ? <FileText size={18} style={{ color: '#c8f135' }} /> : <CreditCard size={18} style={{ color: '#c8f135' }} />}
+          {mode === 'manual' ? <FileText size={18} style={{ color: '#ff9b26' }} /> : <CreditCard size={18} style={{ color: '#ff9b26' }} />}
           <span style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df' }}>Invoice</span>
           <span style={{ fontSize: 13, color: '#4a4845' }}>— {deal.name}</span>
           <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #252523', marginLeft: 8 }}>
@@ -310,8 +310,8 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               <button key={m} onClick={() => setMode(m)} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '5px 12px', fontSize: 12, cursor: 'pointer', border: 'none',
-                background: mode === m ? '#c8f13522' : 'transparent',
-                color: mode === m ? '#c8f135' : '#4a4845',
+                background: mode === m ? '#ff9b2622' : 'transparent',
+                color: mode === m ? '#ff9b26' : '#4a4845',
                 fontWeight: mode === m ? 700 : 400,
                 borderRight: m === 'manual' ? '1px solid #252523' : 'none',
               }}>
@@ -351,9 +351,9 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                     {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                       <button key={val} onClick={() => setStructure(val)} style={{
                         flex: 1, padding: '9px 0', borderRadius: 8,
-                        border: `1px solid ${structure === val ? '#c8f135' : '#252523'}`,
-                        background: structure === val ? '#c8f13522' : 'transparent',
-                        color: structure === val ? '#c8f135' : '#4a4845',
+                        border: `1px solid ${structure === val ? '#ff9b26' : '#252523'}`,
+                        background: structure === val ? '#ff9b2622' : 'transparent',
+                        color: structure === val ? '#ff9b26' : '#4a4845',
                         cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                       }}>{lbl}</button>
                     ))}
@@ -363,7 +363,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               {structure === 'single' && (
                 <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#7a7870', fontSize: 13 }}>Total invoice amount</span>
-                  <span style={{ color: '#c8f135', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
+                  <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
                 </div>
               )}
               {structure === 'two_phase' && (
@@ -372,7 +372,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                     <span style={{ color: '#7a7870', fontSize: 13 }}>Phase 1 (sent now)</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input type="range" min={10} max={90} value={pct1} onChange={e => setPct1(Number(e.target.value))} style={{ width: 80 }} />
-                      <span style={{ color: '#c8f135', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
+                      <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                     </div>
                   </div>
                   <div style={{ height: 1, background: '#252523' }} />
@@ -443,14 +443,14 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                   <input style={{ ...inp, padding: '5px 8px' }} placeholder="Description" value={item.description} onChange={e => updateItem(idx, 'description', e.target.value)} />
                   <input style={{ ...inp, padding: '5px 8px' }} type="number" min="1" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} />
                   <input style={{ ...inp, padding: '5px 8px' }} type="number" min="0" step="0.01" value={item.rate} onChange={e => updateItem(idx, 'rate', e.target.value)} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#c8f135' }}>${((item.qty || 1) * (parseFloat(item.rate) || 0)).toLocaleString()}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#ff9b26' }}>${((item.qty || 1) * (parseFloat(item.rate) || 0)).toLocaleString()}</span>
                   <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', padding: 0 }}>
                     <X size={13} />
                   </button>
                 </div>
               ))}
               <div style={{ padding: '8px 12px' }}>
-                <button onClick={addItem} style={{ background: 'none', border: '1px dashed #252523', borderRadius: 6, cursor: 'pointer', color: '#c8f135', fontSize: 12, padding: '5px 12px', width: '100%' }}>
+                <button onClick={addItem} style={{ background: 'none', border: '1px dashed #252523', borderRadius: 6, cursor: 'pointer', color: '#ff9b26', fontSize: 12, padding: '5px 12px', width: '100%' }}>
                   + Add Item
                 </button>
               </div>
@@ -459,7 +459,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, paddingRight: 44 }}>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 12, color: '#4a4845', marginBottom: 3 }}>Total</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#c8f135' }}>${subtotal.toLocaleString()}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#ff9b26' }}>${subtotal.toLocaleString()}</div>
               </div>
             </div>
           </div>
@@ -489,7 +489,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {err && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{err}</div>}
 
           {saved && (
-            <div style={{ color: '#c8f135', fontSize: 13, background: '#c8f13515', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ color: '#ff9b26', fontSize: 13, background: '#ff9b2615', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
               <Check size={14} /> Invoice #{saved.invoice_number} saved successfully
             </div>
           )}
@@ -551,7 +551,7 @@ function buildInvoiceHTML({ invoice_number, invoice_date, due_date, bill_to_name
     .company { font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 6px; }
     .from-details { font-size: 13px; color: #6b7280; line-height: 1.6; }
     .invoice-meta { text-align: right; }
-    .invoice-title { font-size: 28px; font-weight: 800; color: #c8f135; margin-bottom: 8px; }
+    .invoice-title { font-size: 28px; font-weight: 800; color: #ff9b26; margin-bottom: 8px; }
     .meta-row { font-size: 13px; color: #6b7280; margin-bottom: 3px; }
     .meta-row span { color: #111827; font-weight: 600; }
     .bill-to { margin-bottom: 32px; }
@@ -638,7 +638,7 @@ function buildInvoiceHTML({ invoice_number, invoice_date, due_date, bill_to_name
 const TASK_STATUS_STYLE = {
   'Not Started':   { background: 'rgba(74,72,69,0.35)',   color: '#7a7870' },
   'Working on it': { background: 'rgba(253,171,61,0.15)', color: '#fdab3d' },
-  'Done':          { background: 'rgba(200,241,53,0.12)', color: '#c8f135' },
+  'Done':          { background: 'rgba(255,155,38,0.12)', color: '#ff9b26' },
   'Stuck':         { background: 'rgba(255,92,92,0.15)',  color: '#ff5c5c' },
   'In Review':     { background: 'rgba(91,156,246,0.15)', color: '#5b9cf6' },
 };
@@ -662,7 +662,7 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
     <div style={{ padding: '10px 16px 14px 12px', background: '#0d0d0b', borderTop: '1px solid #1c1c1a' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <ClipboardList size={13} style={{ color: '#c8f135' }} />
+        <ClipboardList size={13} style={{ color: '#ff9b26' }} />
         <span style={{ fontSize: 11, fontWeight: 700, color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'DM Mono, monospace' }}>
           Tasks
         </span>
@@ -688,7 +688,7 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}
           >
             {todo.completed
-              ? <div style={{ width: 14, height: 14, borderRadius: 3, background: '#c8f135', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ? <div style={{ width: 14, height: 14, borderRadius: 3, background: '#ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Check size={10} color="#0a0a08" strokeWidth={3} />
                 </div>
               : <div style={{ width: 14, height: 14, borderRadius: 3, border: '1.5px solid #3a3a38' }} />
@@ -699,7 +699,7 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
           <span style={{
             flex: 1, fontSize: 13, color: todo.completed ? '#4a4845' : '#e8e6df',
             textDecoration: todo.completed ? 'line-through' : 'none',
-            fontFamily: 'Syne, sans-serif',
+            fontFamily: 'Poppins, sans-serif',
           }}>
             {todo.title}
           </span>
@@ -764,8 +764,8 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
             onBlur={submit}
             placeholder="Task name…"
             style={{
-              flex: 1, background: 'none', border: 'none', borderBottom: '1px solid rgba(200,241,53,0.35)',
-              outline: 'none', color: '#e8e6df', fontSize: 13, fontFamily: 'Syne, sans-serif', padding: '2px 0',
+              flex: 1, background: 'none', border: 'none', borderBottom: '1px solid rgba(255,155,38,0.35)',
+              outline: 'none', color: '#e8e6df', fontSize: 13, fontFamily: 'Poppins, sans-serif', padding: '2px 0',
             }}
           />
         </div>
@@ -774,10 +774,10 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
           onClick={() => setAdding(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
-            cursor: 'pointer', color: '#4a4845', fontSize: 12, padding: '5px 6px', fontFamily: 'Syne, sans-serif',
+            cursor: 'pointer', color: '#4a4845', fontSize: 12, padding: '5px 6px', fontFamily: 'Poppins, sans-serif',
             transition: 'color 0.15s',
           }}
-          onMouseEnter={e => e.currentTarget.style.color = '#c8f135'}
+          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
           onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
         >
           <Plus size={12} /> Add Task
@@ -926,10 +926,10 @@ export default function Deals() {
 
   // Group color by label
   const groupLabelColor = (label) => {
-    if (label === 'Closed Won') return '#c8f135';
+    if (label === 'Closed Won') return '#ff9b26';
     if (label === 'Closed Lost') return '#ff5c5c';
     if (label === 'Completed') return '#784bd1';
-    return '#c8f135';
+    return '#ff9b26';
   };
 
   return (
@@ -1005,9 +1005,9 @@ export default function Deals() {
                           placeholder="Task name…"
                           style={{
                             display: 'block', marginTop: 4, width: '100%',
-                            background: '#1c1c1a', border: '1px solid rgba(200,241,53,0.4)',
+                            background: '#1c1c1a', border: '1px solid rgba(255,155,38,0.4)',
                             borderRadius: 5, outline: 'none', color: '#e8e6df',
-                            fontSize: 12, padding: '3px 8px', fontFamily: 'Syne, sans-serif',
+                            fontSize: 12, padding: '3px 8px', fontFamily: 'Poppins, sans-serif',
                           }}
                         />
                       ) : hoveredDeal === deal.id ? (
@@ -1017,9 +1017,9 @@ export default function Deals() {
                             display: 'flex', alignItems: 'center', gap: 4, marginTop: 4,
                             background: 'none', border: 'none', cursor: 'pointer',
                             color: '#4a4845', fontSize: 11, padding: 0,
-                            fontFamily: 'Syne, sans-serif', transition: 'color 0.15s',
+                            fontFamily: 'Poppins, sans-serif', transition: 'color 0.15s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#c8f135'}
+                          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
                           onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
                         >
                           <Plus size={11} /> Add Task
@@ -1034,13 +1034,13 @@ export default function Deals() {
                     </td>
                     <td>
                       <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <DollarSign size={13} style={{ color: '#c8f135', flexShrink: 0 }} />
+                        <DollarSign size={13} style={{ color: '#ff9b26', flexShrink: 0 }} />
                         <InlineEdit value={String(deal.value || '')} type="number" onSave={val => handleFieldSave(deal.id, 'value', val)} placeholder="0" />
                       </div>
                     </td>
                     <td>
                       <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <DollarSign size={13} style={{ color: deal.amount_paid > 0 ? '#c8f135' : '#555880', flexShrink: 0 }} />
+                        <DollarSign size={13} style={{ color: deal.amount_paid > 0 ? '#ff9b26' : '#555880', flexShrink: 0 }} />
                         <InlineEdit value={String(deal.amount_paid || '')} type="number" onSave={val => handleAmountPaidSave(deal, val)} placeholder="0" />
                       </div>
                     </td>
@@ -1058,8 +1058,8 @@ export default function Deals() {
                         <button
                           onClick={() => setManualDeal(deal)}
                           title="Create or Send Invoice"
-                          style={{ background: 'none', border: '1px solid #252523', borderRadius: 6, cursor: 'pointer', color: '#c8f135', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#c8f13522'}
+                          style={{ background: 'none', border: '1px solid #252523', borderRadius: 6, cursor: 'pointer', color: '#ff9b26', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#ff9b2622'}
                           onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
                           <FileText size={11} /> Invoice
@@ -1072,9 +1072,9 @@ export default function Deals() {
                           onClick={() => toggleTasks(deal.id)}
                           title="Toggle tasks"
                           style={{
-                            background: expandedTasks.has(deal.id) ? 'rgba(200,241,53,0.1)' : 'none',
-                            border: expandedTasks.has(deal.id) ? '1px solid rgba(200,241,53,0.3)' : '1px solid transparent',
-                            borderRadius: 6, cursor: 'pointer', color: expandedTasks.has(deal.id) ? '#c8f135' : '#4a4845',
+                            background: expandedTasks.has(deal.id) ? 'rgba(255,155,38,0.1)' : 'none',
+                            border: expandedTasks.has(deal.id) ? '1px solid rgba(255,155,38,0.3)' : '1px solid transparent',
+                            borderRadius: 6, cursor: 'pointer', color: expandedTasks.has(deal.id) ? '#ff9b26' : '#4a4845',
                             padding: '3px 6px', display: 'flex', alignItems: 'center', gap: 3, transition: 'all 0.15s',
                           }}
                           onMouseEnter={e => { if (!expandedTasks.has(deal.id)) { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#252523'; } }}
@@ -1121,8 +1121,8 @@ export default function Deals() {
                   <tr className="sum-row">
                     <td colSpan={3} style={{ textAlign: 'right', color: '#7a7870', fontSize: 12 }}>Total</td>
                     <td></td>
-                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#c8f135' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.value || 0), 0))}</span></div></td>
-                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#c8f135' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.amount_paid || 0), 0))}</span></div></td>
+                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#ff9b26' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.value || 0), 0))}</span></div></td>
+                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#ff9b26' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.amount_paid || 0), 0))}</span></div></td>
                     <td colSpan={5}></td>
                   </tr>
                 )}

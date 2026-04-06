@@ -13,7 +13,7 @@ import {
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['#c8f135', '#c8f135', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
+const AVATAR_COLORS = ['#ff9b26', '#ff9b26', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function formatDateTime(iso) {
@@ -82,9 +82,9 @@ function ParticipantAvatars({ participants = [], max = 4 }) {
 // ── Status badge for past meetings ────────────────────────────────────────────
 function MeetingStatusBadge({ status }) {
   const map = {
-    summarized:   { color: '#c8f135', label: 'Summarized' },
+    summarized:   { color: '#ff9b26', label: 'Summarized' },
     processing:   { color: '#fdab3d', label: 'Processing…' },
-    recorded:     { color: '#c8f135', label: 'Recording Found' },
+    recorded:     { color: '#ff9b26', label: 'Recording Found' },
     no_recording: { color: '#4a4845', label: 'No Recording' },
   };
   const s = map[status];
@@ -229,7 +229,7 @@ export default function Meetings() {
     return {
       padding: '10px 18px', cursor: 'pointer', fontSize: 14, fontWeight: active ? 700 : 500,
       color: active ? '#fff' : '#4a4845', background: 'none', border: 'none',
-      borderBottom: `2px solid ${active ? '#c8f135' : 'transparent'}`,
+      borderBottom: `2px solid ${active ? '#ff9b26' : 'transparent'}`,
       transition: 'color 0.15s, border-color 0.15s',
     };
   }
@@ -245,7 +245,7 @@ export default function Meetings() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Calendar size={22} color="#c8f135" />
+          <Calendar size={22} color="#ff9b26" />
           <span style={{ fontSize: 22, fontWeight: 800, color: '#e8e6df' }}>Meetings</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -288,7 +288,7 @@ export default function Meetings() {
               >
                 Enable Calendar API →
               </a>
-              <Link to="/settings" style={{ fontSize: 12, color: '#c8f135', fontWeight: 600, textDecoration: 'none', padding: '4px 0' }}>
+              <Link to="/settings" style={{ fontSize: 12, color: '#ff9b26', fontWeight: 600, textDecoration: 'none', padding: '4px 0' }}>
                 Then Reconnect in Settings →
               </Link>
             </div>
@@ -303,7 +303,7 @@ export default function Meetings() {
           <span style={{ fontSize: 13, color: '#fdab3d', flex: 1 }}>
             Google Calendar needs additional permissions.
           </span>
-          <Link to="/settings" style={{ fontSize: 12, color: '#c8f135', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
+          <Link to="/settings" style={{ fontSize: 12, color: '#ff9b26', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
             Reconnect in Settings →
           </Link>
         </div>
@@ -321,7 +321,7 @@ export default function Meetings() {
         <button style={tabStyle('upcoming')} onClick={() => setActiveTab('upcoming')}>
           Upcoming
           {upcomingEvents.length > 0 && (
-            <span style={{ marginLeft: 6, fontSize: 11, background: '#c8f13525', color: '#c8f135', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
+            <span style={{ marginLeft: 6, fontSize: 11, background: '#ff9b2625', color: '#ff9b26', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
               {upcomingEvents.length}
             </span>
           )}
@@ -471,7 +471,7 @@ export default function Meetings() {
                               onClick={e => { e.stopPropagation(); navigate(`/meetings/${event.google_event_id}`); }}
                               title="View meeting details"
                               style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                              onMouseEnter={e => e.currentTarget.style.color = '#c8f135'}
+                              onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
                               onMouseLeave={e => e.currentTarget.style.color = '#fff'}
                             >
                               {event.title}
@@ -542,7 +542,7 @@ export default function Meetings() {
                                     <div style={{ marginTop: 10, borderTop: '1px solid #252523', paddingTop: 8 }}>
                                       <div style={{ fontSize: 11, color: '#4a4845', marginBottom: 5 }}>Linked Leads</div>
                                       {linkedLeads.map(lead => (
-                                        <div key={lead.id} style={{ fontSize: 11, color: '#c8f135', padding: '1px 0' }}>
+                                        <div key={lead.id} style={{ fontSize: 11, color: '#ff9b26', padding: '1px 0' }}>
                                           {lead.name || lead.email}
                                         </div>
                                       ))}
@@ -558,12 +558,12 @@ export default function Meetings() {
                                       <span style={{ fontSize: 10, color: '#784bd1', fontWeight: 600 }}>AI Summary</span>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: event.status === 'recorded' || event.status === 'summarized' ? 1 : 0.4 }}>
-                                      <Video size={18} color="#c8f135" />
-                                      <span style={{ fontSize: 10, color: '#c8f135', fontWeight: 600 }}>Recording</span>
+                                      <Video size={18} color="#ff9b26" />
+                                      <span style={{ fontSize: 10, color: '#ff9b26', fontWeight: 600 }}>Recording</span>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c8f135" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                      <span style={{ fontSize: 10, color: '#c8f135', fontWeight: 600 }}>Sidekick</span>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff9b26" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                      <span style={{ fontSize: 10, color: '#ff9b26', fontWeight: 600 }}>Sidekick</span>
                                     </div>
                                   </div>
                                   <div style={{ fontSize: 12, color: '#4a4845', lineHeight: 1.6 }}>
@@ -601,7 +601,7 @@ export default function Meetings() {
           <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 12, width: 440, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #252523', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <LinkIcon size={15} color="#c8f135" />
+                <LinkIcon size={15} color="#ff9b26" />
                 <span style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df' }}>Link to Lead</span>
               </div>
               <button onClick={() => setShowLinkModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845' }}><X size={17} /></button>
@@ -634,9 +634,9 @@ export default function Meetings() {
                     <div style={{ fontSize: 11, color: '#4a4845' }}>{lead.email || ''}</div>
                   </div>
                   {linkingLeadId === lead.id ? (
-                    <Loader size={13} color="#c8f135" style={{ animation: 'spin 0.7s linear infinite' }} />
+                    <Loader size={13} color="#ff9b26" style={{ animation: 'spin 0.7s linear infinite' }} />
                   ) : (
-                    <div style={{ fontSize: 11, color: '#c8f135' }}>Link →</div>
+                    <div style={{ fontSize: 11, color: '#ff9b26' }}>Link →</div>
                   )}
                 </div>
               ))}
@@ -660,12 +660,12 @@ export default function Meetings() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9000,
-          background: '#161614', border: '1px solid #c8f135',
+          background: '#161614', border: '1px solid #ff9b26',
           color: '#7a7870', padding: '10px 20px', borderRadius: 8,
           fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <Check size={14} color="#c8f135" /> {toast}
+          <Check size={14} color="#ff9b26" /> {toast}
         </div>
       )}
     </div>

@@ -200,18 +200,18 @@ export default function BulkImport({ onClose, onImported }) {
       <div style={overlayStyle}>
         <div style={modalStyle}>
           <div style={{ textAlign: 'center', padding: '32px 24px' }}>
-            <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#c8f13522', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <Check size={30} style={{ color: '#c8f135' }} />
+            <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#ff9b2622', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Check size={30} style={{ color: '#ff9b26' }} />
             </div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#e8e6df', marginBottom: 16 }}>Import Complete!</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
               {done.created > 0 && (
-                <div style={{ background: '#c8f13515', border: '1px solid #c8f13540', borderRadius: 8, padding: '8px 16px', color: '#c8f135', fontSize: 14 }}>
+                <div style={{ background: '#ff9b2615', border: '1px solid #ff9b2640', borderRadius: 8, padding: '8px 16px', color: '#ff9b26', fontSize: 14 }}>
                   ✓ {done.created} new lead{done.created !== 1 ? 's' : ''} added
                 </div>
               )}
               {done.updated > 0 && (
-                <div style={{ background: '#c8f13515', border: '1px solid #c8f13540', borderRadius: 8, padding: '8px 16px', color: '#c8f135', fontSize: 14 }}>
+                <div style={{ background: '#ff9b2615', border: '1px solid #ff9b2640', borderRadius: 8, padding: '8px 16px', color: '#ff9b26', fontSize: 14 }}>
                   ↑ {done.updated} existing lead{done.updated !== 1 ? 's' : ''} updated with missing info
                 </div>
               )}
@@ -262,7 +262,7 @@ export default function BulkImport({ onClose, onImported }) {
               onDragOver={e => e.preventDefault()}
               onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { fileRef.current.files = e.dataTransfer.files; handleFile({ target: { files: [f] } }); } }}
             >
-              <Upload size={28} style={{ color: '#c8f135', marginBottom: 10 }} />
+              <Upload size={28} style={{ color: '#ff9b26', marginBottom: 10 }} />
               <div style={{ color: '#e8e6df', fontWeight: 600, marginBottom: 4 }}>Drop a file or click to browse</div>
               <div style={{ color: '#4a4845', fontSize: 13 }}>Supports .csv, .xlsx, .xls</div>
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={handleFile} />
@@ -273,7 +273,7 @@ export default function BulkImport({ onClose, onImported }) {
           {tab === 'gsheets' && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ color: '#7a7870', fontSize: 13, marginBottom: 8 }}>
-                Paste a Google Sheets link (sheet must be <strong style={{ color: '#c8f135' }}>publicly viewable</strong>)
+                Paste a Google Sheets link (sheet must be <strong style={{ color: '#ff9b26' }}>publicly viewable</strong>)
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input

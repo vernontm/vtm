@@ -80,7 +80,7 @@ export default function SelectionBar({
     }}>
       {/* Count badge */}
       <div style={{
-        background: '#c8f135',
+        background: '#ff9b26',
         borderRadius: '50%',
         width: 26, height: 26,
         display: 'flex', alignItems: 'center', justifyContent: 'center',

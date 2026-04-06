@@ -12,7 +12,7 @@ function Toggle({ checked, onChange }) {
       aria-checked={checked}
       style={{
         width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
-        background: checked ? '#c8f135' : '#252523',
+        background: checked ? '#ff9b26' : '#252523',
         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
       }}
     >
@@ -32,7 +32,7 @@ function Section({ title, icon: Icon, children }) {
   return (
     <div style={{ background: '#161614', borderRadius: 10, padding: '20px 24px', border: '1px solid #252523' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-        {Icon && <Icon size={16} color="#c8f135" />}
+        {Icon && <Icon size={16} color="#ff9b26" />}
         <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#e8e6df' }}>{title}</h3>
       </div>
       {children}
@@ -229,7 +229,7 @@ export default function Settings() {
         <Section title="Gmail Connection" icon={Mail}>
           {/* Status messages */}
           {gmailMsg === 'connected' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#c8f13520', border: '1px solid #c8f135', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#c8f135', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#ff9b2620', border: '1px solid #ff9b26', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#ff9b26', fontSize: 13 }}>
               <CheckCircle size={15} /> Gmail connected successfully!
             </div>
           )}
@@ -243,8 +243,8 @@ export default function Settings() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <div style={{
               width: 10, height: 10, borderRadius: '50%',
-              background: gmailStatus.connected && !gmailStatus.expired ? '#c8f135' : '#ff5c5c',
-              boxShadow: gmailStatus.connected && !gmailStatus.expired ? '0 0 6px #c8f135' : '0 0 6px #ff5c5c',
+              background: gmailStatus.connected && !gmailStatus.expired ? '#ff9b26' : '#ff5c5c',
+              boxShadow: gmailStatus.connected && !gmailStatus.expired ? '0 0 6px #ff9b26' : '0 0 6px #ff5c5c',
               flexShrink: 0,
             }} />
             <span style={{ fontSize: 13, color: '#7a7870' }}>
@@ -273,7 +273,7 @@ export default function Settings() {
                   href="https://console.cloud.google.com"
                   target="_blank"
                   rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#c8f135', fontSize: 12, marginTop: 8 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#ff9b26', fontSize: 12, marginTop: 8 }}
                 >
                   Open Google Cloud Console <ExternalLink size={11} />
                 </a>
@@ -361,7 +361,7 @@ export default function Settings() {
             {saving ? <><Loader size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</> : 'Save Settings'}
           </button>
           {saveMsg === 'saved' && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#c8f135', fontSize: 13 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ff9b26', fontSize: 13 }}>
               <CheckCircle size={15} /> Saved successfully
             </span>
           )}

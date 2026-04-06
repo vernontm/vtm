@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        syne: ['Syne', 'sans-serif'],
+        poppins: ['Poppins', 'sans-serif'],
         mono: ['DM Mono', 'monospace'],
       },
       colors: {
@@ -19,8 +19,8 @@ export default {
           text:    '#e8e6df',
           muted:   '#7a7870',
           dim:     '#4a4845',
-          accent:  '#c8f135',
-          green:   '#c8f135',
+          accent:  '#ff9b26',
+          green:   '#ff9b26',
           blue:    '#5b9cf6',
           orange:  '#f5a623',
           red:     '#ff5c5c',

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Zap, Users, User, ChevronRight, Loader, CheckCircle, AlertCircle, Search } from 'lucide-react';
 import { getLeads, startBatchGenerate, getBatchProgress } from '../api';
 
-const SEGMENT_COLORS = { hot: '#fdab3d', warm: '#c8f135', cold: '#4a4845' };
+const SEGMENT_COLORS = { hot: '#fdab3d', warm: '#ff9b26', cold: '#4a4845' };
 
 export default function GenerateModal({ onClose, onComplete }) {
   const [mode, setMode]               = useState('all');         // 'all' | 'segment' | 'individual'
@@ -123,20 +123,20 @@ export default function GenerateModal({ onClose, onComplete }) {
                       display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
                       borderRadius: 8, cursor: 'pointer', transition: 'background 0.15s',
                       background: mode === id ? '#111110' : '#111328',
-                      border: `1px solid ${mode === id ? '#c8f135' : '#252523'}`,
+                      border: `1px solid ${mode === id ? '#ff9b26' : '#252523'}`,
                     }}
                   >
                     <div style={{
                       width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: mode === id ? '#c8f13520' : '#161614', flexShrink: 0,
+                      background: mode === id ? '#ff9b2620' : '#161614', flexShrink: 0,
                     }}>
-                      <Icon size={17} color={mode === id ? '#c8f135' : '#4a4845'} />
+                      <Icon size={17} color={mode === id ? '#ff9b26' : '#4a4845'} />
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: mode === id ? '#fff' : '#7a7870' }}>{label}</div>
                       <div style={{ fontSize: 12, color: '#4a4845', marginTop: 2 }}>{desc}</div>
                     </div>
-                    {mode === id && <ChevronRight size={14} color="#c8f135" />}
+                    {mode === id && <ChevronRight size={14} color="#ff9b26" />}
                   </div>
                 ))}
               </div>
@@ -211,7 +211,7 @@ export default function GenerateModal({ onClose, onComplete }) {
                     </div>
                   )}
                   {selectedIds.size > 0 && (
-                    <div style={{ fontSize: 12, color: '#c8f135', marginTop: 8 }}>{selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} selected</div>
+                    <div style={{ fontSize: 12, color: '#ff9b26', marginTop: 8 }}>{selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} selected</div>
                   )}
                 </div>
               )}
@@ -233,7 +233,7 @@ export default function GenerateModal({ onClose, onComplete }) {
                   <div style={{ height: 8, background: '#111328', borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', width: `${progress.percent || 0}%`,
-                      background: 'linear-gradient(90deg, #c8f135, #784bd1)',
+                      background: 'linear-gradient(90deg, #ff9b26, #784bd1)',
                       borderRadius: 4, transition: 'width 0.4s',
                     }} />
                   </div>
@@ -244,7 +244,7 @@ export default function GenerateModal({ onClose, onComplete }) {
                     {progress.errors > 0 && (
                       <span style={{ color: '#fdab3d', fontSize: 12 }}>{progress.errors} error{progress.errors !== 1 ? 's' : ''}</span>
                     )}
-                    <span style={{ color: '#c8f135', fontWeight: 600 }}>{progress.percent}%</span>
+                    <span style={{ color: '#ff9b26', fontWeight: 600 }}>{progress.percent}%</span>
                   </div>
                   <div style={{ fontSize: 12, color: '#4a4845', marginTop: 12, textAlign: 'center', lineHeight: 1.5 }}>
                     Emails are processed in batches of 10 to avoid rate limits.
@@ -253,7 +253,7 @@ export default function GenerateModal({ onClose, onComplete }) {
                 </>
               ) : progress?.done ? (
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                  <CheckCircle size={40} color="#c8f135" style={{ marginBottom: 12 }} />
+                  <CheckCircle size={40} color="#ff9b26" style={{ marginBottom: 12 }} />
                   <div style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df', marginBottom: 6 }}>Done!</div>
                   <div style={{ fontSize: 13, color: '#7a7870' }}>
                     {progress.completed - progress.errors} emails generated

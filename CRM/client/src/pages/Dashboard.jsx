@@ -16,18 +16,18 @@ const fmt = (n) =>
   n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Number(n).toFixed(0)}`;
 
 const STAGE_COLORS = {
-  Won:      '#c8f135',
+  Won:      '#ff9b26',
   Lost:     '#ff5c5c',
   Proposal: '#fdab3d',
-  New:      '#c8f135',
+  New:      '#ff9b26',
   Qualified:'#784bd1',
   Negotiation: '#00d1d1',
 };
 
-const PIE_COLORS = ['#c8f135','#784bd1','#c8f135','#fdab3d','#ff5c5c','#00d1d1'];
+const PIE_COLORS = ['#ff9b26','#784bd1','#ff9b26','#fdab3d','#ff5c5c','#00d1d1'];
 
 // ── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, sub, color = '#c8f135', trend, private: isPrivate }) {
+function StatCard({ icon: Icon, label, value, sub, color = '#ff9b26', trend, private: isPrivate }) {
   return (
     <div style={{
       background: '#161614', border: '1px solid #252523', borderRadius: 14,
@@ -43,7 +43,7 @@ function StatCard({ icon: Icon, label, value, sub, color = '#c8f135', trend, pri
         {trend !== undefined && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 3,
-            fontSize: 12, color: trend >= 0 ? '#c8f135' : '#ff5c5c',
+            fontSize: 12, color: trend >= 0 ? '#ff9b26' : '#ff5c5c',
           }}>
             <ArrowUpRight size={13} />
             {Math.abs(trend)}%
@@ -182,20 +182,20 @@ export default function Dashboard() {
 
       {/* KPI Cards Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
-        <StatCard icon={DollarSign}   label="Total Revenue (Won Deals)"  value={fmt(totalRevenue)}            color="#c8f135" private />
-        <StatCard icon={Clock}        label="Last 30 Days Revenue"        value={fmt(last30DaysRevenue || 0)}  color="#c8f135" sub="Paid deals only" private />
-        <StatCard icon={FileText}     label="Total Invoiced (Collected)"  value={fmt(totalInvoiced)}           color="#c8f135" private />
+        <StatCard icon={DollarSign}   label="Total Revenue (Won Deals)"  value={fmt(totalRevenue)}            color="#ff9b26" private />
+        <StatCard icon={Clock}        label="Last 30 Days Revenue"        value={fmt(last30DaysRevenue || 0)}  color="#ff9b26" sub="Paid deals only" private />
+        <StatCard icon={FileText}     label="Total Invoiced (Collected)"  value={fmt(totalInvoiced)}           color="#ff9b26" private />
         <StatCard icon={TrendingUp}   label="Pipeline Value"              value={fmt(pipelineValue)}           color="#fdab3d" private />
         <StatCard icon={Briefcase}    label="Active Deals"                value={activeDeals}                  color="#784bd1" />
       </div>
 
       {/* KPI Cards Row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
-        <StatCard icon={Users}      label="Contacts"            value={activeClients}    color="#c8f135" />
+        <StatCard icon={Users}      label="Contacts"            value={activeClients}    color="#ff9b26" />
         <StatCard icon={FolderOpen} label="Active Projects"     value={activeProjects}   color="#00d1d1"
           sub={`${completedProjects} completed`} />
         <StatCard icon={Star}       label="Open Leads"          value={openLeads}        color="#fdab3d" />
-        <StatCard icon={FileText}   label="Invoice Collection"  value={`${collectRate}%`} color="#c8f135"
+        <StatCard icon={FileText}   label="Invoice Collection"  value={`${collectRate}%`} color="#ff9b26"
           sub={`${invoiceStats.paid} / ${invoiceStats.total} invoices paid`} />
       </div>
 
@@ -211,8 +211,8 @@ export default function Dashboard() {
             <AreaChart data={monthlyChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#c8f135" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#c8f135" stopOpacity={0}   />
+                  <stop offset="5%"  stopColor="#ff9b26" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ff9b26" stopOpacity={0}   />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#111110" />
@@ -221,10 +221,10 @@ export default function Dashboard() {
               <Tooltip content={<ChartTooltip />} />
               <Area
                 type="monotone" dataKey="revenue" name="Revenue"
-                stroke="#c8f135" strokeWidth={2}
+                stroke="#ff9b26" strokeWidth={2}
                 fill="url(#revGrad)"
-                dot={{ r: 3, fill: '#c8f135', strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: '#c8f135' }}
+                dot={{ r: 3, fill: '#ff9b26', strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: '#ff9b26' }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -305,7 +305,7 @@ export default function Dashboard() {
                 <tr key={d.id} style={{ borderBottom: i < recentDeals.length - 1 ? '1px solid #111110' : 'none' }}>
                   <td style={{ padding: '9px 8px 9px 0', color: '#e8e6df', fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</td>
                   <td style={{ padding: '9px 8px 9px 0' }}><StageBadge stage={d.stage} /></td>
-                  <td style={{ padding: '9px 0', color: '#c8f135', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '9px 0', color: '#ff9b26', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {d.value ? `$${Number(d.value).toLocaleString()}` : '—'}
                   </td>
                 </tr>
@@ -325,17 +325,17 @@ export default function Dashboard() {
               <span style={{ color: '#e8e6df', fontWeight: 600 }}>{collectRate}%</span>
             </div>
             <div style={{ height: 8, background: '#111110', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${collectRate}%`, background: collectRate === 100 ? '#c8f135' : '#c8f135', borderRadius: 4, transition: 'width 0.5s ease' }} />
+              <div style={{ height: '100%', width: `${collectRate}%`, background: collectRate === 100 ? '#ff9b26' : '#ff9b26', borderRadius: 4, transition: 'width 0.5s ease' }} />
             </div>
           </div>
 
           {/* Stats list */}
           {[
             { label: 'Total Invoices',    value: invoiceStats.total,                         color: '#7a7870' },
-            { label: 'Sent / Open',       value: invoiceStats.sent,                          color: '#c8f135' },
-            { label: 'Paid',              value: invoiceStats.paid,                          color: '#c8f135' },
+            { label: 'Sent / Open',       value: invoiceStats.sent,                          color: '#ff9b26' },
+            { label: 'Paid',              value: invoiceStats.paid,                          color: '#ff9b26' },
             { label: 'Total Billed',      value: `$${Number(invoiceStats.totalAmount).toLocaleString()}`, color: '#fdab3d' },
-            { label: 'Total Collected',   value: `$${Number(invoiceStats.paidAmount).toLocaleString()}`,  color: '#c8f135' },
+            { label: 'Total Collected',   value: `$${Number(invoiceStats.paidAmount).toLocaleString()}`,  color: '#ff9b26' },
             { label: 'Outstanding',
               value: `$${Number(invoiceStats.totalAmount - invoiceStats.paidAmount).toLocaleString()}`,
               color: invoiceStats.totalAmount - invoiceStats.paidAmount > 0 ? '#ff5c5c' : '#4a4845',
@@ -356,10 +356,10 @@ export default function Dashboard() {
         <div style={{ marginTop: 20, background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '18px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Calendar size={16} color="#c8f135" />
+              <Calendar size={16} color="#ff9b26" />
               <span style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df' }}>Upcoming Meetings</span>
             </div>
-            <Link to="/meetings" style={{ fontSize: 12, color: '#c8f135', textDecoration: 'none', fontWeight: 600 }}>
+            <Link to="/meetings" style={{ fontSize: 12, color: '#ff9b26', textDecoration: 'none', fontWeight: 600 }}>
               View All →
             </Link>
           </div>

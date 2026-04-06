@@ -90,7 +90,7 @@ export default function Accounts() {
   };
 
   const industryColor = (ind) => {
-    const colors = { Technology: '#c8f135', Marketing: '#fdab3d', Logistics: '#784bd1', Finance: '#c8f135', Media: '#ff5c5c' };
+    const colors = { Technology: '#ff9b26', Marketing: '#fdab3d', Logistics: '#784bd1', Finance: '#ff9b26', Media: '#ff5c5c' };
     return colors[ind] || '#4a4845';
   };
 
@@ -98,7 +98,7 @@ export default function Accounts() {
     <div style={{ minHeight: '100%', background: '#0a0a08' }}>
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <Building2 size={22} style={{ color: '#c8f135' }} />
+          <Building2 size={22} style={{ color: '#ff9b26' }} />
           <div className="page-title">Accounts</div>
         </div>
         <div className="flex items-center gap-3">
@@ -157,7 +157,7 @@ export default function Accounts() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {account.email && (
                       <a href={gmailLink(account.email)} target="_blank" rel="noreferrer" title="Compose in Gmail" style={{ display: 'flex', flexShrink: 0 }}>
-                        <Mail size={13} style={{ color: '#c8f135' }} />
+                        <Mail size={13} style={{ color: '#ff9b26' }} />
                       </a>
                     )}
                     <InlineEdit value={account.email} type="email" onSave={val => handleFieldSave(account.id, 'email', val)} placeholder="Add email" />

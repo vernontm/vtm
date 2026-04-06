@@ -73,11 +73,11 @@ export default function Sidebar() {
         {/* Logo */}
         <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #252523' }}>
           <div className="flex items-center gap-2">
-            <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #c8f135, #9ed420)', borderRadius: 8 }} className="flex items-center justify-center">
+            <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #ff9b26, #ee4c27)', borderRadius: 8 }} className="flex items-center justify-center">
               <BarChart3 size={18} color="#0a0a08" />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#e8e6df', lineHeight: 1.2, fontFamily: 'Syne, sans-serif' }}>Vernon Tech</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#e8e6df', lineHeight: 1.2, fontFamily: 'Poppins, sans-serif' }}>Vernon Tech</div>
               <div style={{ fontSize: 10, color: '#4a4845', fontFamily: 'DM Mono, monospace' }}>&amp; Media CRM</div>
             </div>
           </div>
@@ -93,9 +93,9 @@ export default function Sidebar() {
               padding: '7px 10px', borderRadius: 8, cursor: 'pointer',
               background: '#0a0a08', border: '1px solid #252523',
               color: '#4a4845', fontSize: 12, transition: 'color 0.15s, border-color 0.15s',
-              textAlign: 'left', fontFamily: 'Syne, sans-serif',
+              textAlign: 'left', fontFamily: 'Poppins, sans-serif',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = 'rgba(200,241,53,0.35)'; }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = 'rgba(255,155,38,0.35)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; }}
           >
             <Search size={13} style={{ flexShrink: 0 }} />
@@ -148,13 +148,13 @@ export default function Sidebar() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
-              background: privacyMode ? 'rgba(200,241,53,0.08)' : '#0a0a08',
-              border: privacyMode ? '1px solid rgba(200,241,53,0.35)' : '1px solid #252523',
-              color: privacyMode ? '#c8f135' : '#4a4845',
+              background: privacyMode ? 'rgba(255,155,38,0.08)' : '#0a0a08',
+              border: privacyMode ? '1px solid rgba(255,155,38,0.35)' : '1px solid #252523',
+              color: privacyMode ? '#ff9b26' : '#4a4845',
               fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'Poppins, sans-serif',
             }}
-            onMouseEnter={e => { if (!privacyMode) { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#c8f135'; } }}
+            onMouseEnter={e => { if (!privacyMode) { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#ff9b26'; } }}
             onMouseLeave={e => { if (!privacyMode) { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; } }}
           >
             {privacyMode ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -168,9 +168,9 @@ export default function Sidebar() {
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
               background: '#0a0a08', border: '1px solid #252523', color: '#4a4845',
               fontSize: 12, fontWeight: 600, transition: 'color 0.15s, border-color 0.15s',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'Poppins, sans-serif',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#c8f135'; }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#ff9b26'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; }}
           >
             <RefreshCw size={13} style={{ transition: 'transform 0.7s', transform: spinning ? 'rotate(360deg)' : 'rotate(0deg)' }} />
@@ -184,7 +184,7 @@ export default function Sidebar() {
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
               background: '#0a0a08', border: '1px solid #252523', color: '#4a4845',
               fontSize: 12, fontWeight: 600, transition: 'color 0.15s, border-color 0.15s',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'Poppins, sans-serif',
             }}
             onMouseEnter={e => { e.currentTarget.style.color = '#ff5c5c'; e.currentTarget.style.borderColor = '#ff5c5c'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; }}

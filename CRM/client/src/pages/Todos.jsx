@@ -8,12 +8,12 @@ import {
 
 const STATUSES   = ['Not Started', 'Working on it', 'Done', 'Stuck', 'In Review'];
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
-const GROUP_COLORS = ['#c8f135', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#e86df5', '#f5a623'];
+const GROUP_COLORS = ['#ff9b26', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#e86df5', '#f5a623'];
 
 const STATUS_STYLE = {
   'Not Started':   { background: 'rgba(74,72,69,0.35)',   color: '#7a7870' },
   'Working on it': { background: 'rgba(253,171,61,0.15)', color: '#fdab3d' },
-  'Done':          { background: 'rgba(200,241,53,0.12)', color: '#c8f135' },
+  'Done':          { background: 'rgba(255,155,38,0.12)', color: '#ff9b26' },
   'Stuck':         { background: 'rgba(255,92,92,0.15)',  color: '#ff5c5c' },
   'In Review':     { background: 'rgba(91,156,246,0.15)', color: '#5b9cf6' },
 };
@@ -56,9 +56,9 @@ function EditableCell({ value, onSave, placeholder = '—', style = {} }) {
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setVal(value || ''); setEditing(false); } }}
         style={{
-          background: '#1c1c1a', border: '1px solid rgba(200,241,53,0.35)', borderRadius: 4,
+          background: '#1c1c1a', border: '1px solid rgba(255,155,38,0.35)', borderRadius: 4,
           color: '#e8e6df', fontSize: 13, padding: '3px 7px', width: '100%', outline: 'none',
-          fontFamily: 'Syne, sans-serif', ...style,
+          fontFamily: 'Poppins, sans-serif', ...style,
         }}
       />
     );
@@ -88,7 +88,7 @@ function DateCell({ value, onSave }) {
         onBlur={e => { onSave(e.target.value); setEditing(false); }}
         onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }}
         style={{
-          background: '#1c1c1a', border: '1px solid rgba(200,241,53,0.35)', borderRadius: 4,
+          background: '#1c1c1a', border: '1px solid rgba(255,155,38,0.35)', borderRadius: 4,
           color: '#e8e6df', fontSize: 12, padding: '3px 6px', outline: 'none',
           fontFamily: 'DM Mono, monospace', colorScheme: 'dark',
         }}
@@ -304,7 +304,7 @@ export default function Todos() {
 
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#e8e6df', fontFamily: 'Syne, sans-serif', margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#e8e6df', fontFamily: 'Poppins, sans-serif', margin: 0 }}>
           Todo Board
         </h1>
         <button
@@ -320,7 +320,7 @@ export default function Todos() {
       {addingGroup && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20,
-          background: '#161614', border: '1px solid rgba(200,241,53,0.25)', borderRadius: 8, padding: '10px 14px',
+          background: '#161614', border: '1px solid rgba(255,155,38,0.25)', borderRadius: 8, padding: '10px 14px',
         }}>
           <input
             id="new-group-input"
@@ -334,7 +334,7 @@ export default function Todos() {
             placeholder="Group name…"
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: '#e8e6df', fontSize: 14, fontFamily: 'Syne, sans-serif',
+              color: '#e8e6df', fontSize: 14, fontFamily: 'Poppins, sans-serif',
             }}
           />
           <button className="btn-primary" onClick={handleAddGroup} style={{ fontSize: 12, padding: '5px 14px' }}>Add</button>
@@ -346,7 +346,7 @@ export default function Todos() {
       {groups.length === 0 && !addingGroup && todos.filter(t => t.deal_id).length === 0 && (
         <div style={{ textAlign: 'center', padding: '100px 0' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df', fontFamily: 'Syne, sans-serif', marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df', fontFamily: 'Poppins, sans-serif', marginBottom: 8 }}>
             No groups yet
           </div>
           <div style={{ fontSize: 13, color: '#4a4845', marginBottom: 20 }}>
@@ -383,7 +383,7 @@ export default function Todos() {
                 {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
               </button>
               <Briefcase size={14} style={{ color: '#5b9cf6', flexShrink: 0 }} />
-              <span style={{ color: '#5b9cf6', fontSize: 15, fontWeight: 700, fontFamily: 'Syne, sans-serif' }}>Deal Tasks</span>
+              <span style={{ color: '#5b9cf6', fontSize: 15, fontWeight: 700, fontFamily: 'Poppins, sans-serif' }}>Deal Tasks</span>
               <span style={{ color: '#4a4845', fontSize: 12, fontFamily: 'DM Mono, monospace' }}>
                 {dealTodos.length} {dealTodos.length === 1 ? 'item' : 'items'} · {doneCount} done
               </span>
@@ -415,10 +415,10 @@ export default function Todos() {
                           display: 'grid', gridTemplateColumns: ROW_GRID,
                           alignItems: 'center', padding: '7px 0',
                           borderBottom: '1px solid #1a1a18',
-                          background: todo.completed ? 'rgba(200,241,53,0.02)' : 'transparent',
+                          background: todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent',
                         }}
                         onMouseEnter={e => e.currentTarget.style.background = '#161614'}
-                        onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(200,241,53,0.02)' : 'transparent'}
+                        onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent'}
                       >
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <button
@@ -426,7 +426,7 @@ export default function Todos() {
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
                           >
                             {todo.completed
-                              ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#c8f135', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#0a0a08" strokeWidth={3} /></div>
+                              ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#0a0a08" strokeWidth={3} /></div>
                               : <div style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid #3a3a38' }} />
                             }
                           </button>
@@ -500,7 +500,7 @@ export default function Todos() {
               <EditableCell
                 value={group.name}
                 onSave={val => handleUpdateGroup(group.id, { name: val })}
-                style={{ fontWeight: 700, fontSize: 15, color: group.color, fontFamily: 'Syne, sans-serif' }}
+                style={{ fontWeight: 700, fontSize: 15, color: group.color, fontFamily: 'Poppins, sans-serif' }}
               />
 
               <span style={{ color: '#4a4845', fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
@@ -517,7 +517,7 @@ export default function Todos() {
                   display: 'flex', alignItems: 'center', gap: 4,
                   background: 'none', border: `1px solid ${group.color}33`, borderRadius: 6,
                   color: group.color, fontSize: 12, padding: '4px 10px', cursor: 'pointer',
-                  fontFamily: 'Syne, sans-serif', fontWeight: 600,
+                  fontFamily: 'Poppins, sans-serif', fontWeight: 600,
                   transition: 'background 0.15s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = `${group.color}11`}
@@ -556,19 +556,19 @@ export default function Todos() {
                       display: 'grid', gridTemplateColumns: ROW_GRID,
                       alignItems: 'center', padding: '7px 0',
                       borderBottom: idx < groupTodos.length - 1 ? '1px solid #1a1a18' : 'none',
-                      background: todo.completed ? 'rgba(200,241,53,0.02)' : 'transparent',
+                      background: todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent',
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = '#161614'}
-                    onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(200,241,53,0.02)' : 'transparent'}
+                    onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent'}
                   >
                     {/* Checkbox */}
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <button
                         onClick={() => handleUpdateTodo(todo.id, { completed: !todo.completed })}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: todo.completed ? '#c8f135' : '#4a4845', padding: 0, display: 'flex' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: todo.completed ? '#ff9b26' : '#4a4845', padding: 0, display: 'flex' }}
                       >
                         {todo.completed
-                          ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#c8f135', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#0a0a08" strokeWidth={3} /></div>
+                          ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#0a0a08" strokeWidth={3} /></div>
                           : <div style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid #3a3a38' }} />
                         }
                       </button>
@@ -656,8 +656,8 @@ export default function Todos() {
                         onBlur={() => handleAddTask(group.id)}
                         placeholder="Task name…"
                         style={{
-                          width: '100%', background: 'none', border: 'none', borderBottom: '1px solid rgba(200,241,53,0.35)',
-                          outline: 'none', color: '#e8e6df', fontSize: 13, fontFamily: 'Syne, sans-serif',
+                          width: '100%', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,155,38,0.35)',
+                          outline: 'none', color: '#e8e6df', fontSize: 13, fontFamily: 'Poppins, sans-serif',
                           padding: '2px 0',
                         }}
                       />
@@ -670,7 +670,7 @@ export default function Todos() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6, width: '100%',
                       background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845',
-                      fontSize: 13, padding: '9px 0 9px 36px', fontFamily: 'Syne, sans-serif',
+                      fontSize: 13, padding: '9px 0 9px 36px', fontFamily: 'Poppins, sans-serif',
                       borderTop: groupTodos.length > 0 ? '1px solid #1a1a18' : 'none',
                       transition: 'color 0.15s',
                     }}

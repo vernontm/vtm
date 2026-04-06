@@ -13,7 +13,7 @@ import {
 } from '../api';
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['#c8f135', '#c8f135', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
+const AVATAR_COLORS = ['#ff9b26', '#ff9b26', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatDateTime(iso) {
@@ -35,9 +35,9 @@ function formatDuration(min) {
 
 function StatusBadge({ status }) {
   const map = {
-    summarized:   { color: '#c8f135', label: 'Summarized' },
+    summarized:   { color: '#ff9b26', label: 'Summarized' },
     processing:   { color: '#fdab3d', label: 'Processing…' },
-    recorded:     { color: '#c8f135', label: 'Recording Found' },
+    recorded:     { color: '#ff9b26', label: 'Recording Found' },
     no_recording: { color: '#4a4845', label: 'No Recording' },
   };
   const s = map[status] || { color: '#4a4845', label: 'Pending' };
@@ -242,7 +242,7 @@ export default function MeetingDetail() {
     return {
       padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 500,
       color: active ? '#fff' : '#4a4845', background: 'none', border: 'none',
-      borderBottom: `2px solid ${active ? '#c8f135' : 'transparent'}`,
+      borderBottom: `2px solid ${active ? '#ff9b26' : 'transparent'}`,
       transition: 'color 0.15s, border-color 0.15s',
       display: 'flex', alignItems: 'center', gap: 6,
     };
@@ -279,7 +279,7 @@ export default function MeetingDetail() {
           <AlertCircle size={16} /> {error}
         </div>
         <div style={{ marginTop: 12, fontSize: 13, color: '#4a4845' }}>
-          Tip: First <Link to="/meetings" style={{ color: '#c8f135' }}>sync the meeting</Link> from the Meetings page, then click its title to view details.
+          Tip: First <Link to="/meetings" style={{ color: '#ff9b26' }}>sync the meeting</Link> from the Meetings page, then click its title to view details.
         </div>
       </div>
     );
@@ -405,7 +405,7 @@ export default function MeetingDetail() {
                             href={webViewUrl}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ fontSize: 11, color: '#c8f135', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+                            style={{ fontSize: 11, color: '#ff9b26', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
                           >
                             Open in Drive <ExternalLink size={10} />
                           </a>
@@ -483,26 +483,26 @@ export default function MeetingDetail() {
                       {/* Action Items + Key Decisions */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                         {summary.action_items?.length > 0 && (
-                          <div style={{ background: '#1a1d2e', border: '1px solid #c8f13530', borderRadius: 8, padding: '12px 14px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#c8f135', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                          <div style={{ background: '#1a1d2e', border: '1px solid #ff9b2630', borderRadius: 8, padding: '12px 14px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#ff9b26', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
                               Action Items
                             </div>
                             {summary.action_items.map((item, i) => (
                               <div key={i} style={{ fontSize: 12, color: '#7a7870', display: 'flex', gap: 7, marginBottom: 6, alignItems: 'flex-start' }}>
-                                <Check size={11} color="#c8f135" style={{ marginTop: 2, flexShrink: 0 }} />
+                                <Check size={11} color="#ff9b26" style={{ marginTop: 2, flexShrink: 0 }} />
                                 <span>{item}</span>
                               </div>
                             ))}
                           </div>
                         )}
                         {summary.key_decisions?.length > 0 && (
-                          <div style={{ background: '#1a1d2e', border: '1px solid #c8f13530', borderRadius: 8, padding: '12px 14px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#c8f135', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                          <div style={{ background: '#1a1d2e', border: '1px solid #ff9b2630', borderRadius: 8, padding: '12px 14px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#ff9b26', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
                               Key Decisions
                             </div>
                             {summary.key_decisions.map((item, i) => (
                               <div key={i} style={{ fontSize: 12, color: '#7a7870', display: 'flex', gap: 7, marginBottom: 6, alignItems: 'flex-start' }}>
-                                <ChevronRight size={11} color="#c8f135" style={{ marginTop: 2, flexShrink: 0 }} />
+                                <ChevronRight size={11} color="#ff9b26" style={{ marginTop: 2, flexShrink: 0 }} />
                                 <span>{item}</span>
                               </div>
                             ))}
@@ -571,7 +571,7 @@ export default function MeetingDetail() {
                             )}
                           </div>
                           {linkedLead && (
-                            <span style={{ fontSize: 11, background: '#c8f13518', color: '#c8f135', padding: '2px 8px', borderRadius: 8, border: '1px solid #c8f13540' }}>
+                            <span style={{ fontSize: 11, background: '#ff9b2618', color: '#ff9b26', padding: '2px 8px', borderRadius: 8, border: '1px solid #ff9b2640' }}>
                               {linkedLead.name}
                             </span>
                           )}
@@ -598,11 +598,11 @@ export default function MeetingDetail() {
                         to={`/leads?search=${encodeURIComponent(lead.name || lead.email || '')}`}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', padding: '10px 14px', background: '#1a1d2e', border: '1px solid #252523', borderRadius: 8, marginBottom: 6 }}
                       >
-                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#c8f13522', border: '1px solid #c8f135', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#c8f135', flexShrink: 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#ff9b2622', border: '1px solid #ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#ff9b26', flexShrink: 0 }}>
                           {(lead.name || lead.email || '?')[0].toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#c8f135' }}>{lead.name || '(no name)'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#ff9b26' }}>{lead.name || '(no name)'}</div>
                           <div style={{ fontSize: 11, color: '#4a4845' }}>{lead.email || lead.company || ''}</div>
                         </div>
                         <ChevronRight size={14} color="#252523" style={{ marginLeft: 'auto' }} />
@@ -629,7 +629,7 @@ export default function MeetingDetail() {
                     color: '#e8e6df', fontSize: 13, lineHeight: 1.7, fontFamily: 'inherit',
                     resize: 'vertical', outline: 'none',
                   }}
-                  onFocus={e => e.target.style.borderColor = '#c8f135'}
+                  onFocus={e => e.target.style.borderColor = '#ff9b26'}
                   onBlur={e  => e.target.style.borderColor = '#252523'}
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
@@ -701,7 +701,7 @@ export default function MeetingDetail() {
                         padding: '8px 10px', fontSize: 11, color: '#7a7870', cursor: 'pointer',
                         textAlign: 'left', transition: 'border-color 0.1s',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = '#c8f135'}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = '#ff9b26'}
                       onMouseLeave={e => e.currentTarget.style.borderColor = '#252523'}
                     >
                       {q}
@@ -715,7 +715,7 @@ export default function MeetingDetail() {
                   <div style={{
                     maxWidth: '88%', padding: '8px 12px',
                     borderRadius: msg.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
-                    background: msg.role === 'user' ? '#c8f135' : '#111110',
+                    background: msg.role === 'user' ? '#ff9b26' : '#111110',
                     fontSize: 12, color: '#e8e6df', lineHeight: 1.65, whiteSpace: 'pre-wrap',
                   }}>
                     {msg.content}
@@ -746,14 +746,14 @@ export default function MeetingDetail() {
                   flex: 1, background: '#111328', border: '1px solid #252523', borderRadius: 8,
                   padding: '8px 12px', fontSize: 12, color: '#e8e6df', outline: 'none',
                 }}
-                onFocus={e => e.target.style.borderColor = '#c8f135'}
+                onFocus={e => e.target.style.borderColor = '#ff9b26'}
                 onBlur={e  => e.target.style.borderColor = '#252523'}
               />
               <button
                 type="submit"
                 disabled={!chatInput.trim() || chatLoading}
                 style={{
-                  background: chatInput.trim() && !chatLoading ? '#c8f135' : '#111110',
+                  background: chatInput.trim() && !chatLoading ? '#ff9b26' : '#111110',
                   border: 'none', borderRadius: 8, padding: '8px 12px',
                   cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default',
                   color: '#e8e6df', display: 'flex', alignItems: 'center',
@@ -776,7 +776,7 @@ export default function MeetingDetail() {
           <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 12, width: 440, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #252523', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <LinkIcon size={15} color="#c8f135" />
+                <LinkIcon size={15} color="#ff9b26" />
                 <span style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df' }}>Link to Lead</span>
               </div>
               <button onClick={() => setShowLinkModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845' }}>
@@ -813,11 +813,11 @@ export default function MeetingDetail() {
                       <div style={{ fontSize: 11, color: '#4a4845' }}>{lead.email || ''}</div>
                     </div>
                     {linkingLeadId === lead.id ? (
-                      <Loader size={13} color="#c8f135" style={{ animation: 'spin 0.7s linear infinite' }} />
+                      <Loader size={13} color="#ff9b26" style={{ animation: 'spin 0.7s linear infinite' }} />
                     ) : alreadyLinked ? (
-                      <span style={{ fontSize: 11, color: '#c8f135', display: 'flex', alignItems: 'center', gap: 4 }}><Check size={11} /> Linked</span>
+                      <span style={{ fontSize: 11, color: '#ff9b26', display: 'flex', alignItems: 'center', gap: 4 }}><Check size={11} /> Linked</span>
                     ) : (
-                      <span style={{ fontSize: 11, color: '#c8f135' }}>Link →</span>
+                      <span style={{ fontSize: 11, color: '#ff9b26' }}>Link →</span>
                     )}
                   </div>
                 );
@@ -831,12 +831,12 @@ export default function MeetingDetail() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9000,
-          background: '#161614', border: '1px solid #c8f135',
+          background: '#161614', border: '1px solid #ff9b26',
           color: '#7a7870', padding: '10px 20px', borderRadius: 8,
           fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <Check size={14} color="#c8f135" /> {toast}
+          <Check size={14} color="#ff9b26" /> {toast}
         </div>
       )}
 

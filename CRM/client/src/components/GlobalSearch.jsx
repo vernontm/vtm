@@ -6,8 +6,8 @@ import { searchAll } from '../api';
 // ── Category config ────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { key: 'leads',    label: 'Leads',    icon: Star,      color: '#fdab3d', route: '/leads'    },
-  { key: 'contacts', label: 'Contacts', icon: Users,     color: '#c8f135', route: '/contacts' },
-  { key: 'deals',    label: 'Deals',    icon: Briefcase, color: '#c8f135', route: '/deals'    },
+  { key: 'contacts', label: 'Contacts', icon: Users,     color: '#ff9b26', route: '/contacts' },
+  { key: 'deals',    label: 'Deals',    icon: Briefcase, color: '#ff9b26', route: '/deals'    },
   { key: 'accounts', label: 'Accounts', icon: Building2, color: '#784bd1', route: '/accounts' },
   { key: 'projects', label: 'Projects', icon: FolderOpen, color: '#00d1d1', route: '/projects' },
 ];
@@ -16,18 +16,18 @@ function statusColor(status) {
   const s = (status || '').toLowerCase();
   if (s === 'hot')        return '#ff5c5c';
   if (s === 'warm')       return '#fdab3d';
-  if (s === 'cold')       return '#c8f135';
-  if (s === 'won')        return '#c8f135';
+  if (s === 'cold')       return '#ff9b26';
+  if (s === 'won')        return '#ff9b26';
   if (s === 'lost')       return '#ff5c5c';
-  if (s === 'active')     return '#c8f135';
-  if (s === 'completed')  return '#c8f135';
+  if (s === 'active')     return '#ff9b26';
+  if (s === 'completed')  return '#ff9b26';
   return '#4a4845';
 }
 
 function ResultRow({ result, isActive, onHover, onClick }) {
   const cat = CATEGORIES.find(c => c.key === result._cat);
   const Icon = cat?.icon || Star;
-  const color = cat?.color || '#c8f135';
+  const color = cat?.color || '#ff9b26';
 
   const sub = result.email || result.client || result.industry || result.company || '';
   const badge = result.status || result.stage || '';
@@ -76,7 +76,7 @@ function ResultRow({ result, isActive, onHover, onClick }) {
 
       {/* Value for deals */}
       {result.value > 0 && (
-        <div style={{ fontSize: 12, color: '#c8f135', fontWeight: 700, flexShrink: 0 }}>
+        <div style={{ fontSize: 12, color: '#ff9b26', fontWeight: 700, flexShrink: 0 }}>
           ${result.value.toLocaleString()}
         </div>
       )}
@@ -189,7 +189,7 @@ export default function GlobalSearch({ onClose }) {
             placeholder="Search leads, contacts, deals, accounts, projects…"
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
-              fontSize: 15, color: '#e8e6df', caretColor: '#c8f135',
+              fontSize: 15, color: '#e8e6df', caretColor: '#ff9b26',
             }}
           />
           {query && (
@@ -288,7 +288,7 @@ export default function GlobalSearch({ onClose }) {
                     padding: '4px 10px', fontSize: 11, color: '#4a4845', cursor: 'pointer',
                     transition: 'color 0.1s, border-color 0.1s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#7a7870'; e.currentTarget.style.borderColor = '#c8f135'; }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#7a7870'; e.currentTarget.style.borderColor = '#ff9b26'; }}
                   onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; }}
                 >
                   All {cat.label} →

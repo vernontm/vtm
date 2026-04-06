@@ -50,7 +50,7 @@ export default function InlineEdit({
 
   const inputStyle = {
     background: '#111328',
-    border: '1px solid #c8f135',
+    border: '1px solid #ff9b26',
     borderRadius: 4,
     color: '#e8e6df',
     padding: '3px 8px',

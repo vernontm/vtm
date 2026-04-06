@@ -10,7 +10,7 @@ import BulkImport from '../components/BulkImport';
 
 const LEAD_STATUSES = ['Cold', 'Warm', 'Hot', 'Unqualified'];
 const LEAD_SOURCES = ['', 'Website', 'Referral', 'Cold Outreach', 'LinkedIn', 'Email Campaign', 'Social Media', 'Other'];
-const ACTIVITY_COLORS = ['#c8f135', '#c8f135', '#fdab3d', '#784bd1', '#ff5c5c'];
+const ACTIVITY_COLORS = ['#ff9b26', '#ff9b26', '#fdab3d', '#784bd1', '#ff5c5c'];
 
 function ActivityBar({ id }) {
   const blocks = useMemo(() => {
@@ -74,11 +74,11 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
   const highlightRE = new RegExp(`(${escapeRE(bizName)}${niche !== bizName ? '|' + escapeRE(niche) : ''})`, 'g');
 
   const navBtnStyle = (disabled) => ({
-    background: disabled ? 'none' : 'rgba(200,241,53,0.08)',
-    border: '1px solid', borderColor: disabled ? '#1c1c1a' : 'rgba(200,241,53,0.25)',
+    background: disabled ? 'none' : 'rgba(255,155,38,0.08)',
+    border: '1px solid', borderColor: disabled ? '#1c1c1a' : 'rgba(255,155,38,0.25)',
     borderRadius: 6, padding: '5px 8px',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    color: disabled ? '#2a2a28' : '#c8f135',
+    color: disabled ? '#2a2a28' : '#ff9b26',
     display: 'flex', alignItems: 'center', transition: 'all 0.15s',
   });
 
@@ -92,11 +92,11 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #252523', background: '#111110' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(200,241,53,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ScrollText size={15} color="#c8f135" />
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,155,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ScrollText size={15} color="#ff9b26" />
               </div>
               <div>
-                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700, color: '#e8e6df' }}>Phone Script</div>
+                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, fontWeight: 700, color: '#e8e6df' }}>Phone Script</div>
                 <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#7a7870', marginTop: 1 }}>{lead.name}</div>
               </div>
             </div>
@@ -122,14 +122,14 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
               <>
                 <a
                   href={`tel:${lead.phone}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(200,241,53,0.08)', border: '1px solid rgba(200,241,53,0.2)', borderRadius: 8, padding: '7px 14px', color: '#c8f135', textDecoration: 'none', fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600, flex: 1 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(255,155,38,0.08)', border: '1px solid rgba(255,155,38,0.2)', borderRadius: 8, padding: '7px 14px', color: '#ff9b26', textDecoration: 'none', fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600, flex: 1 }}
                 >
                   <Phone size={13} /> {lead.phone}
                 </a>
                 <button
                   onClick={handleCopyPhone}
                   title="Copy number"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: copiedPhone ? 'rgba(200,241,53,0.15)' : '#1c1c1a', border: '1px solid', borderColor: copiedPhone ? 'rgba(200,241,53,0.4)' : '#252523', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', color: copiedPhone ? '#c8f135' : '#7a7870', fontFamily: 'DM Mono, monospace', fontSize: 11, transition: 'all 0.2s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: copiedPhone ? 'rgba(255,155,38,0.15)' : '#1c1c1a', border: '1px solid', borderColor: copiedPhone ? 'rgba(255,155,38,0.4)' : '#252523', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', color: copiedPhone ? '#ff9b26' : '#7a7870', fontFamily: 'DM Mono, monospace', fontSize: 11, transition: 'all 0.2s' }}
                 >
                   {copiedPhone ? <><CheckCheck size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
                 </button>
@@ -148,7 +148,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
             <p key={i} style={{ fontSize: 14, lineHeight: 1.75, color: '#e8e6df', margin: 0, marginBottom: i < 3 ? 16 : 0 }}>
               {para.split(highlightRE).map((chunk, j) =>
                 chunk === bizName || chunk === niche
-                  ? <span key={j} style={{ color: '#c8f135', fontWeight: 700, fontFamily: 'Syne, sans-serif' }}>{chunk}</span>
+                  ? <span key={j} style={{ color: '#ff9b26', fontWeight: 700, fontFamily: 'Poppins, sans-serif' }}>{chunk}</span>
                   : chunk
               )}
             </p>
@@ -159,7 +159,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
         <div style={{ padding: '12px 22px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             onClick={handleCopy}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: copied ? 'rgba(200,241,53,0.15)' : '#c8f135', color: copied ? '#c8f135' : '#0a0a08', border: copied ? '1px solid rgba(200,241,53,0.4)' : 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Syne, sans-serif', transition: 'all 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, background: copied ? 'rgba(255,155,38,0.15)' : '#ff9b26', color: copied ? '#ff9b26' : '#0a0a08', border: copied ? '1px solid rgba(255,155,38,0.4)' : 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Poppins, sans-serif', transition: 'all 0.2s' }}
           >
             {copied ? <><CheckCheck size={14} /> Copied!</> : <><Copy size={14} /> Copy Script</>}
           </button>
@@ -169,7 +169,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
             <button
               title="Interested → next"
               onClick={() => { onInterest(lead.id, 'up'); if (index < total - 1) onNavigate(index + 1); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'up' ? 'rgba(200,241,53,0.15)' : '#1c1c1a', border: '1px solid', borderColor: lead.interest === 'up' ? 'rgba(200,241,53,0.4)' : '#252523', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'up' ? '#c8f135' : '#4a4845', fontSize: 12, transition: 'all 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'up' ? 'rgba(255,155,38,0.15)' : '#1c1c1a', border: '1px solid', borderColor: lead.interest === 'up' ? 'rgba(255,155,38,0.4)' : '#252523', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'up' ? '#ff9b26' : '#4a4845', fontSize: 12, transition: 'all 0.15s' }}
             >
               <ThumbsUp size={14} />
             </button>
@@ -194,7 +194,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
           <button
             title="Schedule demo call"
             onClick={() => onSchedule && onSchedule(lead)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111328', border: '1px solid #5b9cf630', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#5b9cf6', fontSize: 12, fontWeight: 600, fontFamily: 'Syne, sans-serif', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111328', border: '1px solid #5b9cf630', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#5b9cf6', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.background = '#5b9cf620'; e.currentTarget.style.borderColor = '#5b9cf660'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#111328'; e.currentTarget.style.borderColor = '#5b9cf630'; }}
           >
@@ -360,8 +360,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '4px 11px', borderRadius: 12, cursor: 'pointer',
                     fontSize: 11, fontWeight: 600, border: 'none',
-                    background: draft.call_completed ? '#c8f13525' : '#25252340',
-                    color: draft.call_completed ? '#c8f135' : '#4a4845',
+                    background: draft.call_completed ? '#ff9b2625' : '#25252340',
+                    color: draft.call_completed ? '#ff9b26' : '#4a4845',
                     transition: 'all 0.15s',
                   }}
                   title={draft.call_completed ? 'Click to unmark call' : 'Mark call as completed'}
@@ -410,7 +410,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
             style={{
               flex: 1, padding: '9px 0', borderRadius: 6, cursor: isDirty ? 'pointer' : 'not-allowed',
               fontSize: 13, fontWeight: 700, border: 'none',
-              background: isDirty ? '#c8f135' : '#252523',
+              background: isDirty ? '#ff9b26' : '#252523',
               color: isDirty ? '#fff' : '#4a4845',
               transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
@@ -559,9 +559,9 @@ export default function Leads() {
             onClick={() => filtered.length > 0 && setScriptIdx(0)}
             disabled={filtered.length === 0}
             title="Open phone script"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(200,241,53,0.10)', border: '1px solid rgba(200,241,53,0.3)', color: '#c8f135', borderRadius: 7, padding: '6px 12px', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'DM Mono, monospace', fontSize: 11, transition: 'all 0.15s', opacity: filtered.length === 0 ? 0.4 : 1 }}
-            onMouseEnter={e => { if (filtered.length > 0) e.currentTarget.style.background = 'rgba(200,241,53,0.20)'; }}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(200,241,53,0.10)'}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,155,38,0.10)', border: '1px solid rgba(255,155,38,0.3)', color: '#ff9b26', borderRadius: 7, padding: '6px 12px', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'DM Mono, monospace', fontSize: 11, transition: 'all 0.15s', opacity: filtered.length === 0 ? 0.4 : 1 }}
+            onMouseEnter={e => { if (filtered.length > 0) e.currentTarget.style.background = 'rgba(255,155,38,0.20)'; }}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,155,38,0.10)'}
           >
             <ScrollText size={13} /> Phone Script
           </button>
@@ -643,13 +643,13 @@ export default function Leads() {
                           title="Interested"
                           onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'up' ? null : 'up')}
                           style={{
-                            background: lead.interest === 'up' ? 'rgba(200,241,53,0.15)' : 'none',
-                            border: lead.interest === 'up' ? '1px solid rgba(200,241,53,0.4)' : '1px solid transparent',
+                            background: lead.interest === 'up' ? 'rgba(255,155,38,0.15)' : 'none',
+                            border: lead.interest === 'up' ? '1px solid rgba(255,155,38,0.4)' : '1px solid transparent',
                             borderRadius: 6, cursor: 'pointer', padding: '4px 6px',
-                            color: lead.interest === 'up' ? '#c8f135' : '#4a4845',
+                            color: lead.interest === 'up' ? '#ff9b26' : '#4a4845',
                             transition: 'all 0.15s', display: 'flex', alignItems: 'center',
                           }}
-                          onMouseEnter={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#c8f135'; }}
+                          onMouseEnter={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#ff9b26'; }}
                           onMouseLeave={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#4a4845'; }}
                         >
                           <ThumbsUp size={13} />
@@ -684,7 +684,7 @@ export default function Leads() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {lead.email && (
                           <a href={gmailLink(lead.email)} target="_blank" rel="noreferrer" title="Compose in Gmail">
-                            <Mail size={13} style={{ color: '#c8f135' }} />
+                            <Mail size={13} style={{ color: '#ff9b26' }} />
                           </a>
                         )}
                         <InlineEdit value={lead.email} type="email" onSave={val => handleFieldSave(lead.id, 'email', val)} placeholder="Add email" />
@@ -694,7 +694,7 @@ export default function Leads() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {lead.phone && (
                           <a href={`tel:${lead.phone}`} title="Call" style={{ display: 'flex' }}>
-                            <Phone size={13} style={{ color: '#c8f135' }} />
+                            <Phone size={13} style={{ color: '#ff9b26' }} />
                           </a>
                         )}
                         <InlineEdit value={lead.phone} onSave={val => handleFieldSave(lead.id, 'phone', val)} placeholder="Add phone" />
@@ -702,13 +702,13 @@ export default function Leads() {
                     </td>
                     <td><Trunc value={lead.location} /></td>
                     <td>
-                      <span style={{ fontSize: 12, color: lead.budget ? '#c8f135' : '#252523', fontWeight: lead.budget ? 600 : 400 }}>
+                      <span style={{ fontSize: 12, color: lead.budget ? '#ff9b26' : '#252523', fontWeight: lead.budget ? 600 : 400 }}>
                         {lead.budget || '—'}
                       </span>
                     </td>
                     <td>
                       {lead.has_business ? (
-                        <span style={{ fontSize: 11, background: lead.has_business.toLowerCase().includes('yes') ? '#c8f13520' : '#ff5c5c20', color: lead.has_business.toLowerCase().includes('yes') ? '#c8f135' : '#ff5c5c', borderRadius: 6, padding: '2px 7px', fontWeight: 600 }}>
+                        <span style={{ fontSize: 11, background: lead.has_business.toLowerCase().includes('yes') ? '#ff9b2620' : '#ff5c5c20', color: lead.has_business.toLowerCase().includes('yes') ? '#ff9b26' : '#ff5c5c', borderRadius: 6, padding: '2px 7px', fontWeight: 600 }}>
                           {lead.has_business.length > 20 ? lead.has_business.slice(0, 20) + '…' : lead.has_business}
                         </span>
                       ) : <span style={{ color: '#252523', fontSize: 12 }}>—</span>}
@@ -717,7 +717,7 @@ export default function Leads() {
                     <td><Trunc value={lead.time_available} max={18} /></td>
                     <td>
                       {lead.tiktok_handle ? (
-                        <span style={{ fontSize: 12, color: '#c8f135' }}>{lead.tiktok_handle}</span>
+                        <span style={{ fontSize: 12, color: '#ff9b26' }}>{lead.tiktok_handle}</span>
                       ) : <span style={{ color: '#252523', fontSize: 12 }}>—</span>}
                     </td>
                     <td><Trunc value={lead.lead_source} max={16} /></td>
@@ -730,7 +730,7 @@ export default function Leads() {
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer',
                             padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center',
-                            color: lead.call_completed ? '#c8f135' : '#252523',
+                            color: lead.call_completed ? '#ff9b26' : '#252523',
                             transition: 'color 0.15s',
                           }}
                           onMouseEnter={e => { if (!lead.call_completed) e.currentTarget.style.color = '#4a4845'; }}
@@ -742,7 +742,7 @@ export default function Leads() {
                           title="View phone script"
                           onClick={() => setScriptIdx(filtered.indexOf(lead))}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#c8f135'}
+                          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
                           onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
                         >
                           <ScrollText size={13} />
@@ -760,7 +760,7 @@ export default function Leads() {
                           title="Edit lead"
                           onClick={() => setDetailLead(lead)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#c8f135'}
+                          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
                           onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
                         >
                           <Eye size={14} />

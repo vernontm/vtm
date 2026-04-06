@@ -91,7 +91,7 @@ export default function Contacts() {
 
   const initials = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const avatarColor = (name) => {
-    const colors = ['#c8f135', '#784bd1', '#c8f135', '#fdab3d', '#ff5c5c'];
+    const colors = ['#ff9b26', '#784bd1', '#ff9b26', '#fdab3d', '#ff5c5c'];
     return colors[name.charCodeAt(0) % colors.length];
   };
 
@@ -153,7 +153,7 @@ export default function Contacts() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {contact.email && (
                       <a href={gmailLink(contact.email)} target="_blank" rel="noreferrer" title="Compose in Gmail" style={{ display: 'flex', flexShrink: 0 }}>
-                        <Mail size={13} style={{ color: '#c8f135' }} />
+                        <Mail size={13} style={{ color: '#ff9b26' }} />
                       </a>
                     )}
                     <InlineEdit value={contact.email} type="email" onSave={val => handleFieldSave(contact.id, 'email', val)} placeholder="Add email" />

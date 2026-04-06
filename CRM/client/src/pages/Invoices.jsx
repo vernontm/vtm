@@ -11,10 +11,10 @@ import {
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
   open:          { bg: '#fdab3d22', color: '#fdab3d', label: 'Open' },
-  paid:          { bg: '#c8f13522', color: '#c8f135', label: 'Paid' },
+  paid:          { bg: '#ff9b2622', color: '#ff9b26', label: 'Paid' },
   void:          { bg: '#4a484522', color: '#4a4845', label: 'Void' },
   uncollectible: { bg: '#ff5c5c22', color: '#ff5c5c', label: 'Uncollectible' },
-  draft:         { bg: '#c8f13522', color: '#c8f135', label: 'Draft' },
+  draft:         { bg: '#ff9b2622', color: '#ff9b26', label: 'Draft' },
   cancelled:     { bg: '#4a484522', color: '#4a4845', label: 'Cancelled' },
 };
 
@@ -30,7 +30,7 @@ function StatusBadge({ status }) {
 function TypeBadge({ type }) {
   const isStripe = type === 'stripe';
   return (
-    <span style={{ background: isStripe ? '#784bd122' : '#c8f13522', color: isStripe ? '#a78bfa' : '#c8f135', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
+    <span style={{ background: isStripe ? '#784bd122' : '#ff9b2622', color: isStripe ? '#a78bfa' : '#ff9b26', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
       {isStripe ? 'Stripe' : 'Manual'}
     </span>
   );
@@ -215,9 +215,9 @@ export default function Invoices() {
         {/* Summary cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 22 }}>
           {[
-            { label: 'Total Collected', value: `$${totals.all.toLocaleString()}`, color: '#c8f135', note: 'paid invoices' },
+            { label: 'Total Collected', value: `$${totals.all.toLocaleString()}`, color: '#ff9b26', note: 'paid invoices' },
             { label: 'Outstanding',     value: `$${totals.open.toLocaleString()}`, color: '#fdab3d', note: 'open / unpaid' },
-            { label: 'Draft',           value: `$${totals.draft.toLocaleString()}`, color: '#c8f135', note: 'manual drafts' },
+            { label: 'Draft',           value: `$${totals.draft.toLocaleString()}`, color: '#ff9b26', note: 'manual drafts' },
           ].map(({ label, value, color, note }) => (
             <div key={label} style={{ background: '#161614', border: '1px solid #252523', borderRadius: 10, padding: '16px 20px' }}>
               <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
@@ -236,9 +236,9 @@ export default function Invoices() {
                 onClick={() => setTab(key)}
                 style={{
                   padding: '5px 14px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-                  border: `1px solid ${tab === key ? '#c8f135' : '#252523'}`,
-                  background: tab === key ? '#c8f13522' : 'transparent',
-                  color: tab === key ? '#c8f135' : '#4a4845',
+                  border: `1px solid ${tab === key ? '#ff9b26' : '#252523'}`,
+                  background: tab === key ? '#ff9b2622' : 'transparent',
+                  color: tab === key ? '#ff9b26' : '#4a4845',
                   fontWeight: tab === key ? 700 : 400,
                 }}
               >
@@ -292,8 +292,8 @@ export default function Invoices() {
                     {/* # */}
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : '#c8f13522', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: '#c8f135' }} />}
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : '#ff9b2622', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: '#ff9b26' }} />}
                         </div>
                         <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{inv._number}</span>
                       </div>
@@ -331,7 +331,7 @@ export default function Invoices() {
                     <td style={{ ...tdStyle, color: '#4a4845', fontSize: 12 }}>
                       {inv._date ? new Date(inv._date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                       {inv.status === 'paid' && inv.paid_at && (
-                        <div style={{ fontSize: 11, color: '#c8f135', marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: '#ff9b26', marginTop: 2 }}>
                           Paid {new Date(inv.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </div>
                       )}
@@ -349,7 +349,7 @@ export default function Invoices() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="View on Stripe"
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#c8f135', background: '#c8f13518', border: '1px solid #c8f13540', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#ff9b26', background: '#ff9b2618', border: '1px solid #ff9b2640', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
                               >
                                 <ExternalLink size={12} /> View
                               </a>
@@ -427,7 +427,7 @@ export default function Invoices() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-          background: toast.error ? '#ff5c5c' : '#c8f135', color: '#e8e6df',
+          background: toast.error ? '#ff5c5c' : '#ff9b26', color: '#e8e6df',
           borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600,
           zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
         }}>

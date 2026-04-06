@@ -48,7 +48,7 @@ function SubitemRow({ item, onFieldSave, onDelete }) {
             <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`}
                target="_blank" rel="noreferrer" title="Open link"
                style={{ display: 'flex', flexShrink: 0 }}>
-              <ExternalLink size={12} style={{ color: '#c8f135' }} />
+              <ExternalLink size={12} style={{ color: '#ff9b26' }} />
             </a>
           )}
           <InlineEdit value={item.link} onSave={v => onFieldSave(item.id, 'link', v)} placeholder="https://..." />
@@ -266,7 +266,7 @@ export default function Projects() {
                   <td colSpan={10} style={{ padding: 0, background: '#161614' }}>
                     <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))}>
                       {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                      <span style={{ color: label === 'Completed' ? '#c8f135' : '#fdab3d' }}>{label}</span>
+                      <span style={{ color: label === 'Completed' ? '#ff9b26' : '#fdab3d' }}>{label}</span>
                       <span style={{ background: '#252523', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#7a7870' }}>{items.length}</span>
                     </div>
                   </td>
@@ -325,7 +325,7 @@ export default function Projects() {
                         </td>
                         <td>
                           <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <DollarSign size={13} style={{ color: '#c8f135', flexShrink: 0 }} />
+                            <DollarSign size={13} style={{ color: '#ff9b26', flexShrink: 0 }} />
                             <InlineEdit value={String(project.value || '')} type="number" onSave={v => handleProjectField(project.id, 'value', v)} placeholder="0" />
                           </div>
                         </td>
@@ -334,7 +334,7 @@ export default function Projects() {
                             <div style={{ flex: 1, height: 6, background: '#252523', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
                               <div style={{
                                 height: '100%', borderRadius: 3, width: `${pct}%`,
-                                background: pct === 100 ? '#c8f135' : pct > 60 ? '#fdab3d' : '#c8f135',
+                                background: pct === 100 ? '#ff9b26' : pct > 60 ? '#fdab3d' : '#ff9b26',
                                 transition: 'width 0.3s',
                               }} />
                             </div>
@@ -398,7 +398,7 @@ export default function Projects() {
                     <td style={{ color: '#7a7870', fontSize: 12 }}>Total</td>
                     <td>
                       <div className="private-value flex items-center gap-1">
-                        <DollarSign size={13} style={{ color: '#c8f135' }} />
+                        <DollarSign size={13} style={{ color: '#ff9b26' }} />
                         <span>{formatMoney(items.reduce((s, p) => s + (p.value || 0), 0))}</span>
                       </div>
                     </td>

@@ -15,7 +15,7 @@ const TYPE_CONFIG = {
   project_due_soon: { label: 'Due Soon',           icon: Clock,         color: '#fdab3d' },
   stale_lead:       { label: 'Stale Lead',         icon: Users,         color: '#4a4845' },
   invoice_unpaid:   { label: 'Invoice Unpaid',     icon: CreditCard,    color: '#fdab3d' },
-  deal_cold:        { label: 'Deal Going Cold',    icon: TrendingDown,  color: '#c8f135' },
+  deal_cold:        { label: 'Deal Going Cold',    icon: TrendingDown,  color: '#ff9b26' },
 };
 
 const PRIORITY_CONFIG = {
@@ -65,7 +65,7 @@ function NotificationCard({ n, onDismiss }) {
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link
             to={n.link}
-            style={{ fontSize: 12, color: '#c8f135', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+            style={{ fontSize: 12, color: '#ff9b26', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
           >
             View {n.entity_type} <ChevronRight size={12} />
           </Link>
@@ -207,9 +207,9 @@ export default function Notifications() {
                 onClick={() => setFilter(t)}
                 style={{
                   padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-                  border: `1px solid ${active ? (tc?.color || '#c8f135') : '#252523'}`,
-                  background: active ? (tc?.color || '#c8f135') + '22' : 'transparent',
-                  color: active ? (tc?.color || '#c8f135') : '#4a4845',
+                  border: `1px solid ${active ? (tc?.color || '#ff9b26') : '#252523'}`,
+                  background: active ? (tc?.color || '#ff9b26') + '22' : 'transparent',
+                  color: active ? (tc?.color || '#ff9b26') : '#4a4845',
                   fontWeight: active ? 700 : 400,
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}

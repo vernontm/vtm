@@ -8,9 +8,9 @@
   --surface2:     #161614;
   --border:       #252523;
   --border-light: #2e2e2b;
-  --accent:       #c8f135;
-  --accent-dim:   rgba(200,241,53,0.10);
-  --accent-mid:   rgba(200,241,53,0.22);
+  --accent:       #ff9b26;
+  --accent-dim:   rgba(255,155,38,0.10);
+  --accent-mid:   rgba(255,155,38,0.22);
   --text:         #e8e6df;
   --text-muted:   #7a7870;
   --text-dim:     #4a4845;
@@ -26,7 +26,7 @@
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Syne', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   margin: 0;
   padding: 0;
 }
@@ -121,7 +121,7 @@ tr:hover td { background-color: var(--hover, #1c1c1a); }
   align-items: center;
   gap: 6px;
   transition: opacity 0.15s, transform 0.1s;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
@@ -139,7 +139,7 @@ tr:hover td { background-color: var(--hover, #1c1c1a); }
   align-items: center;
   gap: 4px;
   transition: opacity 0.15s;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 .btn-green:hover { opacity: 0.85; }
 
@@ -155,7 +155,7 @@ tr:hover td { background-color: var(--hover, #1c1c1a); }
   align-items: center;
   gap: 6px;
   transition: all 0.15s;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 .btn-ghost:hover { background-color: var(--surface2); color: var(--text); border-color: var(--border-light); }
 
@@ -169,7 +169,7 @@ tr:hover td { background-color: var(--hover, #1c1c1a); }
   font-weight: 700;
   cursor: pointer;
   transition: opacity 0.15s;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 .btn-danger:hover { opacity: 0.85; }
 
@@ -219,7 +219,7 @@ tr:hover td { background-color: var(--hover, #1c1c1a); }
   font-size: 14px;
   outline: none;
   transition: border-color 0.15s;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 .form-input:focus { border-color: var(--accent); }
 .form-input::placeholder { color: var(--text-dim); }
@@ -236,7 +236,7 @@ tr:hover td { background-color: var(--hover, #1c1c1a); }
   cursor: pointer;
   appearance: none;
   transition: border-color 0.15s;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 .form-select:focus { border-color: var(--accent); }
 
@@ -253,7 +253,7 @@ tr:hover td { background-color: var(--hover, #1c1c1a); }
   outline: none;
   width: 220px;
   transition: border-color 0.15s;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 .search-input:focus { border-color: var(--accent); }
 .search-input::placeholder { color: var(--text-dim); }
