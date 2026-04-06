@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, ChevronDown, ChevronRight, Trash2, UserPlus, Mail, Phone, Upload, Eye, X, AtSign, Check, ThumbsUp, ThumbsDown, Calendar } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, ChevronLeft, Trash2, UserPlus, Mail, Phone, Upload, Eye, X, Globe, AtSign, Check, PhoneCall, ThumbsUp, ThumbsDown, ScrollText, Copy, CheckCheck, Calendar } from 'lucide-react';
 import { getLeads, createLead, updateLead, deleteLead, convertLead } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -23,8 +23,8 @@ function ActivityBar({ id }) {
 const EMPTY = { name: '', status: 'New Lead', company: '', email: '', phone: '', lead_source: '', notes: '' };
 const gmailLink = (email) => `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
 
-// PhoneScriptModal removed - no longer needed
-function _REMOVED_PhoneScriptModal({ leads, index, onNavigate, onClose, onInterest, onSchedule, onNoAnswer }) {
+/*PhoneScriptModal removed*/
+function _skip({ leads, index, onNavigate, onClose, onInterest, onSchedule, onNoAnswer }) {
   const [copied,       setCopied]       = useState(false);
   const [copiedPhone,  setCopiedPhone]  = useState(false);
 
@@ -522,7 +522,7 @@ export default function Leads() {
     try { await Promise.all([...selectedIds].map(id => updateLead(id, { status }))); setLeads(ls => ls.map(l => selectedIds.has(l.id) ? { ...l, status } : l)); clearSelection(); } catch (e) { console.error(e); }
   };
 
-  const COL_COUNT = 16; // checkbox, Lead, Status, Interest, Call, Action, Email, Phone, Location, Budget, Has Business, Financial Goal, Time Available, TikTok, Source, Actions
+  const COL_COUNT = 10; // checkbox, Lead, Status, Interest, Action, Email, Phone, Business, Budget, Actions
 
   return (
     <div style={{ minHeight: '100%', background: '#0a0a08' }}>
@@ -560,17 +560,11 @@ export default function Leads() {
               <th style={{ minWidth: 180 }}>Lead</th>
               <th style={{ minWidth: 130 }}>Status</th>
               <th style={{ minWidth: 90 }}>Interest</th>
-              <th style={{ minWidth: 110 }}>Call</th>
               <th style={{ minWidth: 140 }}>Action</th>
               <th style={{ minWidth: 155 }}>Email</th>
               <th style={{ minWidth: 120 }}>Phone</th>
-              <th style={{ minWidth: 120 }}>Location</th>
+              <th style={{ minWidth: 140 }}>Business</th>
               <th style={{ minWidth: 110 }}>Budget</th>
-              <th style={{ minWidth: 120 }}>Has Business?</th>
-              <th style={{ minWidth: 150 }}>Financial Goal</th>
-              <th style={{ minWidth: 140 }}>Time Available</th>
-              <th style={{ minWidth: 120 }}>TikTok</th>
-              <th style={{ minWidth: 120 }}>Source</th>
               <th style={{ width: 80 }}></th>
             </tr>
           </thead>
@@ -664,44 +658,14 @@ export default function Leads() {
                         <InlineEdit value={lead.phone} onSave={val => handleFieldSave(lead.id, 'phone', val)} placeholder="Add phone" />
                       </div>
                     </td>
-                    <td><Trunc value={lead.location} /></td>
+                    <td><Trunc value={lead.company} max={20} /></td>
                     <td>
                       <span style={{ fontSize: 12, color: lead.budget ? '#ff9b26' : '#252523', fontWeight: lead.budget ? 600 : 400 }}>
                         {lead.budget || '—'}
                       </span>
                     </td>
                     <td>
-                      {lead.has_business ? (
-                        <span style={{ fontSize: 11, background: lead.has_business.toLowerCase().includes('yes') ? '#ff9b2620' : '#ff5c5c20', color: lead.has_business.toLowerCase().includes('yes') ? '#ff9b26' : '#ff5c5c', borderRadius: 6, padding: '2px 7px', fontWeight: 600 }}>
-                          {lead.has_business.length > 20 ? lead.has_business.slice(0, 20) + '…' : lead.has_business}
-                        </span>
-                      ) : <span style={{ color: '#252523', fontSize: 12 }}>—</span>}
-                    </td>
-                    <td><Trunc value={lead.financial_goal} max={18} /></td>
-                    <td><Trunc value={lead.time_available} max={18} /></td>
-                    <td>
-                      {lead.tiktok_handle ? (
-                        <span style={{ fontSize: 12, color: '#ff9b26' }}>{lead.tiktok_handle}</span>
-                      ) : <span style={{ color: '#252523', fontSize: 12 }}>—</span>}
-                    </td>
-                    <td><Trunc value={lead.lead_source} max={16} /></td>
-                    <td>
                       <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        {/* Call completed toggle */}
-                        <button
-                          title={lead.call_completed ? 'Call completed — click to unmark' : 'Mark call as completed'}
-                          onClick={() => handleFieldSave(lead.id, 'call_completed', !lead.call_completed)}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center',
-                            color: lead.call_completed ? '#ff9b26' : '#252523',
-                            transition: 'color 0.15s',
-                          }}
-                          onMouseEnter={e => { if (!lead.call_completed) e.currentTarget.style.color = '#4a4845'; }}
-                          onMouseLeave={e => { if (!lead.call_completed) e.currentTarget.style.color = '#252523'; }}
-                        >
-                          <PhoneCall size={13} />
-                        </button>
                         <button
                           title="Edit lead"
                           onClick={() => setDetailLead(lead)}
