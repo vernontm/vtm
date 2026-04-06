@@ -216,8 +216,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
 
 // ── Survey Detail / Edit Panel ────────────────────────────────────────────────
 const LONG_FIELDS = new Set([
-  'current_situation','why_now','skills_story','previous_attempts',
-  'biggest_fear','biggest_wish','notes',
+  'problem','current_situation','financial_goal','notes',
 ]);
 
 const DETAIL_SECTIONS = [
@@ -228,20 +227,24 @@ const DETAIL_SECTIONS = [
       { key: 'email',         label: 'Email' },
       { key: 'phone',         label: 'Phone' },
       { key: 'company',       label: 'Business' },
-      { key: 'lead_source',   label: 'Source' },
     ],
   },
   {
     title: 'Project Details',
     fields: [
-      { key: 'current_situation', label: 'Current State' },
-      { key: 'financial_goal',    label: 'Goal' },
-      { key: 'budget',            label: 'Budget Tier' },
+      { key: 'problem',           label: 'Problem' },
+      { key: 'current_situation',  label: 'Current State' },
+      { key: 'financial_goal',     label: 'Goal' },
+      { key: 'budget',             label: 'Budget Tier' },
+      { key: 'best_time',          label: 'Best Time' },
     ],
   },
   {
-    title: 'Notes',
-    fields: [{ key: 'notes', label: 'Notes' }],
+    title: 'Other',
+    fields: [
+      { key: 'notes',        label: 'Notes' },
+      { key: 'lead_source',  label: 'Source' },
+    ],
   },
 ];
 
@@ -522,7 +525,7 @@ export default function Leads() {
     try { await Promise.all([...selectedIds].map(id => updateLead(id, { status }))); setLeads(ls => ls.map(l => selectedIds.has(l.id) ? { ...l, status } : l)); clearSelection(); } catch (e) { console.error(e); }
   };
 
-  const COL_COUNT = 10; // checkbox, Lead, Status, Interest, Action, Email, Phone, Business, Budget, Actions
+  const COL_COUNT = 10; // checkbox, Lead, Status, Interest, Action, Email, Phone, Business, Budget Tier, Actions
 
   return (
     <div style={{ minHeight: '100%', background: '#0a0a08' }}>
