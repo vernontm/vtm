@@ -54,7 +54,21 @@ export default async function handler(req, res) {
     results.supabase = 'error';
   }
 
-  // 2. Send to Zapier webhook
+  // 2. Build summary
+  const parts = [];
+  if (lead.name) parts.push(`${lead.name}`);
+  if (lead.business) parts.push(`from ${lead.business}`);
+  if (lead.problem) parts.push(`needs help with: ${lead.problem}`);
+  if (lead.current_state) parts.push(`Currently: ${lead.current_state}`);
+  if (lead.goal) parts.push(`Goal: ${lead.goal}`);
+  if (lead.budget_tier) parts.push(`Budget: ${lead.budget_tier}`);
+  if (lead.best_time) parts.push(`Best time to reach: ${lead.best_time}`);
+  if (lead.email) parts.push(`Email: ${lead.email}`);
+  if (lead.phone) parts.push(`Phone: ${lead.phone}`);
+  if (lead.notes) parts.push(`Notes: ${lead.notes}`);
+  const summary = parts.join('. ') + '.';
+
+  // 3. Send to Zapier webhook
   try {
     const zapierRes = await fetch(
       'https://hooks.zapier.com/hooks/catch/12135291/u7ub25s/',
@@ -72,6 +86,7 @@ export default async function handler(req, res) {
           budget_tier: lead.budget_tier,
           best_time: lead.best_time,
           notes: lead.notes,
+          summary: summary,
           source: lead.source || 'vtm-chat',
           timestamp: new Date().toISOString(),
         }),
