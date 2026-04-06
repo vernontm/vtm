@@ -1179,10 +1179,9 @@
             }
         }
         // ── LEAD CAPTURE ──
-        let earlyLeadSent = false;
+        let lastLeadData = '';
 
         function parseLeadCapture(text) {
-            if (earlyLeadSent) return;
             const match = text.match(/\[LEAD_CAPTURE\]([\s\S]*?)(?=\n\n|$)/i);
             if (!match) return;
 
@@ -1196,17 +1195,22 @@
                 name: get('Name'),
                 email: get('Email'),
                 phone: get('Phone'),
+                business: get('Business'),
                 notes: get('Note') || get('Notes'),
-                source: 'vtm-chat-early',
+                source: 'vtm-chat-progress',
             };
 
+            // Only send if we have something new
+            const dataKey = JSON.stringify(lead);
+            if (dataKey === lastLeadData) return;
+            lastLeadData = dataKey;
+
             if (lead.name || lead.email || lead.phone) {
-                earlyLeadSent = true;
                 fetch('/api/lead', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(lead),
-                }).catch(err => console.error('Early lead save failed:', err));
+                }).catch(err => console.error('Lead save failed:', err));
             }
         }
 
