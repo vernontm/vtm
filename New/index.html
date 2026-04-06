@@ -1158,6 +1158,11 @@
                 conversationHistory.push({ role: 'assistant', content: reply });
                 appendMessage('assistant', reply);
 
+                // Check for lead summary and send to backend
+                if (reply.includes('[SUMMARY]')) {
+                    parseSummaryAndSendLead(reply);
+                }
+
             } catch (err) {
                 removeTyping();
                 appendMessage('assistant', 'Hmm, something went wrong. Check that the API is connected and try again.');
@@ -1167,6 +1172,41 @@
                 input.focus();
             }
         }
+        // ── LEAD CAPTURE ──
+        function parseSummaryAndSendLead(text) {
+            const summaryMatch = text.match(/\[SUMMARY\]([\s\S]*)/i);
+            if (!summaryMatch) return;
+
+            const summary = summaryMatch[1];
+            const get = (key) => {
+                const m = summary.match(new RegExp(key + ':\\s*(.+)', 'i'));
+                return m ? m[1].trim() : '';
+            };
+
+            const lead = {
+                name: get('Name'),
+                email: get('Email'),
+                phone: get('Phone'),
+                business: get('Business'),
+                problem: get('Problem'),
+                current_state: get('Current state'),
+                goal: get('Goal'),
+                budget_tier: get('Budget tier') || get('Budget'),
+                best_time: get('Best time'),
+                notes: get('Notes'),
+                source: 'vtm-chat',
+            };
+
+            // Only send if we have at least a name
+            if (lead.name) {
+                fetch('/api/lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(lead),
+                }).catch(err => console.error('Lead save failed:', err));
+            }
+        }
+
         // ── MENU TOGGLE ──
         const menuToggle = document.getElementById('menuToggle');
         const menuOverlay = document.getElementById('menuOverlay');
