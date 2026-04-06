@@ -445,7 +445,7 @@
                 </div>
                 <div class="form-row">
                     <div class="form-field">
-                        <label>Media URL (image or video)</label>
+                        <label>Media URL (or upload below)</label>
                         <input type="text" id="postMediaUrl" placeholder="https://..." />
                     </div>
                     <div class="form-field" style="max-width:140px">
@@ -456,6 +456,17 @@
                         </select>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Upload Image</label>
+                        <input type="file" id="uploadImage" accept="image/*" style="padding:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.85rem" />
+                    </div>
+                    <div class="form-field">
+                        <label>Upload Video</label>
+                        <input type="file" id="uploadVideo" accept="video/*" style="padding:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.85rem" />
+                    </div>
+                </div>
+                <div id="uploadStatus" style="font-size:0.8rem;color:var(--orange);margin-bottom:8px;display:none"></div>
                 <div class="form-row">
                     <div class="form-field">
                         <label>Link URL</label>
@@ -588,6 +599,51 @@
 
         document.getElementById('savePostBtn').addEventListener('click', savePost);
 
+        // ── FILE UPLOADS ──
+        async function uploadFile(file) {
+            const status = document.getElementById('uploadStatus');
+            status.style.display = 'block';
+            status.textContent = 'Uploading...';
+
+            try {
+                const res = await fetch(`${API}/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': file.type },
+                    body: file,
+                });
+
+                if (!res.ok) { status.textContent = 'Upload failed'; return null; }
+                const data = await res.json();
+                status.textContent = 'Uploaded!';
+                setTimeout(() => { status.style.display = 'none'; }, 2000);
+                return data.url;
+            } catch (err) {
+                status.textContent = 'Upload error';
+                console.error(err);
+                return null;
+            }
+        }
+
+        document.getElementById('uploadImage').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = await uploadFile(file);
+            if (url) {
+                document.getElementById('postMediaUrl').value = url;
+                document.getElementById('postMediaType').value = 'image';
+            }
+        });
+
+        document.getElementById('uploadVideo').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = await uploadFile(file);
+            if (url) {
+                document.getElementById('postMediaUrl').value = url;
+                document.getElementById('postMediaType').value = 'video';
+            }
+        });
+
         function clearForm() {
             document.getElementById('postId').value = '';
             document.getElementById('postTitle').value = '';
@@ -603,6 +659,8 @@
             gatedState = false;
             document.getElementById('postPublished').classList.remove('on');
             document.getElementById('postGated').classList.remove('on');
+            document.getElementById('uploadImage').value = '';
+            document.getElementById('uploadVideo').value = '';
         }
 
         function fillForm(post) {
