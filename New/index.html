@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vernontm. — Build & Automate Without Limits</title>
+    <title>vernontm. - Build & Automate Without Limits</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
@@ -254,6 +254,40 @@
             display: flex;
             padding: 20px 24px 0;
             border-bottom: 1px solid var(--border);
+        }
+
+        .quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 0 0 4px 40px;
+            animation: msgIn 0.3s ease;
+        }
+
+        .quick-reply-btn {
+            padding: 7px 14px;
+            background: rgba(255,155,38,0.08);
+            border: 1px solid rgba(255,155,38,0.25);
+            border-radius: 100px;
+            color: var(--orange);
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .quick-reply-btn:hover {
+            background: rgba(255,155,38,0.15);
+            border-color: rgba(255,155,38,0.45);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 12px rgba(255,155,38,0.15);
+        }
+
+        .quick-reply-btn:active {
+            transform: translateY(0);
         }
 
         .message {
@@ -631,7 +665,7 @@
                 <span class="eyebrow-dot"></span>
                 Unlocking the Power of AI for Brands & Creators
             </div>
-            <p class="hero-sub">Ask anything — websites, automation, AI, marketing, or scaling your business.</p>
+            <p class="hero-sub">Ask anything - websites, automation, AI, marketing, or scaling your business.</p>
 
             <!-- Chat Box -->
             <div class="chat-container">
@@ -855,16 +889,58 @@
 
         const conversationHistory = [];
 
+        function removeQuickReplies() {
+            const existing = messagesEl.querySelector('.quick-replies');
+            if (existing) existing.remove();
+        }
+
+        function parseQuickReplies(content) {
+            const match = content.match(/\[QUICK_REPLIES:\s*"([^"]+)"\s*(?:\|\s*"([^"]+)"\s*)?(?:\|\s*"([^"]+)"\s*)?\]/);
+            if (!match) return { text: content, replies: [] };
+            const text = content.replace(/\[QUICK_REPLIES:.*?\]/, '').trim();
+            const replies = [match[1], match[2], match[3]].filter(Boolean);
+            return { text, replies };
+        }
+
         function appendMessage(role, content) {
             messagesEl.classList.add('has-messages');
+            removeQuickReplies();
+
+            const isUser = role === 'user';
+            let displayText = content;
+            let quickReplies = [];
+
+            if (!isUser) {
+                const parsed = parseQuickReplies(content);
+                displayText = parsed.text;
+                quickReplies = parsed.replies;
+            }
+
             const msg = document.createElement('div');
             msg.className = 'message';
-            const isUser = role === 'user';
             msg.innerHTML = `
                 <div class="msg-avatar ${isUser ? 'user-av' : 'ai-av'}">${isUser ? 'U' : '✦'}</div>
-                <div class="msg-body ${isUser ? 'user-msg' : 'ai-msg'}">${escapeHtml(content)}</div>
+                <div class="msg-body ${isUser ? 'user-msg' : 'ai-msg'}">${escapeHtml(displayText)}</div>
             `;
             messagesEl.appendChild(msg);
+
+            if (quickReplies.length > 0) {
+                const repliesDiv = document.createElement('div');
+                repliesDiv.className = 'quick-replies';
+                quickReplies.forEach(reply => {
+                    const btn = document.createElement('button');
+                    btn.className = 'quick-reply-btn';
+                    btn.textContent = reply;
+                    btn.addEventListener('click', () => {
+                        removeQuickReplies();
+                        input.value = reply;
+                        sendMessage();
+                    });
+                    repliesDiv.appendChild(btn);
+                });
+                messagesEl.appendChild(repliesDiv);
+            }
+
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
