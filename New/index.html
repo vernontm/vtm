@@ -599,8 +599,7 @@
             font-weight: 600;
             font-size: 0.8rem;
             letter-spacing: 0.02em;
-            pointer-events: none;
-            cursor: default;
+            cursor: pointer;
             box-shadow: 0 0 14px rgba(255,155,38,0.08), inset 0 1px 0 rgba(255,255,255,0.06);
         }
 
@@ -807,9 +806,7 @@
                 const chip = document.createElement('button');
                 chip.className = category ? 'quick-chip category' : 'quick-chip';
                 chip.innerHTML = `<span class="chip-icon">${icon}</span>${text}`;
-                if (!category) {
-                    chip.dataset.chipText = text;
-                }
+                chip.dataset.chipText = category ? `I'm interested in ${text}` : text;
                 rowEl.appendChild(chip);
             });
         }
