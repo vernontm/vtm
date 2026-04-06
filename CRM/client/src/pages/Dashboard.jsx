@@ -350,54 +350,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Leads Called Tally */}
-      <div style={{ marginTop: 20, background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '18px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PhoneCall size={16} color="#c8f135" />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df' }}>Leads Called</span>
-          </div>
-          <Link to="/leads" style={{ fontSize: 12, color: '#c8f135', textDecoration: 'none', fontWeight: 600 }}>
-            View Leads →
-          </Link>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          <div style={{ background: '#111110', border: '1px solid #252523', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
-            <div style={{ fontSize: 32, fontWeight: 800, color: '#c8f135', lineHeight: 1 }}>{leadsContacted}</div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 6 }}>Total Called</div>
-          </div>
-          <div style={{ background: '#111110', border: '1px solid rgba(200,241,53,0.2)', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
-              <ThumbsUp size={16} color="#c8f135" />
-              <span style={{ fontSize: 32, fontWeight: 800, color: '#c8f135', lineHeight: 1 }}>{leadsInterested}</span>
-            </div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 6 }}>Interested</div>
-          </div>
-          <div style={{ background: '#111110', border: '1px solid rgba(255,92,92,0.2)', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
-              <ThumbsDown size={16} color="#ff5c5c" />
-              <span style={{ fontSize: 32, fontWeight: 800, color: '#ff5c5c', lineHeight: 1 }}>{leadsUninterested}</span>
-            </div>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 6 }}>Not Interested</div>
-          </div>
-        </div>
-        {leadsContacted > 0 && (
-          <div style={{ marginTop: 12, height: 6, background: '#111110', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${Math.round((leadsInterested / leadsContacted) * 100)}%`, background: '#c8f135', borderRadius: '3px 0 0 3px', transition: 'width 0.5s ease' }} />
-            <div style={{ flex: 1, background: '#ff5c5c', borderRadius: '0 3px 3px 0' }} />
-          </div>
-        )}
-        {leadsContacted > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#c8f135' }}>
-              {Math.round((leadsInterested / leadsContacted) * 100)}% interested
-            </span>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#ff5c5c' }}>
-              {Math.round((leadsUninterested / leadsContacted) * 100)}% not interested
-            </span>
-          </div>
-        )}
-      </div>
 
       {/* Upcoming Meetings Widget */}
       {meetings.length > 0 && (
