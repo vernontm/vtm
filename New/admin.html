@@ -443,6 +443,29 @@
                         </select>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Media URL (image or video)</label>
+                        <input type="text" id="postMediaUrl" placeholder="https://..." />
+                    </div>
+                    <div class="form-field" style="max-width:140px">
+                        <label>Media Type</label>
+                        <select id="postMediaType">
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Link URL</label>
+                        <input type="text" id="postLinkUrl" placeholder="https://..." />
+                    </div>
+                    <div class="form-field">
+                        <label>Link Text</label>
+                        <input type="text" id="postLinkText" placeholder="Check it out" />
+                    </div>
+                </div>
                 <div class="form-field">
                     <label>Content</label>
                     <textarea id="postContent" placeholder="Write your tutorial content here..."></textarea>
@@ -450,6 +473,10 @@
                 <div class="toggle-row">
                     <div class="toggle" id="postPublished"></div>
                     <span class="toggle-label">Published</span>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle" id="postGated"></div>
+                    <span class="toggle-label">Gated (require name, email, phone to access)</span>
                 </div>
                 <div class="form-actions">
                     <button class="btn-primary" id="savePostBtn">Save Post</button>
@@ -538,6 +565,7 @@
         const postForm = document.getElementById('postForm');
         const postsList = document.getElementById('postsList');
         let publishedState = false;
+        let gatedState = false;
 
         document.getElementById('newPostBtn').addEventListener('click', () => {
             clearForm();
@@ -553,6 +581,11 @@
             this.classList.toggle('on', publishedState);
         });
 
+        document.getElementById('postGated').addEventListener('click', function() {
+            gatedState = !gatedState;
+            this.classList.toggle('on', gatedState);
+        });
+
         document.getElementById('savePostBtn').addEventListener('click', savePost);
 
         function clearForm() {
@@ -561,9 +594,15 @@
             document.getElementById('postDesc').value = '';
             document.getElementById('postEmoji').value = '';
             document.getElementById('postCategory').value = 'AI Tools';
+            document.getElementById('postMediaUrl').value = '';
+            document.getElementById('postMediaType').value = 'image';
+            document.getElementById('postLinkUrl').value = '';
+            document.getElementById('postLinkText').value = '';
             document.getElementById('postContent').value = '';
             publishedState = false;
+            gatedState = false;
             document.getElementById('postPublished').classList.remove('on');
+            document.getElementById('postGated').classList.remove('on');
         }
 
         function fillForm(post) {
@@ -572,9 +611,15 @@
             document.getElementById('postDesc').value = post.description || '';
             document.getElementById('postEmoji').value = post.thumbnail_emoji || '';
             document.getElementById('postCategory').value = post.category || 'AI Tools';
+            document.getElementById('postMediaUrl').value = post.media_url || '';
+            document.getElementById('postMediaType').value = post.media_type || 'image';
+            document.getElementById('postLinkUrl').value = post.link_url || '';
+            document.getElementById('postLinkText').value = post.link_text || '';
             document.getElementById('postContent').value = post.content || '';
             publishedState = post.published || false;
+            gatedState = post.gated || false;
             document.getElementById('postPublished').classList.toggle('on', publishedState);
+            document.getElementById('postGated').classList.toggle('on', gatedState);
             postForm.classList.add('show');
         }
 
@@ -595,6 +640,7 @@
                             <p>${esc(p.category || '')} &middot; ${new Date(p.created_at).toLocaleDateString()}</p>
                         </div>
                         <span class="post-status ${p.published ? 'published' : 'draft'}">${p.published ? 'Published' : 'Draft'}</span>
+                        ${p.gated ? '<span class="post-status" style="color:var(--orange);background:rgba(255,155,38,0.1)">Gated</span>' : ''}
                         <div class="post-actions">
                             <button class="btn-secondary" onclick="editPost('${p.id}')">Edit</button>
                             <button class="btn-danger" onclick="deletePost('${p.id}')">Delete</button>
@@ -627,8 +673,13 @@
                 description: document.getElementById('postDesc').value,
                 thumbnail_emoji: document.getElementById('postEmoji').value || '📝',
                 category: document.getElementById('postCategory').value,
+                media_url: document.getElementById('postMediaUrl').value || null,
+                media_type: document.getElementById('postMediaType').value,
+                link_url: document.getElementById('postLinkUrl').value || null,
+                link_text: document.getElementById('postLinkText').value || null,
                 content: document.getElementById('postContent').value,
                 published: publishedState,
+                gated: gatedState,
             };
 
             if (id) data.id = id;

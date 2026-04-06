@@ -287,7 +287,6 @@
             <a href="/portfolio">Portfolio</a>
             <a href="/about">About Us</a>
             <a href="/">For Business</a>
-            <a href="/admin">Login</a>
         </div>
 
         <section class="creators-hero">
@@ -362,16 +361,22 @@
                 grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Tutorials coming soon.</div>';
                 return;
             }
-            grid.innerHTML = posts.map(p => `
-                <div class="tutorial-card">
-                    <div class="card-thumb">${p.thumbnail_emoji || '📝'}</div>
-                    <div class="card-body">
-                        <span class="card-tag">${p.category || 'General'}</span>
-                        <h3>${p.title}</h3>
-                        <p>${p.description || ''}</p>
-                    </div>
-                </div>
-            `).join('');
+            grid.innerHTML = posts.map(p => {
+                const thumb = p.media_url && p.media_type === 'image'
+                    ? `<img src="${p.media_url}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover" />`
+                    : (p.thumbnail_emoji || '📝');
+                const href = p.id ? `/post?id=${p.id}` : '#';
+                return `
+                    <a href="${href}" class="tutorial-card" style="text-decoration:none;color:inherit">
+                        <div class="card-thumb">${thumb}</div>
+                        <div class="card-body">
+                            <span class="card-tag">${p.category || 'General'}</span>
+                            <h3>${p.title}</h3>
+                            <p>${p.description || ''}</p>
+                        </div>
+                    </a>
+                `;
+            }).join('');
         }
 
         fetch('/api/posts')

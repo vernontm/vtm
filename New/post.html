@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vernontm. - Post</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #ff9b26;
+            --orange-dark: #ee4c27;
+            --bg: #111112;
+            --surface: #1a1a1c;
+            --surface-2: #222226;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0f0f0;
+            --muted: #6b6b72;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        html, body {
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page { position: relative; z-index: 1; }
+
+        /* ── NAV ── */
+        nav {
+            padding: 24px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 101;
+        }
+        .logo { display: flex; align-items: center; text-decoration: none; }
+        .logo img { height: 46px; width: auto; display: block; }
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links a { font-size: 0.875rem; font-weight: 400; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .hamburger {
+            width: 40px; height: 40px; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 5px; padding: 0; transition: all 0.2s;
+        }
+        .hamburger:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+        .hamburger span { display: block; width: 18px; height: 1.5px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
+        .nav-mode-btn {
+            font-size: 0.85rem; font-weight: 600; color: #ffffff;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none; padding: 8px 18px; border-radius: 100px; cursor: pointer;
+            text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 10px rgba(255,155,38,0.2);
+        }
+        .nav-mode-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,155,38,0.3); }
+
+        .menu-overlay {
+            position: fixed; inset: 0; background: rgba(10,10,12,0.97); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.35s, visibility 0.35s;
+        }
+        .menu-overlay.open { opacity: 1; visibility: visible; }
+        .menu-overlay a {
+            font-family: var(--font-display); font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 300;
+            color: var(--text); text-decoration: none; padding: 16px 0;
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s, color 0.2s;
+        }
+        .menu-overlay.open a { opacity: 1; transform: translateY(0); }
+        .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+        .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+        .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay.open a:nth-child(4) { transition-delay: 0.26s; }
+        .menu-overlay a:hover { color: var(--orange); }
+
+        /* ── POST ── */
+        .post-container {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 20px 24px 60px;
+        }
+
+        .post-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+            transition: color 0.2s;
+        }
+        .post-back:hover { color: var(--text); }
+
+        .post-tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--orange);
+            background: rgba(255,155,38,0.1);
+            border: 1px solid rgba(255,155,38,0.2);
+            padding: 4px 12px;
+            border-radius: 100px;
+            margin-bottom: 14px;
+        }
+
+        .post-title {
+            font-family: var(--font-display);
+            font-size: clamp(1.6rem, 4vw, 2.5rem);
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+        }
+
+        .post-media {
+            width: 100%;
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 28px;
+            border: 1px solid var(--border);
+        }
+
+        .post-media img {
+            width: 100%;
+            display: block;
+        }
+
+        .post-media video {
+            width: 100%;
+            display: block;
+        }
+
+        .post-media iframe {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border: none;
+            display: block;
+        }
+
+        .post-content {
+            font-size: 1rem;
+            line-height: 1.8;
+            font-weight: 300;
+            color: rgba(255,255,255,0.85);
+            white-space: pre-wrap;
+        }
+
+        .post-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 28px;
+            padding: 12px 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .post-link:hover {
+            border-color: rgba(255,155,38,0.3);
+            background: rgba(255,155,38,0.06);
+            transform: translateY(-2px);
+        }
+
+        /* ── GATE OVERLAY ── */
+        .gate-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10,10,12,0.95);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .gate-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .gate-box h2 {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .gate-box p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .gate-box input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        .gate-box input:focus { border-color: rgba(255,155,38,0.4); }
+
+        .gate-box button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 4px;
+        }
+        .gate-box button:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,155,38,0.3); }
+
+        .gate-error {
+            color: #f87171;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .loading { text-align: center; padding: 80px 20px; color: var(--muted); }
+
+        /* ── FOOTER ── */
+        footer { text-align: center; padding: 24px 20px 20px; }
+        .footer-socials { display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .footer-socials a {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 10px;
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--muted); text-decoration: none; transition: all 0.2s;
+        }
+        .footer-socials a:hover { color: var(--text); border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); transform: translateY(-2px); }
+        .footer-socials a svg { width: 18px; height: 18px; fill: currentColor; }
+
+        @media (max-width: 640px) {
+            nav { padding: 20px 24px; }
+            .logo img { display: none; }
+            .nav-links a:not(.nav-mode-btn) { display: none; }
+            .post-container { padding: 12px 16px 40px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <nav>
+            <a href="/" class="logo">
+                <img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" />
+            </a>
+            <div class="nav-links">
+                <a href="/contact">Contact Us</a>
+                <a href="https://vernontm.com/book-call">Book a Call</a>
+                <a href="/creators" class="nav-mode-btn">For Creators</a>
+                <button class="hamburger" id="menuToggle" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="menu-overlay" id="menuOverlay">
+            <a href="/portfolio">Portfolio</a>
+            <a href="/about">About Us</a>
+            <a href="/creators">For Creators</a>
+            <a href="#">Login</a>
+        </div>
+
+        <div class="post-container" id="postContainer">
+            <div class="loading">Loading post...</div>
+        </div>
+
+        <footer>
+            <div class="footer-socials">
+                <a href="https://instagram.com/rayvaughn.ceo" aria-label="Instagram" target="_blank"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+                <a href="https://tiktok.com/@rayvaughn.ceo" aria-label="TikTok" target="_blank"><svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.48V13a8.28 8.28 0 005.58 2.17v-3.44a4.85 4.85 0 01-3.77-1.82V6.69h3.77z"/></svg></a>
+                <a href="https://youtube.com/@vernontm" aria-label="YouTube" target="_blank"><svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+                <a href="https://x.com/rayvaughnceo" aria-label="X" target="_blank"><svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ── MENU ──
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('open');
+            menuOverlay.classList.toggle('open');
+            document.body.style.overflow = menuOverlay.classList.contains('open') ? 'hidden' : '';
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menuOverlay.classList.contains('open')) {
+                menuToggle.classList.remove('open'); menuOverlay.classList.remove('open'); document.body.style.overflow = '';
+            }
+        });
+        menuOverlay.querySelectorAll('a').forEach(l => l.addEventListener('click', () => {
+            menuToggle.classList.remove('open'); menuOverlay.classList.remove('open'); document.body.style.overflow = '';
+        }));
+
+        // ── LOAD POST ──
+        const container = document.getElementById('postContainer');
+        const params = new URLSearchParams(window.location.search);
+        const postId = params.get('id');
+
+        if (!postId) {
+            container.innerHTML = '<div class="loading">Post not found. <a href="/creators" style="color:var(--orange)">Back to tutorials</a></div>';
+        } else {
+            loadPost();
+        }
+
+        async function loadPost() {
+            try {
+                const res = await fetch(`/api/posts?id=${postId}`);
+                const post = await res.json();
+
+                if (!post || !post.title) {
+                    container.innerHTML = '<div class="loading">Post not found. <a href="/creators" style="color:var(--orange)">Back to tutorials</a></div>';
+                    return;
+                }
+
+                document.title = `vernontm. - ${post.title}`;
+
+                // Check if gated and user hasn't unlocked
+                if (post.gated && !sessionStorage.getItem(`post_unlocked_${postId}`)) {
+                    showGate(post);
+                    return;
+                }
+
+                renderPost(post);
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div class="loading">Something went wrong. <a href="/creators" style="color:var(--orange)">Back to tutorials</a></div>';
+            }
+        }
+
+        function renderPost(post) {
+            let mediaHtml = '';
+            if (post.media_url) {
+                if (post.media_type === 'video') {
+                    if (post.media_url.includes('youtube.com') || post.media_url.includes('youtu.be')) {
+                        const vid = post.media_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+                        if (vid) mediaHtml = `<div class="post-media"><iframe src="https://www.youtube.com/embed/${vid[1]}" allowfullscreen></iframe></div>`;
+                    } else {
+                        mediaHtml = `<div class="post-media"><video src="${post.media_url}" controls></video></div>`;
+                    }
+                } else {
+                    mediaHtml = `<div class="post-media"><img src="${post.media_url}" alt="${post.title}" /></div>`;
+                }
+            }
+
+            let linkHtml = '';
+            if (post.link_url) {
+                linkHtml = `<a href="${post.link_url}" target="_blank" class="post-link">${post.link_text || 'Learn More'} &rarr;</a>`;
+            }
+
+            container.innerHTML = `
+                <a href="/creators" class="post-back">&larr; Back to tutorials</a>
+                <span class="post-tag">${post.category || 'General'}</span>
+                <h1 class="post-title">${post.title}</h1>
+                ${mediaHtml}
+                <div class="post-content">${post.content || ''}</div>
+                ${linkHtml}
+            `;
+        }
+
+        function showGate(post) {
+            container.innerHTML = `
+                <a href="/creators" class="post-back">&larr; Back to tutorials</a>
+                <span class="post-tag">${post.category || 'General'}</span>
+                <h1 class="post-title">${post.title}</h1>
+                ${post.description ? `<p style="color:var(--muted);margin-bottom:20px">${post.description}</p>` : ''}
+            `;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'gate-overlay';
+            overlay.innerHTML = `
+                <div class="gate-box">
+                    <h2>Get Access</h2>
+                    <p>Enter your info to unlock this tutorial.</p>
+                    <input type="text" id="gateName" placeholder="Your name" />
+                    <input type="email" id="gateEmail" placeholder="Email address" />
+                    <input type="tel" id="gatePhone" placeholder="Phone number" />
+                    <button id="gateSubmit">Unlock Tutorial</button>
+                    <div class="gate-error" id="gateError">Please fill in all fields.</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            document.getElementById('gateSubmit').addEventListener('click', async () => {
+                const name = document.getElementById('gateName').value.trim();
+                const email = document.getElementById('gateEmail').value.trim();
+                const phone = document.getElementById('gatePhone').value.trim();
+                const errEl = document.getElementById('gateError');
+
+                if (!name || !email || !phone) {
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                errEl.style.display = 'none';
+                document.getElementById('gateSubmit').textContent = 'Unlocking...';
+
+                // Send lead
+                try {
+                    await fetch('/api/lead', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name, email, phone,
+                            source: 'blog-gate',
+                            notes: `Unlocked post: ${post.title}`,
+                        }),
+                    });
+                } catch (e) { console.error(e); }
+
+                sessionStorage.setItem(`post_unlocked_${postId}`, 'true');
+                overlay.remove();
+                renderPost(post);
+            });
+        }
+    </script>
+</body>
+</html>
