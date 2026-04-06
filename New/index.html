@@ -904,9 +904,11 @@
         }
 
         function parseQuickReplies(content) {
-            const tagMatch = content.match(/\[QUICK_REPLIES:([^\]]+)\]/);
-            if (!tagMatch) return { text: content, replies: [] };
-            const text = content.replace(/\[QUICK_REPLIES:[^\]]+\]/, '').trim();
+            // Strip hidden summary block
+            let cleaned = content.replace(/\[SUMMARY\][\s\S]*/i, '').trim();
+            const tagMatch = cleaned.match(/\[QUICK_REPLIES:([^\]]+)\]/);
+            if (!tagMatch) return { text: cleaned, replies: [] };
+            const text = cleaned.replace(/\[QUICK_REPLIES:[^\]]+\]/, '').trim();
             const replies = tagMatch[1].match(/"([^"]+)"/g);
             if (!replies) return { text, replies: [] };
             return { text, replies: replies.map(r => r.replace(/"/g, '')) };
