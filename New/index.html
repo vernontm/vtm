@@ -774,106 +774,77 @@
         let recognition = null;
         let isListening = false;
 
-        // ── SPEECH-TO-TEXT VIA ELEVENLABS ──
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let recordingInterval = null;
-        let fullTranscript = '';
+        // ── SPEECH-TO-TEXT (Web Speech API — works on HTTPS) ──
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition = null;
 
-        async function transcribeChunk(audioBlob) {
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'audio.webm');
-            formData.append('model_id', 'scribe_v1');
-            formData.append('language_code', 'eng');
+            function startListening() {
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
 
-            try {
-                const res = await fetch('/api/transcribe', {
-                    method: 'POST',
-                    body: formData,
-                });
+                const existing = input.value;
 
-                if (!res.ok) {
-                    console.error('Transcription error:', res.status);
-                    return '';
-                }
-
-                const data = await res.json();
-                return data.text || '';
-            } catch (err) {
-                console.error('Transcription failed:', err);
-                return '';
-            }
-        }
-
-        async function startListening() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                isListening = true;
-                micBtn.classList.add('listening');
-                input.placeholder = 'Listening... tap mic to stop';
-                fullTranscript = input.value;
-                audioChunks = [];
-
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) audioChunks.push(e.data);
+                recognition.onstart = () => {
+                    isListening = true;
+                    micBtn.classList.add('listening');
+                    input.placeholder = 'Listening... tap mic to stop';
                 };
 
-                mediaRecorder.start(100); // collect data every 100ms
-
-                // Every 2.5 seconds, send accumulated audio for transcription
-                recordingInterval = setInterval(async () => {
-                    if (audioChunks.length === 0) return;
-
-                    const blob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
-                    // Don't clear chunks — send everything so far for full context
-                    const text = await transcribeChunk(blob);
-                    if (text) {
-                        input.value = fullTranscript ? fullTranscript + ' ' + text : text;
-                        input.style.height = 'auto';
-                        input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+                recognition.onresult = (event) => {
+                    let transcript = '';
+                    for (let i = 0; i < event.results.length; i++) {
+                        transcript += event.results[i][0].transcript;
                     }
-                }, 2500);
+                    input.value = existing ? existing + ' ' + transcript : transcript;
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+                };
 
-            } catch (err) {
-                console.error('Mic access error:', err);
-                input.placeholder = 'Mic access denied. Check browser permissions.';
+                recognition.onend = () => {
+                    // Only clear state if user stopped it
+                    if (!isListening) return;
+                    // Auto-restart if still listening (Chrome kills after ~60s silence)
+                    try { recognition.start(); } catch(e) {
+                        isListening = false;
+                        micBtn.classList.remove('listening');
+                        input.placeholder = 'Describe what you\u2019re looking for\u2026';
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    if (event.error === 'no-speech' || event.error === 'aborted') return;
+                    console.error('Speech error:', event.error);
+                    isListening = false;
+                    micBtn.classList.remove('listening');
+                    input.placeholder = 'Describe what you\u2019re looking for\u2026';
+                };
+
+                recognition.start();
             }
-        }
 
-        async function stopListening() {
-            clearInterval(recordingInterval);
-
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-                // Final transcription of all audio
-                await new Promise(r => setTimeout(r, 200));
-                if (audioChunks.length > 0) {
-                    const blob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
-                    const text = await transcribeChunk(blob);
-                    if (text) {
-                        input.value = fullTranscript ? fullTranscript + ' ' + text : text;
-                        input.style.height = 'auto';
-                        input.style.height = Math.min(input.scrollHeight, 180) + 'px';
-                    }
+            function stopListening() {
+                isListening = false;
+                if (recognition) {
+                    try { recognition.stop(); } catch(e) {}
                 }
-                mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                micBtn.classList.remove('listening');
+                input.placeholder = 'Describe what you\u2019re looking for\u2026';
+                input.focus();
             }
 
-            isListening = false;
-            micBtn.classList.remove('listening');
-            input.placeholder = 'Describe what you\u2019re looking for\u2026';
-            input.focus();
+            micBtn.addEventListener('click', () => {
+                if (isListening) {
+                    stopListening();
+                } else {
+                    startListening();
+                }
+            });
+        } else {
+            micBtn.style.display = 'none';
         }
-
-        micBtn.addEventListener('click', () => {
-            if (isListening) {
-                stopListening();
-            } else {
-                startListening();
-            }
-        });
 
         function fillAndSend(text) {
             input.value = text;
