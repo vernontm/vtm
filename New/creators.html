@@ -346,20 +346,11 @@
         });
 
         // ── LOAD TUTORIALS ──
-        const fallbackPosts = [
-            { thumbnail_emoji: '🤖', category: 'AI Tools', title: 'How to Build an AI Chatbot for Your Website in 30 Minutes', description: 'Step by step walkthrough using no-code tools to add a smart chatbot to any site.' },
-            { thumbnail_emoji: '⚙️', category: 'Automation', title: 'Automate Your Entire Client Onboarding With AI', description: 'Set up forms, emails, and follow-ups that run themselves while you focus on building.' },
-            { thumbnail_emoji: '🎬', category: 'Content Creation', title: 'Create Faceless TikTok Content With AI Avatars', description: 'Use AI voice cloning and avatars to post daily without showing your face.' },
-            { thumbnail_emoji: '💻', category: 'Web Dev', title: 'Build a Full Website With AI in One Afternoon', description: 'From blank page to live site using AI-powered code generation and design tools.' },
-            { thumbnail_emoji: '📧', category: 'Automation', title: 'Set Up AI Email Marketing That Converts', description: 'Build automated email sequences that sound human and actually get replies.' },
-            { thumbnail_emoji: '📊', category: 'AI Tools', title: 'The Only 5 AI Tools You Need to Run a Solo Business', description: 'Cut through the noise. These are the tools that actually move the needle.' },
-        ];
-
         const grid = document.getElementById('tutorialsGrid');
 
         function renderPosts(posts) {
             if (!posts.length) {
-                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Tutorials coming soon.</div>';
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);font-size:1rem">Tutorials coming soon.</div>';
                 return;
             }
             grid.innerHTML = posts.map(p => {
@@ -382,8 +373,8 @@
 
         fetch('/api/posts')
             .then(r => r.json())
-            .then(posts => renderPosts(posts.length ? posts : fallbackPosts))
-            .catch(() => renderPosts(fallbackPosts));
+            .then(posts => renderPosts(Array.isArray(posts) ? posts : []))
+            .catch(() => renderPosts([]));
     </script>
 </body>
 </html>
