@@ -947,7 +947,10 @@
         if (!isInAppBrowser && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+            let speechBlocked = false;
+
             function startListening() {
+                speechBlocked = false;
                 recognition = new SpeechRecognition();
                 recognition.continuous = true;
                 recognition.interimResults = true;
@@ -960,7 +963,7 @@
                 };
 
                 recognition.onresult = (event) => {
-                    if (!isListening) return; // Ignore results after stop
+                    if (!isListening || speechBlocked) return;
                     let transcript = '';
                     for (let i = 0; i < event.results.length; i++) {
                         transcript += event.results[i][0].transcript;
@@ -971,13 +974,11 @@
                 };
 
                 recognition.onend = () => {
-                    // Only clear state if user stopped it
                     if (!isListening) return;
-                    // Auto-restart if still listening (Chrome kills after ~60s silence)
                     try { recognition.start(); } catch(e) {
                         isListening = false;
                         micBtn.classList.remove('listening');
-                        input.placeholder = 'Describe what you\u2019re looking for\u2026';
+                        input.placeholder = 'Describe what you\'re looking for...';
                     }
                 };
 
@@ -986,7 +987,7 @@
                     console.error('Speech error:', event.error);
                     isListening = false;
                     micBtn.classList.remove('listening');
-                    input.placeholder = 'Describe what you\u2019re looking for\u2026';
+                    input.placeholder = 'Describe what you\'re looking for...';
                 };
 
                 recognition.start();
@@ -994,17 +995,19 @@
 
             function stopListening() {
                 isListening = false;
+                speechBlocked = true;
                 if (recognition) {
                     try { recognition.stop(); } catch(e) {}
+                    recognition = null;
                 }
                 micBtn.classList.remove('listening');
-                input.placeholder = 'Describe what you\u2019re looking for\u2026';
-                input.focus();
+                input.placeholder = 'Describe what you\'re looking for...';
             }
 
             micBtn.addEventListener('click', () => {
                 if (isListening) {
                     stopListening();
+                    input.focus();
                 } else {
                     startListening();
                 }
@@ -1131,6 +1134,9 @@
         async function sendMessage() {
             const text = input.value.trim();
             if (!text) return;
+
+            // Stop mic and block late results
+            if (isListening) stopListening();
 
             // Hide quick links after first message
             document.getElementById('quickLinks').style.display = 'none';
