@@ -77,6 +77,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('Admin posts error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: err.message,
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!(process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY),
+    });
   }
 }
