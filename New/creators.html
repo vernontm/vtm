@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vernontm. - Creators Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #ff9b26;
+            --orange-dark: #ee4c27;
+            --bg: #111112;
+            --surface: #1a1a1c;
+            --surface-2: #222226;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0f0f0;
+            --muted: #6b6b72;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        html, body {
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page { position: relative; z-index: 1; }
+
+        /* ── NAV ── */
+        nav {
+            padding: 24px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: fadeDown 0.6s ease both;
+            position: relative;
+            z-index: 101;
+        }
+
+        .logo { display: flex; align-items: center; text-decoration: none; }
+        .logo img { height: 46px; width: auto; display: block; }
+
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links a {
+            font-size: 0.875rem; font-weight: 400; color: var(--muted);
+            text-decoration: none; letter-spacing: 0.01em; transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+
+        .hamburger {
+            width: 40px; height: 40px; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 5px; padding: 0; transition: all 0.2s;
+        }
+        .hamburger:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+        .hamburger span { display: block; width: 18px; height: 1.5px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
+
+        .nav-mode-btn {
+            font-size: 0.85rem; font-weight: 600; color: var(--text);
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none; padding: 8px 18px; border-radius: 100px; cursor: pointer;
+            text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 10px rgba(255,155,38,0.2);
+        }
+        .nav-mode-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,155,38,0.3); }
+
+        .menu-overlay {
+            position: fixed; inset: 0; background: rgba(10,10,12,0.97); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.35s, visibility 0.35s;
+        }
+        .menu-overlay.open { opacity: 1; visibility: visible; }
+        .menu-overlay a {
+            font-family: var(--font-display); font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 300;
+            color: var(--text); text-decoration: none; padding: 16px 0;
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s, color 0.2s;
+        }
+        .menu-overlay.open a { opacity: 1; transform: translateY(0); }
+        .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+        .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+        .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay.open a:nth-child(4) { transition-delay: 0.26s; }
+        .menu-overlay a:hover { color: var(--orange); }
+
+        /* ── HERO ── */
+        .creators-hero {
+            text-align: center;
+            padding: 60px 20px 40px;
+            animation: fadeUp 0.7s 0.1s ease both;
+        }
+
+        .creators-hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.2rem, 5.5vw, 4rem);
+            font-weight: 300;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 12px;
+        }
+
+        .creators-hero h1 em {
+            font-style: normal;
+            font-weight: 800;
+            color: var(--orange);
+        }
+
+        .creators-hero p {
+            font-size: 1rem;
+            color: var(--muted);
+            font-weight: 300;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* ── TUTORIAL GRID ── */
+        .tutorials-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 24px 60px;
+            animation: fadeUp 0.7s 0.25s ease both;
+        }
+
+        .tutorials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .tutorial-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.25s;
+            cursor: pointer;
+        }
+
+        .tutorial-card:hover {
+            border-color: rgba(255,155,38,0.25);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,155,38,0.06);
+        }
+
+        .card-thumb {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: var(--surface-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-body {
+            padding: 18px 20px 20px;
+        }
+
+        .card-tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--orange);
+            background: rgba(255,155,38,0.1);
+            border: 1px solid rgba(255,155,38,0.2);
+            padding: 3px 10px;
+            border-radius: 100px;
+            margin-bottom: 10px;
+        }
+
+        .card-body h3 {
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            font-weight: 600;
+            line-height: 1.35;
+            margin-bottom: 6px;
+        }
+
+        .card-body p {
+            font-size: 0.85rem;
+            color: var(--muted);
+            font-weight: 300;
+            line-height: 1.55;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            padding: 24px 20px 20px;
+            animation: fadeDown 0.6s 0.5s ease both;
+        }
+
+        .footer-socials {
+            display: flex; align-items: center; justify-content: center; gap: 20px;
+        }
+
+        .footer-socials a {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 10px;
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--muted); text-decoration: none; transition: all 0.2s;
+        }
+
+        .footer-socials a:hover {
+            color: var(--text); border-color: rgba(255,155,38,0.3);
+            background: rgba(255,155,38,0.06); transform: translateY(-2px);
+        }
+
+        .footer-socials a svg { width: 18px; height: 18px; fill: currentColor; }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            .tutorials-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
+            nav { padding: 20px 24px; }
+            .nav-links a:not(.nav-mode-btn) { display: none; }
+            .tutorials-grid { grid-template-columns: 1fr; }
+            .creators-hero { padding: 40px 16px 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <nav>
+            <a href="/" class="logo">
+                <img src="/Logo /VTM_logo.png" alt="Vernon Tech & Media" />
+            </a>
+            <div class="nav-links">
+                <a href="/contact.html">Contact Us</a>
+                <a href="https://vernontm.com/book-call">Book a Call</a>
+                <a href="/" class="nav-mode-btn">For Business</a>
+                <button class="hamburger" id="menuToggle" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="menu-overlay" id="menuOverlay">
+            <a href="#">Portfolio</a>
+            <a href="#">About Us</a>
+            <a href="/">For Business</a>
+            <a href="#">Login</a>
+        </div>
+
+        <section class="creators-hero">
+            <h1>Learn. Build. <em>Create.</em></h1>
+            <p>Free tutorials and guides on using AI to build, automate, and grow your brand.</p>
+        </section>
+
+        <section class="tutorials-section">
+            <div class="tutorials-grid">
+                <div class="tutorial-card">
+                    <div class="card-thumb">🤖</div>
+                    <div class="card-body">
+                        <span class="card-tag">AI Tools</span>
+                        <h3>How to Build an AI Chatbot for Your Website in 30 Minutes</h3>
+                        <p>Step by step walkthrough using no-code tools to add a smart chatbot to any site.</p>
+                    </div>
+                </div>
+
+                <div class="tutorial-card">
+                    <div class="card-thumb">⚙️</div>
+                    <div class="card-body">
+                        <span class="card-tag">Automation</span>
+                        <h3>Automate Your Entire Client Onboarding With AI</h3>
+                        <p>Set up forms, emails, and follow-ups that run themselves while you focus on building.</p>
+                    </div>
+                </div>
+
+                <div class="tutorial-card">
+                    <div class="card-thumb">🎬</div>
+                    <div class="card-body">
+                        <span class="card-tag">Content Creation</span>
+                        <h3>Create Faceless TikTok Content With AI Avatars</h3>
+                        <p>Use AI voice cloning and avatars to post daily without showing your face.</p>
+                    </div>
+                </div>
+
+                <div class="tutorial-card">
+                    <div class="card-thumb">💻</div>
+                    <div class="card-body">
+                        <span class="card-tag">Web Dev</span>
+                        <h3>Build a Full Website With AI in One Afternoon</h3>
+                        <p>From blank page to live site using AI-powered code generation and design tools.</p>
+                    </div>
+                </div>
+
+                <div class="tutorial-card">
+                    <div class="card-thumb">📧</div>
+                    <div class="card-body">
+                        <span class="card-tag">Automation</span>
+                        <h3>Set Up AI Email Marketing That Converts</h3>
+                        <p>Build automated email sequences that sound human and actually get replies.</p>
+                    </div>
+                </div>
+
+                <div class="tutorial-card">
+                    <div class="card-thumb">📊</div>
+                    <div class="card-body">
+                        <span class="card-tag">AI Tools</span>
+                        <h3>The Only 5 AI Tools You Need to Run a Solo Business</h3>
+                        <p>Cut through the noise. These are the tools that actually move the needle.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-socials">
+                <a href="https://instagram.com/rayvaughn.ceo" aria-label="Instagram" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </a>
+                <a href="https://tiktok.com/@rayvaughn.ceo" aria-label="TikTok" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.48V13a8.28 8.28 0 005.58 2.17v-3.44a4.85 4.85 0 01-3.77-1.82V6.69h3.77z"/></svg>
+                </a>
+                <a href="https://youtube.com/@vernontm" aria-label="YouTube" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="https://x.com/rayvaughnceo" aria-label="X" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('open');
+            menuOverlay.classList.toggle('open');
+            document.body.style.overflow = menuOverlay.classList.contains('open') ? 'hidden' : '';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menuOverlay.classList.contains('open')) {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        });
+
+        menuOverlay.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+        });
+    </script>
+</body>
+</html>

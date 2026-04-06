@@ -74,6 +74,8 @@
             justify-content: space-between;
             animation: fadeDown 0.6s ease both;
             flex-shrink: 0;
+            position: relative;
+            z-index: 101;
         }
 
         .logo {
@@ -133,6 +135,82 @@
             background: var(--text);
             border-radius: 2px;
             transition: all 0.3s;
+        }
+
+        .hamburger.open span:nth-child(1) {
+            transform: rotate(45deg) translate(4.5px, 4.5px);
+        }
+        .hamburger.open span:nth-child(2) {
+            opacity: 0;
+        }
+        .hamburger.open span:nth-child(3) {
+            transform: rotate(-45deg) translate(4.5px, -4.5px);
+        }
+
+        .nav-mode-btn {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            padding: 8px 18px;
+            border-radius: 100px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(255,155,38,0.2);
+        }
+
+        .nav-mode-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(255,155,38,0.3);
+        }
+
+        /* ── FULLSCREEN MENU ── */
+        .menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10,10,12,0.97);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.35s, visibility 0.35s;
+        }
+
+        .menu-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .menu-overlay a {
+            font-family: var(--font-display);
+            font-size: clamp(1.8rem, 5vw, 3rem);
+            font-weight: 300;
+            color: var(--text);
+            text-decoration: none;
+            padding: 16px 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s, color 0.2s;
+        }
+
+        .menu-overlay.open a {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+        .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+        .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay.open a:nth-child(4) { transition-delay: 0.26s; }
+
+        .menu-overlay a:hover {
+            color: var(--orange);
         }
 
         /* ── HERO ── */
@@ -663,7 +741,7 @@
         /* ── RESPONSIVE ── */
         @media (max-width: 640px) {
             nav { padding: 20px 24px; }
-            .nav-links a { display: none; }
+            .nav-links a:not(.nav-mode-btn) { display: none; }
             .hero { padding: 16px 16px 0; }
             .hero-heading { font-size: 1.9rem; }
             .input-area { padding: 14px 16px 12px; }
@@ -681,13 +759,22 @@
             <div class="nav-links">
                 <a href="/contact.html">Contact Us</a>
                 <a href="https://vernontm.com/book-call">Book a Call</a>
-                <button class="hamburger" aria-label="Menu">
+                <a href="/creators.html" class="nav-mode-btn">Creators</a>
+                <button class="hamburger" id="menuToggle" aria-label="Menu">
                     <span></span>
                     <span></span>
                     <span></span>
                 </button>
             </div>
         </nav>
+
+        <!-- Fullscreen Menu -->
+        <div class="menu-overlay" id="menuOverlay">
+            <a href="#">Portfolio</a>
+            <a href="#">About Us</a>
+            <a href="/creators.html">Creators</a>
+            <a href="#">Login</a>
+        </div>
 
         <!-- Hero -->
         <main class="hero">
@@ -1080,6 +1167,32 @@
                 input.focus();
             }
         }
+        // ── MENU TOGGLE ──
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('open');
+            menuOverlay.classList.toggle('open');
+            document.body.style.overflow = menuOverlay.classList.contains('open') ? 'hidden' : '';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menuOverlay.classList.contains('open')) {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Close menu when a link is clicked
+        menuOverlay.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+        });
     </script>
 </body>
 </html>
