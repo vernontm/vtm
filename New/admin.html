@@ -742,11 +742,24 @@
 
             if (id) data.id = id;
 
-            await fetch(`${API}/admin-posts`, {
-                method: id ? 'PUT' : 'POST',
-                headers: authHeaders(),
-                body: JSON.stringify(data),
-            });
+            try {
+                const saveRes = await fetch(`${API}/admin-posts`, {
+                    method: id ? 'PUT' : 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify(data),
+                });
+
+                if (!saveRes.ok) {
+                    const errData = await saveRes.text();
+                    alert('Save failed: ' + errData);
+                    console.error('Save error:', errData);
+                    return;
+                }
+            } catch (err) {
+                alert('Save failed: ' + err.message);
+                console.error(err);
+                return;
+            }
 
             postForm.classList.remove('show');
             loadPosts();

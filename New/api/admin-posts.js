@@ -20,9 +20,10 @@ export default async function handler(req, res) {
   if (!verifyToken(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const base = `${process.env.SUPABASE_URL}/rest/v1/blog_posts`;
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
   const headers = {
-    'apikey': process.env.SUPABASE_SERVICE_KEY,
-    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+    'apikey': key,
+    'Authorization': `Bearer ${key}`,
     'Content-Type': 'application/json',
     'Prefer': 'return=representation',
   };
@@ -42,6 +43,11 @@ export default async function handler(req, res) {
         headers,
         body: JSON.stringify(req.body),
       });
+      if (!response.ok) {
+        const err = await response.text();
+        console.error('Supabase POST error:', response.status, err);
+        return res.status(502).json({ error: 'Database error', details: err });
+      }
       const post = await response.json();
       return res.status(201).json(post);
     }
