@@ -290,6 +290,36 @@
             transform: translateY(0);
         }
 
+        .chat-cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            margin-left: 40px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            border-radius: 100px;
+            color: white;
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            animation: msgIn 0.3s ease;
+            box-shadow: 0 4px 14px rgba(255,155,38,0.25);
+        }
+
+        .chat-cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,155,38,0.35);
+        }
+
+        .chat-cta-btn:active {
+            transform: translateY(0);
+        }
+
         .message {
             display: flex;
             gap: 12px;
@@ -923,11 +953,18 @@
             const isUser = role === 'user';
             let displayText = content;
             let quickReplies = [];
+            let hasBookCall = false;
 
             if (!isUser) {
                 const parsed = parseQuickReplies(content);
                 displayText = parsed.text;
                 quickReplies = parsed.replies;
+
+                // Check for book-call link and strip it from text
+                if (displayText.includes('vernontm.com/book-call')) {
+                    hasBookCall = true;
+                    displayText = displayText.replace(/https?:\/\/vernontm\.com\/book-call/g, '').replace(/\s{2,}/g, ' ').trim();
+                }
             }
 
             const msg = document.createElement('div');
@@ -937,6 +974,15 @@
                 <div class="msg-body ${isUser ? 'user-msg' : 'ai-msg'}">${escapeHtml(displayText)}</div>
             `;
             messagesEl.appendChild(msg);
+
+            if (hasBookCall) {
+                const ctaLink = document.createElement('a');
+                ctaLink.href = 'https://vernontm.com/book-call';
+                ctaLink.target = '_blank';
+                ctaLink.className = 'chat-cta-btn';
+                ctaLink.textContent = 'Book a Call';
+                messagesEl.appendChild(ctaLink);
+            }
 
             if (quickReplies.length > 0) {
                 const repliesDiv = document.createElement('div');
