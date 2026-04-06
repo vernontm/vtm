@@ -541,6 +541,8 @@
             transition: all 0.2s;
             flex-shrink: 0;
             user-select: none;
+            position: relative;
+            z-index: 10;
         }
 
         .quick-chip:hover {
@@ -776,17 +778,7 @@
                 chip.className = category ? 'quick-chip category' : 'quick-chip';
                 chip.innerHTML = `<span class="chip-icon">${icon}</span>${text}`;
                 if (!category) {
-                    // Use mousedown for reliable clicks on animated elements
-                    chip.addEventListener('mousedown', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        fillAndSend(text);
-                    });
-                    // Also handle touch
-                    chip.addEventListener('touchend', (e) => {
-                        e.preventDefault();
-                        fillAndSend(text);
-                    });
+                    chip.dataset.chipText = text;
                 }
                 rowEl.appendChild(chip);
             });
@@ -795,6 +787,16 @@
         buildRow(document.getElementById('row1'), chipRows[0]);
         buildRow(document.getElementById('row2'), chipRows[1]);
         buildRow(document.getElementById('row3'), chipRows[2]);
+
+        // Event delegation for chip clicks
+        document.getElementById('quickLinks').addEventListener('pointerdown', (e) => {
+            const chip = e.target.closest('.quick-chip[data-chip-text]');
+            if (!chip) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const text = chip.dataset.chipText;
+            if (text) fillAndSend(text);
+        });
 
         // ── CHAT LOGIC ──
         const input = document.getElementById('chatInput');
