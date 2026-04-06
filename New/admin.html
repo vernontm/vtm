@@ -481,6 +481,14 @@
                     <label>Content</label>
                     <textarea id="postContent" placeholder="Write your tutorial content here..."></textarea>
                 </div>
+                <div class="form-field">
+                    <label>Code Block / Prompt (shows in a copyable modal on the post)</label>
+                    <textarea id="postCodeBlock" placeholder="Paste a prompt, JSON script, code snippet, etc..." style="font-family:monospace;font-size:0.8rem;min-height:100px;white-space:pre;tab-size:2"></textarea>
+                </div>
+                <div class="form-field">
+                    <label>Code Block Label (button text)</label>
+                    <input type="text" id="postCodeLabel" placeholder="e.g. Copy Prompt, View JSON, Get Template" />
+                </div>
                 <div class="toggle-row">
                     <div class="toggle" id="postPublished"></div>
                     <span class="toggle-label">Published</span>
@@ -657,6 +665,8 @@
             document.getElementById('postContent').value = '';
             publishedState = false;
             gatedState = false;
+            document.getElementById('postCodeBlock').value = '';
+            document.getElementById('postCodeLabel').value = '';
             document.getElementById('postPublished').classList.remove('on');
             document.getElementById('postGated').classList.remove('on');
             document.getElementById('uploadImage').value = '';
@@ -674,6 +684,8 @@
             document.getElementById('postLinkUrl').value = post.link_url || '';
             document.getElementById('postLinkText').value = post.link_text || '';
             document.getElementById('postContent').value = post.content || '';
+            document.getElementById('postCodeBlock').value = post.code_block || '';
+            document.getElementById('postCodeLabel').value = post.code_label || '';
             publishedState = post.published || false;
             gatedState = post.gated || false;
             document.getElementById('postPublished').classList.toggle('on', publishedState);
@@ -736,6 +748,8 @@
                 link_url: document.getElementById('postLinkUrl').value || null,
                 link_text: document.getElementById('postLinkText').value || null,
                 content: document.getElementById('postContent').value,
+                code_block: document.getElementById('postCodeBlock').value || null,
+                code_label: document.getElementById('postCodeLabel').value || null,
                 published: publishedState,
                 gated: gatedState,
             };

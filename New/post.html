@@ -193,6 +193,127 @@
             transform: translateY(-2px);
         }
 
+        .code-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+            margin-right: 12px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            font-family: var(--font-body);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(255,155,38,0.25);
+        }
+
+        .code-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,155,38,0.35);
+        }
+
+        .code-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10,10,12,0.92);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s, visibility 0.25s;
+        }
+
+        .code-modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .code-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 680px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .code-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-modal-header h3 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .code-modal-copy {
+            padding: 6px 16px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: all 0.2s;
+        }
+
+        .code-modal-copy:hover { transform: translateY(-1px); }
+
+        .code-modal-close {
+            width: 32px;
+            height: 32px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+
+        .code-modal-close:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+        .code-modal-body {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .code-modal-body pre {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.85);
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-x: auto;
+        }
+
         /* ── GATE OVERLAY ── */
         .gate-overlay {
             position: fixed;
@@ -400,14 +521,67 @@
                 linkHtml = `<a href="${post.link_url}" target="_blank" class="post-link">${post.link_text || 'Learn More'} &rarr;</a>`;
             }
 
+            let codeHtml = '';
+            if (post.code_block) {
+                const label = post.code_label || 'View Code';
+                codeHtml = `<button class="code-btn" id="openCodeModal">${label}</button>`;
+            }
+
             container.innerHTML = `
                 <a href="/creators" class="post-back">&larr; Back to tutorials</a>
                 <span class="post-tag">${post.category || 'General'}</span>
                 <h1 class="post-title">${post.title}</h1>
                 ${mediaHtml}
                 <div class="post-content">${post.content || ''}</div>
-                ${linkHtml}
+                <div style="display:flex;flex-wrap:wrap;align-items:center">${codeHtml}${linkHtml}</div>
             `;
+
+            // Set up code modal
+            if (post.code_block) {
+                const modal = document.createElement('div');
+                modal.className = 'code-modal-overlay';
+                modal.id = 'codeModal';
+                const escaped = post.code_block.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                modal.innerHTML = `
+                    <div class="code-modal">
+                        <div class="code-modal-header">
+                            <h3>${post.code_label || 'Code'}</h3>
+                            <div style="display:flex;align-items:center">
+                                <button class="code-modal-copy" id="copyCodeBtn">Copy</button>
+                                <button class="code-modal-close" id="closeCodeModal">&times;</button>
+                            </div>
+                        </div>
+                        <div class="code-modal-body">
+                            <pre>${escaped}</pre>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                document.getElementById('openCodeModal').addEventListener('click', () => {
+                    modal.classList.add('open');
+                    document.body.style.overflow = 'hidden';
+                });
+
+                document.getElementById('closeCodeModal').addEventListener('click', () => {
+                    modal.classList.remove('open');
+                    document.body.style.overflow = '';
+                });
+
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('open');
+                        document.body.style.overflow = '';
+                    }
+                });
+
+                document.getElementById('copyCodeBtn').addEventListener('click', () => {
+                    navigator.clipboard.writeText(post.code_block).then(() => {
+                        document.getElementById('copyCodeBtn').textContent = 'Copied!';
+                        setTimeout(() => { document.getElementById('copyCodeBtn').textContent = 'Copy'; }, 2000);
+                    });
+                });
+            }
         }
 
         function showGate(post) {
