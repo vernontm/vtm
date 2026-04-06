@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTM Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #ff9b26;
+            --orange-dark: #ee4c27;
+            --bg: #111112;
+            --surface: #1a1a1c;
+            --surface-2: #222226;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0f0f0;
+            --muted: #6b6b72;
+            --green: #34d399;
+            --red: #f87171;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── LOGIN ── */
+        .login-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 40px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+
+        .login-box h1 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .login-box p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        .login-box input:focus { border-color: rgba(255,155,38,0.4); }
+
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .login-box button:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,155,38,0.3); }
+
+        .login-error {
+            color: var(--red);
+            font-size: 0.85rem;
+            margin-top: 12px;
+            display: none;
+        }
+
+        /* ── DASHBOARD ── */
+        .dashboard { display: none; }
+
+        .dash-header {
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dash-header h1 {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .dash-header .logout-btn {
+            padding: 6px 14px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dash-header .logout-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            padding: 0 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 14px 24px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            font-family: var(--font-body);
+        }
+
+        .tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+        .tab:hover { color: var(--text); }
+
+        .tab-content { display: none; padding: 24px 32px; }
+        .tab-content.active { display: block; }
+
+        /* ── BLOG POSTS TAB ── */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .action-bar h2 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            padding: 8px 18px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover { transform: translateY(-1px); }
+
+        .btn-secondary {
+            padding: 6px 14px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: all 0.2s;
+        }
+
+        .btn-danger {
+            padding: 6px 14px;
+            background: rgba(248,113,113,0.1);
+            border: 1px solid rgba(248,113,113,0.3);
+            border-radius: 8px;
+            color: var(--red);
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: all 0.2s;
+        }
+
+        /* Post Form */
+        .post-form {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .post-form.show { display: block; }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-field {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-field label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-field input, .form-field textarea, .form-field select {
+            padding: 10px 14px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .form-field textarea { min-height: 120px; resize: vertical; }
+        .form-field input:focus, .form-field textarea:focus { border-color: rgba(255,155,38,0.4); }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .toggle {
+            width: 40px;
+            height: 22px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle.on { background: rgba(52,211,153,0.3); border-color: var(--green); }
+
+        .toggle::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background: var(--muted);
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
+        }
+
+        .toggle.on::after { left: 20px; background: var(--green); }
+
+        .toggle-label { font-size: 0.85rem; color: var(--muted); }
+
+        /* Posts List */
+        .posts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .post-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .post-row:hover { border-color: rgba(255,255,255,0.12); }
+
+        .post-emoji { font-size: 1.5rem; flex-shrink: 0; }
+
+        .post-info { flex: 1; }
+        .post-info h3 { font-size: 0.95rem; font-weight: 500; margin-bottom: 2px; }
+        .post-info p { font-size: 0.8rem; color: var(--muted); }
+
+        .post-status {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 10px;
+            border-radius: 100px;
+        }
+
+        .post-status.published { color: var(--green); background: rgba(52,211,153,0.1); }
+        .post-status.draft { color: var(--muted); background: var(--surface-2); }
+
+        .post-actions { display: flex; gap: 8px; }
+
+        /* ── LEADS TAB ── */
+        .leads-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .leads-table th {
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .leads-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            color: rgba(255,255,255,0.8);
+        }
+
+        .leads-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .dash-header, .tabs, .tab-content { padding-left: 16px; padding-right: 16px; }
+            .form-row { flex-direction: column; }
+            .leads-table { font-size: 0.75rem; }
+            .leads-table th, .leads-table td { padding: 8px 8px; }
+            .post-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>VTM Admin</h1>
+            <p>Enter your password to continue</p>
+            <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password" />
+            <button id="loginBtn">Sign In</button>
+            <div class="login-error" id="loginError">Incorrect password. Try again.</div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard" id="dashboard">
+        <div class="dash-header">
+            <h1>VTM Admin</h1>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="posts">Blog Posts</button>
+            <button class="tab" data-tab="leads">Leads</button>
+        </div>
+
+        <!-- Posts Tab -->
+        <div class="tab-content active" id="tab-posts">
+            <div class="action-bar">
+                <h2>Blog Posts</h2>
+                <button class="btn-primary" id="newPostBtn">+ New Post</button>
+            </div>
+
+            <div class="post-form" id="postForm">
+                <input type="hidden" id="postId" />
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Title</label>
+                        <input type="text" id="postTitle" placeholder="Post title" />
+                    </div>
+                    <div class="form-field" style="max-width:80px">
+                        <label>Emoji</label>
+                        <input type="text" id="postEmoji" placeholder="📝" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Description</label>
+                        <input type="text" id="postDesc" placeholder="Short description" />
+                    </div>
+                    <div class="form-field" style="max-width:180px">
+                        <label>Category</label>
+                        <select id="postCategory">
+                            <option value="AI Tools">AI Tools</option>
+                            <option value="Automation">Automation</option>
+                            <option value="Content Creation">Content Creation</option>
+                            <option value="Web Dev">Web Dev</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Business">Business</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label>Content</label>
+                    <textarea id="postContent" placeholder="Write your tutorial content here..."></textarea>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle" id="postPublished"></div>
+                    <span class="toggle-label">Published</span>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-primary" id="savePostBtn">Save Post</button>
+                    <button class="btn-secondary" id="cancelPostBtn">Cancel</button>
+                </div>
+            </div>
+
+            <div class="posts-list" id="postsList">
+                <div class="empty-state">Loading posts...</div>
+            </div>
+        </div>
+
+        <!-- Leads Tab -->
+        <div class="tab-content" id="tab-leads">
+            <div class="action-bar">
+                <h2>Leads</h2>
+            </div>
+            <div id="leadsContainer">
+                <div class="empty-state">Loading leads...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = sessionStorage.getItem('vtm_admin_token');
+        const API = '/api';
+
+        // ── AUTH ──
+        const loginScreen = document.getElementById('loginScreen');
+        const dashboard = document.getElementById('dashboard');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginError = document.getElementById('loginError');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        if (token) showDashboard();
+
+        loginBtn.addEventListener('click', login);
+        passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+
+        async function login() {
+            loginError.style.display = 'none';
+            try {
+                const res = await fetch(`${API}/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: passwordInput.value }),
+                });
+                if (!res.ok) { loginError.style.display = 'block'; return; }
+                const data = await res.json();
+                token = data.token;
+                sessionStorage.setItem('vtm_admin_token', token);
+                showDashboard();
+            } catch { loginError.style.display = 'block'; }
+        }
+
+        logoutBtn.addEventListener('click', () => {
+            token = null;
+            sessionStorage.removeItem('vtm_admin_token');
+            loginScreen.style.display = 'flex';
+            dashboard.style.display = 'none';
+        });
+
+        function showDashboard() {
+            loginScreen.style.display = 'none';
+            dashboard.style.display = 'block';
+            loadPosts();
+            loadLeads();
+        }
+
+        function authHeaders() {
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        }
+
+        // ── TABS ──
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+            });
+        });
+
+        // ── BLOG POSTS ──
+        const postForm = document.getElementById('postForm');
+        const postsList = document.getElementById('postsList');
+        let publishedState = false;
+
+        document.getElementById('newPostBtn').addEventListener('click', () => {
+            clearForm();
+            postForm.classList.add('show');
+        });
+
+        document.getElementById('cancelPostBtn').addEventListener('click', () => {
+            postForm.classList.remove('show');
+        });
+
+        document.getElementById('postPublished').addEventListener('click', function() {
+            publishedState = !publishedState;
+            this.classList.toggle('on', publishedState);
+        });
+
+        document.getElementById('savePostBtn').addEventListener('click', savePost);
+
+        function clearForm() {
+            document.getElementById('postId').value = '';
+            document.getElementById('postTitle').value = '';
+            document.getElementById('postDesc').value = '';
+            document.getElementById('postEmoji').value = '';
+            document.getElementById('postCategory').value = 'AI Tools';
+            document.getElementById('postContent').value = '';
+            publishedState = false;
+            document.getElementById('postPublished').classList.remove('on');
+        }
+
+        function fillForm(post) {
+            document.getElementById('postId').value = post.id;
+            document.getElementById('postTitle').value = post.title || '';
+            document.getElementById('postDesc').value = post.description || '';
+            document.getElementById('postEmoji').value = post.thumbnail_emoji || '';
+            document.getElementById('postCategory').value = post.category || 'AI Tools';
+            document.getElementById('postContent').value = post.content || '';
+            publishedState = post.published || false;
+            document.getElementById('postPublished').classList.toggle('on', publishedState);
+            postForm.classList.add('show');
+        }
+
+        async function loadPosts() {
+            try {
+                const res = await fetch(`${API}/admin-posts`, { headers: authHeaders() });
+                if (res.status === 401) { logoutBtn.click(); return; }
+                const posts = await res.json();
+                if (!posts.length) {
+                    postsList.innerHTML = '<div class="empty-state">No posts yet. Click "+ New Post" to create one.</div>';
+                    return;
+                }
+                postsList.innerHTML = posts.map(p => `
+                    <div class="post-row">
+                        <div class="post-emoji">${p.thumbnail_emoji || '📝'}</div>
+                        <div class="post-info">
+                            <h3>${esc(p.title)}</h3>
+                            <p>${esc(p.category || '')} &middot; ${new Date(p.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <span class="post-status ${p.published ? 'published' : 'draft'}">${p.published ? 'Published' : 'Draft'}</span>
+                        <div class="post-actions">
+                            <button class="btn-secondary" onclick="editPost('${p.id}')">Edit</button>
+                            <button class="btn-danger" onclick="deletePost('${p.id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+                window._posts = posts;
+            } catch (err) { console.error(err); }
+        }
+
+        window.editPost = function(id) {
+            const post = window._posts.find(p => p.id === id);
+            if (post) fillForm(post);
+        };
+
+        window.deletePost = async function(id) {
+            if (!confirm('Delete this post?')) return;
+            await fetch(`${API}/admin-posts`, {
+                method: 'DELETE',
+                headers: authHeaders(),
+                body: JSON.stringify({ id }),
+            });
+            loadPosts();
+        };
+
+        async function savePost() {
+            const id = document.getElementById('postId').value;
+            const data = {
+                title: document.getElementById('postTitle').value,
+                description: document.getElementById('postDesc').value,
+                thumbnail_emoji: document.getElementById('postEmoji').value || '📝',
+                category: document.getElementById('postCategory').value,
+                content: document.getElementById('postContent').value,
+                published: publishedState,
+            };
+
+            if (id) data.id = id;
+
+            await fetch(`${API}/admin-posts`, {
+                method: id ? 'PUT' : 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(data),
+            });
+
+            postForm.classList.remove('show');
+            loadPosts();
+        }
+
+        // ── LEADS ──
+        async function loadLeads() {
+            const container = document.getElementById('leadsContainer');
+            try {
+                const res = await fetch(`${API}/admin-leads`, { headers: authHeaders() });
+                if (res.status === 401) { logoutBtn.click(); return; }
+                const leads = await res.json();
+                if (!leads.length) {
+                    container.innerHTML = '<div class="empty-state">No leads yet.</div>';
+                    return;
+                }
+                container.innerHTML = `
+                    <div style="overflow-x:auto">
+                    <table class="leads-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Business</th>
+                                <th>Problem</th>
+                                <th>Budget</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leads.map(l => `
+                                <tr>
+                                    <td>${esc(l.name || '')}</td>
+                                    <td>${esc(l.email || '')}</td>
+                                    <td>${esc(l.phone || '')}</td>
+                                    <td>${esc(l.business || '')}</td>
+                                    <td>${esc(l.problem || '')}</td>
+                                    <td>${esc(l.budget_tier || '')}</td>
+                                    <td>${l.created_at ? new Date(l.created_at).toLocaleDateString() : ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    </div>
+                `;
+            } catch (err) { console.error(err); }
+        }
+
+        function esc(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+    </script>
+</body>
+</html>

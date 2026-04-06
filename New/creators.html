@@ -258,6 +258,7 @@
         }
         @media (max-width: 640px) {
             nav { padding: 20px 24px; }
+            .logo img { display: none; }
             .nav-links a:not(.nav-mode-btn) { display: none; }
             .tutorials-grid { grid-template-columns: 1fr; }
             .creators-hero { padding: 40px 16px 24px; }
@@ -295,60 +296,8 @@
         </section>
 
         <section class="tutorials-section">
-            <div class="tutorials-grid">
-                <div class="tutorial-card">
-                    <div class="card-thumb">🤖</div>
-                    <div class="card-body">
-                        <span class="card-tag">AI Tools</span>
-                        <h3>How to Build an AI Chatbot for Your Website in 30 Minutes</h3>
-                        <p>Step by step walkthrough using no-code tools to add a smart chatbot to any site.</p>
-                    </div>
-                </div>
-
-                <div class="tutorial-card">
-                    <div class="card-thumb">⚙️</div>
-                    <div class="card-body">
-                        <span class="card-tag">Automation</span>
-                        <h3>Automate Your Entire Client Onboarding With AI</h3>
-                        <p>Set up forms, emails, and follow-ups that run themselves while you focus on building.</p>
-                    </div>
-                </div>
-
-                <div class="tutorial-card">
-                    <div class="card-thumb">🎬</div>
-                    <div class="card-body">
-                        <span class="card-tag">Content Creation</span>
-                        <h3>Create Faceless TikTok Content With AI Avatars</h3>
-                        <p>Use AI voice cloning and avatars to post daily without showing your face.</p>
-                    </div>
-                </div>
-
-                <div class="tutorial-card">
-                    <div class="card-thumb">💻</div>
-                    <div class="card-body">
-                        <span class="card-tag">Web Dev</span>
-                        <h3>Build a Full Website With AI in One Afternoon</h3>
-                        <p>From blank page to live site using AI-powered code generation and design tools.</p>
-                    </div>
-                </div>
-
-                <div class="tutorial-card">
-                    <div class="card-thumb">📧</div>
-                    <div class="card-body">
-                        <span class="card-tag">Automation</span>
-                        <h3>Set Up AI Email Marketing That Converts</h3>
-                        <p>Build automated email sequences that sound human and actually get replies.</p>
-                    </div>
-                </div>
-
-                <div class="tutorial-card">
-                    <div class="card-thumb">📊</div>
-                    <div class="card-body">
-                        <span class="card-tag">AI Tools</span>
-                        <h3>The Only 5 AI Tools You Need to Run a Solo Business</h3>
-                        <p>Cut through the noise. These are the tools that actually move the needle.</p>
-                    </div>
-                </div>
+            <div class="tutorials-grid" id="tutorialsGrid">
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Loading tutorials...</div>
             </div>
         </section>
 
@@ -395,6 +344,40 @@
                 document.body.style.overflow = '';
             });
         });
+
+        // ── LOAD TUTORIALS ──
+        const fallbackPosts = [
+            { thumbnail_emoji: '🤖', category: 'AI Tools', title: 'How to Build an AI Chatbot for Your Website in 30 Minutes', description: 'Step by step walkthrough using no-code tools to add a smart chatbot to any site.' },
+            { thumbnail_emoji: '⚙️', category: 'Automation', title: 'Automate Your Entire Client Onboarding With AI', description: 'Set up forms, emails, and follow-ups that run themselves while you focus on building.' },
+            { thumbnail_emoji: '🎬', category: 'Content Creation', title: 'Create Faceless TikTok Content With AI Avatars', description: 'Use AI voice cloning and avatars to post daily without showing your face.' },
+            { thumbnail_emoji: '💻', category: 'Web Dev', title: 'Build a Full Website With AI in One Afternoon', description: 'From blank page to live site using AI-powered code generation and design tools.' },
+            { thumbnail_emoji: '📧', category: 'Automation', title: 'Set Up AI Email Marketing That Converts', description: 'Build automated email sequences that sound human and actually get replies.' },
+            { thumbnail_emoji: '📊', category: 'AI Tools', title: 'The Only 5 AI Tools You Need to Run a Solo Business', description: 'Cut through the noise. These are the tools that actually move the needle.' },
+        ];
+
+        const grid = document.getElementById('tutorialsGrid');
+
+        function renderPosts(posts) {
+            if (!posts.length) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Tutorials coming soon.</div>';
+                return;
+            }
+            grid.innerHTML = posts.map(p => `
+                <div class="tutorial-card">
+                    <div class="card-thumb">${p.thumbnail_emoji || '📝'}</div>
+                    <div class="card-body">
+                        <span class="card-tag">${p.category || 'General'}</span>
+                        <h3>${p.title}</h3>
+                        <p>${p.description || ''}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        fetch('/api/posts')
+            .then(r => r.json())
+            .then(posts => renderPosts(posts.length ? posts : fallbackPosts))
+            .catch(() => renderPosts(fallbackPosts));
     </script>
 </body>
 </html>
