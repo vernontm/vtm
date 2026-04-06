@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vernontm. — Contact Us</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange: #ff9b26;
+            --orange-dark: #ee4c27;
+            --bg: #111112;
+            --surface: #1a1a1c;
+            --surface-2: #222226;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0f0f0;
+            --muted: #6b6b72;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── NAV ── */
+        nav {
+            padding: 24px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: fadeDown 0.6s ease both;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 36px;
+            width: auto;
+            display: block;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .nav-links a {
+            font-size: 0.875rem;
+            font-weight: 400;
+            color: var(--muted);
+            text-decoration: none;
+            letter-spacing: 0.01em;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: var(--text); }
+
+        .hamburger {
+            width: 40px;
+            height: 40px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 0;
+            transition: all 0.2s;
+        }
+
+        .hamburger:hover {
+            border-color: rgba(255,155,38,0.3);
+            background: rgba(255,155,38,0.06);
+        }
+
+        .hamburger span {
+            display: block;
+            width: 18px;
+            height: 1.5px;
+            background: var(--text);
+            border-radius: 2px;
+        }
+
+        /* ── CONTACT HERO ── */
+        .contact-hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 20px 40px;
+            text-align: center;
+        }
+
+        .contact-heading {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 300;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+            animation: fadeUp 0.7s 0.1s ease both;
+        }
+
+        .contact-heading em {
+            font-style: normal;
+            font-weight: 800;
+        }
+
+        .contact-sub {
+            font-size: 0.95rem;
+            color: var(--muted);
+            font-weight: 300;
+            margin-bottom: 36px;
+            animation: fadeUp 0.7s 0.2s ease both;
+        }
+
+        /* ── CHAT FORM ── */
+        .chat-form-container {
+            width: 100%;
+            max-width: 700px;
+            animation: fadeUp 0.7s 0.3s ease both;
+        }
+
+        .chat-form-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px rgba(255,155,38,0.04),
+                0 24px 60px rgba(0,0,0,0.5),
+                0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .chat-messages {
+            padding: 24px 24px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--surface-2) transparent;
+        }
+
+        .chat-msg {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            animation: msgIn 0.35s ease;
+        }
+
+        .chat-msg + .chat-msg {
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 1px;
+        }
+
+        .msg-avatar.bot {
+            background: rgba(255,255,255,0.05);
+            color: var(--muted);
+            border: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .msg-avatar.user {
+            background: rgba(255,155,38,0.15);
+            color: var(--orange);
+            border: 1px solid rgba(255,155,38,0.2);
+            font-family: var(--font-display);
+        }
+
+        .msg-text {
+            flex: 1;
+            font-size: 0.9rem;
+            line-height: 1.65;
+            font-weight: 300;
+            padding-top: 4px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .msg-text.user-text {
+            color: rgba(255,255,255,0.85);
+        }
+
+        /* Typing indicator */
+        .typing {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            padding-top: 6px;
+        }
+
+        .typing span {
+            width: 5px;
+            height: 5px;
+            background: var(--muted);
+            border-radius: 50%;
+            animation: blink 1.2s ease infinite;
+        }
+
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Input area */
+        .chat-input-area {
+            padding: 18px 20px 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chat-input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #contactInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 300;
+            line-height: 1.6;
+            caret-color: var(--orange);
+            padding: 4px 0;
+        }
+
+        #contactInput::placeholder {
+            color: var(--muted);
+            opacity: 0.6;
+        }
+
+        #contactSendBtn {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none;
+            border-radius: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(255,155,38,0.25);
+        }
+
+        #contactSendBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(255,155,38,0.35);
+        }
+
+        #contactSendBtn:active { transform: translateY(0); }
+
+        #contactSendBtn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #contactSendBtn svg {
+            width: 16px;
+            height: 16px;
+            color: white;
+        }
+
+        /* Success state */
+        .chat-input-area.done {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .done-text {
+            font-size: 0.9rem;
+            color: var(--orange);
+            font-weight: 500;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            padding: 24px 20px 20px;
+            flex-shrink: 0;
+            animation: fadeDown 0.6s 0.5s ease both;
+        }
+
+        .footer-socials {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .footer-socials a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .footer-socials a:hover {
+            color: var(--text);
+            border-color: rgba(255,155,38,0.3);
+            background: rgba(255,155,38,0.06);
+            transform: translateY(-2px);
+        }
+
+        .footer-socials a svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 640px) {
+            nav { padding: 20px 24px; }
+            .nav-links a { display: none; }
+            .contact-hero { padding: 16px 16px 32px; }
+            .contact-heading { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Nav -->
+        <nav>
+            <a href="/" class="logo">
+                <img src="/icon_logo_vtm.png" alt="Vernon Tech & Media" />
+            </a>
+            <div class="nav-links">
+                <a href="/contact.html">Contact Us</a>
+                <a href="https://vernontm.com/book-call">Book a Call</a>
+                <button class="hamburger" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Contact Hero -->
+        <main class="contact-hero">
+            <h1 class="contact-heading">Let's <em>talk.</em></h1>
+            <p class="contact-sub">Tell us a bit about yourself and we'll get back to you fast.</p>
+
+            <div class="chat-form-container">
+                <div class="chat-form-box">
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-area" id="inputArea">
+                        <div class="chat-input-row">
+                            <input
+                                type="text"
+                                id="contactInput"
+                                placeholder="Type your answer..."
+                                autocomplete="off"
+                            />
+                            <button id="contactSendBtn" aria-label="Send">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-socials">
+                <a href="https://instagram.com/rayvaughn.ceo" aria-label="Instagram" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </a>
+                <a href="https://tiktok.com/@rayvaughn.ceo" aria-label="TikTok" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.48V13a8.28 8.28 0 005.58 2.17v-3.44a4.85 4.85 0 01-3.77-1.82V6.69h3.77z"/></svg>
+                </a>
+                <a href="https://youtube.com/@vernontm" aria-label="YouTube" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="https://x.com/rayvaughnceo" aria-label="X" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const steps = [
+            { key: 'name', question: "Hey there! What's your name?", placeholder: 'Your full name' },
+            { key: 'email', question: "Nice to meet you, {{name}}! What's your email address?", placeholder: 'you@example.com', type: 'email' },
+            { key: 'phone', question: 'Got it! What\'s the best phone number to reach you?', placeholder: '(555) 123-4567', type: 'tel' },
+            { key: 'message', question: 'And finally, how can we help you? Tell us what you need.', placeholder: 'Describe your project or question...' },
+        ];
+
+        const collected = {};
+        let currentStep = 0;
+
+        const messagesEl = document.getElementById('chatMessages');
+        const inputEl = document.getElementById('contactInput');
+        const sendBtn = document.getElementById('contactSendBtn');
+        const inputArea = document.getElementById('inputArea');
+
+        function addBotMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg';
+            msg.innerHTML = `
+                <div class="msg-avatar bot">\u2726</div>
+                <div class="msg-text">${text}</div>
+            `;
+            messagesEl.appendChild(msg);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function addUserMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg';
+            msg.innerHTML = `
+                <div class="msg-avatar user">U</div>
+                <div class="msg-text user-text">${escapeHtml(text)}</div>
+            `;
+            messagesEl.appendChild(msg);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function addTyping() {
+            const msg = document.createElement('div');
+            msg.className = 'chat-msg';
+            msg.id = 'typing';
+            msg.innerHTML = `
+                <div class="msg-avatar bot">\u2726</div>
+                <div class="msg-text"><div class="typing"><span></span><span></span><span></span></div></div>
+            `;
+            messagesEl.appendChild(msg);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function removeTyping() {
+            const t = document.getElementById('typing');
+            if (t) t.remove();
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function getQuestion(step) {
+            let q = step.question;
+            for (const [key, val] of Object.entries(collected)) {
+                q = q.replace(`{{${key}}}`, val);
+            }
+            return q;
+        }
+
+        function showStep() {
+            if (currentStep >= steps.length) {
+                // All done
+                addTyping();
+                setTimeout(() => {
+                    removeTyping();
+                    addBotMessage(`Thanks ${escapeHtml(collected.name)}! We've got your info and will reach out soon. Talk to you shortly! \u{1F680}`);
+                    inputArea.classList.add('done');
+                    inputArea.innerHTML = '<p class="done-text">\u2713 Message sent! We\'ll be in touch.</p>';
+                }, 800);
+                return;
+            }
+
+            const step = steps[currentStep];
+            addTyping();
+            setTimeout(() => {
+                removeTyping();
+                addBotMessage(getQuestion(step));
+                inputEl.placeholder = step.placeholder || 'Type your answer...';
+                inputEl.type = step.type || 'text';
+                inputEl.value = '';
+                inputEl.focus();
+            }, 600);
+        }
+
+        function submitAnswer() {
+            const val = inputEl.value.trim();
+            if (!val) return;
+
+            const step = steps[currentStep];
+
+            // Basic validation
+            if (step.key === 'email' && !val.includes('@')) {
+                addBotMessage("That doesn't look like a valid email. Try again?");
+                inputEl.value = '';
+                inputEl.focus();
+                return;
+            }
+
+            addUserMessage(val);
+            collected[step.key] = val;
+            currentStep++;
+            inputEl.value = '';
+            showStep();
+        }
+
+        sendBtn.addEventListener('click', submitAnswer);
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitAnswer();
+            }
+        });
+
+        // Start the conversation
+        setTimeout(() => showStep(), 400);
+    </script>
+</body>
+</html>
