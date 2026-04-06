@@ -1186,6 +1186,27 @@
         }
         // ── LEAD CAPTURE ──
         let lastLeadData = '';
+        let zapierTimer = null;
+        let zapierSent = false;
+        let collectedLead = {};
+
+        function sendToZapier() {
+            if (zapierSent) return;
+            if (!collectedLead.email) return; // Need at least an email for Zapier automation
+            zapierSent = true;
+            fetch('/api/lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...collectedLead, source: 'vtm-chat' }),
+            }).catch(err => console.error('Zapier lead send failed:', err));
+        }
+
+        function resetZapierTimer() {
+            if (zapierSent) return;
+            if (zapierTimer) clearTimeout(zapierTimer);
+            // Send all collected data to Zapier after 5 minutes of no new info
+            zapierTimer = setTimeout(sendToZapier, 5 * 60 * 1000);
+        }
 
         function parseLeadCapture(text) {
             const match = text.match(/\[LEAD_CAPTURE\]([\s\S]*?)(?=\n\n|$)/i);
@@ -1211,12 +1232,19 @@
             if (dataKey === lastLeadData) return;
             lastLeadData = dataKey;
 
+            // Merge into collected lead (accumulate all fields over time)
+            Object.entries(lead).forEach(([k, v]) => { if (v) collectedLead[k] = v; });
+
             if (lead.name || lead.email || lead.phone) {
+                // Save to CRM immediately (progressive, skips Zapier)
                 fetch('/api/lead', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(lead),
                 }).catch(err => console.error('Lead save failed:', err));
+
+                // Reset the 5-minute Zapier timer
+                if (collectedLead.email) resetZapierTimer();
             }
         }
 
@@ -1244,15 +1272,42 @@
                 source: 'vtm-chat',
             };
 
-            // Only send if we have at least a name
+            // Merge final data into collected lead
+            Object.entries(lead).forEach(([k, v]) => { if (v) collectedLead[k] = v; });
+
+            // Cancel the timer — send immediately with full data
+            if (zapierTimer) clearTimeout(zapierTimer);
+
             if (lead.name) {
+                // Save full lead to CRM
                 fetch('/api/lead', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(lead),
                 }).catch(err => console.error('Lead save failed:', err));
+
+                // Send to Zapier immediately with all collected data
+                if (!zapierSent && collectedLead.email) {
+                    zapierSent = true;
+                    // Small delay to let CRM save finish first
+                    setTimeout(() => {
+                        fetch('/api/lead', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...collectedLead, source: 'vtm-chat' }),
+                        }).catch(err => console.error('Zapier lead send failed:', err));
+                    }, 500);
+                }
             }
         }
+
+        // Also send to Zapier if user closes/leaves the page
+        window.addEventListener('beforeunload', () => {
+            if (!zapierSent && collectedLead.email) {
+                zapierSent = true;
+                navigator.sendBeacon('/api/lead', JSON.stringify({ ...collectedLead, source: 'vtm-chat' }));
+            }
+        });
 
         // ── MENU TOGGLE ──
         const menuToggle = document.getElementById('menuToggle');
