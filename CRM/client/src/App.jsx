@@ -8,8 +8,6 @@ import Login from './pages/Login';
 import Leads from './pages/Leads';
 import Contacts from './pages/Contacts';
 import Deals from './pages/Deals';
-import Accounts from './pages/Accounts';
-import Projects from './pages/Projects';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
@@ -31,9 +29,7 @@ function AppLayout() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/contacts" element={<Contacts />} />
-          <Route path="/deals" element={<Deals />} />
-          <Route path="/accounts" element={<Accounts />} />
-          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects" element={<Deals />} />
           <Route path="/meetings/:eventId" element={<MeetingDetail />} />
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/notifications" element={<Notifications />} />

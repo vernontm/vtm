@@ -935,7 +935,7 @@ export default function Deals() {
   return (
     <div style={{ minHeight: '100%', background: '#0a0a08' }}>
       <div className="page-header">
-        <div className="page-title">Deals</div>
+        <div className="page-title">Projects</div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a4845' }} />

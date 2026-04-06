@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, ChevronDown, ChevronRight, ChevronLeft, Trash2, UserPlus, Mail, Phone, Upload, Eye, X, Globe, AtSign, Check, PhoneCall, ThumbsUp, ThumbsDown, ScrollText, Copy, CheckCheck, Calendar } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Trash2, UserPlus, Mail, Phone, Upload, Eye, X, AtSign, Check, ThumbsUp, ThumbsDown, Calendar } from 'lucide-react';
 import { getLeads, createLead, updateLead, deleteLead, convertLead } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -20,11 +20,11 @@ function ActivityBar({ id }) {
   return <div className="activity-bar">{blocks.map((c, i) => <div key={i} className="activity-block" style={{ background: c }} />)}</div>;
 }
 
-const EMPTY = { name: '', status: 'Cold', company: '', title: '', email: '', phone: '', lead_source: '', notes: '' };
+const EMPTY = { name: '', status: 'New Lead', company: '', email: '', phone: '', lead_source: '', notes: '' };
 const gmailLink = (email) => `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
 
-// ── Phone Script Modal ────────────────────────────────────────────────────────
-function PhoneScriptModal({ leads, index, onNavigate, onClose, onInterest, onSchedule, onNoAnswer }) {
+// PhoneScriptModal removed - no longer needed
+function _REMOVED_PhoneScriptModal({ leads, index, onNavigate, onClose, onInterest, onSchedule, onNoAnswer }) {
   const [copied,       setCopied]       = useState(false);
   const [copiedPhone,  setCopiedPhone]  = useState(false);
 
@@ -227,45 +227,21 @@ const DETAIL_SECTIONS = [
       { key: 'name',          label: 'Name' },
       { key: 'email',         label: 'Email' },
       { key: 'phone',         label: 'Phone' },
-      { key: 'location',      label: 'Location' },
-      { key: 'tiktok_handle', label: 'TikTok Handle' },
-      { key: 'website',       label: 'Website' },
-      { key: 'social_media',  label: 'Social Media' },
+      { key: 'company',       label: 'Business' },
+      { key: 'lead_source',   label: 'Source' },
     ],
   },
   {
-    title: 'Business Profile',
+    title: 'Project Details',
     fields: [
-      { key: 'has_business',   label: 'Has Business?' },
-      { key: 'budget',         label: 'Budget' },
-      { key: 'time_available', label: 'Time Available' },
-      { key: 'financial_goal', label: 'Financial Goal' },
-      { key: 'lead_source',    label: 'Traffic Source' },
-      { key: 'submission_date',label: 'Submission Date' },
-    ],
-  },
-  {
-    title: 'Survey Responses',
-    fields: [
-      { key: 'current_situation', label: 'Current Situation' },
-      { key: 'why_now',           label: 'Why Now?' },
-      { key: 'skills_story',      label: 'Skills & Story' },
-      { key: 'previous_attempts', label: 'Previous Attempts' },
-      { key: 'biggest_fear',      label: 'Biggest Fear' },
-      { key: 'biggest_wish',      label: 'Biggest Wish' },
-    ],
-  },
-  {
-    title: 'Preferences',
-    fields: [
-      { key: 'tech_comfort',       label: 'Tech Comfort' },
-      { key: 'content_preference', label: 'Content Preference' },
-      { key: 'work_style',         label: 'Work Style' },
+      { key: 'current_situation', label: 'Current State' },
+      { key: 'financial_goal',    label: 'Goal' },
+      { key: 'budget',            label: 'Budget Tier' },
     ],
   },
   {
     title: 'Notes',
-    fields: [{ key: 'notes', label: 'Additional Info' }],
+    fields: [{ key: 'notes', label: 'Notes' }],
   },
 ];
 
@@ -452,8 +428,6 @@ export default function Leads() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showImport, setShowImport] = useState(false);
   const [detailLead, setDetailLead] = useState(null);
-  const [scheduleLead,  setScheduleLead]  = useState(null);
-  const [scriptIdx,  setScriptIdx]  = useState(null);
   const [sort,        setSort]        = useState('newest');
 
   const load = async () => {
@@ -555,16 +529,6 @@ export default function Leads() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="page-title">Leads</div>
-          <button
-            onClick={() => filtered.length > 0 && setScriptIdx(0)}
-            disabled={filtered.length === 0}
-            title="Open phone script"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,155,38,0.10)', border: '1px solid rgba(255,155,38,0.3)', color: '#ff9b26', borderRadius: 7, padding: '6px 12px', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'DM Mono, monospace', fontSize: 11, transition: 'all 0.15s', opacity: filtered.length === 0 ? 0.4 : 1 }}
-            onMouseEnter={e => { if (filtered.length > 0) e.currentTarget.style.background = 'rgba(255,155,38,0.20)'; }}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,155,38,0.10)'}
-          >
-            <ScrollText size={13} /> Phone Script
-          </button>
         </div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
@@ -739,24 +703,6 @@ export default function Leads() {
                           <PhoneCall size={13} />
                         </button>
                         <button
-                          title="View phone script"
-                          onClick={() => setScriptIdx(filtered.indexOf(lead))}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
-                          onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
-                        >
-                          <ScrollText size={13} />
-                        </button>
-                        <button
-                          title="Schedule demo call"
-                          onClick={() => setScheduleLead(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#5b9cf6'}
-                          onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
-                        >
-                          <Calendar size={14} />
-                        </button>
-                        <button
                           title="Edit lead"
                           onClick={() => setDetailLead(lead)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
@@ -796,22 +742,6 @@ export default function Leads() {
         moveToOptions={LEAD_STATUSES.map(s => ({ label: s, value: s }))}
         onMoveTo={handleBulkMoveTo}
       />
-
-      {/* Phone script modal */}
-      {scriptIdx !== null && (
-        <PhoneScriptModal
-          leads={filtered}
-          index={scriptIdx}
-          onNavigate={setScriptIdx}
-          onClose={() => setScriptIdx(null)}
-          onInterest={(id, val) => handleFieldSave(id, 'interest', val)}
-          onSchedule={(lead) => { setScriptIdx(null); setScheduleLead(lead); }}
-          onNoAnswer={async (lead) => {
-            await updateLead(lead.id, { status: 'Unqualified' }).catch(() => {});
-            setLeads(ls => ls.map(l => l.id === lead.id ? { ...l, status: 'Unqualified' } : l));
-          }}
-        />
-      )}
 
       {/* Lead detail panel */}
       {detailLead && (

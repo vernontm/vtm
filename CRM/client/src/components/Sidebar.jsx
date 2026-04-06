@@ -13,11 +13,9 @@ import { getNotifications } from '../api';
 
 const nav = [
   { to: '/dashboard',      icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/contacts',       icon: Users,           label: 'Contacts' },
-  { to: '/deals',          icon: Briefcase,       label: 'Deals' },
   { to: '/leads',          icon: Star,            label: 'Leads' },
-  { to: '/accounts',       icon: Building2,       label: 'Accounts' },
-  { to: '/projects',       icon: FolderOpen,      label: 'Client Projects' },
+  { to: '/contacts',       icon: Users,           label: 'Contacts' },
+  { to: '/projects',       icon: Briefcase,       label: 'Projects' },
   { to: '/todos',          icon: CheckSquare,     label: 'Todo Board' },
 ];
 
