@@ -64,54 +64,61 @@ export default async function handler(req, res) {
     results.supabase = 'error';
   }
 
-  // 2. Build summary
-  const parts = [];
-  if (lead.name) parts.push(`${lead.name}`);
-  if (lead.business) parts.push(`from ${lead.business}`);
-  if (lead.problem) parts.push(`needs help with: ${lead.problem}`);
-  if (lead.current_state) parts.push(`Currently: ${lead.current_state}`);
-  if (lead.goal) parts.push(`Goal: ${lead.goal}`);
-  if (lead.budget_tier) parts.push(`Budget: ${lead.budget_tier}`);
-  if (lead.best_time) parts.push(`Best time to reach: ${lead.best_time}`);
-  if (lead.email) parts.push(`Email: ${lead.email}`);
-  if (lead.phone) parts.push(`Phone: ${lead.phone}`);
-  if (lead.notes) parts.push(`Notes: ${lead.notes}`);
-  const summary = parts.join('. ') + '.';
+  // 2. Only send to Zapier on final summary (not progressive saves)
+  // Progressive saves (source: vtm-chat-progress) go to Supabase only
+  // Final summary (source: vtm-chat) triggers Zapier for email automation
+  const isProgressiveSave = (lead.source || '').includes('progress');
 
-  // 3. Send to Zapier webhook
-  try {
-    const zapierRes = await fetch(
-      'https://hooks.zapier.com/hooks/catch/12135291/u7ub25s/',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: lead.name,
-          email: lead.email,
-          phone: lead.phone,
-          business: lead.business,
-          problem: lead.problem,
-          current_state: lead.current_state,
-          goal: lead.goal,
-          budget_tier: lead.budget_tier,
-          best_time: lead.best_time,
-          notes: lead.notes,
-          summary: summary,
-          source: lead.source || 'vtm-chat',
-          timestamp: new Date().toISOString(),
-        }),
+  if (!isProgressiveSave) {
+    const parts = [];
+    if (lead.name) parts.push(`${lead.name}`);
+    if (lead.business) parts.push(`from ${lead.business}`);
+    if (lead.problem) parts.push(`needs help with: ${lead.problem}`);
+    if (lead.current_state) parts.push(`Currently: ${lead.current_state}`);
+    if (lead.goal) parts.push(`Goal: ${lead.goal}`);
+    if (lead.budget_tier) parts.push(`Budget: ${lead.budget_tier}`);
+    if (lead.best_time) parts.push(`Best time to reach: ${lead.best_time}`);
+    if (lead.email) parts.push(`Email: ${lead.email}`);
+    if (lead.phone) parts.push(`Phone: ${lead.phone}`);
+    if (lead.notes) parts.push(`Notes: ${lead.notes}`);
+    const summary = parts.join('. ') + '.';
+
+    try {
+      const zapierRes = await fetch(
+        'https://hooks.zapier.com/hooks/catch/12135291/u7ub25s/',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            business: lead.business,
+            problem: lead.problem,
+            current_state: lead.current_state,
+            goal: lead.goal,
+            budget_tier: lead.budget_tier,
+            best_time: lead.best_time,
+            notes: lead.notes,
+            summary: summary,
+            source: lead.source || 'vtm-chat',
+            timestamp: new Date().toISOString(),
+          }),
+        }
+      );
+
+      if (zapierRes.ok) {
+        results.zapier = 'sent';
+      } else {
+        console.error('Zapier error:', zapierRes.status);
+        results.zapier = 'error';
       }
-    );
-
-    if (zapierRes.ok) {
-      results.zapier = 'sent';
-    } else {
-      console.error('Zapier error:', zapierRes.status);
+    } catch (err) {
+      console.error('Zapier send failed:', err);
       results.zapier = 'error';
     }
-  } catch (err) {
-    console.error('Zapier send failed:', err);
-    results.zapier = 'error';
+  } else {
+    results.zapier = 'skipped (progressive save)';
   }
 
   return res.status(200).json({ success: true, results });
