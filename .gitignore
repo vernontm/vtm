@@ -1,6 +1,10 @@
 .env
+*.env
 .claude/
 node_modules/
 .DS_Store
 serve.py
 serve.rb
+CRM/server/db.json
+CRM/server/client-demos/
+CRM/content-output/
