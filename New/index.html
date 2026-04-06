@@ -836,6 +836,7 @@
                 };
 
                 recognition.onresult = (event) => {
+                    if (!isListening) return; // Ignore results after stop
                     let transcript = '';
                     for (let i = 0; i < event.results.length; i++) {
                         transcript += event.results[i][0].transcript;
