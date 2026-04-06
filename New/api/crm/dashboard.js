@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch, SUPABASE_URL, headers } from '../_lib/supabase.js';
+import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -8,47 +8,102 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // Fetch counts and data in parallel
-    const [leads, contacts, deals, projects, invoices, manualInvoices, activities, emailQueue] = await Promise.all([
-      supaFetch('crm_leads?select=id,status,lead_segment,created_at'),
-      supaFetch('crm_contacts?select=id'),
-      supaFetch('crm_deals?select=id,stage,value,amount_paid,payment_status,created_at'),
-      supaFetch('crm_projects?select=id,status,value'),
+    const [contacts, deals, projects, invoices, leads] = await Promise.all([
+      supaFetch('crm_contacts?select=id,archived'),
+      supaFetch('crm_deals?select=id,name,stage,value,amount_paid,payment_status,created_at,updated_at,archived'),
+      supaFetch('crm_projects?select=id,status,value,archived'),
       supaFetch('crm_invoices?select=id,status,amount'),
-      supaFetch('crm_manual_invoices?select=id,status,amount'),
-      supaFetch('crm_activities?select=id,type,created_at&order=created_at.desc&limit=10'),
-      supaFetch('crm_email_queue?select=id,status'),
+      supaFetch('crm_leads?select=id,status,interest,lead_segment,archived,created_at'),
     ]);
 
-    // Pipeline stats
-    const stages = {};
-    deals.forEach(d => { stages[d.stage] = (stages[d.stage] || 0) + 1; });
+    const activeContacts = contacts.filter(c => !c.archived);
+    const activeDeals = deals.filter(d => !d.archived);
+    const activeProjects = projects.filter(p => !p.archived);
+    const activeLeads = leads.filter(l => !l.archived);
 
-    const totalRevenue = deals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
-    const wonDeals = deals.filter(d => d.stage === 'Won');
-    const wonRevenue = wonDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
-    const totalPaid = deals.reduce((sum, d) => sum + (Number(d.amount_paid) || 0), 0);
+    // Revenue = sum of Won + Completed deals
+    const wonDeals = activeDeals.filter(d => d.stage === 'Won' || d.stage === 'Completed');
+    const totalRevenue = wonDeals.reduce((s, d) => s + (Number(d.value) || 0), 0);
 
-    // Lead segment counts
-    const segments = {};
-    leads.forEach(l => { segments[l.lead_segment || 'cold'] = (segments[l.lead_segment || 'cold'] || 0) + 1; });
+    // Last 30 days revenue
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+    const last30DaysRevenue = activeDeals
+      .filter(d => (Number(d.amount_paid) || 0) > 0 && (d.updated_at || '') >= thirtyDaysAgoISO)
+      .reduce((s, d) => s + (Number(d.amount_paid) || 0), 0);
+
+    // Invoiced = sum of paid invoices
+    const totalInvoiced = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (Number(i.amount) || 0), 0);
+
+    // Pipeline value
+    const pipelineValue = activeDeals
+      .filter(d => !['Won', 'Lost', 'Completed'].includes(d.stage))
+      .reduce((s, d) => s + (Number(d.value) || 0), 0);
+
+    // Monthly revenue chart (last 12 months)
+    const now = new Date();
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+      return {
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      };
+    });
+
+    const revenueByMonth = {};
+    wonDeals.forEach(d => {
+      const k = d.created_at ? d.created_at.slice(0, 7) : null;
+      if (k) revenueByMonth[k] = (revenueByMonth[k] || 0) + (Number(d.value) || 0);
+    });
+
+    const monthlyChart = months.map(m => ({
+      label: m.label,
+      revenue: revenueByMonth[m.key] || 0,
+    }));
+
+    // Deals by stage
+    const dealsByStage = activeDeals.reduce((acc, d) => {
+      acc[d.stage] = (acc[d.stage] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Recent deals (last 6)
+    const recentDeals = [...activeDeals]
+      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+      .slice(0, 6);
+
+    // Invoice breakdown
+    const invoiceStats = {
+      total: invoices.length,
+      sent: invoices.filter(i => i.status === 'open').length,
+      paid: invoices.filter(i => i.status === 'paid').length,
+      totalAmount: invoices.reduce((s, i) => s + (Number(i.amount) || 0), 0),
+      paidAmount: invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (Number(i.amount) || 0), 0),
+    };
+
+    // Lead interest tallies
+    const leadsInterested = activeLeads.filter(l => l.interest === 'up').length;
+    const leadsUninterested = activeLeads.filter(l => l.interest === 'down').length;
+    const leadsContacted = leadsInterested + leadsUninterested;
 
     return res.json({
-      counts: {
-        leads: leads.length,
-        contacts: contacts.length,
-        deals: deals.length,
-        projects: projects.length,
-      },
-      pipeline: stages,
-      revenue: { total: totalRevenue, won: wonRevenue, paid: totalPaid },
-      leadSegments: segments,
-      recentActivity: activities,
-      emailQueue: {
-        draft: emailQueue.filter(e => e.status === 'draft').length,
-        approved: emailQueue.filter(e => e.status === 'approved').length,
-        sent: emailQueue.filter(e => e.status === 'sent').length,
-      },
+      totalRevenue,
+      totalInvoiced,
+      pipelineValue,
+      activeClients: activeContacts.length,
+      activeProjects: activeProjects.filter(p => !['Completed', 'Cancelled'].includes(p.status)).length,
+      completedProjects: activeProjects.filter(p => p.status === 'Completed').length,
+      openLeads: activeLeads.filter(l => l.status !== 'Converted').length,
+      activeDeals: activeDeals.filter(d => !['Won', 'Lost', 'Completed'].includes(d.stage)).length,
+      last30DaysRevenue,
+      monthlyChart,
+      dealsByStage,
+      recentDeals,
+      invoiceStats,
+      leadsContacted,
+      leadsInterested,
+      leadsUninterested,
     });
   } catch (err) {
     console.error('CRM dashboard error:', err);
