@@ -339,6 +339,7 @@
             line-height: 1.65;
             font-weight: 300;
             padding-top: 4px;
+            text-align: left;
         }
 
         .msg-body.user-msg { color: rgba(255,255,255,0.85); }
@@ -495,10 +496,11 @@
             display: flex;
             gap: 10px;
             width: max-content;
+            will-change: transform;
         }
 
         .quick-links-wrapper:hover .marquee-row {
-            animation-play-state: paused;
+            animation-play-state: paused !important;
         }
 
         .marquee-row.left {
@@ -774,7 +776,17 @@
                 chip.className = category ? 'quick-chip category' : 'quick-chip';
                 chip.innerHTML = `<span class="chip-icon">${icon}</span>${text}`;
                 if (!category) {
-                    chip.addEventListener('click', () => fillAndSend(text));
+                    // Use mousedown for reliable clicks on animated elements
+                    chip.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        fillAndSend(text);
+                    });
+                    // Also handle touch
+                    chip.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        fillAndSend(text);
+                    });
                 }
                 rowEl.appendChild(chip);
             });
@@ -895,11 +907,12 @@
         }
 
         function parseQuickReplies(content) {
-            const match = content.match(/\[QUICK_REPLIES:\s*"([^"]+)"\s*(?:\|\s*"([^"]+)"\s*)?(?:\|\s*"([^"]+)"\s*)?\]/);
-            if (!match) return { text: content, replies: [] };
-            const text = content.replace(/\[QUICK_REPLIES:.*?\]/, '').trim();
-            const replies = [match[1], match[2], match[3]].filter(Boolean);
-            return { text, replies };
+            const tagMatch = content.match(/\[QUICK_REPLIES:([^\]]+)\]/);
+            if (!tagMatch) return { text: content, replies: [] };
+            const text = content.replace(/\[QUICK_REPLIES:[^\]]+\]/, '').trim();
+            const replies = tagMatch[1].match(/"([^"]+)"/g);
+            if (!replies) return { text, replies: [] };
+            return { text, replies: replies.map(r => r.replace(/"/g, '')) };
         }
 
         function appendMessage(role, content) {
