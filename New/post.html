@@ -193,76 +193,25 @@
             transform: translateY(-2px);
         }
 
-        .code-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 20px;
-            margin-right: 12px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
-            border: none;
-            border-radius: 12px;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 0.95rem;
-            font-family: var(--font-body);
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 14px rgba(255,155,38,0.25);
+        .code-section {
+            margin-top: 28px;
         }
 
-        .code-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255,155,38,0.35);
-        }
-
-        .code-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(10,10,12,0.92);
-            z-index: 300;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.25s, visibility 0.25s;
-        }
-
-        .code-modal-overlay.open {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .code-modal {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            width: 100%;
-            max-width: 680px;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .code-modal-header {
+        .code-section-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
         }
 
-        .code-modal-header h3 {
+        .code-section-header h3 {
             font-family: var(--font-display);
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
+            color: var(--orange);
         }
 
-        .code-modal-copy {
+        .code-copy-btn {
             padding: 6px 16px;
             background: linear-gradient(135deg, var(--orange), var(--orange-dark));
             border: none;
@@ -275,35 +224,12 @@
             transition: all 0.2s;
         }
 
-        .code-modal-copy:hover { transform: translateY(-1px); }
+        .code-copy-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,155,38,0.25); }
 
-        .code-modal-close {
-            width: 32px;
-            height: 32px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--muted);
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            margin-left: 10px;
-        }
-
-        .code-modal-close:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
-
-        .code-modal-body {
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .code-modal-body pre {
+        .code-block-pre {
             background: var(--bg);
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 20px;
             font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
             font-size: 0.85rem;
@@ -312,6 +238,10 @@
             white-space: pre-wrap;
             word-break: break-word;
             overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--surface-2) transparent;
         }
 
         /* ── GATE OVERLAY ── */
@@ -523,8 +453,16 @@
 
             let codeHtml = '';
             if (post.code_block) {
-                const label = post.code_label || 'View Code';
-                codeHtml = `<button class="code-btn" id="openCodeModal">${label}</button>`;
+                const escaped = post.code_block.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                codeHtml = `
+                    <div class="code-section">
+                        <div class="code-section-header">
+                            <h3>${post.code_label || 'Code'}</h3>
+                            <button class="code-copy-btn" id="copyCodeBtn">Copy</button>
+                        </div>
+                        <pre class="code-block-pre">${escaped}</pre>
+                    </div>
+                `;
             }
 
             container.innerHTML = `
@@ -533,48 +471,11 @@
                 <h1 class="post-title">${post.title}</h1>
                 ${mediaHtml}
                 <div class="post-content">${post.content || ''}</div>
-                <div style="display:flex;flex-wrap:wrap;align-items:center">${codeHtml}${linkHtml}</div>
+                ${codeHtml}
+                ${linkHtml ? `<div style="margin-top:20px">${linkHtml}</div>` : ''}
             `;
 
-            // Set up code modal
             if (post.code_block) {
-                const modal = document.createElement('div');
-                modal.className = 'code-modal-overlay';
-                modal.id = 'codeModal';
-                const escaped = post.code_block.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                modal.innerHTML = `
-                    <div class="code-modal">
-                        <div class="code-modal-header">
-                            <h3>${post.code_label || 'Code'}</h3>
-                            <div style="display:flex;align-items:center">
-                                <button class="code-modal-copy" id="copyCodeBtn">Copy</button>
-                                <button class="code-modal-close" id="closeCodeModal">&times;</button>
-                            </div>
-                        </div>
-                        <div class="code-modal-body">
-                            <pre>${escaped}</pre>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-
-                document.getElementById('openCodeModal').addEventListener('click', () => {
-                    modal.classList.add('open');
-                    document.body.style.overflow = 'hidden';
-                });
-
-                document.getElementById('closeCodeModal').addEventListener('click', () => {
-                    modal.classList.remove('open');
-                    document.body.style.overflow = '';
-                });
-
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.classList.remove('open');
-                        document.body.style.overflow = '';
-                    }
-                });
-
                 document.getElementById('copyCodeBtn').addEventListener('click', () => {
                     navigator.clipboard.writeText(post.code_block).then(() => {
                         document.getElementById('copyCodeBtn').textContent = 'Copied!';
