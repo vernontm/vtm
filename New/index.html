@@ -1132,14 +1132,6 @@
             const text = input.value.trim();
             if (!text) return;
 
-            // Reset speech recognition for a fresh session
-            if (isListening && recognition) {
-                try { recognition.stop(); } catch(e) {}
-                isListening = false;
-                micBtn.classList.remove('listening');
-                input.placeholder = 'Describe what you\'re looking for...';
-            }
-
             // Hide quick links after first message
             document.getElementById('quickLinks').style.display = 'none';
 
