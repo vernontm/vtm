@@ -437,7 +437,7 @@ export default function Invoices() {
       <div style={{ padding: '0 28px 28px' }}>
 
         {/* Summary cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 22 }}>
+        <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 22 }}>
           {[
             { label: 'Total Collected', value: `$${totals.all.toLocaleString()}`, color: '#4a6cf7', note: 'paid invoices' },
             { label: 'Outstanding',     value: `$${totals.open.toLocaleString()}`, color: '#fdab3d', note: 'open / unpaid' },

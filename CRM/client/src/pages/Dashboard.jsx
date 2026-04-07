@@ -130,7 +130,7 @@ export default function Dashboard() {
   const pendingDrafts = drafts.length;
 
   return (
-    <div style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: '#f5f7fa' }}>
+    <div className="dashboard-page" style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: '#f5f7fa' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
@@ -148,7 +148,7 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
+      <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
         <StatMini icon={Star} label="Open Leads" value={openLeads} color="#f5a623" />
         <StatMini icon={Mail} label="Drafts to Review" value={pendingDrafts} color={pendingDrafts > 0 ? '#ff5c5c' : '#4a6cf7'} />
         <StatMini icon={FolderOpen} label="Active Projects" value={activeProjects} color="#00b8d4" />
@@ -159,7 +159,7 @@ export default function Dashboard() {
       {stats?.stripeRevenue && (
         <div style={{ marginBottom: 22 }}>
           {/* Revenue Stats Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
+          <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
             <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Stripe Balance</div>
               <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>${stats.stripeRevenue.available?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
@@ -181,7 +181,7 @@ export default function Dashboard() {
           </div>
 
           {/* Revenue Chart + Recent Payments */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             {/* Monthly Revenue Chart */}
             <Card>
               <CardHeader icon={TrendingUp} title="Monthly Revenue" color="#22c55e" />
@@ -252,7 +252,7 @@ export default function Dashboard() {
       )}
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+      <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
 
         {/* Recent Leads */}
         <Card>
@@ -400,7 +400,7 @@ export default function Dashboard() {
         {todos.length === 0 ? (
           <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>No pending tasks</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+          <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
             {todos.map(t => (
               <div key={t.id} style={{
                 display: 'flex', alignItems: 'center', gap: 8,

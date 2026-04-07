@@ -336,3 +336,112 @@ input[type="checkbox"] {
 }
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Hamburger button — hidden on desktop */
+.mobile-hamburger {
+  display: none;
+  position: fixed; top: 12px; left: 12px; z-index: 1100;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px; cursor: pointer; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Sidebar overlay backdrop — hidden on desktop */
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 999;
+}
+
+/* ── Tablet (≤1024px) ──────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .page-header { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+  .page-title { font-size: 18px; }
+  .search-input { width: 180px; }
+  td, th { padding: 8px 8px; font-size: 12px; }
+  .modal-content { max-width: 95vw; padding: 20px; }
+}
+
+/* ── Mobile (≤768px) ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Show hamburger */
+  .mobile-hamburger { display: flex; }
+
+  /* Sidebar: off-screen by default, slide in when open */
+  .app-sidebar {
+    position: fixed !important; left: -260px; top: 0; bottom: 0;
+    width: 250px !important; min-width: 250px !important;
+    z-index: 1000; transition: left 0.25s ease;
+    box-shadow: none;
+  }
+  .app-sidebar.sidebar-open {
+    left: 0;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+  }
+
+  /* Show overlay when sidebar is open */
+  .sidebar-overlay.sidebar-open { display: block; }
+
+  /* Main content full width, add top padding for hamburger */
+  .app-main { padding-top: 52px !important; }
+
+  /* Page layout */
+  .page-header {
+    padding: 12px 14px; flex-wrap: wrap; gap: 8px;
+  }
+  .page-title { font-size: 17px; width: 100%; }
+  .search-input { width: 100%; }
+
+  /* Grids → 2 columns */
+  .grid-4 { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+  .grid-2 { grid-template-columns: 1fr !important; }
+
+  /* Tables */
+  td, th { padding: 7px 6px; font-size: 11px; }
+  td { white-space: normal; }
+  th { font-size: 10px; }
+  .table-container { margin: 0 -14px; }
+
+  /* Hide low-priority table columns */
+  .hide-mobile { display: none !important; }
+
+  /* Buttons */
+  .btn-primary, .btn-green, .btn-ghost { font-size: 12px; padding: 6px 10px; }
+
+  /* Cards */
+  .card-responsive { padding: 14px 16px !important; }
+
+  /* Modals full-screen on mobile */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal-content {
+    max-width: 100vw; width: 100vw; border-radius: 16px 16px 0 0;
+    max-height: 92vh; padding: 20px 16px;
+  }
+
+  /* Email page: stack vertically */
+  .email-page-wrap { flex-direction: column !important; }
+  .email-sidebar {
+    width: 100% !important; min-width: 0 !important;
+    border-right: none !important; border-bottom: 1px solid var(--border) !important;
+    flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important;
+    max-height: none !important; height: auto !important;
+  }
+
+  /* Email compose popup */
+  .compose-popup { width: 100vw !important; right: 0 !important; left: 0 !important; }
+
+  /* Dashboard padding */
+  .dashboard-page { padding: 16px 14px !important; }
+}
+
+/* ── Small phone (≤480px) ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .grid-4 { grid-template-columns: 1fr !important; }
+  .page-header { padding: 10px 12px; }
+  .page-title { font-size: 16px; }
+  td, th { padding: 6px 4px; font-size: 10px; }
+  .btn-primary { padding: 6px 8px; font-size: 11px; }
+  .modal-content { padding: 16px 12px; }
+}

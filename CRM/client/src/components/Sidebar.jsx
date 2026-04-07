@@ -8,6 +8,7 @@ import {
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
+import { useMobile } from '../App';
 import GlobalSearch from './GlobalSearch';
 import { getNotifications, getGmailInbox } from '../api';
 
@@ -74,12 +75,13 @@ export default function Sidebar() {
 
   const { privacyMode, togglePrivacy } = usePrivacy();
   const { signOut } = useAuth();
+  const { sidebarOpen } = useMobile();
 
   return (
     <>
       <aside
         style={{ width: 230, minWidth: 230, background: '#f0f2f8', borderRight: '1px solid #e5e7ef' }}
-        className="flex flex-col h-full"
+        className={`app-sidebar flex flex-col h-full${sidebarOpen ? ' sidebar-open' : ''}`}
       >
         {/* Logo */}
         <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #e5e7ef' }}>

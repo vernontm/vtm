@@ -190,7 +190,7 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
 
   return (
     <div style={{
-      position:'fixed', bottom:0, right:80, width:480, zIndex:8000,
+      position:'fixed', bottom:0, right:80, width:480, maxWidth:'100vw', zIndex:8000,
       background:'#fff', borderRadius:'12px 12px 0 0', boxShadow:'0 -4px 32px rgba(0,0,0,0.15)',
       border:'1px solid #e5e7ef', borderBottom:'none', display:'flex', flexDirection:'column',
       maxHeight: minimized ? 44 : '70vh', transition:'max-height 0.2s ease',
@@ -483,10 +483,10 @@ export default function EmailPage() {
 
   /* ════════════════════════════════════════════════════════════════════════ */
   return (
-    <div style={{ height:'100%', display:'flex', background:'#f5f7fa', fontFamily:'Inter, sans-serif' }}>
+    <div className="email-page-wrap" style={{ height:'100%', display:'flex', background:'#f5f7fa', fontFamily:'Inter, sans-serif' }}>
 
       {/* ── Left Sidebar ── */}
-      <div style={{ width:200, background:'#fff', borderRight:'1px solid #e5e7ef', display:'flex', flexDirection:'column', flexShrink:0 }}>
+      <div className="email-sidebar" style={{ width:200, background:'#fff', borderRight:'1px solid #e5e7ef', display:'flex', flexDirection:'column', flexShrink:0 }}>
         <div style={{ padding:'16px 14px 12px' }}>
           <button onClick={openCompose} style={{ width:'100%', padding:'10px 0', borderRadius:10, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
             <Edit3 size={14} /> Compose
@@ -740,7 +740,7 @@ export default function EmailPage() {
                       onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'}
                       onMouseLeave={e => e.currentTarget.style.background='#fff'}>
                       <Avatar name={name} size={38} />
-                      <div style={{ width:200, flexShrink:0 }}>
+                      <div style={{ width:200, minWidth:0, flexShrink:1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                           <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'#1a1a2e', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                             {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
@@ -793,7 +793,7 @@ export default function EmailPage() {
         <div style={{
           position:'fixed', bottom:16, left:'50%', transform:'translateX(-50%)', zIndex:7000,
           background:'#fff', borderRadius:14, boxShadow:'0 8px 40px rgba(0,0,0,0.15)', border:'1px solid #e5e7ef',
-          width:520, maxHeight:'60vh', display:'flex', flexDirection:'column',
+          width:520, maxWidth:'calc(100vw - 32px)', maxHeight:'60vh', display:'flex', flexDirection:'column',
         }}>
           <div style={{ display:'flex', alignItems:'center', padding:'14px 18px', borderBottom:'1px solid #f0f2f8' }}>
             <Zap size={16} color="#4a6cf7" />

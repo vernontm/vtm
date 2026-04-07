@@ -144,8 +144,8 @@ export default function SubscriptionsPage() {
         </div>
 
         {/* Stats cards */}
-        <div style={{ display:'flex', gap:12 }}>
-          <div style={{ flex:1, padding:'14px 18px', background:'#f8f9fc', borderRadius:10, border:'1px solid #e5e7ef' }}>
+        <div className="grid-4" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12 }}>
+          <div style={{ padding:'14px 18px', background:'#f8f9fc', borderRadius:10, border:'1px solid #e5e7ef' }}>
             <div style={{ fontSize:10, color:'#8e8ea0', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>Active</div>
             <div style={{ fontSize:22, fontWeight:700, color:'#1a1a2e' }}>{activeSubs.length}</div>
           </div>
