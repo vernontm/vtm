@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   RefreshCw, Star, Mail, Sparkles, FolderOpen, CheckSquare,
   Calendar, Clock, ArrowRight, AlertCircle, Send, Video,
-  TrendingUp, Users, FileText,
+  TrendingUp, Users, FileText, DollarSign, CreditCard,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -154,6 +154,85 @@ export default function Dashboard() {
         <StatMini icon={FolderOpen} label="Active Projects" value={activeProjects} color="#00b8d4" />
         <StatMini icon={TrendingUp} label="Active Deals" value={activeDeals} color="#22c55e" />
       </div>
+
+      {/* ── Stripe Revenue ── */}
+      {stats?.stripeRevenue && (
+        <div style={{ marginBottom: 22 }}>
+          {/* Revenue Stats Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Stripe Balance</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>${stats.stripeRevenue.available?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              {stats.stripeRevenue.pending > 0 && <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>${stats.stripeRevenue.pending.toFixed(2)} pending</div>}
+            </div>
+            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Last 30 Days</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#4a6cf7' }}>${stats.stripeRevenue.last30Days?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{stats.stripeRevenue.last30Count} payment{stats.stripeRevenue.last30Count !== 1 ? 's' : ''}</div>
+            </div>
+            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>12-Month Revenue</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>${stats.stripeRevenue.total?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pipeline Value</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#784bd1' }}>${(stats?.pipelineValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+          </div>
+
+          {/* Revenue Chart + Recent Payments */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {/* Monthly Revenue Chart */}
+            <Card>
+              <CardHeader icon={TrendingUp} title="Monthly Revenue" color="#22c55e" />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 120 }}>
+                {(stats?.monthlyChart || []).map((m, i) => {
+                  const maxVal = Math.max(...(stats?.monthlyChart || []).map(x => x.revenue), 1);
+                  const h = Math.max((m.revenue / maxVal) * 100, 2);
+                  return (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div title={`$${m.revenue.toLocaleString()}`} style={{
+                        width: '100%', height: h, borderRadius: '4px 4px 0 0',
+                        background: m.revenue > 0 ? 'linear-gradient(180deg, #4a6cf7, #6e8efb)' : '#f0f2f8',
+                        transition: 'height 0.3s ease',
+                      }} />
+                      <span style={{ fontSize: 8, color: '#b0b0c0', whiteSpace: 'nowrap' }}>{m.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* Recent Payments */}
+            <Card>
+              <CardHeader icon={CreditCard} title="Recent Payments" color="#22c55e" linkTo="/invoices" />
+              {(stats.stripeRevenue.recentPayments || []).length === 0 ? (
+                <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No recent payments</div>
+              ) : (
+                (stats.stripeRevenue.recentPayments || []).slice(0, 6).map(p => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #f0f2f8' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#22c55e18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <DollarSign size={13} color="#22c55e" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.customer}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.description || p.email || ''}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>+${p.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                      <div style={{ fontSize: 10, color: '#8e8ea0' }}>{timeAgo(p.date)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* Action Items Banner */}
       {pendingDrafts > 0 && (

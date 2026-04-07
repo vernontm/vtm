@@ -16,6 +16,64 @@ export default async function handler(req, res) {
       supaFetch('crm_leads?select=id,status,interest,lead_segment,archived,created_at'),
     ]);
 
+    // ── Stripe Revenue ────────────────────────────────────────────────────────
+    let stripeRevenue = null;
+    const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
+    if (STRIPE_KEY && !STRIPE_KEY.includes('REPLACE')) {
+      try {
+        const stripeHeaders = { 'Authorization': `Bearer ${STRIPE_KEY}` };
+        const stripeFetch = async (path) => {
+          const r = await fetch(`https://api.stripe.com/v1${path}`, { headers: stripeHeaders });
+          if (!r.ok) throw new Error(`Stripe ${r.status}`);
+          return r.json();
+        };
+
+        const thirtyDaysAgoTs = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+        const yearAgoTs = Math.floor((Date.now() - 365 * 24 * 60 * 60 * 1000) / 1000);
+
+        const [balance, recentCharges, yearCharges] = await Promise.all([
+          stripeFetch('/balance'),
+          stripeFetch(`/charges?created[gte]=${thirtyDaysAgoTs}&limit=100`),
+          stripeFetch(`/charges?created[gte]=${yearAgoTs}&limit=100&status=succeeded`),
+        ]);
+
+        const availableBalance = balance.available.reduce((s, b) => s + b.amount, 0) / 100;
+        const pendingBalance = balance.pending.reduce((s, b) => s + b.amount, 0) / 100;
+
+        const succeededRecent = recentCharges.data.filter(c => c.status === 'succeeded');
+        const last30Revenue = succeededRecent.reduce((s, c) => s + c.amount, 0) / 100;
+        const totalStripeRevenue = yearCharges.data.reduce((s, c) => s + c.amount, 0) / 100;
+
+        const stripeByMonth = {};
+        yearCharges.data.forEach(c => {
+          const d = new Date(c.created * 1000);
+          const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          stripeByMonth[k] = (stripeByMonth[k] || 0) + c.amount / 100;
+        });
+
+        const recentPayments = succeededRecent.slice(0, 10).map(c => ({
+          id: c.id,
+          amount: c.amount / 100,
+          customer: c.billing_details?.name || c.billing_details?.email || c.customer || 'Unknown',
+          email: c.billing_details?.email || '',
+          description: c.description || '',
+          date: new Date(c.created * 1000).toISOString(),
+        }));
+
+        stripeRevenue = {
+          available: availableBalance,
+          pending: pendingBalance,
+          last30Days: last30Revenue,
+          last30Count: succeededRecent.length,
+          total: totalStripeRevenue,
+          byMonth: stripeByMonth,
+          recentPayments,
+        };
+      } catch (stripeErr) {
+        console.error('Stripe fetch error:', stripeErr.message);
+      }
+    }
+
     const activeContacts = contacts.filter(c => !c.archived);
     const activeDeals = deals.filter(d => !d.archived);
     const activeProjects = projects.filter(p => !p.archived);
@@ -57,9 +115,12 @@ export default async function handler(req, res) {
       if (k) revenueByMonth[k] = (revenueByMonth[k] || 0) + (Number(d.value) || 0);
     });
 
+    const stripeByMonth = stripeRevenue?.byMonth || {};
     const monthlyChart = months.map(m => ({
       label: m.label,
-      revenue: revenueByMonth[m.key] || 0,
+      revenue: (revenueByMonth[m.key] || 0) + (stripeByMonth[m.key] || 0),
+      deals: revenueByMonth[m.key] || 0,
+      stripe: stripeByMonth[m.key] || 0,
     }));
 
     // Deals by stage
@@ -104,6 +165,7 @@ export default async function handler(req, res) {
       leadsContacted,
       leadsInterested,
       leadsUninterested,
+      stripeRevenue,
     });
   } catch (err) {
     console.error('CRM dashboard error:', err);
