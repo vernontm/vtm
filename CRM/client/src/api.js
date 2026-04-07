@@ -122,6 +122,9 @@ export const getGmailInbox = (params = {}) => {
   return request(`/gmail-inbox${qs ? '?' + qs : ''}`);
 };
 
+// Gmail Thread
+export const getGmailThread = (threadId) => request(`/gmail-thread?threadId=${encodeURIComponent(threadId)}`);
+
 // Gmail Contacts
 export const getGmailContacts = (params = {}) => {
   const qs = new URLSearchParams(params).toString();

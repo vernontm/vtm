@@ -7,7 +7,7 @@ import {
 import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
-  addEmailLabel, removeEmailLabel, getGmailContacts,
+  addEmailLabel, removeEmailLabel, getGmailContacts, getGmailThread,
 } from '../api';
 
 const TABS = [
@@ -257,6 +257,8 @@ export default function EmailPage() {
   const [draftMessages, setDraftMessages]   = useState([]);
   const [loading, setLoading]               = useState(true);
   const [selected, setSelected]             = useState(null);
+  const [threadMessages, setThreadMessages] = useState([]);
+  const [threadLoading, setThreadLoading]   = useState(false);
   const [search, setSearch]                 = useState('');
   const [refreshing, setRefreshing]         = useState(false);
   const [allContacts, setAllContacts]       = useState([]);
@@ -349,6 +351,21 @@ export default function EmailPage() {
   const inboxCount = inboxMessages.filter(m => !(m.crmLabels||[]).includes('spam')).length;
 
   /* ── actions ─────────────────────────────────────────────────────────── */
+
+  // Select email and load thread
+  const selectEmail = async (email) => {
+    setSelected(email);
+    setThreadMessages([]);
+    // Load full thread for Gmail messages
+    if (email.threadId && (email._type==='gmail'||email._type==='gmail-sent'||email._type==='gmail-draft')) {
+      setThreadLoading(true);
+      try {
+        const data = await getGmailThread(email.threadId);
+        setThreadMessages(data?.messages || []);
+      } catch (e) { console.error('Thread load error:', e); }
+      setThreadLoading(false);
+    }
+  };
 
   const handleSendQueue = async id => { try { await sendQueueItem(id); await load(); setSelected(null); } catch(e) { alert('Send failed: '+e.message); } };
   const handleDelete = async id => { try { await deleteQueueItem(id); await load(); if(selected?.id===id) setSelected(null); } catch(e) { alert('Delete failed: '+e.message); } };
@@ -461,36 +478,71 @@ export default function EmailPage() {
                 <h1 style={{ fontSize:22, fontWeight:700, color:'#1a1a2e', margin:'0 0 6px' }}>{selected.subject||'(no subject)'}</h1>
                 <div style={{ fontSize:12, color:'#8e8ea0', marginBottom:20 }}>{fmtFullDate(getDate(selected))}</div>
 
-                <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20, padding:'14px 18px', background:'#fff', borderRadius:10, border:'1px solid #e5e7ef' }}>
-                  <Avatar name={getName(selected)} size={42} />
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:'#1a1a2e' }}>{getName(selected)}</div>
-                    <div style={{ fontSize:12, color:'#8e8ea0' }}>
-                      {selected._type==='gmail-sent'||selected._type==='queue' ? `To: ${getRecipient(selected)}` : getRecipient(selected)}
-                    </div>
-                  </div>
-                  <div style={{ display:'flex', gap:4 }}>
-                    {(selected.crmLabels||[]).filter(l=>l!=='spam').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{ fontSize:10, padding:'3px 8px', borderRadius:5, background:cfg.color+'15', color:cfg.color, fontWeight:600 }}>{cfg.label}</span> : null; })}
-                  </div>
-                  {selected._type==='queue' && (
-                    <button onClick={() => handleDelete(selected.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ff5c5c', display:'flex', padding:6 }}><Trash2 size={15} /></button>
-                  )}
-                </div>
-
-                {selected.isReply && (
-                  <div style={{ padding:'8px 14px', background:'#4a6cf708', border:'1px solid #4a6cf715', borderRadius:8, marginBottom:16, display:'flex', alignItems:'center', gap:6 }}>
-                    <Reply size={13} color="#4a6cf7" /><span style={{ fontSize:12, color:'#4a6cf7', fontWeight:500 }}>This is a reply to one of your emails</span>
+                {/* CRM labels */}
+                {(selected.crmLabels||[]).filter(l=>l!=='spam').length > 0 && (
+                  <div style={{ display:'flex', gap:6, marginBottom:16 }}>
+                    {(selected.crmLabels||[]).filter(l=>l!=='spam').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{ fontSize:10, padding:'4px 10px', borderRadius:6, background:cfg.color+'15', color:cfg.color, fontWeight:600 }}>{cfg.label}</span> : null; })}
                   </div>
                 )}
+
                 {selected.auto_generated && (
                   <div style={{ padding:'10px 16px', background:'rgba(74,108,247,0.05)', border:'1px solid rgba(74,108,247,0.12)', borderRadius:8, marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
                     <Sparkles size={14} color="#4a6cf7" /><span style={{ fontSize:13, color:'#4a6cf7', fontWeight:500 }}>Auto-drafted from a lead submission.</span>
                   </div>
                 )}
 
-                <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding:28, fontSize:14, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap' }}>
-                  {selected.body||selected.generated_body||selected.snippet||'(empty)'}
-                </div>
+                {/* Thread messages or single message */}
+                {threadLoading ? (
+                  <div style={{ textAlign:'center', padding:40, color:'#8e8ea0', fontSize:13 }}>Loading conversation...</div>
+                ) : threadMessages.length > 1 ? (
+                  /* Full thread view */
+                  <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                    {threadMessages.map((msg, idx) => (
+                      <div key={msg.id} style={{
+                        background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', overflow:'hidden',
+                        borderLeft: msg.isFromMe ? '3px solid #4a6cf7' : '3px solid #22c55e',
+                      }}>
+                        {/* Message header */}
+                        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderBottom:'1px solid #f0f2f8', background:'#f8f9fc' }}>
+                          <Avatar name={msg.from?.name || msg.from?.email || '?'} size={32} color={msg.isFromMe ? '#4a6cf7' : undefined} />
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                              <span style={{ fontSize:13, fontWeight:600, color:'#1a1a2e' }}>{msg.from?.name || msg.from?.email}</span>
+                              {msg.isFromMe && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:4, background:'#4a6cf710', color:'#4a6cf7', fontWeight:700 }}>You</span>}
+                            </div>
+                            <div style={{ fontSize:11, color:'#8e8ea0' }}>
+                              to {(msg.to||'').replace(/<.*>/,'').trim().split(',')[0]}
+                            </div>
+                          </div>
+                          <span style={{ fontSize:11, color:'#8e8ea0' }}>{fmtFullDate(msg.date)}</span>
+                        </div>
+                        {/* Message body */}
+                        <div style={{ padding:'16px 20px', fontSize:13, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap' }}>
+                          {msg.body || msg.snippet || '(empty)'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* Single message */
+                  <>
+                    <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'14px 18px', background:'#fff', borderRadius:10, border:'1px solid #e5e7ef' }}>
+                      <Avatar name={getName(selected)} size={42} />
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14, fontWeight:600, color:'#1a1a2e' }}>{getName(selected)}</div>
+                        <div style={{ fontSize:12, color:'#8e8ea0' }}>
+                          {selected._type==='gmail-sent'||selected._type==='queue' ? `To: ${getRecipient(selected)}` : getRecipient(selected)}
+                        </div>
+                      </div>
+                      {selected._type==='queue' && (
+                        <button onClick={() => handleDelete(selected.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ff5c5c', display:'flex', padding:6 }}><Trash2 size={15} /></button>
+                      )}
+                    </div>
+                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding:28, fontSize:14, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap' }}>
+                      {threadMessages.length === 1 ? (threadMessages[0].body || selected.snippet || '(empty)') : (selected.body||selected.generated_body||selected.snippet||'(empty)')}
+                    </div>
+                  </>
+                )}
 
                 {selected.follow_up_date && (
                   <div style={{ marginTop:16, padding:'10px 16px', background:'#784bd108', border:'1px solid #784bd120', borderRadius:8, display:'flex', alignItems:'center', gap:8 }}>
@@ -559,7 +611,7 @@ export default function EmailPage() {
                   const isSentType = email._type==='gmail-sent'||email._type==='queue';
 
                   return (
-                    <div key={email.id} onClick={() => setSelected(email)}
+                    <div key={email.id} onClick={() => selectEmail(email)}
                       style={{
                         display:'flex', alignItems:'center', gap:14, padding:'12px 24px', cursor:'pointer',
                         borderBottom:'1px solid #f0f2f8', transition:'background 0.1s',
