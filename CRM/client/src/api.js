@@ -125,6 +125,24 @@ export const getGmailInbox = (params = {}) => {
 // Gmail Thread
 export const getGmailThread = (threadId) => request(`/gmail-thread?threadId=${encodeURIComponent(threadId)}`);
 
+// AI Follow-ups
+export const getAIFollowups = () => request('/ai-followups');
+
+// Subscriptions
+export const getSubscriptions = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request(`/subscriptions${qs ? '?' + qs : ''}`);
+};
+export const createSubscription = (data) => request('/subscriptions', { method: 'POST', body: JSON.stringify(data) });
+export const updateSubscription = (id, data) => request(`/subscriptions?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteSubscription = (id) => request(`/subscriptions?id=${id}`, { method: 'DELETE' });
+export const scanSubscriptions = () => request('/subscriptions?action=scan', { method: 'POST' });
+
+// Label Definitions (custom labels with colors)
+export const getLabelDefs = () => request('/label-defs');
+export const createLabelDef = (data) => request('/label-defs', { method: 'POST', body: JSON.stringify(data) });
+export const deleteLabelDef = (id) => request(`/label-defs?id=${id}`, { method: 'DELETE' });
+
 // Gmail Contacts
 export const getGmailContacts = (params = {}) => {
   const qs = new URLSearchParams(params).toString();

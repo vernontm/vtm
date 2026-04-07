@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Send, FileText, Inbox, Search, RefreshCw, Trash2,
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
-  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2,
+  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap,
 } from 'lucide-react';
 import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
   addEmailLabel, removeEmailLabel, getGmailContacts, getGmailThread,
+  getLabelDefs, createLabelDef, deleteLabelDef, getAIFollowups,
 } from '../api';
 
 const TABS = [
@@ -264,6 +265,17 @@ export default function EmailPage() {
   const [allContacts, setAllContacts]       = useState([]);
   const [gmailContactsList, setGmailContactsList] = useState([]);
 
+  // Custom labels
+  const [customLabels, setCustomLabels]     = useState([]);
+  const [showNewLabel, setShowNewLabel]     = useState(false);
+  const [newLabelName, setNewLabelName]     = useState('');
+  const [newLabelColor, setNewLabelColor]   = useState('#4a6cf7');
+
+  // AI Follow-ups
+  const [followups, setFollowups]           = useState([]);
+  const [showFollowups, setShowFollowups]   = useState(false);
+  const [followupsLoading, setFollowupsLoading] = useState(false);
+
   // Compose popup
   const [composeOpen, setComposeOpen]       = useState(false); // true = new, or an email obj for reply
   const [sending, setSending]               = useState(false);
@@ -275,9 +287,9 @@ export default function EmailPage() {
 
     const [queueRes, inboxRes, sentRes, draftRes] = await Promise.allSettled([
       getEmailQueue(),
-      getGmailInbox({ maxResults:'50' }),
-      getGmailInbox({ maxResults:'50', label:'SENT' }),
-      getGmailInbox({ maxResults:'30', label:'DRAFT' }),
+      getGmailInbox({ maxResults:'200' }),
+      getGmailInbox({ maxResults:'100', label:'SENT' }),
+      getGmailInbox({ maxResults:'50', label:'DRAFT' }),
     ]);
 
     setQueueEmails(queueRes.status==='fulfilled' && Array.isArray(queueRes.value) ? queueRes.value : []);
@@ -298,10 +310,33 @@ export default function EmailPage() {
       try { const gc = await getGmailContacts({pageSize:'100'}); setGmailContactsList(gc?.contacts||[]); } catch{}
     }
     loadContacts();
+    // Load custom labels
+    getLabelDefs().then(l => setCustomLabels(l||[])).catch(() => {});
   }, []);
 
   useEffect(() => { load(); }, [load]);
   const handleRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+  // Label management
+  const handleCreateLabel = async () => {
+    if (!newLabelName.trim()) return;
+    try {
+      const created = await createLabelDef({ name: newLabelName.trim(), color: newLabelColor });
+      setCustomLabels(prev => [...prev, created]);
+      setNewLabelName(''); setShowNewLabel(false);
+    } catch (e) { alert('Failed: ' + e.message); }
+  };
+  const handleDeleteLabel = async (id) => {
+    try { await deleteLabelDef(id); setCustomLabels(prev => prev.filter(l => l.id !== id)); } catch {}
+  };
+
+  // AI Follow-ups
+  const loadFollowups = async () => {
+    setFollowupsLoading(true);
+    try { const data = await getAIFollowups(); setFollowups(data?.suggestions||[]); setShowFollowups(true); }
+    catch (e) { console.error('Follow-up error:', e); }
+    finally { setFollowupsLoading(false); }
+  };
 
   /* ── label actions ───────────────────────────────────────────────────── */
 
@@ -437,7 +472,50 @@ export default function EmailPage() {
             );
           })}
         </div>
-        <div style={{ padding:'12px 14px', borderTop:'1px solid #f0f2f8' }}>
+        {/* ── Custom Labels ── */}
+        <div style={{ borderTop:'1px solid #f0f2f8', padding:'8px 14px' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+            <span style={{ fontSize:10, fontWeight:600, color:'#8e8ea0', textTransform:'uppercase', letterSpacing:'0.05em' }}>Labels</span>
+            <button onClick={() => setShowNewLabel(!showNewLabel)} style={{ background:'none', border:'none', cursor:'pointer', color:'#4a6cf7', display:'flex', padding:2 }}>
+              <Plus size={13} />
+            </button>
+          </div>
+          {showNewLabel && (
+            <div style={{ display:'flex', gap:4, marginBottom:6 }}>
+              <input
+                type="color" value={newLabelColor} onChange={e => setNewLabelColor(e.target.value)}
+                style={{ width:24, height:24, border:'none', cursor:'pointer', borderRadius:4, padding:0, background:'none' }}
+              />
+              <input
+                value={newLabelName} onChange={e => setNewLabelName(e.target.value)}
+                placeholder="Label name..."
+                onKeyDown={e => e.key==='Enter' && handleCreateLabel()}
+                style={{ flex:1, fontSize:11, padding:'4px 8px', border:'1px solid #e5e7ef', borderRadius:6, outline:'none', color:'#1a1a2e', background:'#f5f7fa' }}
+              />
+              <button onClick={handleCreateLabel} style={{ background:'#4a6cf7', border:'none', borderRadius:6, color:'#fff', fontSize:10, padding:'4px 8px', cursor:'pointer', fontWeight:600 }}>Add</button>
+            </div>
+          )}
+          <div style={{ display:'flex', flexDirection:'column', gap:2, maxHeight:120, overflow:'auto' }}>
+            {customLabels.map(l => (
+              <div key={l.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 8px', borderRadius:6, cursor:'pointer', fontSize:12, color:'#5a5a6e' }}
+                onMouseEnter={e => e.currentTarget.style.background='#f5f7fa'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                <div style={{ width:10, height:10, borderRadius:'50%', background:l.color||'#4a6cf7', flexShrink:0 }} />
+                <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</span>
+                <button onClick={e => { e.stopPropagation(); handleDeleteLabel(l.id); }} style={{ background:'none', border:'none', cursor:'pointer', color:'#d0d0d8', display:'flex', padding:1 }}
+                  onMouseEnter={e => e.currentTarget.style.color='#ff5c5c'} onMouseLeave={e => e.currentTarget.style.color='#d0d0d8'}>
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── AI Follow-ups & Refresh ── */}
+        <div style={{ padding:'8px 14px 12px', borderTop:'1px solid #f0f2f8', display:'flex', flexDirection:'column', gap:6 }}>
+          <button onClick={loadFollowups} disabled={followupsLoading}
+            style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid #e5e7ef', borderRadius:8, background:followupsLoading?'#f5f7fa':'linear-gradient(135deg,rgba(74,108,247,0.05),rgba(110,142,251,0.05))', color:followupsLoading?'#b0b0c0':'#4a6cf7', fontSize:12, cursor:followupsLoading?'wait':'pointer', fontWeight:500 }}>
+            <Zap size={12} /> {followupsLoading ? 'Analyzing...' : 'AI Follow-ups'}
+          </button>
           <button onClick={handleRefresh} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid #e5e7ef', borderRadius:8, background:'#fff', color:'#8e8ea0', fontSize:12, cursor:'pointer' }}>
             <RefreshCw size={12} style={{ animation:refreshing?'spin 1s linear infinite':'none' }} /> Refresh
           </button>
@@ -665,6 +743,62 @@ export default function EmailPage() {
           onClose={() => setComposeOpen(false)}
           sending={sending}
         />
+      )}
+
+      {/* ── AI Follow-up Suggestions Popup ── */}
+      {showFollowups && followups.length > 0 && (
+        <div style={{
+          position:'fixed', bottom:16, left:'50%', transform:'translateX(-50%)', zIndex:7000,
+          background:'#fff', borderRadius:14, boxShadow:'0 8px 40px rgba(0,0,0,0.15)', border:'1px solid #e5e7ef',
+          width:520, maxHeight:'60vh', display:'flex', flexDirection:'column',
+        }}>
+          <div style={{ display:'flex', alignItems:'center', padding:'14px 18px', borderBottom:'1px solid #f0f2f8' }}>
+            <Zap size={16} color="#4a6cf7" />
+            <span style={{ fontSize:14, fontWeight:700, color:'#1a1a2e', marginLeft:8, flex:1 }}>Follow-up Suggestions</span>
+            <span style={{ fontSize:11, color:'#8e8ea0', marginRight:10 }}>{followups.length} suggestion{followups.length!==1?'s':''}</span>
+            <button onClick={() => setShowFollowups(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#8e8ea0', display:'flex' }}><X size={16} /></button>
+          </div>
+          <div style={{ flex:1, overflow:'auto', padding:'8px 0' }}>
+            {followups.map((f, i) => (
+              <div key={f.id||i} style={{ padding:'12px 18px', borderBottom: i<followups.length-1?'1px solid #f0f2f8':'none' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                  <span style={{
+                    fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:4, textTransform:'uppercase',
+                    background: f.priority==='high'?'#ff5c5c15':f.priority==='medium'?'#f5a62315':'#4a6cf715',
+                    color: f.priority==='high'?'#ff5c5c':f.priority==='medium'?'#f5a623':'#4a6cf7',
+                  }}>{f.priority}</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:'#1a1a2e', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {f.original_subject}
+                  </span>
+                  <span style={{ fontSize:10, color:'#8e8ea0' }}>{f.days_since_sent}d ago</span>
+                </div>
+                <div style={{ fontSize:11, color:'#8e8ea0', marginBottom:4 }}>To: {(f.original_to||'').replace(/<.*>/,'').trim()}</div>
+                {f.suggested_body && (
+                  <div style={{ fontSize:12, color:'#5a5a6e', background:'#f8f9fc', borderRadius:8, padding:'8px 12px', marginBottom:8, lineHeight:1.6, maxHeight:60, overflow:'hidden' }}>
+                    {f.suggested_body}
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={() => {
+                    setComposeOpen({ subject: f.suggested_subject, to_email: f.original_to, from: { email: f.original_to } });
+                    setFollowups(prev => prev.filter((_,j) => j!==i));
+                  }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
+                    <Edit3 size={10} /> Draft Follow-up
+                  </button>
+                  <button onClick={() => setFollowups(prev => prev.filter((_,j) => j!==i))}
+                    style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'#fff', border:'1px solid #e5e7ef', color:'#8e8ea0', fontWeight:500 }}>
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ padding:'10px 18px', borderTop:'1px solid #f0f2f8', display:'flex', justifyContent:'flex-end' }}>
+            <button onClick={() => { setFollowups([]); setShowFollowups(false); }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'#fff', border:'1px solid #e5e7ef', color:'#8e8ea0', fontWeight:500 }}>
+              Dismiss All
+            </button>
+          </div>
+        </div>
       )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

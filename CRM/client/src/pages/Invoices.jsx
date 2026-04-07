@@ -6,7 +6,7 @@ import {
 import {
   getInvoices, getManualInvoices, deleteInvoice, voidInvoice,
   deleteManualInvoice, updateManualInvoice, refreshInvoice,
-  createManualInvoice, getDeals,
+  createManualInvoice, getDeals, getContacts, getLeads, getGmailContacts,
 } from '../api';
 
 // ── Status config ──────────────────────────────────────────────────────────────
@@ -55,13 +55,25 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
 }
 
 // ── Create Invoice Modal ──────────────────────────────────────────────────────
-function CreateInvoiceModal({ onClose, onCreated, deals }) {
+function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
   const [form, setForm] = useState({
     bill_to_name: '', bill_to_email: '', description: '',
     invoice_number: `INV-${Date.now().toString(36).toUpperCase()}`,
     status: 'draft', deal_id: '', items: [{ description: '', quantity: 1, unit_price: '' }],
   });
   const [saving, setSaving] = useState(false);
+  const [contactQuery, setContactQuery] = useState('');
+  const [showContactDropdown, setShowContactDropdown] = useState(false);
+
+  const filteredContacts = contactQuery.length > 0
+    ? (contacts||[]).filter(c => (c.name||'').toLowerCase().includes(contactQuery.toLowerCase()) || (c.email||'').toLowerCase().includes(contactQuery.toLowerCase())).slice(0,6)
+    : (contacts||[]).slice(0,6);
+
+  const selectBillToContact = (c) => {
+    setForm(f => ({ ...f, bill_to_name: c.name || c.email, bill_to_email: c.email }));
+    setContactQuery('');
+    setShowContactDropdown(false);
+  };
 
   const total = form.items.reduce((s, item) => s + (parseFloat(item.unit_price) || 0) * (parseInt(item.quantity) || 0), 0);
 
@@ -126,14 +138,38 @@ function CreateInvoiceModal({ onClose, onCreated, deals }) {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Bill To (Name) *</label>
-              <input value={form.bill_to_name} onChange={e => setForm(f => ({ ...f, bill_to_name: e.target.value }))} style={inputStyle} placeholder="Client name" />
-            </div>
-            <div>
-              <label style={labelStyle}>Bill To (Email)</label>
-              <input value={form.bill_to_email} onChange={e => setForm(f => ({ ...f, bill_to_email: e.target.value }))} style={inputStyle} placeholder="client@email.com" />
+          {/* Bill To with contact search */}
+          <div>
+            <label style={labelStyle}>Bill To *</label>
+            <div style={{ position: 'relative' }}>
+              <input value={form.bill_to_name ? `${form.bill_to_name}${form.bill_to_email ? ` (${form.bill_to_email})` : ''}` : contactQuery}
+                onChange={e => { setContactQuery(e.target.value); setShowContactDropdown(true); setForm(f => ({ ...f, bill_to_name: '', bill_to_email: '' })); }}
+                onFocus={() => setShowContactDropdown(true)}
+                style={inputStyle} placeholder="Search contacts, leads, or type name..." />
+              {form.bill_to_name && (
+                <button onClick={() => { setForm(f => ({ ...f, bill_to_name: '', bill_to_email: '' })); setContactQuery(''); }}
+                  style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#8e8ea0', display:'flex' }}><X size={14} /></button>
+              )}
+              {showContactDropdown && !form.bill_to_name && filteredContacts.length > 0 && (
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:4, background:'#fff', border:'1px solid #e5e7ef', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:220, overflow:'auto' }}>
+                  {filteredContacts.map((c,i) => (
+                    <div key={c.email+i} onClick={() => selectBillToContact(c)}
+                      style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', cursor:'pointer', borderBottom:i<filteredContacts.length-1?'1px solid #f0f2f8':'none' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+                      <div style={{ width:24, height:24, borderRadius:'50%', background:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'#4a6cf7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff' }}>
+                        {(c.name||c.email)[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:'#1a1a2e' }}>{c.name||c.email}</div>
+                        <div style={{ fontSize:10, color:'#8e8ea0' }}>{c.email}</div>
+                      </div>
+                      <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'#4a6cf710', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'#4a6cf7' }}>
+                        {c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'CRM'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -224,6 +260,7 @@ export default function Invoices() {
   const [refreshingId, setRefreshingId]     = useState(null);
   const [showCreate, setShowCreate]         = useState(false);
   const [deals, setDeals]                   = useState([]);
+  const [allContacts, setAllContacts]       = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -236,7 +273,19 @@ export default function Invoices() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { getDeals().then(d => setDeals(d || [])).catch(() => {}); }, []);
+  useEffect(() => {
+    getDeals().then(d => setDeals(d || [])).catch(() => {});
+    // Load all contacts for bill-to search
+    async function loadContacts() {
+      const results = [];
+      try { const c = await getContacts(); (c||[]).forEach(x => { if(x.email) results.push({name:x.name||'',email:x.email,_source:'contact'}); }); } catch{}
+      try { const l = await getLeads(); (l||[]).forEach(x => { if(x.email) results.push({name:x.name||'',email:x.email,_source:'lead'}); }); } catch{}
+      try { const gc = await getGmailContacts({pageSize:'100'}); (gc?.contacts||[]).forEach(x => { if(x.email) results.push({name:x.name||'',email:x.email,_source:'gmail'}); }); } catch{}
+      const seen = new Set();
+      setAllContacts(results.filter(c => { const k=c.email.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; }));
+    }
+    loadContacts();
+  }, []);
 
   const showToast = (msg, error = false) => {
     setToast({ msg, error });
@@ -591,6 +640,7 @@ export default function Invoices() {
           onClose={() => setShowCreate(false)}
           onCreated={load}
           deals={deals}
+          contacts={allContacts}
         />
       )}
 

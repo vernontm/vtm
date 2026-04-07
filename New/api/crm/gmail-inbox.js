@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { maxResults = '30', pageToken, label = 'INBOX' } = req.query;
+  const { maxResults = '200', label = 'INBOX' } = req.query;
 
   try {
     const { accessToken } = await getGmailAuth();
@@ -42,19 +42,36 @@ export default async function handler(req, res) {
     const labelId = validLabels.includes(label.toUpperCase()) ? label.toUpperCase() : 'INBOX';
 
     const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
-    let query = `/messages?labelIds=${labelId}&maxResults=${Math.min(parseInt(maxResults), 50)}&q=after:${thirtyDaysAgo}`;
-    if (pageToken) query += `&pageToken=${pageToken}`;
+    const maxTotal = Math.min(parseInt(maxResults), 200);
+    let fetchedMessages = [];
+    let allMessageIds = [];
+    let nextPage = null;
 
-    const listRes = await gmailFetch(query, accessToken);
-    const messages = listRes.messages || [];
+    // Paginate through Gmail API (up to 200 messages, 50 per page)
+    while (fetchedMessages.length < maxTotal) {
+      const perPage = Math.min(50, maxTotal - fetchedMessages.length);
+      let query = `/messages?labelIds=${labelId}&maxResults=${perPage}&q=after:${thirtyDaysAgo}`;
+      if (nextPage) query += `&pageToken=${nextPage}`;
 
-    // Fetch metadata for each message in parallel
-    const detailed = await Promise.all(
-      messages.map(m =>
-        gmailFetch(`/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date&metadataHeaders=In-Reply-To`, accessToken)
-          .catch(() => null)
-      )
-    );
+      const listRes = await gmailFetch(query, accessToken);
+      const messages = listRes.messages || [];
+      if (messages.length === 0) break;
+
+      // Fetch metadata for each message in parallel
+      const pageMeta = await Promise.all(
+        messages.map(m =>
+          gmailFetch(`/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date&metadataHeaders=In-Reply-To`, accessToken)
+            .catch(() => null)
+        )
+      );
+      allMessageIds = allMessageIds.concat(messages);
+      fetchedMessages = fetchedMessages.concat(pageMeta);
+
+      nextPage = listRes.nextPageToken;
+      if (!nextPage) break;
+    }
+
+    const detailed = fetchedMessages;
 
     // Load CRM labels (spam, favorite, follow-up, etc.)
     let crmLabels = [];
@@ -72,7 +89,7 @@ export default async function handler(req, res) {
     if (labelId === 'INBOX') {
       try {
         const labeled = await supaFetch('crm_email_labels?label=neq.spam&select=gmail_message_id,gmail_thread_id,label,from_email,to_email,subject,snippet,date&order=date.desc');
-        const inboxIds = new Set(messages.map(m => m.id));
+        const inboxIds = new Set(allMessageIds.map(m => m.id));
         const unseenLabeled = labeled.filter(l => !inboxIds.has(l.gmail_message_id));
         const seen = new Set();
         unseenLabeled.forEach(l => {
@@ -121,14 +138,14 @@ export default async function handler(req, res) {
       });
 
     // Append persisted labeled messages (inbox only, also filter spam)
-    const allMessages = labelId === 'INBOX'
+    const combinedMessages = labelId === 'INBOX'
       ? [...result, ...persistedMessages.filter(m => !spamIds.has(m.id))]
       : result;
 
     return res.json({
-      messages: allMessages,
-      nextPageToken: listRes.nextPageToken || null,
-      resultCount: allMessages.length,
+      messages: combinedMessages,
+      nextPageToken: null,
+      resultCount: combinedMessages.length,
     });
   } catch (err) {
     console.error('Gmail inbox error:', err.message);

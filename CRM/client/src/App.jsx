@@ -18,6 +18,7 @@ import QuickNotes from './pages/QuickNotes';
 import Todos from './pages/Todos';
 import Blog from './pages/Blog';
 import EmailPage from './pages/Email';
+import Subscriptions from './pages/Subscriptions';
 
 function AppLayout() {
   const { refreshKey } = useRefresh();
@@ -40,6 +41,7 @@ function AppLayout() {
           <Route path="/todos" element={<Todos />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/email" element={<EmailPage />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>

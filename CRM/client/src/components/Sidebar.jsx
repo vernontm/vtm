@@ -3,13 +3,13 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, Briefcase, Star, BarChart3, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
-  Eye, EyeOff, FileText,
+  Eye, EyeOff, FileText, CreditCard,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
 import GlobalSearch from './GlobalSearch';
-import { getNotifications } from '../api';
+import { getNotifications, getGmailInbox } from '../api';
 
 const nav = [
   { to: '/dashboard',      icon: LayoutDashboard, label: 'Dashboard' },
@@ -24,6 +24,7 @@ const navTools = [
   { to: '/email',          icon: Mail,        label: 'Email' },
   { to: '/meetings',       icon: Calendar,    label: 'Meetings' },
   { to: '/invoices',       icon: Receipt,     label: 'Invoices' },
+  { to: '/subscriptions',  icon: CreditCard,  label: 'Subscriptions' },
   { to: '/quick-notes',    icon: StickyNote,  label: 'Quick Notes' },
   { to: '/notifications',  icon: Bell,        label: 'Notifications' },
   { to: '/settings',       icon: Settings,    label: 'Settings' },
@@ -34,13 +35,23 @@ export default function Sidebar() {
   const [spinning, setSpinning]         = useState(false);
   const [searchOpen, setSearchOpen]     = useState(false);
   const [notifCount, setNotifCount]     = useState(0);
+  const [emailCount, setEmailCount]     = useState(0);
 
   useEffect(() => {
-    const fetchCount = () => {
+    const fetchCounts = () => {
       getNotifications().then(d => setNotifCount(d.total || 0)).catch(() => {});
+      getGmailInbox({ maxResults: '10' }).then(d => {
+        // Count unread (non-spam) in last 24 hours
+        const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+        const recent = (d?.messages || []).filter(m => {
+          const date = new Date(m.date);
+          return date.getTime() > dayAgo && !(m.crmLabels || []).includes('spam');
+        });
+        setEmailCount(recent.length);
+      }).catch(() => {});
     };
-    fetchCount();
-    const interval = setInterval(fetchCount, 60000);
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -131,6 +142,11 @@ export default function Sidebar() {
             >
               <Icon size={15} />
               <span style={{ flex: 1 }}>{label}</span>
+              {to === '/email' && emailCount > 0 && (
+                <span style={{ background: '#4a6cf7', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700, lineHeight: '14px' }}>
+                  {emailCount}
+                </span>
+              )}
               {to === '/notifications' && notifCount > 0 && (
                 <span style={{ background: '#ff5c5c', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700, lineHeight: '14px' }}>
                   {notifCount}
