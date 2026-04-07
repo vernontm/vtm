@@ -2,32 +2,44 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Send, FileText, Inbox, Search, RefreshCw, Trash2,
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
-  Star, Users,
+  Star, Users, Ban, Flag, Reply, AlertTriangle,
 } from 'lucide-react';
 import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
+  addEmailLabel, removeEmailLabel,
 } from '../api';
 
 const TABS = [
   { key: 'inbox',  label: 'Inbox',  icon: Inbox },
   { key: 'sent',   label: 'Sent',   icon: Send },
   { key: 'drafts', label: 'Drafts', icon: FileText },
+  { key: 'starred', label: 'Starred', icon: Star },
+  { key: 'spam',   label: 'Spam',   icon: Ban },
 ];
 
 const AVATAR_COLORS = ['#4a6cf7', '#784bd1', '#22c55e', '#f5a623', '#ff5c5c', '#00b8d4', '#e91e8c', '#ff6b35'];
 
+const LABEL_CONFIG = {
+  favorite:  { icon: Star, color: '#f5a623', label: 'Favorite' },
+  'follow-up': { icon: Flag, color: '#784bd1', label: 'Follow Up' },
+  important: { icon: AlertTriangle, color: '#ff5c5c', label: 'Important' },
+  spam:      { icon: Ban, color: '#8e8ea0', label: 'Spam' },
+};
+
 function timeAgo(iso) {
   if (!iso) return '';
-  const diff = Date.now() - new Date(iso).getTime();
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const diff = Date.now() - d.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
+  if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
-  return new Date(iso).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 }
 
 function fmtFullDate(iso) {
@@ -51,7 +63,7 @@ function Avatar({ name, size = 40, color }) {
   );
 }
 
-// ── Contact Search Dropdown ──────────────────────────────────────────────────
+// ── Contact Search ───────────────────────────────────────────────────────────
 function ContactSearch({ value, onChange, contacts }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -86,9 +98,7 @@ function ContactSearch({ value, onChange, contacts }) {
           boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 280, overflow: 'auto',
         }}>
           {filtered.map((c, i) => (
-            <div
-              key={c.email + i}
-              onClick={() => { onChange(c.email); setOpen(false); setQuery(''); }}
+            <div key={c.email + i} onClick={() => { onChange(c.email); setOpen(false); setQuery(''); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
                 cursor: 'pointer', borderBottom: i < filtered.length - 1 ? '1px solid #f0f2f8' : 'none',
@@ -98,20 +108,14 @@ function ContactSearch({ value, onChange, contacts }) {
             >
               <Avatar name={c.name || c.email} size={30} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {c.name || c.email}
-                </div>
-                <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {c.email}
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name || c.email}</div>
+                <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>
               </div>
               <span style={{
                 fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 600,
                 background: c._source === 'lead' ? '#f5a62310' : '#4a6cf710',
                 color: c._source === 'lead' ? '#f5a623' : '#4a6cf7',
-              }}>
-                {c._source === 'lead' ? 'Lead' : 'Contact'}
-              </span>
+              }}>{c._source === 'lead' ? 'Lead' : 'Contact'}</span>
             </div>
           ))}
         </div>
@@ -120,9 +124,32 @@ function ContactSearch({ value, onChange, contacts }) {
   );
 }
 
+// ── Label Button ─────────────────────────────────────────────────────────────
+function LabelButton({ labelKey, active, onClick, size = 14 }) {
+  const cfg = LABEL_CONFIG[labelKey];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
+  return (
+    <button
+      onClick={onClick}
+      title={active ? `Remove ${cfg.label}` : `Mark as ${cfg.label}`}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex',
+        color: active ? cfg.color : '#d0d0d8',
+        transition: 'color 0.15s',
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.color = cfg.color; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#d0d0d8'; }}
+    >
+      <Icon size={size} fill={active ? cfg.color : 'none'} />
+    </button>
+  );
+}
+
 export default function EmailPage() {
   const [tab, setTab] = useState('inbox');
-  const [emails, setEmails] = useState([]);
+  const [queueEmails, setQueueEmails] = useState([]);
+  const [inboxMessages, setInboxMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState('');
@@ -131,226 +158,208 @@ export default function EmailPage() {
   const [composeData, setComposeData] = useState({ to: '', subject: '', body: '', scheduleDate: '' });
   const [sending, setSending] = useState(false);
   const [editingDraft, setEditingDraft] = useState(null);
-  const [gmailThreads, setGmailThreads] = useState([]);
   const [allContacts, setAllContacts] = useState([]);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [labelMenu, setLabelMenu] = useState(null); // message id showing label menu
 
   const load = useCallback(async () => {
     setLoading(true);
+    // Load queue emails
     try {
       const queue = await getEmailQueue();
-      setEmails(Array.isArray(queue) ? queue : []);
-    } catch (err) {
-      console.error('Email load error:', err);
-    }
-    // Load Gmail threads silently
+      setQueueEmails(Array.isArray(queue) ? queue : []);
+    } catch (err) { console.error('Email queue error:', err); }
+
+    // Load Gmail inbox
     try {
-      const data = await getGmailInbox();
-      if (data?.threads) {
-        setGmailThreads(data.threads.map(t => ({
-          id: t.threadId,
-          _gmail: true,
-          lead_name: (t.from || '').replace(/<.*>/, '').trim() || t.from,
-          to_email: t.to,
-          subject: t.subject,
-          body: t.snippet,
-          status: 'received',
-          created_at: t.date ? new Date(t.date).toISOString() : '',
-          messageCount: t.messageCount,
-          hasReply: t.hasReply,
-        })));
+      const data = await getGmailInbox({ maxResults: '50' });
+      if (data?.messages) {
+        setInboxMessages(data.messages);
       }
     } catch (err) { /* Gmail not connected */ }
+
     setLoading(false);
   }, []);
 
-  // Load contacts + leads for To: search
+  // Load contacts
   useEffect(() => {
     async function loadContacts() {
       const results = [];
       try {
         const contacts = await getContacts();
-        (contacts || []).forEach(c => {
-          if (c.email) results.push({ name: c.name || '', email: c.email, _source: 'contact' });
-        });
+        (contacts || []).forEach(c => { if (c.email) results.push({ name: c.name || '', email: c.email, _source: 'contact' }); });
       } catch {}
       try {
         const leads = await getLeads();
-        (leads || []).forEach(l => {
-          if (l.email) results.push({ name: l.name || '', email: l.email, _source: 'lead' });
-        });
+        (leads || []).forEach(l => { if (l.email) results.push({ name: l.name || '', email: l.email, _source: 'lead' }); });
       } catch {}
-      // Dedupe by email
       const seen = new Set();
-      setAllContacts(results.filter(c => {
-        if (seen.has(c.email)) return false;
-        seen.add(c.email);
-        return true;
-      }));
+      setAllContacts(results.filter(c => { if (seen.has(c.email)) return false; seen.add(c.email); return true; }));
     }
     loadContacts();
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
   const handleRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
-  // Filter emails by tab
-  const filtered = emails.filter(e => {
-    if (tab === 'inbox') return e.status === 'received' || e.status === 'reply';
-    if (tab === 'drafts') return e.status === 'draft' || e.status === 'pending';
-    if (tab === 'sent') return e.status === 'sent';
-    return true;
-  }).filter(e => {
-    if (!search) return true;
+  // ── Label actions ──────────────────────────────────────────────────────────
+  const toggleLabel = async (msg, labelKey) => {
+    const hasLabel = (msg.crmLabels || []).includes(labelKey);
+    try {
+      if (hasLabel) {
+        await removeEmailLabel(msg.id, labelKey);
+      } else {
+        await addEmailLabel({
+          gmail_message_id: msg.id,
+          gmail_thread_id: msg.threadId || '',
+          label: labelKey,
+          from_email: msg.from?.email || msg.from || '',
+          to_email: msg.to || '',
+          subject: msg.subject || '',
+          snippet: msg.snippet || '',
+          date: msg.date ? new Date(msg.date).toISOString() : new Date().toISOString(),
+        });
+      }
+      // Update local state
+      setInboxMessages(prev => prev.map(m => {
+        if (m.id !== msg.id) return m;
+        const labels = hasLabel
+          ? (m.crmLabels || []).filter(l => l !== labelKey)
+          : [...(m.crmLabels || []), labelKey];
+        return { ...m, crmLabels: labels };
+      }));
+      if (selected?.id === msg.id) {
+        setSelected(s => ({
+          ...s,
+          crmLabels: hasLabel
+            ? (s.crmLabels || []).filter(l => l !== labelKey)
+            : [...(s.crmLabels || []), labelKey],
+        }));
+      }
+    } catch (err) {
+      console.error('Label error:', err);
+    }
+    setLabelMenu(null);
+  };
+
+  // ── Build filtered list ────────────────────────────────────────────────────
+  const contactMap = {};
+  allContacts.forEach(c => { contactMap[c.email] = c; });
+
+  let filtered = [];
+  if (tab === 'inbox') {
+    // Show Gmail inbox messages (excluding spam)
+    filtered = inboxMessages
+      .filter(m => !(m.crmLabels || []).includes('spam'))
+      .map(m => ({ ...m, _type: 'gmail' }));
+  } else if (tab === 'sent') {
+    filtered = queueEmails.filter(e => e.status === 'sent').map(e => ({ ...e, _type: 'queue' }));
+  } else if (tab === 'drafts') {
+    filtered = queueEmails.filter(e => e.status === 'draft' || e.status === 'pending').map(e => ({ ...e, _type: 'queue' }));
+  } else if (tab === 'starred') {
+    filtered = inboxMessages
+      .filter(m => (m.crmLabels || []).some(l => l === 'favorite' || l === 'follow-up' || l === 'important'))
+      .map(m => ({ ...m, _type: 'gmail' }));
+  } else if (tab === 'spam') {
+    filtered = inboxMessages
+      .filter(m => (m.crmLabels || []).includes('spam'))
+      .map(m => ({ ...m, _type: 'gmail' }));
+  }
+
+  // Search filter
+  if (search) {
     const q = search.toLowerCase();
-    return (e.to_email || '').toLowerCase().includes(q) ||
-           (e.subject || '').toLowerCase().includes(q) ||
-           (e.lead_name || '').toLowerCase().includes(q);
-  });
+    filtered = filtered.filter(e => {
+      const name = e._type === 'gmail' ? (e.from?.name || e.from?.email || '') : (e.lead_name || e.to_email || '');
+      return name.toLowerCase().includes(q) ||
+        (e.subject || '').toLowerCase().includes(q) ||
+        (e.to_email || e.to || '').toLowerCase().includes(q);
+    });
+  }
 
-  const autoDraftCount = emails.filter(e => e.status === 'draft' && e.auto_generated).length;
+  const autoDraftCount = queueEmails.filter(e => e.status === 'draft' && e.auto_generated).length;
+  const inboxCount = inboxMessages.filter(m => !(m.crmLabels || []).includes('spam')).length;
 
-  const handleSend = async (id) => {
-    try {
-      await sendQueueItem(id);
-      await load();
-      setSelected(null);
-    } catch (err) {
-      alert('Send failed: ' + err.message);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await deleteQueueItem(id);
-      await load();
-      if (selected?.id === id) setSelected(null);
-    } catch (err) {
-      alert('Delete failed: ' + err.message);
-    }
-  };
-
-  const handleApprove = async (email) => {
-    try {
-      await updateQueueItem(email.id, { status: 'pending' });
-      await load();
-    } catch (err) {
-      alert('Approve failed: ' + err.message);
-    }
-  };
+  // ── Queue email handlers ───────────────────────────────────────────────────
+  const handleSend = async (id) => { try { await sendQueueItem(id); await load(); setSelected(null); } catch (err) { alert('Send failed: ' + err.message); } };
+  const handleDelete = async (id) => { try { await deleteQueueItem(id); await load(); if (selected?.id === id) setSelected(null); } catch (err) { alert('Delete failed: ' + err.message); } };
+  const handleApprove = async (email) => { try { await updateQueueItem(email.id, { status: 'pending' }); await load(); } catch (err) { alert('Approve failed: ' + err.message); } };
 
   const handleCompose = () => {
-    setComposing(true);
-    setSelected(null);
-    setEditingDraft(null);
-    setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
-    setShowSchedule(false);
+    setComposing(true); setSelected(null); setEditingDraft(null);
+    setComposeData({ to: '', subject: '', body: '', scheduleDate: '' }); setShowSchedule(false);
   };
-
   const handleEditDraft = (email) => {
-    setComposing(true);
-    setEditingDraft(email);
+    setComposing(true); setEditingDraft(email);
     setComposeData({
-      to: email.to_email || '',
-      subject: email.subject || '',
+      to: email.to_email || '', subject: email.subject || '',
       body: email.body || email.generated_body || '',
       scheduleDate: email.follow_up_date ? new Date(email.follow_up_date).toISOString().slice(0, 16) : '',
     });
     setShowSchedule(!!email.follow_up_date);
   };
 
-  // Send immediately: create queue item then call send action
   const handleSendCompose = async () => {
     if (!composeData.to || !composeData.subject) return;
     setSending(true);
     try {
       let itemId;
       if (editingDraft) {
-        await updateQueueItem(editingDraft.id, {
-          to_email: composeData.to,
-          subject: composeData.subject,
-          body: composeData.body,
-        });
+        await updateQueueItem(editingDraft.id, { to_email: composeData.to, subject: composeData.subject, body: composeData.body });
         itemId = editingDraft.id;
       } else {
-        const created = await createQueueItem({
-          to_email: composeData.to,
-          subject: composeData.subject,
-          body: composeData.body,
-          status: 'draft',
-        });
+        const created = await createQueueItem({ to_email: composeData.to, subject: composeData.subject, body: composeData.body, status: 'draft' });
         itemId = created.id;
       }
-      // Now send immediately via Gmail
       await sendQueueItem(itemId);
-      setComposing(false);
-      setEditingDraft(null);
-      setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
-      setShowSchedule(false);
+      setComposing(false); setEditingDraft(null); setComposeData({ to: '', subject: '', body: '', scheduleDate: '' }); setShowSchedule(false);
       await load();
-    } catch (err) {
-      alert('Send failed: ' + err.message);
-    } finally {
-      setSending(false);
-    }
+    } catch (err) { alert('Send failed: ' + err.message); } finally { setSending(false); }
   };
 
-  // Schedule: create queue item with follow_up_date
   const handleScheduleCompose = async () => {
     if (!composeData.to || !composeData.subject || !composeData.scheduleDate) return;
     setSending(true);
     try {
-      const scheduleData = {
-        to_email: composeData.to,
-        subject: composeData.subject,
-        body: composeData.body,
-        status: 'draft',
-        follow_up_date: new Date(composeData.scheduleDate).toISOString(),
-      };
-      if (editingDraft) {
-        await updateQueueItem(editingDraft.id, scheduleData);
-      } else {
-        await createQueueItem(scheduleData);
-      }
-      setComposing(false);
-      setEditingDraft(null);
-      setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
-      setShowSchedule(false);
+      const data = { to_email: composeData.to, subject: composeData.subject, body: composeData.body, status: 'draft', follow_up_date: new Date(composeData.scheduleDate).toISOString() };
+      if (editingDraft) await updateQueueItem(editingDraft.id, data);
+      else await createQueueItem(data);
+      setComposing(false); setEditingDraft(null); setComposeData({ to: '', subject: '', body: '', scheduleDate: '' }); setShowSchedule(false);
       await load();
-    } catch (err) {
-      alert('Schedule failed: ' + err.message);
-    } finally {
-      setSending(false);
-    }
+    } catch (err) { alert('Schedule failed: ' + err.message); } finally { setSending(false); }
   };
 
   const handleSaveDraft = async () => {
     if (!composeData.to && !composeData.subject && !composeData.body) return;
     try {
-      const data = {
-        to_email: composeData.to,
-        subject: composeData.subject,
-        body: composeData.body,
-        status: 'draft',
-      };
+      const data = { to_email: composeData.to, subject: composeData.subject, body: composeData.body, status: 'draft' };
       if (composeData.scheduleDate) data.follow_up_date = new Date(composeData.scheduleDate).toISOString();
-      if (editingDraft) {
-        await updateQueueItem(editingDraft.id, data);
-      } else {
-        await createQueueItem(data);
-      }
-      setComposing(false);
-      setEditingDraft(null);
-      setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
-      setShowSchedule(false);
+      if (editingDraft) await updateQueueItem(editingDraft.id, data);
+      else await createQueueItem(data);
+      setComposing(false); setEditingDraft(null); setComposeData({ to: '', subject: '', body: '', scheduleDate: '' }); setShowSchedule(false);
       await load();
-    } catch (err) {
-      alert('Save failed: ' + err.message);
-    }
+    } catch (err) { alert('Save failed: ' + err.message); }
   };
 
-  // Navigation
+  // ── Helpers for display ────────────────────────────────────────────────────
+  function getEmailName(email) {
+    if (email._type === 'gmail') {
+      const contact = contactMap[email.from?.email];
+      return contact?.name || email.from?.name || email.from?.email || 'Unknown';
+    }
+    return email.lead_name || email.to_email || 'Unknown';
+  }
+
+  function getEmailDate(email) {
+    if (email._type === 'gmail') return email.date || '';
+    return email.created_at || '';
+  }
+
+  function getEmailPreview(email) {
+    if (email._type === 'gmail') return email.snippet || '';
+    return (email.body || email.generated_body || '').slice(0, 100);
+  }
+
   const currentIdx = selected ? filtered.findIndex(e => e.id === selected.id) : -1;
   const canPrev = currentIdx > 0;
   const canNext = currentIdx >= 0 && currentIdx < filtered.length - 1;
@@ -377,38 +386,31 @@ export default function EmailPage() {
         <div style={{ padding: '0 14px 12px' }}>
           <div style={{ position: 'relative' }}>
             <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search here..."
-              style={{
-                width: '100%', padding: '8px 10px 8px 30px', borderRadius: 8, fontSize: 12,
-                background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e', outline: 'none',
-              }}
-            />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search here..."
+              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 8, fontSize: 12, background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e', outline: 'none' }} />
           </div>
         </div>
 
         <div style={{ flex: 1 }}>
           {TABS.map(t => {
             const isActive = tab === t.key;
-            const count = t.key === 'drafts' ? autoDraftCount : 0;
+            let count = 0;
+            if (t.key === 'drafts') count = autoDraftCount;
+            if (t.key === 'inbox') count = inboxCount;
             return (
-              <button
-                key={t.key}
-                onClick={() => { setTab(t.key); setSelected(null); setComposing(false); }}
+              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); setComposing(false); }}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                   padding: '10px 18px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
                   background: isActive ? 'rgba(74,108,247,0.08)' : 'transparent',
                   color: isActive ? '#4a6cf7' : '#5a5a6e',
                   borderLeft: isActive ? '3px solid #4a6cf7' : '3px solid transparent',
-                }}
-              >
+                }}>
                 <t.icon size={16} />
                 {t.label}
                 {count > 0 && (
                   <span style={{
-                    marginLeft: 'auto', background: '#ff5c5c', color: '#fff',
+                    marginLeft: 'auto', background: t.key === 'drafts' ? '#ff5c5c' : '#4a6cf7', color: '#fff',
                     borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700,
                   }}>{count}</span>
                 )}
@@ -434,25 +436,17 @@ export default function EmailPage() {
         width: 380, borderRight: '1px solid #e5e7ef', background: '#ffffff',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
-        <div style={{
-          padding: '14px 18px', borderBottom: '1px solid #e5e7ef',
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', flex: 1 }}>
-            {tab === 'inbox' ? 'Inbox' : tab === 'sent' ? 'Sent' : 'Drafts'}
+            {TABS.find(t => t.key === tab)?.label || 'Email'}
           </span>
-          <span style={{ fontSize: 12, color: '#8e8ea0' }}>{filtered.length} email{filtered.length !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize: 12, color: '#8e8ea0' }}>{filtered.length}</span>
         </div>
 
         {tab === 'drafts' && autoDraftCount > 0 && (
-          <div style={{
-            padding: '8px 18px', background: 'rgba(74,108,247,0.04)', borderBottom: '1px solid #e5e7ef',
-            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
-          }}>
+          <div style={{ padding: '8px 18px', background: 'rgba(74,108,247,0.04)', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
             <Sparkles size={12} color="#4a6cf7" />
-            <span style={{ color: '#4a6cf7', fontWeight: 500 }}>
-              {autoDraftCount} auto-drafted — review & approve
-            </span>
+            <span style={{ color: '#4a6cf7', fontWeight: 500 }}>{autoDraftCount} auto-drafted — review & approve</span>
           </div>
         )}
 
@@ -463,57 +457,78 @@ export default function EmailPage() {
             <div style={{ textAlign: 'center', padding: 48 }}>
               <Mail size={32} style={{ color: '#e5e7ef', margin: '0 auto 10px' }} />
               <div style={{ color: '#8e8ea0', fontSize: 13 }}>
-                {tab === 'drafts' ? 'No drafts' : tab === 'sent' ? 'No sent emails' : 'No emails'}
+                {tab === 'spam' ? 'No spam' : tab === 'starred' ? 'No labeled emails' : 'No emails'}
               </div>
             </div>
           ) : (
             filtered.map(email => {
               const isSelected = selected?.id === email.id;
-              const name = email.lead_name || email.to_email || 'Unknown';
+              const name = getEmailName(email);
+              const isGmail = email._type === 'gmail';
+              const crmLabels = email.crmLabels || [];
+              const isFav = crmLabels.includes('favorite');
+              const isSpam = crmLabels.includes('spam');
+              const crmContact = isGmail ? contactMap[email.from?.email] : null;
+
               return (
-                <div
-                  key={email.id}
-                  onClick={() => { setSelected(email); setComposing(false); }}
+                <div key={email.id} onClick={() => { setSelected(email); setComposing(false); setLabelMenu(null); }}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 12,
-                    padding: '14px 18px', cursor: 'pointer',
+                    padding: '12px 18px', cursor: 'pointer',
                     borderBottom: '1px solid #f0f2f8',
-                    background: isSelected ? 'rgba(74,108,247,0.06)' : email.auto_generated && email.status === 'draft' ? 'rgba(74,108,247,0.02)' : '#fff',
+                    background: isSelected ? 'rgba(74,108,247,0.06)' : '#fff',
                     borderLeft: isSelected ? '3px solid #4a6cf7' : '3px solid transparent',
                     transition: 'background 0.1s',
+                    opacity: isSpam && tab !== 'spam' ? 0.5 : 1,
                   }}
                   onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#f8f9fc'; }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = email.auto_generated && email.status === 'draft' ? 'rgba(74,108,247,0.02)' : '#fff'; }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = '#fff'; }}
                 >
-                  <Avatar name={name} size={38} />
+                  <Avatar name={name} size={36} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{name}</span>
-                      <span style={{ fontSize: 11, color: '#8e8ea0', flexShrink: 0, marginLeft: 8 }}>
-                        {timeAgo(email.created_at)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flex: 1 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                        {crmContact && (
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: '#4a6cf710', color: '#4a6cf7', fontWeight: 600, flexShrink: 0 }}>
+                            {crmContact._source === 'lead' ? 'Lead' : 'CRM'}
+                          </span>
+                        )}
+                        {email.isReply && (
+                          <Reply size={11} color="#4a6cf7" style={{ flexShrink: 0 }} />
+                        )}
+                      </div>
+                      <span style={{ fontSize: 10, color: '#8e8ea0', flexShrink: 0, marginLeft: 6 }}>
+                        {timeAgo(getEmailDate(email))}
                       </span>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
                       {email.subject || '(no subject)'}
                     </div>
-                    <div style={{ fontSize: 12, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(email.body || email.generated_body || '').slice(0, 80)}
+                    <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {getEmailPreview(email)}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                    {/* Labels row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      {isGmail && (
+                        <LabelButton labelKey="favorite" active={isFav} onClick={e => { e.stopPropagation(); toggleLabel(email, 'favorite'); }} size={12} />
+                      )}
+                      {crmLabels.filter(l => l !== 'spam' && l !== 'favorite').map(l => {
+                        const cfg = LABEL_CONFIG[l];
+                        return cfg ? (
+                          <span key={l} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: cfg.color + '15', color: cfg.color, fontWeight: 600 }}>
+                            {cfg.label}
+                          </span>
+                        ) : null;
+                      })}
                       {email.auto_generated && (
-                        <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#4a6cf710', color: '#4a6cf7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Sparkles size={9} /> Auto
+                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: '#4a6cf710', color: '#4a6cf7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Sparkles size={8} /> Auto
                         </span>
                       )}
-                      {email.status === 'draft' && (
-                        <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#f5a62310', color: '#f5a623', fontWeight: 600 }}>Draft</span>
-                      )}
-                      {email.status === 'pending' && (
-                        <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#22c55e10', color: '#22c55e', fontWeight: 600 }}>Approved</span>
-                      )}
                       {email.follow_up_date && (
-                        <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#784bd110', color: '#784bd1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Clock size={9} /> {new Date(email.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: '#784bd110', color: '#784bd1', fontWeight: 600 }}>
+                          {new Date(email.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       )}
                     </div>
@@ -525,287 +540,182 @@ export default function EmailPage() {
         </div>
       </div>
 
-      {/* ── Right Panel (Detail / Compose) ── */}
+      {/* ── Right Panel ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f5f7fa', minWidth: 0 }}>
 
         {composing ? (
+          /* ── Compose ── */
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{
-              padding: '16px 24px', background: '#ffffff', borderBottom: '1px solid #e5e7ef',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
-                {editingDraft ? 'Edit Draft' : 'New Email'}
-              </h2>
-              <button onClick={() => { setComposing(false); setEditingDraft(null); setShowSchedule(false); }} style={{
-                background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0',
-              }}>
-                <X size={18} />
-              </button>
+            <div style={{ padding: '16px 24px', background: '#ffffff', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{editingDraft ? 'Edit Draft' : 'New Email'}</h2>
+              <button onClick={() => { setComposing(false); setEditingDraft(null); setShowSchedule(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={18} /></button>
             </div>
-
             <div style={{ flex: 1, padding: '24px', overflow: 'auto' }}>
               <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7ef', overflow: 'hidden' }}>
-                {/* To — with contact search */}
                 <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f2f8', padding: '12px 20px' }}>
-                  <span style={{ fontSize: 13, color: '#8e8ea0', fontWeight: 500, width: 60, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Users size={12} /> To:
-                  </span>
-                  <ContactSearch
-                    value={composeData.to}
-                    onChange={v => setComposeData(d => ({ ...d, to: v }))}
-                    contacts={allContacts}
-                  />
+                  <span style={{ fontSize: 13, color: '#8e8ea0', fontWeight: 500, width: 60, display: 'flex', alignItems: 'center', gap: 4 }}><Users size={12} /> To:</span>
+                  <ContactSearch value={composeData.to} onChange={v => setComposeData(d => ({ ...d, to: v }))} contacts={allContacts} />
                 </div>
-                {/* Subject */}
                 <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f2f8', padding: '12px 20px' }}>
                   <span style={{ fontSize: 13, color: '#8e8ea0', fontWeight: 500, width: 60 }}>Subject:</span>
-                  <input
-                    value={composeData.subject}
-                    onChange={e => setComposeData(d => ({ ...d, subject: e.target.value }))}
-                    placeholder="Subject line"
-                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#1a1a2e', fontWeight: 600, background: 'transparent' }}
-                  />
+                  <input value={composeData.subject} onChange={e => setComposeData(d => ({ ...d, subject: e.target.value }))} placeholder="Subject line"
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#1a1a2e', fontWeight: 600, background: 'transparent' }} />
                 </div>
-                {/* Schedule bar */}
                 {showSchedule && (
                   <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f2f8', padding: '10px 20px', background: '#f8f9fc' }}>
-                    <span style={{ fontSize: 13, color: '#784bd1', fontWeight: 500, width: 60, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Clock size={12} /> Send:
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={composeData.scheduleDate}
-                      onChange={e => setComposeData(d => ({ ...d, scheduleDate: e.target.value }))}
-                      min={new Date().toISOString().slice(0, 16)}
-                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: '#1a1a2e', background: 'transparent' }}
-                    />
-                    <button onClick={() => { setShowSchedule(false); setComposeData(d => ({ ...d, scheduleDate: '' })); }} style={{
-                      background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4,
-                    }}>
-                      <X size={14} />
-                    </button>
+                    <span style={{ fontSize: 13, color: '#784bd1', fontWeight: 500, width: 60, display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> Send:</span>
+                    <input type="datetime-local" value={composeData.scheduleDate} onChange={e => setComposeData(d => ({ ...d, scheduleDate: e.target.value }))}
+                      min={new Date().toISOString().slice(0, 16)} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: '#1a1a2e', background: 'transparent' }} />
+                    <button onClick={() => { setShowSchedule(false); setComposeData(d => ({ ...d, scheduleDate: '' })); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4 }}><X size={14} /></button>
                   </div>
                 )}
-                {/* Body */}
-                <textarea
-                  value={composeData.body}
-                  onChange={e => setComposeData(d => ({ ...d, body: e.target.value }))}
-                  placeholder="Write your email..."
-                  style={{
-                    width: '100%', minHeight: 320, padding: '20px', border: 'none', outline: 'none',
-                    fontSize: 14, lineHeight: 1.7, color: '#1a1a2e', resize: 'vertical',
-                    background: 'transparent', fontFamily: 'Inter, sans-serif',
-                  }}
-                />
+                <textarea value={composeData.body} onChange={e => setComposeData(d => ({ ...d, body: e.target.value }))} placeholder="Write your email..."
+                  style={{ width: '100%', minHeight: 320, padding: '20px', border: 'none', outline: 'none', fontSize: 14, lineHeight: 1.7, color: '#1a1a2e', resize: 'vertical', background: 'transparent', fontFamily: 'Inter, sans-serif' }} />
               </div>
             </div>
-
-            {/* Compose Footer */}
-            <div style={{
-              padding: '14px 24px', background: '#ffffff', borderTop: '1px solid #e5e7ef',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
+            <div style={{ padding: '14px 24px', background: '#ffffff', borderTop: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10 }}>
               {showSchedule && composeData.scheduleDate ? (
-                <button
-                  onClick={handleScheduleCompose}
-                  disabled={sending || !composeData.to || !composeData.subject || !composeData.scheduleDate}
-                  style={{
-                    padding: '9px 20px', borderRadius: 8, cursor: sending ? 'wait' : 'pointer',
-                    background: 'linear-gradient(135deg, #784bd1, #9b6fe8)', border: 'none',
-                    color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex',
-                    alignItems: 'center', gap: 6, opacity: sending || !composeData.to || !composeData.subject ? 0.5 : 1,
-                  }}
-                >
+                <button onClick={handleScheduleCompose} disabled={sending || !composeData.to || !composeData.subject || !composeData.scheduleDate}
+                  style={{ padding: '9px 20px', borderRadius: 8, cursor: sending ? 'wait' : 'pointer', background: 'linear-gradient(135deg, #784bd1, #9b6fe8)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, opacity: sending || !composeData.to || !composeData.subject ? 0.5 : 1 }}>
                   <Clock size={13} /> {sending ? 'Scheduling...' : 'Schedule Send'}
                 </button>
               ) : (
-                <button
-                  onClick={handleSendCompose}
-                  disabled={sending || !composeData.to || !composeData.subject}
-                  style={{
-                    padding: '9px 20px', borderRadius: 8, cursor: sending ? 'wait' : 'pointer',
-                    background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
-                    color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex',
-                    alignItems: 'center', gap: 6, opacity: sending || !composeData.to || !composeData.subject ? 0.5 : 1,
-                  }}
-                >
+                <button onClick={handleSendCompose} disabled={sending || !composeData.to || !composeData.subject}
+                  style={{ padding: '9px 20px', borderRadius: 8, cursor: sending ? 'wait' : 'pointer', background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, opacity: sending || !composeData.to || !composeData.subject ? 0.5 : 1 }}>
                   <Send size={13} /> {sending ? 'Sending...' : 'Send Now'}
                 </button>
               )}
               {!showSchedule && (
-                <button onClick={() => setShowSchedule(true)} style={{
-                  padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-                  background: '#ffffff', border: '1px solid #e5e7ef',
-                  color: '#784bd1', fontSize: 13, fontWeight: 500,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
+                <button onClick={() => setShowSchedule(true)} style={{ padding: '9px 16px', borderRadius: 8, cursor: 'pointer', background: '#fff', border: '1px solid #e5e7ef', color: '#784bd1', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Clock size={13} /> Schedule
                 </button>
               )}
-              <button onClick={handleSaveDraft} style={{
-                padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-                background: '#ffffff', border: '1px solid #e5e7ef',
-                color: '#8e8ea0', fontSize: 13, fontWeight: 500,
-              }}>
-                Save Draft
-              </button>
+              <button onClick={handleSaveDraft} style={{ padding: '9px 16px', borderRadius: 8, cursor: 'pointer', background: '#fff', border: '1px solid #e5e7ef', color: '#8e8ea0', fontSize: 13, fontWeight: 500 }}>Save Draft</button>
               <div style={{ flex: 1 }} />
-              <button onClick={() => { setComposing(false); setEditingDraft(null); setShowSchedule(false); }} style={{
-                padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-                background: 'none', border: 'none', color: '#8e8ea0', fontSize: 13,
-              }}>
-                Discard
-              </button>
+              <button onClick={() => { setComposing(false); setEditingDraft(null); setShowSchedule(false); }} style={{ padding: '9px 16px', borderRadius: 8, cursor: 'pointer', background: 'none', border: 'none', color: '#8e8ea0', fontSize: 13 }}>Discard</button>
             </div>
           </div>
         ) : selected ? (
+          /* ── Detail ── */
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{
-              padding: '12px 24px', background: '#ffffff', borderBottom: '1px solid #e5e7ef',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', display: 'flex' }}>
-                <ChevronLeft size={18} />
-              </button>
+            {/* Header */}
+            <div style={{ padding: '12px 24px', background: '#ffffff', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', display: 'flex' }}><ChevronLeft size={18} /></button>
               <div style={{ flex: 1 }} />
-              <span style={{ fontSize: 12, color: '#8e8ea0' }}>
-                {currentIdx + 1} of {filtered.length}
-              </span>
-              <button onClick={() => canPrev && setSelected(filtered[currentIdx - 1])} disabled={!canPrev}
-                style={{ background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default', color: canPrev ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}>
-                <ChevronLeft size={16} />
-              </button>
-              <button onClick={() => canNext && setSelected(filtered[currentIdx + 1])} disabled={!canNext}
-                style={{ background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default', color: canNext ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}>
-                <ChevronRight size={16} />
-              </button>
-            </div>
 
-            <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
-              <div style={{ marginBottom: 20 }}>
-                <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', margin: '0 0 6px' }}>
-                  {selected.subject || '(no subject)'}
-                </h1>
-                <div style={{ fontSize: 12, color: '#8e8ea0' }}>{fmtFullDate(selected.created_at)}</div>
-              </div>
-
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20,
-                padding: '14px 18px', background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7ef',
-              }}>
-                <Avatar name={selected.lead_name || selected.to_email || '?'} size={42} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>
-                    {selected.lead_name || 'Unknown'}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#8e8ea0' }}>{selected.to_email || ''}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {(selected.status === 'draft' || selected.status === 'pending') && (
-                    <button onClick={() => handleEditDraft(selected)} style={{
-                      padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
-                      background: '#ffffff', border: '1px solid #e5e7ef',
-                      color: '#8e8ea0', fontSize: 12, fontWeight: 500,
-                      display: 'flex', alignItems: 'center', gap: 4,
-                    }}>
-                      <Edit3 size={12} /> Edit
-                    </button>
-                  )}
-                  <button onClick={() => handleDelete(selected.id)} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', padding: 6,
-                  }}>
-                    <Trash2 size={15} />
+              {/* Label actions for Gmail messages */}
+              {selected._type === 'gmail' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginRight: 8 }}>
+                  {['favorite', 'follow-up', 'important'].map(lbl => (
+                    <LabelButton key={lbl} labelKey={lbl} active={(selected.crmLabels || []).includes(lbl)} onClick={() => toggleLabel(selected, lbl)} size={16} />
+                  ))}
+                  <button onClick={() => toggleLabel(selected, 'spam')}
+                    title={(selected.crmLabels || []).includes('spam') ? 'Remove from spam' : 'Mark as spam'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: (selected.crmLabels || []).includes('spam') ? '#ff5c5c' : '#d0d0d8', display: 'flex' }}>
+                    <Ban size={16} />
                   </button>
-                </div>
-              </div>
-
-              {selected.auto_generated && (
-                <div style={{
-                  padding: '10px 16px', background: 'rgba(74,108,247,0.05)', border: '1px solid rgba(74,108,247,0.12)',
-                  borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8,
-                }}>
-                  <Sparkles size={14} color="#4a6cf7" />
-                  <span style={{ fontSize: 13, color: '#4a6cf7', fontWeight: 500 }}>
-                    This message is auto-drafted from a lead submission.
-                  </span>
                 </div>
               )}
 
-              <div style={{
-                background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7ef',
-                padding: '28px 28px', fontSize: 14, lineHeight: 1.8, color: '#1a1a2e',
-                whiteSpace: 'pre-wrap',
-              }}>
-                {selected.body || selected.generated_body || '(empty)'}
+              <span style={{ fontSize: 12, color: '#8e8ea0' }}>{currentIdx + 1} of {filtered.length}</span>
+              <button onClick={() => canPrev && setSelected(filtered[currentIdx - 1])} disabled={!canPrev}
+                style={{ background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default', color: canPrev ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}><ChevronLeft size={16} /></button>
+              <button onClick={() => canNext && setSelected(filtered[currentIdx + 1])} disabled={!canNext}
+                style={{ background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default', color: canNext ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}><ChevronRight size={16} /></button>
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', margin: '0 0 6px' }}>{selected.subject || '(no subject)'}</h1>
+                <div style={{ fontSize: 12, color: '#8e8ea0' }}>{fmtFullDate(getEmailDate(selected))}</div>
+              </div>
+
+              {/* Sender/recipient info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '14px 18px', background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7ef' }}>
+                <Avatar name={getEmailName(selected)} size={42} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>{getEmailName(selected)}</div>
+                  <div style={{ fontSize: 12, color: '#8e8ea0' }}>
+                    {selected._type === 'gmail' ? (selected.from?.email || '') : (selected.to_email || '')}
+                  </div>
+                </div>
+                {/* CRM label badges */}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {(selected.crmLabels || []).filter(l => l !== 'spam').map(l => {
+                    const cfg = LABEL_CONFIG[l];
+                    return cfg ? (
+                      <span key={l} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, background: cfg.color + '15', color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
+                    ) : null;
+                  })}
+                </div>
+                {(selected.status === 'draft' || selected.status === 'pending') && (
+                  <button onClick={() => handleEditDraft(selected)} style={{ padding: '6px 12px', borderRadius: 6, cursor: 'pointer', background: '#fff', border: '1px solid #e5e7ef', color: '#8e8ea0', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Edit3 size={12} /> Edit
+                  </button>
+                )}
+                {selected._type === 'queue' && (
+                  <button onClick={() => handleDelete(selected.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', padding: 6 }}><Trash2 size={15} /></button>
+                )}
+              </div>
+
+              {selected.isReply && (
+                <div style={{ padding: '8px 14px', background: '#4a6cf708', border: '1px solid #4a6cf715', borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Reply size={13} color="#4a6cf7" />
+                  <span style={{ fontSize: 12, color: '#4a6cf7', fontWeight: 500 }}>This is a reply to one of your emails</span>
+                </div>
+              )}
+
+              {selected.auto_generated && (
+                <div style={{ padding: '10px 16px', background: 'rgba(74,108,247,0.05)', border: '1px solid rgba(74,108,247,0.12)', borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={14} color="#4a6cf7" />
+                  <span style={{ fontSize: 13, color: '#4a6cf7', fontWeight: 500 }}>Auto-drafted from a lead submission.</span>
+                </div>
+              )}
+
+              <div style={{ background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7ef', padding: '28px', fontSize: 14, lineHeight: 1.8, color: '#1a1a2e', whiteSpace: 'pre-wrap' }}>
+                {selected.body || selected.generated_body || selected.snippet || '(empty)'}
               </div>
 
               {selected.follow_up_date && (
-                <div style={{
-                  marginTop: 16, padding: '10px 16px', background: '#784bd108', border: '1px solid #784bd120',
-                  borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8,
-                }}>
+                <div style={{ marginTop: 16, padding: '10px 16px', background: '#784bd108', border: '1px solid #784bd120', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Calendar size={14} color="#784bd1" />
                   <span style={{ fontSize: 13, color: '#784bd1', fontWeight: 500 }}>
-                    Scheduled: {new Date(selected.follow_up_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    Scheduled: {new Date(selected.follow_up_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                   </span>
                 </div>
               )}
             </div>
 
+            {/* Footer actions for drafts/pending */}
             {(selected.status === 'draft' || selected.status === 'pending') && (
-              <div style={{
-                padding: '14px 24px', background: '#ffffff', borderTop: '1px solid #e5e7ef',
-                display: 'flex', alignItems: 'center', gap: 10,
-              }}>
+              <div style={{ padding: '14px 24px', background: '#ffffff', borderTop: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10 }}>
                 {selected.auto_generated && selected.status === 'draft' && (
-                  <button onClick={() => handleApprove(selected)} style={{
-                    padding: '9px 18px', borderRadius: 8, cursor: 'pointer',
-                    background: '#22c55e', border: 'none', color: '#ffffff',
-                    fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
+                  <button onClick={() => handleApprove(selected)} style={{ padding: '9px 18px', borderRadius: 8, cursor: 'pointer', background: '#22c55e', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Check size={14} /> Approve
                   </button>
                 )}
-                <button onClick={() => handleSend(selected.id)} style={{
-                  padding: '9px 18px', borderRadius: 8, cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
-                  color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
-                }}>
+                <button onClick={() => handleSend(selected.id)} style={{ padding: '9px 18px', borderRadius: 8, cursor: 'pointer', background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Send size={13} /> Send Now
                 </button>
-                <button onClick={() => handleEditDraft(selected)} style={{
-                  padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-                  background: '#ffffff', border: '1px solid #e5e7ef',
-                  color: '#1a1a2e', fontSize: 13, fontWeight: 500,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
+                <button onClick={() => handleEditDraft(selected)} style={{ padding: '9px 16px', borderRadius: 8, cursor: 'pointer', background: '#fff', border: '1px solid #e5e7ef', color: '#1a1a2e', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Edit3 size={13} /> Edit
                 </button>
                 {selected.auto_generated && selected.status === 'draft' && (
-                  <button onClick={() => handleDelete(selected.id)} style={{
-                    padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-                    background: 'none', border: '1px solid #ff5c5c40',
-                    color: '#ff5c5c', fontSize: 13, fontWeight: 500,
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
+                  <button onClick={() => handleDelete(selected.id)} style={{ padding: '9px 16px', borderRadius: 8, cursor: 'pointer', background: 'none', border: '1px solid #ff5c5c40', color: '#ff5c5c', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <X size={13} /> Deny
                   </button>
                 )}
-                <div style={{ flex: 1 }} />
               </div>
             )}
           </div>
         ) : (
+          /* ── Empty ── */
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <Mail size={48} style={{ color: '#e5e7ef', marginBottom: 16 }} />
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#8e8ea0', marginBottom: 4 }}>
-                Select an email to read
-              </div>
-              <div style={{ fontSize: 13, color: '#b0b0c0' }}>
-                Or compose a new message
-              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#8e8ea0', marginBottom: 4 }}>Select an email to read</div>
+              <div style={{ fontSize: 13, color: '#b0b0c0' }}>Or compose a new message</div>
             </div>
           </div>
         )}

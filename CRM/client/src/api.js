@@ -116,11 +116,20 @@ export const getBatchProgress    = (jobId) => request(`/email-generate?action=pr
 export const getCommLog        = (lead_id) => request(`/communication-log${lead_id ? '?lead_id=' + lead_id : ''}`);
 export const markReplyReceived = (id) => request(`/communication-log?id=${id}&action=reply`, { method: 'PUT' });
 
-// Gmail Inbox - Phase 2
+// Gmail Inbox
 export const getGmailInbox = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return request(`/gmail-inbox${qs ? '?' + qs : ''}`);
 };
+
+// Email Labels (spam, favorite, follow-up, etc.)
+export const getEmailLabels = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request(`/email-labels${qs ? '?' + qs : ''}`);
+};
+export const addEmailLabel = (data) => request('/email-labels', { method: 'POST', body: JSON.stringify(data) });
+export const removeEmailLabel = (gmail_message_id, label) =>
+  request(`/email-labels?gmail_message_id=${encodeURIComponent(gmail_message_id)}&label=${encodeURIComponent(label)}`, { method: 'DELETE' });
 
 // Meetings
 export const getUpcomingMeetings      = ()             => request('/meetings?action=upcoming');
