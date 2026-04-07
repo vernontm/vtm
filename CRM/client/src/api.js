@@ -122,6 +122,12 @@ export const getGmailInbox = (params = {}) => {
   return request(`/gmail-inbox${qs ? '?' + qs : ''}`);
 };
 
+// Gmail Contacts
+export const getGmailContacts = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request(`/gmail-contacts${qs ? '?' + qs : ''}`);
+};
+
 // Email Labels (spam, favorite, follow-up, etc.)
 export const getEmailLabels = (params = {}) => {
   const qs = new URLSearchParams(params).toString();

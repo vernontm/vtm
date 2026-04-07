@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileText, CreditCard, Trash2, XCircle, ExternalLink,
-  RefreshCw, ChevronDown, ChevronUp, Search,
+  RefreshCw, ChevronDown, ChevronUp, Search, Plus, X,
 } from 'lucide-react';
 import {
   getInvoices, getManualInvoices, deleteInvoice, voidInvoice,
   deleteManualInvoice, updateManualInvoice, refreshInvoice,
+  createManualInvoice, getDeals,
 } from '../api';
 
 // ── Status config ──────────────────────────────────────────────────────────────
@@ -53,6 +54,164 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
+// ── Create Invoice Modal ──────────────────────────────────────────────────────
+function CreateInvoiceModal({ onClose, onCreated, deals }) {
+  const [form, setForm] = useState({
+    bill_to_name: '', bill_to_email: '', description: '',
+    invoice_number: `INV-${Date.now().toString(36).toUpperCase()}`,
+    status: 'draft', deal_id: '', items: [{ description: '', quantity: 1, unit_price: '' }],
+  });
+  const [saving, setSaving] = useState(false);
+
+  const total = form.items.reduce((s, item) => s + (parseFloat(item.unit_price) || 0) * (parseInt(item.quantity) || 0), 0);
+
+  const addItem = () => setForm(f => ({ ...f, items: [...f.items, { description: '', quantity: 1, unit_price: '' }] }));
+  const removeItem = (i) => setForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
+  const updateItem = (i, key, val) => setForm(f => ({ ...f, items: f.items.map((item, idx) => idx === i ? { ...item, [key]: val } : item) }));
+
+  const handleDealSelect = (dealId) => {
+    const deal = deals.find(d => d.id === dealId);
+    if (deal) {
+      setForm(f => ({
+        ...f, deal_id: dealId,
+        bill_to_name: deal.contact_name || deal.account_name || f.bill_to_name,
+        bill_to_email: deal.contact_email || f.bill_to_email,
+        description: deal.name || f.description,
+      }));
+    } else {
+      setForm(f => ({ ...f, deal_id: dealId }));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!form.bill_to_name) return;
+    setSaving(true);
+    try {
+      await createManualInvoice({
+        ...form,
+        total,
+        items: JSON.stringify(form.items),
+      });
+      onCreated();
+      onClose();
+    } catch (e) { alert('Failed: ' + e.message); }
+    finally { setSaving(false); }
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13,
+    background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e',
+    outline: 'none', boxSizing: 'border-box',
+  };
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#fff', borderRadius: 14, width: 520, maxHeight: '85vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #e5e7ef' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Create Invoice</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={18} /></button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Deal link */}
+          {deals.length > 0 && (
+            <div>
+              <label style={labelStyle}>Link to Deal (optional)</label>
+              <select value={form.deal_id} onChange={e => handleDealSelect(e.target.value)} style={inputStyle}>
+                <option value="">No deal</option>
+                {deals.map(d => <option key={d.id} value={d.id}>{d.name} — {d.contact_name || d.account_name || ''}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Bill To (Name) *</label>
+              <input value={form.bill_to_name} onChange={e => setForm(f => ({ ...f, bill_to_name: e.target.value }))} style={inputStyle} placeholder="Client name" />
+            </div>
+            <div>
+              <label style={labelStyle}>Bill To (Email)</label>
+              <input value={form.bill_to_email} onChange={e => setForm(f => ({ ...f, bill_to_email: e.target.value }))} style={inputStyle} placeholder="client@email.com" />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Invoice #</label>
+              <input value={form.invoice_number} onChange={e => setForm(f => ({ ...f, invoice_number: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Status</label>
+              <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} style={inputStyle}>
+                <option value="draft">Draft</option>
+                <option value="open">Open</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Description</label>
+            <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} style={inputStyle} placeholder="What is this invoice for?" />
+          </div>
+
+          {/* Line items */}
+          <div>
+            <label style={labelStyle}>Line Items</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {form.items.map((item, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)}
+                    placeholder="Item description" style={{ ...inputStyle, flex: 2 }} />
+                  <input type="number" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)}
+                    placeholder="Qty" style={{ ...inputStyle, flex: 0, width: 60, textAlign: 'center' }} />
+                  <input type="number" value={item.unit_price} onChange={e => updateItem(i, 'unit_price', e.target.value)}
+                    placeholder="Price" style={{ ...inputStyle, flex: 0, width: 90 }} />
+                  {form.items.length > 1 && (
+                    <button onClick={() => removeItem(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', padding: 4 }}>
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button onClick={addItem} style={{
+                display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#4a6cf7',
+                background: 'none', border: '1px dashed #4a6cf740', borderRadius: 6, padding: '6px 10px',
+                cursor: 'pointer', fontWeight: 500, alignSelf: 'flex-start',
+              }}>
+                <Plus size={12} /> Add item
+              </button>
+            </div>
+          </div>
+
+          {/* Total */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0', borderTop: '1px solid #f0f2f8' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 500 }}>Total</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 10, padding: '16px 24px', borderTop: '1px solid #e5e7ef', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} className="btn-ghost">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !form.bill_to_name}
+            style={{
+              padding: '9px 20px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer',
+              background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
+              color: '#fff', fontSize: 13, fontWeight: 600,
+              opacity: saving || !form.bill_to_name ? 0.5 : 1,
+            }}>
+            {saving ? 'Creating...' : 'Create Invoice'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Invoices() {
   const [stripeInvoices, setStripeInvoices] = useState([]);
   const [manualInvoices, setManualInvoices] = useState([]);
@@ -63,6 +222,8 @@ export default function Invoices() {
   const [confirm, setConfirm]               = useState(null);    // { message, action }
   const [toast, setToast]                   = useState(null);
   const [refreshingId, setRefreshingId]     = useState(null);
+  const [showCreate, setShowCreate]         = useState(false);
+  const [deals, setDeals]                   = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,6 +236,7 @@ export default function Invoices() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { getDeals().then(d => setDeals(d || [])).catch(() => {}); }, []);
 
   const showToast = (msg, error = false) => {
     setToast({ msg, error });
@@ -205,9 +367,18 @@ export default function Invoices() {
             {allRows.length}
           </span>
         </div>
-        <button onClick={load} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-          <RefreshCw size={14} /> Refresh
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={load} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <button onClick={() => setShowCreate(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600,
+            padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+            background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none', color: '#fff',
+          }}>
+            <Plus size={14} /> Create Invoice
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: '0 28px 28px' }}>
@@ -413,6 +584,15 @@ export default function Invoices() {
           </div>
         )}
       </div>
+
+      {/* Create Invoice Modal */}
+      {showCreate && (
+        <CreateInvoiceModal
+          onClose={() => setShowCreate(false)}
+          onCreated={load}
+          deals={deals}
+        />
+      )}
 
       {/* Confirm dialog */}
       {confirm && (
