@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Send, FileText, Inbox, Search, RefreshCw, Trash2,
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
-  Star, MoreVertical, Reply, Forward, Archive, Paperclip,
+  Star, Users,
 } from 'lucide-react';
-import { getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem, createQueueItem, getGmailInbox } from '../api';
+import {
+  getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
+  createQueueItem, getGmailInbox, getContacts, getLeads,
+} from '../api';
 
 const TABS = [
   { key: 'inbox',  label: 'Inbox',  icon: Inbox },
@@ -48,6 +51,75 @@ function Avatar({ name, size = 40, color }) {
   );
 }
 
+// ── Contact Search Dropdown ──────────────────────────────────────────────────
+function ContactSearch({ value, onChange, contacts }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filtered = query.length > 0
+    ? contacts.filter(c =>
+        (c.name || '').toLowerCase().includes(query.toLowerCase()) ||
+        (c.email || '').toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 8)
+    : contacts.slice(0, 8);
+
+  return (
+    <div ref={ref} style={{ flex: 1, position: 'relative' }}>
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Search contacts or type email..."
+        style={{ width: '100%', border: 'none', outline: 'none', fontSize: 14, color: '#1a1a2e', background: 'transparent' }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: -20, right: -20, marginTop: 8,
+          background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 280, overflow: 'auto',
+        }}>
+          {filtered.map((c, i) => (
+            <div
+              key={c.email + i}
+              onClick={() => { onChange(c.email); setOpen(false); setQuery(''); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
+                cursor: 'pointer', borderBottom: i < filtered.length - 1 ? '1px solid #f0f2f8' : 'none',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f8f9fc'}
+              onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+            >
+              <Avatar name={c.name || c.email} size={30} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.name || c.email}
+                </div>
+                <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.email}
+                </div>
+              </div>
+              <span style={{
+                fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 600,
+                background: c._source === 'lead' ? '#f5a62310' : '#4a6cf710',
+                color: c._source === 'lead' ? '#f5a623' : '#4a6cf7',
+              }}>
+                {c._source === 'lead' ? 'Lead' : 'Contact'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EmailPage() {
   const [tab, setTab] = useState('inbox');
   const [emails, setEmails] = useState([]);
@@ -56,10 +128,12 @@ export default function EmailPage() {
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [composing, setComposing] = useState(false);
-  const [composeData, setComposeData] = useState({ to: '', subject: '', body: '' });
+  const [composeData, setComposeData] = useState({ to: '', subject: '', body: '', scheduleDate: '' });
   const [sending, setSending] = useState(false);
   const [editingDraft, setEditingDraft] = useState(null);
   const [gmailThreads, setGmailThreads] = useState([]);
+  const [allContacts, setAllContacts] = useState([]);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,7 +143,7 @@ export default function EmailPage() {
     } catch (err) {
       console.error('Email load error:', err);
     }
-    // Load Gmail threads silently (don't block if not connected)
+    // Load Gmail threads silently
     try {
       const data = await getGmailInbox();
       if (data?.threads) {
@@ -86,10 +160,35 @@ export default function EmailPage() {
           hasReply: t.hasReply,
         })));
       }
-    } catch (err) {
-      // Gmail not connected — that's fine
-    }
+    } catch (err) { /* Gmail not connected */ }
     setLoading(false);
+  }, []);
+
+  // Load contacts + leads for To: search
+  useEffect(() => {
+    async function loadContacts() {
+      const results = [];
+      try {
+        const contacts = await getContacts();
+        (contacts || []).forEach(c => {
+          if (c.email) results.push({ name: c.name || '', email: c.email, _source: 'contact' });
+        });
+      } catch {}
+      try {
+        const leads = await getLeads();
+        (leads || []).forEach(l => {
+          if (l.email) results.push({ name: l.name || '', email: l.email, _source: 'lead' });
+        });
+      } catch {}
+      // Dedupe by email
+      const seen = new Set();
+      setAllContacts(results.filter(c => {
+        if (seen.has(c.email)) return false;
+        seen.add(c.email);
+        return true;
+      }));
+    }
+    loadContacts();
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -145,7 +244,8 @@ export default function EmailPage() {
     setComposing(true);
     setSelected(null);
     setEditingDraft(null);
-    setComposeData({ to: '', subject: '', body: '' });
+    setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
+    setShowSchedule(false);
   };
 
   const handleEditDraft = (email) => {
@@ -155,34 +255,71 @@ export default function EmailPage() {
       to: email.to_email || '',
       subject: email.subject || '',
       body: email.body || email.generated_body || '',
+      scheduleDate: email.follow_up_date ? new Date(email.follow_up_date).toISOString().slice(0, 16) : '',
     });
+    setShowSchedule(!!email.follow_up_date);
   };
 
+  // Send immediately: create queue item then call send action
   const handleSendCompose = async () => {
     if (!composeData.to || !composeData.subject) return;
     setSending(true);
     try {
+      let itemId;
       if (editingDraft) {
         await updateQueueItem(editingDraft.id, {
           to_email: composeData.to,
           subject: composeData.subject,
           body: composeData.body,
-          status: 'pending',
         });
+        itemId = editingDraft.id;
       } else {
-        await createQueueItem({
+        const created = await createQueueItem({
           to_email: composeData.to,
           subject: composeData.subject,
           body: composeData.body,
-          status: 'pending',
+          status: 'draft',
         });
+        itemId = created.id;
+      }
+      // Now send immediately via Gmail
+      await sendQueueItem(itemId);
+      setComposing(false);
+      setEditingDraft(null);
+      setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
+      setShowSchedule(false);
+      await load();
+    } catch (err) {
+      alert('Send failed: ' + err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Schedule: create queue item with follow_up_date
+  const handleScheduleCompose = async () => {
+    if (!composeData.to || !composeData.subject || !composeData.scheduleDate) return;
+    setSending(true);
+    try {
+      const scheduleData = {
+        to_email: composeData.to,
+        subject: composeData.subject,
+        body: composeData.body,
+        status: 'draft',
+        follow_up_date: new Date(composeData.scheduleDate).toISOString(),
+      };
+      if (editingDraft) {
+        await updateQueueItem(editingDraft.id, scheduleData);
+      } else {
+        await createQueueItem(scheduleData);
       }
       setComposing(false);
       setEditingDraft(null);
-      setComposeData({ to: '', subject: '', body: '' });
+      setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
+      setShowSchedule(false);
       await load();
     } catch (err) {
-      alert('Failed: ' + err.message);
+      alert('Schedule failed: ' + err.message);
     } finally {
       setSending(false);
     }
@@ -191,30 +328,29 @@ export default function EmailPage() {
   const handleSaveDraft = async () => {
     if (!composeData.to && !composeData.subject && !composeData.body) return;
     try {
+      const data = {
+        to_email: composeData.to,
+        subject: composeData.subject,
+        body: composeData.body,
+        status: 'draft',
+      };
+      if (composeData.scheduleDate) data.follow_up_date = new Date(composeData.scheduleDate).toISOString();
       if (editingDraft) {
-        await updateQueueItem(editingDraft.id, {
-          to_email: composeData.to,
-          subject: composeData.subject,
-          body: composeData.body,
-        });
+        await updateQueueItem(editingDraft.id, data);
       } else {
-        await createQueueItem({
-          to_email: composeData.to,
-          subject: composeData.subject,
-          body: composeData.body,
-          status: 'draft',
-        });
+        await createQueueItem(data);
       }
       setComposing(false);
       setEditingDraft(null);
-      setComposeData({ to: '', subject: '', body: '' });
+      setComposeData({ to: '', subject: '', body: '', scheduleDate: '' });
+      setShowSchedule(false);
       await load();
     } catch (err) {
       alert('Save failed: ' + err.message);
     }
   };
 
-  // Navigation within selected emails
+  // Navigation
   const currentIdx = selected ? filtered.findIndex(e => e.id === selected.id) : -1;
   const canPrev = currentIdx > 0;
   const canNext = currentIdx >= 0 && currentIdx < filtered.length - 1;
@@ -227,22 +363,17 @@ export default function EmailPage() {
         width: 200, background: '#ffffff', borderRight: '1px solid #e5e7ef',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
-        {/* Compose Button */}
         <div style={{ padding: '16px 14px 12px' }}>
-          <button
-            onClick={handleCompose}
-            style={{
-              width: '100%', padding: '10px 0', borderRadius: 10, cursor: 'pointer',
-              background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
-              color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
+          <button onClick={handleCompose} style={{
+            width: '100%', padding: '10px 0', borderRadius: 10, cursor: 'pointer',
+            background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
+            color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
             <Edit3 size={14} /> Compose email
           </button>
         </div>
 
-        {/* Search */}
         <div style={{ padding: '0 14px 12px' }}>
           <div style={{ position: 'relative' }}>
             <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
@@ -257,7 +388,6 @@ export default function EmailPage() {
           </div>
         </div>
 
-        {/* Tab List */}
         <div style={{ flex: 1 }}>
           {TABS.map(t => {
             const isActive = tab === t.key;
@@ -287,7 +417,6 @@ export default function EmailPage() {
           })}
         </div>
 
-        {/* Refresh */}
         <div style={{ padding: '12px 14px', borderTop: '1px solid #f0f2f8' }}>
           <button onClick={handleRefresh} style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -305,7 +434,6 @@ export default function EmailPage() {
         width: 380, borderRight: '1px solid #e5e7ef', background: '#ffffff',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
-        {/* List Header */}
         <div style={{
           padding: '14px 18px', borderBottom: '1px solid #e5e7ef',
           display: 'flex', alignItems: 'center', gap: 8,
@@ -316,7 +444,6 @@ export default function EmailPage() {
           <span style={{ fontSize: 12, color: '#8e8ea0' }}>{filtered.length} email{filtered.length !== 1 ? 's' : ''}</span>
         </div>
 
-        {/* Auto-draft banner */}
         {tab === 'drafts' && autoDraftCount > 0 && (
           <div style={{
             padding: '8px 18px', background: 'rgba(74,108,247,0.04)', borderBottom: '1px solid #e5e7ef',
@@ -329,7 +456,6 @@ export default function EmailPage() {
           </div>
         )}
 
-        {/* Email rows */}
         <div style={{ flex: 1, overflow: 'auto' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 48, color: '#8e8ea0', fontSize: 13 }}>Loading...</div>
@@ -371,9 +497,8 @@ export default function EmailPage() {
                       {email.subject || '(no subject)'}
                     </div>
                     <div style={{ fontSize: 12, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(email.body || email.generated_body || '').slice(0, 80)}...
+                      {(email.body || email.generated_body || '').slice(0, 80)}
                     </div>
-                    {/* Badges */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
                       {email.auto_generated && (
                         <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#4a6cf710', color: '#4a6cf7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -388,7 +513,7 @@ export default function EmailPage() {
                       )}
                       {email.follow_up_date && (
                         <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#784bd110', color: '#784bd1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Clock size={9} /> Follow-up
+                          <Clock size={9} /> {new Date(email.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       )}
                     </div>
@@ -404,9 +529,7 @@ export default function EmailPage() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f5f7fa', minWidth: 0 }}>
 
         {composing ? (
-          /* ── Compose Panel ── */
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* Compose Header */}
             <div style={{
               padding: '16px 24px', background: '#ffffff', borderBottom: '1px solid #e5e7ef',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -414,24 +537,24 @@ export default function EmailPage() {
               <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
                 {editingDraft ? 'Edit Draft' : 'New Email'}
               </h2>
-              <button onClick={() => { setComposing(false); setEditingDraft(null); }} style={{
+              <button onClick={() => { setComposing(false); setEditingDraft(null); setShowSchedule(false); }} style={{
                 background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0',
               }}>
                 <X size={18} />
               </button>
             </div>
 
-            {/* Compose Form */}
             <div style={{ flex: 1, padding: '24px', overflow: 'auto' }}>
               <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e5e7ef', overflow: 'hidden' }}>
-                {/* To */}
+                {/* To — with contact search */}
                 <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f2f8', padding: '12px 20px' }}>
-                  <span style={{ fontSize: 13, color: '#8e8ea0', fontWeight: 500, width: 60 }}>To:</span>
-                  <input
+                  <span style={{ fontSize: 13, color: '#8e8ea0', fontWeight: 500, width: 60, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Users size={12} /> To:
+                  </span>
+                  <ContactSearch
                     value={composeData.to}
-                    onChange={e => setComposeData(d => ({ ...d, to: e.target.value }))}
-                    placeholder="email@example.com"
-                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#1a1a2e', background: 'transparent' }}
+                    onChange={v => setComposeData(d => ({ ...d, to: v }))}
+                    contacts={allContacts}
                   />
                 </div>
                 {/* Subject */}
@@ -444,13 +567,33 @@ export default function EmailPage() {
                     style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#1a1a2e', fontWeight: 600, background: 'transparent' }}
                   />
                 </div>
+                {/* Schedule bar */}
+                {showSchedule && (
+                  <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f2f8', padding: '10px 20px', background: '#f8f9fc' }}>
+                    <span style={{ fontSize: 13, color: '#784bd1', fontWeight: 500, width: 60, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Clock size={12} /> Send:
+                    </span>
+                    <input
+                      type="datetime-local"
+                      value={composeData.scheduleDate}
+                      onChange={e => setComposeData(d => ({ ...d, scheduleDate: e.target.value }))}
+                      min={new Date().toISOString().slice(0, 16)}
+                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: '#1a1a2e', background: 'transparent' }}
+                    />
+                    <button onClick={() => { setShowSchedule(false); setComposeData(d => ({ ...d, scheduleDate: '' })); }} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4,
+                    }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 {/* Body */}
                 <textarea
                   value={composeData.body}
                   onChange={e => setComposeData(d => ({ ...d, body: e.target.value }))}
                   placeholder="Write your email..."
                   style={{
-                    width: '100%', minHeight: 360, padding: '20px', border: 'none', outline: 'none',
+                    width: '100%', minHeight: 320, padding: '20px', border: 'none', outline: 'none',
                     fontSize: 14, lineHeight: 1.7, color: '#1a1a2e', resize: 'vertical',
                     background: 'transparent', fontFamily: 'Inter, sans-serif',
                   }}
@@ -463,18 +606,43 @@ export default function EmailPage() {
               padding: '14px 24px', background: '#ffffff', borderTop: '1px solid #e5e7ef',
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
-              <button
-                onClick={handleSendCompose}
-                disabled={sending || !composeData.to || !composeData.subject}
-                style={{
-                  padding: '9px 20px', borderRadius: 8, cursor: sending ? 'wait' : 'pointer',
-                  background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
-                  color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex',
-                  alignItems: 'center', gap: 6, opacity: sending || !composeData.to || !composeData.subject ? 0.5 : 1,
-                }}
-              >
-                <Send size={13} /> {sending ? 'Sending...' : 'Send'}
-              </button>
+              {showSchedule && composeData.scheduleDate ? (
+                <button
+                  onClick={handleScheduleCompose}
+                  disabled={sending || !composeData.to || !composeData.subject || !composeData.scheduleDate}
+                  style={{
+                    padding: '9px 20px', borderRadius: 8, cursor: sending ? 'wait' : 'pointer',
+                    background: 'linear-gradient(135deg, #784bd1, #9b6fe8)', border: 'none',
+                    color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex',
+                    alignItems: 'center', gap: 6, opacity: sending || !composeData.to || !composeData.subject ? 0.5 : 1,
+                  }}
+                >
+                  <Clock size={13} /> {sending ? 'Scheduling...' : 'Schedule Send'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSendCompose}
+                  disabled={sending || !composeData.to || !composeData.subject}
+                  style={{
+                    padding: '9px 20px', borderRadius: 8, cursor: sending ? 'wait' : 'pointer',
+                    background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
+                    color: '#ffffff', fontSize: 13, fontWeight: 600, display: 'flex',
+                    alignItems: 'center', gap: 6, opacity: sending || !composeData.to || !composeData.subject ? 0.5 : 1,
+                  }}
+                >
+                  <Send size={13} /> {sending ? 'Sending...' : 'Send Now'}
+                </button>
+              )}
+              {!showSchedule && (
+                <button onClick={() => setShowSchedule(true)} style={{
+                  padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
+                  background: '#ffffff', border: '1px solid #e5e7ef',
+                  color: '#784bd1', fontSize: 13, fontWeight: 500,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <Clock size={13} /> Schedule
+                </button>
+              )}
               <button onClick={handleSaveDraft} style={{
                 padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
                 background: '#ffffff', border: '1px solid #e5e7ef',
@@ -483,7 +651,7 @@ export default function EmailPage() {
                 Save Draft
               </button>
               <div style={{ flex: 1 }} />
-              <button onClick={() => { setComposing(false); setEditingDraft(null); }} style={{
+              <button onClick={() => { setComposing(false); setEditingDraft(null); setShowSchedule(false); }} style={{
                 padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
                 background: 'none', border: 'none', color: '#8e8ea0', fontSize: 13,
               }}>
@@ -492,9 +660,7 @@ export default function EmailPage() {
             </div>
           </div>
         ) : selected ? (
-          /* ── Email Detail Panel ── */
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* Detail Header */}
             <div style={{
               padding: '12px 24px', background: '#ffffff', borderBottom: '1px solid #e5e7ef',
               display: 'flex', alignItems: 'center', gap: 10,
@@ -503,30 +669,20 @@ export default function EmailPage() {
                 <ChevronLeft size={18} />
               </button>
               <div style={{ flex: 1 }} />
-
-              {/* Navigation */}
               <span style={{ fontSize: 12, color: '#8e8ea0' }}>
                 {currentIdx + 1} of {filtered.length}
               </span>
-              <button
-                onClick={() => canPrev && setSelected(filtered[currentIdx - 1])}
-                disabled={!canPrev}
-                style={{ background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default', color: canPrev ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}
-              >
+              <button onClick={() => canPrev && setSelected(filtered[currentIdx - 1])} disabled={!canPrev}
+                style={{ background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default', color: canPrev ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}>
                 <ChevronLeft size={16} />
               </button>
-              <button
-                onClick={() => canNext && setSelected(filtered[currentIdx + 1])}
-                disabled={!canNext}
-                style={{ background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default', color: canNext ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}
-              >
+              <button onClick={() => canNext && setSelected(filtered[currentIdx + 1])} disabled={!canNext}
+                style={{ background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default', color: canNext ? '#8e8ea0' : '#e5e7ef', display: 'flex' }}>
                 <ChevronRight size={16} />
               </button>
             </div>
 
-            {/* Email Content */}
             <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
-              {/* Subject & Date */}
               <div style={{ marginBottom: 20 }}>
                 <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', margin: '0 0 6px' }}>
                   {selected.subject || '(no subject)'}
@@ -534,7 +690,6 @@ export default function EmailPage() {
                 <div style={{ fontSize: 12, color: '#8e8ea0' }}>{fmtFullDate(selected.created_at)}</div>
               </div>
 
-              {/* Sender Info */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20,
                 padding: '14px 18px', background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7ef',
@@ -544,9 +699,7 @@ export default function EmailPage() {
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>
                     {selected.lead_name || 'Unknown'}
                   </div>
-                  <div style={{ fontSize: 12, color: '#8e8ea0' }}>
-                    {selected.to_email || ''}
-                  </div>
+                  <div style={{ fontSize: 12, color: '#8e8ea0' }}>{selected.to_email || ''}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {(selected.status === 'draft' || selected.status === 'pending') && (
@@ -567,7 +720,6 @@ export default function EmailPage() {
                 </div>
               </div>
 
-              {/* Auto-draft notice */}
               {selected.auto_generated && (
                 <div style={{
                   padding: '10px 16px', background: 'rgba(74,108,247,0.05)', border: '1px solid rgba(74,108,247,0.12)',
@@ -580,7 +732,6 @@ export default function EmailPage() {
                 </div>
               )}
 
-              {/* Email Body */}
               <div style={{
                 background: '#ffffff', borderRadius: 10, border: '1px solid #e5e7ef',
                 padding: '28px 28px', fontSize: 14, lineHeight: 1.8, color: '#1a1a2e',
@@ -589,7 +740,6 @@ export default function EmailPage() {
                 {selected.body || selected.generated_body || '(empty)'}
               </div>
 
-              {/* Follow-up info */}
               {selected.follow_up_date && (
                 <div style={{
                   marginTop: 16, padding: '10px 16px', background: '#784bd108', border: '1px solid #784bd120',
@@ -597,13 +747,12 @@ export default function EmailPage() {
                 }}>
                   <Calendar size={14} color="#784bd1" />
                   <span style={{ fontSize: 13, color: '#784bd1', fontWeight: 500 }}>
-                    Follow-up scheduled: {new Date(selected.follow_up_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    Scheduled: {new Date(selected.follow_up_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Action Footer */}
             {(selected.status === 'draft' || selected.status === 'pending') && (
               <div style={{
                 padding: '14px 24px', background: '#ffffff', borderTop: '1px solid #e5e7ef',
@@ -648,7 +797,6 @@ export default function EmailPage() {
             )}
           </div>
         ) : (
-          /* ── Empty State ── */
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <Mail size={48} style={{ color: '#e5e7ef', marginBottom: 16 }} />
