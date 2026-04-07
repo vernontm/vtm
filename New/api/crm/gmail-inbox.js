@@ -21,7 +21,6 @@ function getHeader(msg, name) {
 }
 
 function parseFrom(fromStr) {
-  // "John Doe <john@example.com>" → { name: "John Doe", email: "john@example.com" }
   const match = fromStr.match(/^(.+?)\s*<(.+)>$/);
   if (match) return { name: match[1].trim().replace(/^"|"$/g, ''), email: match[2] };
   return { name: fromStr, email: fromStr };
@@ -31,17 +30,19 @@ export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
-
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { maxResults = '30', pageToken } = req.query;
+  const { maxResults = '30', pageToken, label = 'INBOX' } = req.query;
 
   try {
     const { accessToken } = await getGmailAuth();
 
-    // Fetch inbox messages from last 30 days
+    // Determine label filter
+    const validLabels = ['INBOX', 'SENT', 'DRAFT'];
+    const labelId = validLabels.includes(label.toUpperCase()) ? label.toUpperCase() : 'INBOX';
+
     const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
-    let query = `/messages?labelIds=INBOX&maxResults=${Math.min(parseInt(maxResults), 50)}&q=after:${thirtyDaysAgo}`;
+    let query = `/messages?labelIds=${labelId}&maxResults=${Math.min(parseInt(maxResults), 50)}&q=after:${thirtyDaysAgo}`;
     if (pageToken) query += `&pageToken=${pageToken}`;
 
     const listRes = await gmailFetch(query, accessToken);
@@ -66,43 +67,43 @@ export default async function handler(req, res) {
       labelMap[l.gmail_message_id].push(l.label);
     });
 
-    // Load labeled messages that are older than 30 days (they persist)
+    // For INBOX: load persisted labeled messages older than 30 days
     let persistedMessages = [];
-    try {
-      const labeled = await supaFetch('crm_email_labels?label=neq.spam&select=gmail_message_id,gmail_thread_id,label,from_email,to_email,subject,snippet,date&order=date.desc');
-      // Get unique message IDs not already in the inbox
-      const inboxIds = new Set(messages.map(m => m.id));
-      const unseenLabeled = labeled.filter(l => !inboxIds.has(l.gmail_message_id));
-      // Dedupe
-      const seen = new Set();
-      unseenLabeled.forEach(l => {
-        if (!seen.has(l.gmail_message_id)) {
-          seen.add(l.gmail_message_id);
-          persistedMessages.push({
-            id: l.gmail_message_id,
-            threadId: l.gmail_thread_id || '',
-            from: { name: l.from_email || '', email: l.from_email || '' },
-            to: l.to_email || '',
-            subject: l.subject || '(no subject)',
-            snippet: l.snippet || '',
-            date: l.date || '',
-            labelIds: [],
-            isReply: false,
-            crmLabels: labelMap[l.gmail_message_id] || [],
-            _persisted: true,
-          });
-        }
-      });
-    } catch {}
+    if (labelId === 'INBOX') {
+      try {
+        const labeled = await supaFetch('crm_email_labels?label=neq.spam&select=gmail_message_id,gmail_thread_id,label,from_email,to_email,subject,snippet,date&order=date.desc');
+        const inboxIds = new Set(messages.map(m => m.id));
+        const unseenLabeled = labeled.filter(l => !inboxIds.has(l.gmail_message_id));
+        const seen = new Set();
+        unseenLabeled.forEach(l => {
+          if (!seen.has(l.gmail_message_id)) {
+            seen.add(l.gmail_message_id);
+            persistedMessages.push({
+              id: l.gmail_message_id,
+              threadId: l.gmail_thread_id || '',
+              from: { name: l.from_email || '', email: l.from_email || '' },
+              to: l.to_email || '',
+              subject: l.subject || '(no subject)',
+              snippet: l.snippet || '',
+              date: l.date || '',
+              labelIds: [],
+              isReply: false,
+              crmLabels: labelMap[l.gmail_message_id] || [],
+              _persisted: true,
+            });
+          }
+        });
+      } catch {}
+    }
 
-    // Filter out spam-labeled messages
+    // Filter out spam-labeled messages (inbox only)
     const spamIds = new Set(
       crmLabels.filter(l => l.label === 'spam').map(l => l.gmail_message_id)
     );
 
     const result = detailed
       .filter(Boolean)
-      .filter(d => !spamIds.has(d.id))
+      .filter(d => labelId !== 'INBOX' || !spamIds.has(d.id))
       .map(d => {
         const from = parseFrom(getHeader(d, 'From'));
         return {
@@ -119,11 +120,10 @@ export default async function handler(req, res) {
         };
       });
 
-    // Append persisted labeled messages (also filter spam)
-    const allMessages = [
-      ...result,
-      ...persistedMessages.filter(m => !spamIds.has(m.id)),
-    ];
+    // Append persisted labeled messages (inbox only, also filter spam)
+    const allMessages = labelId === 'INBOX'
+      ? [...result, ...persistedMessages.filter(m => !spamIds.has(m.id))]
+      : result;
 
     return res.json({
       messages: allMessages,
