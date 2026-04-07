@@ -18,11 +18,18 @@ export default async function handler(req, res) {
     }
     const body = Buffer.concat(chunks);
 
-    const contentType = req.headers['content-type'];
-    const ext = contentType.includes('video') ? 'mp4'
+    const contentType = req.headers['content-type'] || 'application/octet-stream';
+    const originalName = req.headers['x-file-name'] || '';
+    const origExt = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : '';
+    const ext = origExt
+      || (contentType.includes('pdf') ? 'pdf'
+      : contentType.includes('video') ? 'mp4'
       : contentType.includes('png') ? 'png'
       : contentType.includes('webp') ? 'webp'
-      : 'jpg';
+      : contentType.includes('zip') ? 'zip'
+      : contentType.includes('json') ? 'json'
+      : contentType.includes('text') ? 'txt'
+      : 'jpg');
     const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
 
     const uploadRes = await fetch(

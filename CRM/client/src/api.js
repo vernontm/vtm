@@ -219,6 +219,22 @@ export async function uploadBlogMedia(file) {
   return res.json();
 }
 
+export async function uploadBlogFile(file) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const res = await fetch(`${BASE}/upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+      'X-File-Name': file.name,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: file,
+  });
+  if (!res.ok) throw new Error('Upload failed');
+  return res.json();
+}
+
 // Todos
 export const getTodoGroups   = ()       => request('/todos?type=groups');
 export const createTodoGroup = (data)   => request('/todos?type=groups', { method: 'POST', body: JSON.stringify(data) });

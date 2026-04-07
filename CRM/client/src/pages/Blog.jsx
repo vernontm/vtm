@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Trash2, Edit2, Eye, EyeOff, Save, X, Upload, Image, Video, Link2,
-  FileText, Code, Search, ExternalLink, GripVertical,
+  FileText, Code, Search, ExternalLink, GripVertical, Paperclip, Download,
 } from 'lucide-react';
-import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost, uploadBlogMedia } from '../api';
+import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost, uploadBlogMedia, uploadBlogFile } from '../api';
 
 const CATEGORIES = ['Web Design', 'Marketing', 'Social Media', 'Branding', 'Technology', 'Business', 'Case Study', 'Tutorial'];
 
 const emptyPost = {
   title: '', description: '', category: '', thumbnail_emoji: '📝', content: '',
   published: false, media_url: '', media_type: '', link_url: '', link_text: '',
-  gated: false, code_block: '', code_label: '',
+  gated: false, code_block: '', code_label: '', file_url: '', file_name: '',
 };
 
 export default function Blog() {
@@ -21,6 +21,7 @@ export default function Blog() {
   const [filter, setFilter]     = useState('all'); // all, published, draft
   const [saving, setSaving]     = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -90,6 +91,20 @@ export default function Blog() {
       alert('Upload failed: ' + err.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingFile(true);
+    try {
+      const { url } = await uploadBlogFile(file);
+      setEditing(prev => ({ ...prev, file_url: url, file_name: file.name }));
+    } catch (err) {
+      alert('File upload failed: ' + err.message);
+    } finally {
+      setUploadingFile(false);
     }
   };
 
@@ -225,6 +240,34 @@ export default function Blog() {
               rows={6}
               style={{ ...inputStyle, resize: 'vertical', fontFamily: 'Inter, sans-serif', fontSize: 12 }}
             />
+          </div>
+
+          {/* Downloadable File */}
+          <div>
+            <label style={labelStyle}><Paperclip size={12} style={{ display: 'inline', marginRight: 4 }} />Downloadable File</label>
+            <div className="flex items-center gap-3">
+              <label style={{ ...btnStyle('#e5e7ef', '#8e8ea0'), cursor: 'pointer', display: 'inline-flex' }}>
+                <Upload size={14} /> {uploadingFile ? 'Uploading...' : 'Upload File'}
+                <input type="file" onChange={handleFileUpload} style={{ display: 'none' }} />
+              </label>
+              {editing.file_url && (
+                <div className="flex items-center gap-2" style={{ fontSize: 12, color: '#8e8ea0' }}>
+                  <Paperclip size={14} />
+                  <span style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {editing.file_name || editing.file_url.split('/').pop()}
+                  </span>
+                  <a href={editing.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#4a6cf7', display: 'flex' }}>
+                    <Download size={14} />
+                  </a>
+                  <button onClick={() => { set('file_url', ''); set('file_name', ''); }} style={{ color: '#ff5c5c', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+            {!editing.file_url && (
+              <p style={{ fontSize: 11, color: '#b0b0c0', marginTop: 4 }}>Upload any file (PDF, ZIP, etc.) for users to download on the blog page.</p>
+            )}
           </div>
 
           {/* Toggles */}

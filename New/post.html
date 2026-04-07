@@ -194,6 +194,26 @@
             transform: translateY(-2px);
         }
 
+        .post-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 28px;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border-radius: 12px;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 12px rgba(255,155,38,0.2);
+        }
+        .post-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,155,38,0.35);
+        }
+
         .code-section {
             margin-top: 28px;
         }
@@ -478,12 +498,26 @@
                 `;
             }
 
+            let fileHtml = '';
+            if (post.file_url) {
+                const fname = post.file_name || post.file_url.split('/').pop();
+                fileHtml = `
+                    <a href="${post.file_url}" download="${fname}" class="post-download" target="_blank">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download ${fname}
+                    </a>
+                `;
+            }
+
             container.innerHTML = `
                 <a href="/creators" class="post-back">&larr; Back to tutorials</a>
                 <span class="post-tag">${post.category || 'General'}</span>
                 <h1 class="post-title">${post.title}</h1>
                 ${mediaHtml}
                 <div class="post-content">${post.content || ''}</div>
+                ${fileHtml}
                 ${codeHtml}
                 ${linkHtml ? `<div style="margin-top:20px">${linkHtml}</div>` : ''}
             `;
