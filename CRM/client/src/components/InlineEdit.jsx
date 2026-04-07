@@ -49,16 +49,16 @@ export default function InlineEdit({
   };
 
   const inputStyle = {
-    background: '#111328',
-    border: '1px solid #ff9b26',
+    background: '#ffffff',
+    border: '1px solid #4a6cf7',
     borderRadius: 4,
-    color: '#e8e6df',
+    color: '#1a1a2e',
     padding: '3px 8px',
     fontSize: 13,
     outline: 'none',
     width: '100%',
     minWidth: 80,
-    boxShadow: '0 0 0 2px rgba(87,155,252,0.2)',
+    boxShadow: '0 0 0 2px rgba(74,108,247,0.15)',
   };
 
   if (editing) {
@@ -106,12 +106,12 @@ export default function InlineEdit({
         borderRadius: 4,
         minWidth: 32,
         minHeight: 22,
-        color: value ? '#ffffff' : '#555880',
+        color: value ? '#1a1a2e' : '#b0b0c0',
         transition: 'background 0.1s',
         userSelect: 'none',
         lineHeight: '18px',
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = '#1c1c1a')}
+      onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f2f8')}
       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
     >
       {display || placeholder}

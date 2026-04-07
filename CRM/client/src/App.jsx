@@ -16,12 +16,14 @@ import Notifications from './pages/Notifications';
 import Invoices from './pages/Invoices';
 import QuickNotes from './pages/QuickNotes';
 import Todos from './pages/Todos';
+import Blog from './pages/Blog';
+import EmailPage from './pages/Email';
 
 function AppLayout() {
   const { refreshKey } = useRefresh();
   const { privacyMode } = usePrivacy();
   return (
-    <div className={privacyMode ? 'privacy-mode' : ''} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0a0a08' }}>
+    <div className={privacyMode ? 'privacy-mode' : ''} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f5f7fa' }}>
       <Sidebar />
       <main key={refreshKey} style={{ flex: 1, overflow: 'auto' }}>
         <Routes>
@@ -36,6 +38,8 @@ function AppLayout() {
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/quick-notes" element={<QuickNotes />} />
           <Route path="/todos" element={<Todos />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/email" element={<EmailPage />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
@@ -48,8 +52,8 @@ function AuthGate() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#4a4845', fontSize: 14, fontFamily: 'DM Mono, monospace' }}>Loading...</div>
+      <div style={{ minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#8e8ea0', fontSize: 14, fontFamily: 'Inter, sans-serif' }}>Loading...</div>
       </div>
     );
   }

@@ -91,17 +91,17 @@ export default function Contacts() {
 
   const initials = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const avatarColor = (name) => {
-    const colors = ['#ff9b26', '#784bd1', '#ff9b26', '#fdab3d', '#ff5c5c'];
+    const colors = ['#4a6cf7', '#784bd1', '#22c55e', '#f5a623', '#ff5c5c'];
     return colors[name.charCodeAt(0) % colors.length];
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#0a0a08' }}>
+    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       <div className="page-header">
         <div className="page-title">Contacts</div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a4845' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
             <input className="search-input" placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Contact</button>
@@ -124,11 +124,11 @@ export default function Contacts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#4a4845', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#4a4845', padding: 40 }}>No contacts yet.</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No contacts yet.</td></tr>
             ) : filtered.map(contact => (
-              <tr key={contact.id} style={{ background: selectedIds.has(contact.id) ? '#252060' : undefined }}>
+              <tr key={contact.id} style={{ background: selectedIds.has(contact.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
                 <td>
                   <input
                     type="checkbox"
@@ -142,7 +142,7 @@ export default function Contacts() {
                       width: 30, height: 30, borderRadius: '50%',
                       background: avatarColor(contact.name),
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700, color: '#e8e6df', flexShrink: 0
+                      fontSize: 11, fontWeight: 700, color: '#ffffff', flexShrink: 0
                     }}>
                       {initials(contact.name)}
                     </div>
@@ -153,7 +153,7 @@ export default function Contacts() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {contact.email && (
                       <a href={gmailLink(contact.email)} target="_blank" rel="noreferrer" title="Compose in Gmail" style={{ display: 'flex', flexShrink: 0 }}>
-                        <Mail size={13} style={{ color: '#ff9b26' }} />
+                        <Mail size={13} style={{ color: '#4a6cf7' }} />
                       </a>
                     )}
                     <InlineEdit value={contact.email} type="email" onSave={val => handleFieldSave(contact.id, 'email', val)} placeholder="Add email" />
@@ -161,13 +161,13 @@ export default function Contacts() {
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {contact.phone && <Phone size={12} style={{ color: '#4a4845', flexShrink: 0 }} />}
+                    {contact.phone && <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />}
                     <InlineEdit value={contact.phone} type="tel" onSave={val => handleFieldSave(contact.id, 'phone', val)} placeholder="Add phone" />
                   </div>
                 </td>
                 <td><InlineEdit value={contact.company} onSave={val => handleFieldSave(contact.id, 'company', val)} placeholder="Company" /></td>
                 <td><InlineEdit value={contact.title} onSave={val => handleFieldSave(contact.id, 'title', val)} placeholder="Title" /></td>
-                <td style={{ color: '#4a4845', fontSize: 12, paddingLeft: 8 }}>
+                <td style={{ color: '#8e8ea0', fontSize: 12, paddingLeft: 8 }}>
                   {contact.created_at ? new Date(contact.created_at).toLocaleDateString() : '—'}
                 </td>
                 <td>
@@ -229,7 +229,7 @@ export default function Contacts() {
       )}
       {modal === 'delete' && (
         <Modal title="Delete Contact" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#7a7870' }}>Delete <strong style={{ color: '#e8e6df' }}>{selected?.name}</strong>? This cannot be undone.</p>
+          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong>? This cannot be undone.</p>
         </Modal>
       )}
     </div>

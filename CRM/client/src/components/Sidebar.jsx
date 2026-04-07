@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Users, Briefcase, Star, Building2, FolderOpen, BarChart3, LayoutDashboard, RefreshCw,
+  Users, Briefcase, Star, BarChart3, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
-  Eye, EyeOff,
+  Eye, EyeOff, FileText,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -17,9 +17,11 @@ const nav = [
   { to: '/contacts',       icon: Users,           label: 'Contacts' },
   { to: '/projects',       icon: Briefcase,       label: 'Projects' },
   { to: '/todos',          icon: CheckSquare,     label: 'Todo Board' },
+  { to: '/blog',           icon: FileText,        label: 'Blog' },
 ];
 
 const navTools = [
+  { to: '/email',          icon: Mail,        label: 'Email' },
   { to: '/meetings',       icon: Calendar,    label: 'Meetings' },
   { to: '/invoices',       icon: Receipt,     label: 'Invoices' },
   { to: '/quick-notes',    icon: StickyNote,  label: 'Quick Notes' },
@@ -65,18 +67,18 @@ export default function Sidebar() {
   return (
     <>
       <aside
-        style={{ width: 220, minWidth: 220, background: '#111110', borderRight: '1px solid #252523' }}
+        style={{ width: 230, minWidth: 230, background: '#f0f2f8', borderRight: '1px solid #e5e7ef' }}
         className="flex flex-col h-full"
       >
         {/* Logo */}
-        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #252523' }}>
+        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #e5e7ef' }}>
           <div className="flex items-center gap-2">
-            <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #ff9b26, #ee4c27)', borderRadius: 8 }} className="flex items-center justify-center">
-              <BarChart3 size={18} color="#0a0a08" />
+            <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', borderRadius: 8 }} className="flex items-center justify-center">
+              <BarChart3 size={18} color="#ffffff" />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#e8e6df', lineHeight: 1.2, fontFamily: 'Poppins, sans-serif' }}>Vernon Tech</div>
-              <div style={{ fontSize: 10, color: '#4a4845', fontFamily: 'DM Mono, monospace' }}>&amp; Media CRM</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.2, fontFamily: 'Inter, sans-serif' }}>Vernon Tech</div>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>&amp; Media CRM</div>
             </div>
           </div>
         </div>
@@ -85,26 +87,26 @@ export default function Sidebar() {
         <div style={{ padding: '10px 12px 4px' }}>
           <button
             onClick={() => setSearchOpen(true)}
-            title="Search (⌘K)"
+            title="Search (Cmd+K)"
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 8,
               padding: '7px 10px', borderRadius: 8, cursor: 'pointer',
-              background: '#0a0a08', border: '1px solid #252523',
-              color: '#4a4845', fontSize: 12, transition: 'color 0.15s, border-color 0.15s',
-              textAlign: 'left', fontFamily: 'Poppins, sans-serif',
+              background: '#ffffff', border: '1px solid #e5e7ef',
+              color: '#b0b0c0', fontSize: 12, transition: 'all 0.15s',
+              textAlign: 'left', fontFamily: 'Inter, sans-serif',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = 'rgba(255,155,38,0.35)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#4a6cf7'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7ef'; }}
           >
             <Search size={13} style={{ flexShrink: 0 }} />
-            <span style={{ flex: 1 }}>Search…</span>
-            <span style={{ fontSize: 10, background: '#161614', border: '1px solid #252523', borderRadius: 4, padding: '1px 5px', fontFamily: 'DM Mono, monospace', color: '#4a4845' }}>⌘K</span>
+            <span style={{ flex: 1 }}>Search...</span>
+            <span style={{ fontSize: 10, background: '#f0f2f8', border: '1px solid #e5e7ef', borderRadius: 4, padding: '1px 5px', color: '#8e8ea0' }}>Cmd+K</span>
           </button>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 py-3" style={{ overflowY: 'auto' }}>
-          <div style={{ padding: '4px 16px 8px', fontSize: 10, fontWeight: 500, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'DM Mono, monospace' }}>
+          <div style={{ padding: '4px 16px 8px', fontSize: 10, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif' }}>
             Workspace
           </div>
           {nav.map(({ to, icon: Icon, label }) => (
@@ -118,7 +120,7 @@ export default function Sidebar() {
             </NavLink>
           ))}
 
-          <div style={{ padding: '12px 16px 8px', fontSize: 10, fontWeight: 500, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'DM Mono, monospace', marginTop: 4 }}>
+          <div style={{ padding: '12px 16px 8px', fontSize: 10, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>
             Tools
           </div>
           {navTools.map(({ to, icon: Icon, label }) => (
@@ -130,7 +132,7 @@ export default function Sidebar() {
               <Icon size={15} />
               <span style={{ flex: 1 }}>{label}</span>
               {to === '/notifications' && notifCount > 0 && (
-                <span style={{ background: '#ff5c5c', color: '#0a0a08', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 800, lineHeight: '14px', fontFamily: 'DM Mono, monospace' }}>
+                <span style={{ background: '#ff5c5c', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700, lineHeight: '14px' }}>
                   {notifCount}
                 </span>
               )}
@@ -139,58 +141,46 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #252523', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7ef', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button
             onClick={togglePrivacy}
-            title={privacyMode ? 'Disable Privacy Mode' : 'Enable Privacy Mode'}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
-              background: privacyMode ? 'rgba(255,155,38,0.08)' : '#0a0a08',
-              border: privacyMode ? '1px solid rgba(255,155,38,0.35)' : '1px solid #252523',
-              color: privacyMode ? '#ff9b26' : '#4a4845',
-              fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-              fontFamily: 'Poppins, sans-serif',
+              background: privacyMode ? 'rgba(74,108,247,0.08)' : '#ffffff',
+              border: privacyMode ? '1px solid rgba(74,108,247,0.3)' : '1px solid #e5e7ef',
+              color: privacyMode ? '#4a6cf7' : '#8e8ea0',
+              fontSize: 12, fontWeight: 600, transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
             }}
-            onMouseEnter={e => { if (!privacyMode) { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#ff9b26'; } }}
-            onMouseLeave={e => { if (!privacyMode) { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; } }}
           >
             {privacyMode ? <EyeOff size={13} /> : <Eye size={13} />}
             {privacyMode ? 'Privacy On' : 'Privacy Mode'}
           </button>
           <button
             onClick={handleRefresh}
-            title="Refresh all data"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
-              background: '#0a0a08', border: '1px solid #252523', color: '#4a4845',
-              fontSize: 12, fontWeight: 600, transition: 'color 0.15s, border-color 0.15s',
-              fontFamily: 'Poppins, sans-serif',
+              background: '#ffffff', border: '1px solid #e5e7ef', color: '#8e8ea0',
+              fontSize: 12, fontWeight: 600, transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#ff9b26'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; }}
           >
             <RefreshCw size={13} style={{ transition: 'transform 0.7s', transform: spinning ? 'rotate(360deg)' : 'rotate(0deg)' }} />
             Refresh All
           </button>
           <button
             onClick={signOut}
-            title="Sign out"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
-              background: '#0a0a08', border: '1px solid #252523', color: '#4a4845',
-              fontSize: 12, fontWeight: 600, transition: 'color 0.15s, border-color 0.15s',
-              fontFamily: 'Poppins, sans-serif',
+              background: '#ffffff', border: '1px solid #e5e7ef', color: '#8e8ea0',
+              fontSize: 12, fontWeight: 600, transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ff5c5c'; e.currentTarget.style.borderColor = '#ff5c5c'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = '#252523'; }}
           >
             <LogOut size={13} />
             Sign Out
           </button>
-          <div style={{ fontSize: 10, color: '#4a4845', textAlign: 'center', fontFamily: 'DM Mono, monospace' }}>
+          <div style={{ fontSize: 10, color: '#b0b0c0', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
             Vernon Tech &amp; Media
           </div>
         </div>

@@ -13,15 +13,15 @@ const TYPE_CONFIG = {
   payment_partial:  { label: 'Balance Owed',       icon: CreditCard,    color: '#fdab3d' },
   project_overdue:  { label: 'Project Overdue',    icon: FolderOpen,    color: '#ff5c5c' },
   project_due_soon: { label: 'Due Soon',           icon: Clock,         color: '#fdab3d' },
-  stale_lead:       { label: 'Stale Lead',         icon: Users,         color: '#4a4845' },
+  stale_lead:       { label: 'Stale Lead',         icon: Users,         color: '#8e8ea0' },
   invoice_unpaid:   { label: 'Invoice Unpaid',     icon: CreditCard,    color: '#fdab3d' },
-  deal_cold:        { label: 'Deal Going Cold',    icon: TrendingDown,  color: '#ff9b26' },
+  deal_cold:        { label: 'Deal Going Cold',    icon: TrendingDown,  color: '#4a6cf7' },
 };
 
 const PRIORITY_CONFIG = {
   high:   { label: 'High',   color: '#ff5c5c', bg: '#ff5c5c18' },
   medium: { label: 'Medium', color: '#fdab3d', bg: '#fdab3d18' },
-  low:    { label: 'Low',    color: '#4a4845', bg: '#4a484518' },
+  low:    { label: 'Low',    color: '#8e8ea0', bg: '#8e8ea018' },
 };
 
 const ALL_TYPES = ['All', ...Object.keys(TYPE_CONFIG)];
@@ -39,7 +39,7 @@ function NotificationCard({ n, onDismiss }) {
 
   return (
     <div style={{
-      background: '#161614', border: `1px solid #252523`,
+      background: '#ffffff', border: `1px solid #e5e7ef`,
       borderLeft: `3px solid ${pc.color}`,
       borderRadius: 10, padding: '14px 16px',
       display: 'flex', alignItems: 'flex-start', gap: 12,
@@ -53,19 +53,19 @@ function NotificationCard({ n, onDismiss }) {
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#e8e6df' }}>{n.title}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{n.title}</span>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: pc.color, background: pc.bg, borderRadius: 6, padding: '2px 7px' }}>
             {pc.label}
           </span>
-          <span style={{ fontSize: 10, color: '#4a4845', background: '#111110', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: 10, color: '#8e8ea0', background: '#ffffff', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             {tc.label}
           </span>
         </div>
-        <p style={{ fontSize: 13, color: '#7a7870', margin: 0, lineHeight: 1.5 }}>{n.message}</p>
+        <p style={{ fontSize: 13, color: '#8e8ea0', margin: 0, lineHeight: 1.5 }}>{n.message}</p>
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link
             to={n.link}
-            style={{ fontSize: 12, color: '#ff9b26', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+            style={{ fontSize: 12, color: '#4a6cf7', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
           >
             View {n.entity_type} <ChevronRight size={12} />
           </Link>
@@ -76,9 +76,9 @@ function NotificationCard({ n, onDismiss }) {
       <button
         onClick={handleDismiss}
         title="Dismiss"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: 4, flexShrink: 0, display: 'flex' }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, flexShrink: 0, display: 'flex' }}
         onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-        onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+        onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
       >
         <X size={15} />
       </button>
@@ -132,13 +132,13 @@ export default function Notifications() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#0a0a08' }}>
+    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       {/* Header */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="page-title">Notifications</div>
           {notifications.length > 0 && (
-            <span style={{ background: '#ff5c5c', color: '#e8e6df', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
+            <span style={{ background: '#ff5c5c', color: '#1a1a2e', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
               {notifications.length}
             </span>
           )}
@@ -170,14 +170,14 @@ export default function Notifications() {
           {[
             { key: 'high',   label: 'High Priority',   color: '#ff5c5c', icon: AlertTriangle },
             { key: 'medium', label: 'Medium Priority',  color: '#fdab3d', icon: Clock },
-            { key: 'low',    label: 'Low Priority',     color: '#4a4845', icon: Bell },
+            { key: 'low',    label: 'Low Priority',     color: '#8e8ea0', icon: Bell },
           ].map(({ key, label, color, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setPriorityFilter(p => p === key ? 'all' : key)}
               style={{
-                background: priorityFilter === key ? color + '22' : '#161614',
-                border: `1px solid ${priorityFilter === key ? color : '#252523'}`,
+                background: priorityFilter === key ? color + '22' : '#ffffff',
+                border: `1px solid ${priorityFilter === key ? color : '#e5e7ef'}`,
                 borderRadius: 10, padding: '14px 18px',
                 display: 'flex', alignItems: 'center', gap: 12,
                 cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
@@ -185,8 +185,8 @@ export default function Notifications() {
             >
               <Icon size={20} style={{ color }} />
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#e8e6df' }}>{counts[key]}</div>
-                <div style={{ fontSize: 12, color: '#4a4845' }}>{label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>{counts[key]}</div>
+                <div style={{ fontSize: 12, color: '#8e8ea0' }}>{label}</div>
               </div>
             </button>
           ))}
@@ -207,16 +207,16 @@ export default function Notifications() {
                 onClick={() => setFilter(t)}
                 style={{
                   padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-                  border: `1px solid ${active ? (tc?.color || '#ff9b26') : '#252523'}`,
-                  background: active ? (tc?.color || '#ff9b26') + '22' : 'transparent',
-                  color: active ? (tc?.color || '#ff9b26') : '#4a4845',
+                  border: `1px solid ${active ? (tc?.color || '#4a6cf7') : '#e5e7ef'}`,
+                  background: active ? (tc?.color || '#4a6cf7') + '22' : 'transparent',
+                  color: active ? (tc?.color || '#4a6cf7') : '#8e8ea0',
                   fontWeight: active ? 700 : 400,
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}
               >
                 {tc && <Filter size={11} />}
                 {t === 'All' ? 'All Types' : tc?.label}
-                <span style={{ background: '#252523', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>{count}</span>
+                <span style={{ background: '#e5e7ef', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>{count}</span>
               </button>
             );
           })}
@@ -224,14 +224,14 @@ export default function Notifications() {
 
         {/* List */}
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#4a4845', padding: 60, fontSize: 14 }}>Loading notifications...</div>
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 60, fontSize: 14 }}>Loading notifications...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
-            <Bell size={40} style={{ color: '#252523', marginBottom: 16 }} />
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#4a4845', marginBottom: 8 }}>
+            <Bell size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#8e8ea0', marginBottom: 8 }}>
               {notifications.length === 0 ? 'All clear!' : 'No notifications match this filter'}
             </div>
-            <div style={{ fontSize: 13, color: '#4a4845', marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: '#8e8ea0', marginBottom: 20 }}>
               {notifications.length === 0 ? 'No action items at the moment. Check back later.' : 'Try clearing the filters above.'}
             </div>
             {notifications.length === 0 && (
@@ -251,7 +251,7 @@ export default function Notifications() {
         {/* Reset dismissed link */}
         {notifications.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <button onClick={handleReset} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', fontSize: 12 }}>
+            <button onClick={handleReset} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', fontSize: 12 }}>
               Reset dismissed notifications
             </button>
           </div>

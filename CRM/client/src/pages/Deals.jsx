@@ -27,9 +27,9 @@ const GROUPS = [
 ];
 
 const PAYMENT_STATUS_COLORS = {
-  'Pending':      '#4a4845',
+  'Pending':      '#8e8ea0',
   'Partial Paid': '#fdab3d',
-  'Paid':         '#ff9b26',
+  'Paid':         '#4a6cf7',
 };
 
 // ── Payment Progress Badge (Stripe) ──────────────────────────────────────────
@@ -42,9 +42,9 @@ function PaymentBadge({ dealId, allInvoices, onRefresh }) {
   const allPaid = paid.length >= totalPhases;
 
   let label, color;
-  if (allPaid)              { label = '✓ Fully Paid'; color = '#ff9b26'; }
+  if (allPaid)              { label = '✓ Fully Paid'; color = '#4a6cf7'; }
   else if (paid.length > 0) { label = `Phase ${paid.length}/${totalPhases} Paid`; color = '#fdab3d'; }
-  else                      { label = totalPhases > 1 ? `Phase 1/${totalPhases} Sent` : 'Invoice Sent'; color = '#ff9b26'; }
+  else                      { label = totalPhases > 1 ? `Phase 1/${totalPhases} Sent` : 'Invoice Sent'; color = '#4a6cf7'; }
 
   const latestUrl = inv.find(i => i.stripe_invoice_url)?.stripe_invoice_url;
 
@@ -53,10 +53,10 @@ function PaymentBadge({ dealId, allInvoices, onRefresh }) {
       <span style={{ fontSize: 11, fontWeight: 600, color, background: color + '22', borderRadius: 12, padding: '2px 8px', whiteSpace: 'nowrap' }}>{label}</span>
       {latestUrl && (
         <a href={latestUrl} target="_blank" rel="noreferrer" title="View on Stripe">
-          <ExternalLink size={11} style={{ color: '#4a4845' }} />
+          <ExternalLink size={11} style={{ color: '#8e8ea0' }} />
         </a>
       )}
-      <button onClick={() => onRefresh(inv)} title="Refresh" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: 2, display: 'flex' }}>
+      <button onClick={() => onRefresh(inv)} title="Refresh" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 2, display: 'flex' }}>
         <RefreshCw size={11} />
       </button>
     </div>
@@ -103,37 +103,37 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-      <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, width: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
-        <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #252523', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CreditCard size={18} style={{ color: '#ff9b26' }} />
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df' }}>Send Invoice (Stripe)</span>
-          <span style={{ fontSize: 13, color: '#4a4845' }}>— {deal.name}</span>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, width: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+        <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CreditCard size={18} style={{ color: '#4a6cf7' }} />
+          <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Send Invoice (Stripe)</span>
+          <span style={{ fontSize: 13, color: '#8e8ea0' }}>— {deal.name}</span>
         </div>
         <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 5 }}>Customer Email *</label>
+              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Email *</label>
               <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="client@email.com" />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 5 }}>Customer Name</label>
+              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Name</label>
               <input className="form-input" value={custName} onChange={e => setCustName(e.target.value)} />
             </div>
           </div>
           <div>
-            <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 5 }}>Description</label>
+            <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Description</label>
             <input className="form-input" value={desc} onChange={e => setDesc(e.target.value)} />
           </div>
           {showStructureToggle && (
             <div>
-              <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 8 }}>Payment Structure</label>
+              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 8 }}>Payment Structure</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                   <button key={val} onClick={() => setStructure(val)} style={{
                     flex: 1, padding: '9px 0', borderRadius: 8,
-                    border: `1px solid ${structure === val ? '#ff9b26' : '#252523'}`,
-                    background: structure === val ? '#ff9b2622' : 'transparent',
-                    color: structure === val ? '#ff9b26' : '#4a4845',
+                    border: `1px solid ${structure === val ? '#4a6cf7' : '#e5e7ef'}`,
+                    background: structure === val ? '#4a6cf722' : 'transparent',
+                    color: structure === val ? '#4a6cf7' : '#8e8ea0',
                     cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                   }}>{lbl}</button>
                 ))}
@@ -142,22 +142,22 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
           )}
           {structure === 'single' && (
             <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#7a7870', fontSize: 13 }}>Total invoice amount</span>
-              <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
+              <span style={{ color: '#8e8ea0', fontSize: 13 }}>Total invoice amount</span>
+              <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
             </div>
           )}
           {structure === 'two_phase' && (
             <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#7a7870', fontSize: 13 }}>Phase 1 (sent now)</span>
+                <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 1 (sent now)</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="range" min={10} max={90} value={pct1} onChange={e => setPct1(Number(e.target.value))} style={{ width: 80 }} />
-                  <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
+                  <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                 </div>
               </div>
-              <div style={{ height: 1, background: '#252523' }} />
+              <div style={{ height: 1, background: '#e5e7ef' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#4a4845', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
+                <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
                 <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 14 }}>${amount2.toLocaleString()} ({100 - pct1}%)</span>
               </div>
             </div>
@@ -165,15 +165,15 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
           {structure === 'phase2' && (
             <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#7a7870', fontSize: 13 }}>Phase 2 (remaining balance)</span>
+                <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (remaining balance)</span>
                 <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 16 }}>${amount2.toLocaleString()}</span>
               </div>
-              <div style={{ color: '#4a4845', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
+              <div style={{ color: '#8e8ea0', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
             </div>
           )}
           {err && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{err}</div>}
         </div>
-        <div style={{ padding: '14px 22px', borderTop: '1px solid #252523', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div style={{ padding: '14px 22px', borderTop: '1px solid #e5e7ef', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={send} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Send size={14} />
@@ -292,34 +292,34 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
 
   const inp = {
     width: '100%', boxSizing: 'border-box',
-    background: '#111328', border: '1px solid #252523', borderRadius: 6,
-    padding: '7px 10px', fontSize: 12, color: '#e8e6df', outline: 'none',
+    background: '#111328', border: '1px solid #e5e7ef', borderRadius: 6,
+    padding: '7px 10px', fontSize: 12, color: '#1a1a2e', outline: 'none',
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: 20 }}>
-      <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, width: '100%', maxWidth: 780, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, width: '100%', maxWidth: 780, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
 
         {/* Header */}
-        <div style={{ padding: '16px 22px', borderBottom: '1px solid #252523', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-          {mode === 'manual' ? <FileText size={18} style={{ color: '#ff9b26' }} /> : <CreditCard size={18} style={{ color: '#ff9b26' }} />}
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df' }}>Invoice</span>
-          <span style={{ fontSize: 13, color: '#4a4845' }}>— {deal.name}</span>
-          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #252523', marginLeft: 8 }}>
+        <div style={{ padding: '16px 22px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          {mode === 'manual' ? <FileText size={18} style={{ color: '#4a6cf7' }} /> : <CreditCard size={18} style={{ color: '#4a6cf7' }} />}
+          <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Invoice</span>
+          <span style={{ fontSize: 13, color: '#8e8ea0' }}>— {deal.name}</span>
+          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7ef', marginLeft: 8 }}>
             {[['manual', FileText, 'Manual Invoice'], ['stripe', CreditCard, 'Send via Stripe']].map(([m, Icon, label]) => (
               <button key={m} onClick={() => setMode(m)} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '5px 12px', fontSize: 12, cursor: 'pointer', border: 'none',
-                background: mode === m ? '#ff9b2622' : 'transparent',
-                color: mode === m ? '#ff9b26' : '#4a4845',
+                background: mode === m ? '#4a6cf722' : 'transparent',
+                color: mode === m ? '#4a6cf7' : '#8e8ea0',
                 fontWeight: mode === m ? 700 : 400,
-                borderRight: m === 'manual' ? '1px solid #252523' : 'none',
+                borderRight: m === 'manual' ? '1px solid #e5e7ef' : 'none',
               }}>
                 <Icon size={12} /> {label}
               </button>
             ))}
           </div>
-          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845' }}>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}>
             <X size={18} />
           </button>
         </div>
@@ -332,28 +332,28 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
-                  <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 5 }}>Customer Email *</label>
+                  <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Email *</label>
                   <input className="form-input" type="email" value={strEmail} onChange={e => setStrEmail(e.target.value)} placeholder="client@email.com" />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 5 }}>Customer Name</label>
+                  <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Name</label>
                   <input className="form-input" value={strName} onChange={e => setStrName(e.target.value)} />
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 5 }}>Description</label>
+                <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Description</label>
                 <input className="form-input" value={strDesc} onChange={e => setStrDesc(e.target.value)} />
               </div>
               {showStructureToggle && (
                 <div>
-                  <label style={{ fontSize: 12, color: '#4a4845', display: 'block', marginBottom: 8 }}>Payment Structure</label>
+                  <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 8 }}>Payment Structure</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                       <button key={val} onClick={() => setStructure(val)} style={{
                         flex: 1, padding: '9px 0', borderRadius: 8,
-                        border: `1px solid ${structure === val ? '#ff9b26' : '#252523'}`,
-                        background: structure === val ? '#ff9b2622' : 'transparent',
-                        color: structure === val ? '#ff9b26' : '#4a4845',
+                        border: `1px solid ${structure === val ? '#4a6cf7' : '#e5e7ef'}`,
+                        background: structure === val ? '#4a6cf722' : 'transparent',
+                        color: structure === val ? '#4a6cf7' : '#8e8ea0',
                         cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                       }}>{lbl}</button>
                     ))}
@@ -362,22 +362,22 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               )}
               {structure === 'single' && (
                 <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#7a7870', fontSize: 13 }}>Total invoice amount</span>
-                  <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
+                  <span style={{ color: '#8e8ea0', fontSize: 13 }}>Total invoice amount</span>
+                  <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
                 </div>
               )}
               {structure === 'two_phase' && (
                 <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#7a7870', fontSize: 13 }}>Phase 1 (sent now)</span>
+                    <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 1 (sent now)</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input type="range" min={10} max={90} value={pct1} onChange={e => setPct1(Number(e.target.value))} style={{ width: 80 }} />
-                      <span style={{ color: '#ff9b26', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
+                      <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                     </div>
                   </div>
-                  <div style={{ height: 1, background: '#252523' }} />
+                  <div style={{ height: 1, background: '#e5e7ef' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#4a4845', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
+                    <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
                     <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 14 }}>${amount2.toLocaleString()} ({100 - pct1}%)</span>
                   </div>
                 </div>
@@ -385,10 +385,10 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               {structure === 'phase2' && (
                 <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#7a7870', fontSize: 13 }}>Phase 2 (remaining balance)</span>
+                    <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (remaining balance)</span>
                     <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 16 }}>${amount2.toLocaleString()}</span>
                   </div>
-                  <div style={{ color: '#4a4845', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
+                  <div style={{ color: '#8e8ea0', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
                 </div>
               )}
               {strErr && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{strErr}</div>}
@@ -401,29 +401,29 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {/* Invoice meta */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, color: '#4a4845', display: 'block', marginBottom: 4 }}>Invoice Date</label>
+              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 4 }}>Invoice Date</label>
               <input style={inp} type="date" value={form.invoice_date} onChange={e => setField('invoice_date', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: '#4a4845', display: 'block', marginBottom: 4 }}>Due Date</label>
+              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 4 }}>Due Date</label>
               <input style={inp} type="date" value={form.due_date} onChange={e => setField('due_date', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: '#4a4845', display: 'block', marginBottom: 4 }}>Invoice # (auto-assigned)</label>
-              <input style={{ ...inp, color: '#4a4845' }} value={form.invoice_number || 'Will be assigned on save'} readOnly />
+              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 4 }}>Invoice # (auto-assigned)</label>
+              <input style={{ ...inp, color: '#8e8ea0' }} value={form.invoice_number || 'Will be assigned on save'} readOnly />
             </div>
           </div>
 
           {/* From + Bill To */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>From</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>From</div>
               <input style={inp} placeholder="Company name" value={form.from_name} onChange={e => setField('from_name', e.target.value)} />
               <input style={inp} placeholder="Your email" value={form.from_email} onChange={e => setField('from_email', e.target.value)} />
               <input style={inp} placeholder="Phone (optional)" value={form.from_phone} onChange={e => setField('from_phone', e.target.value)} />
             </div>
             <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Bill To</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Bill To</div>
               <input style={inp} placeholder="Client name" value={form.bill_to_name} onChange={e => setField('bill_to_name', e.target.value)} />
               <input style={inp} placeholder="Client email" value={form.bill_to_email} onChange={e => setField('bill_to_email', e.target.value)} />
               <input style={inp} placeholder="Address (optional)" value={form.bill_to_address} onChange={e => setField('bill_to_address', e.target.value)} />
@@ -432,25 +432,25 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
 
           {/* Line Items */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Line Items</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Line Items</div>
             <div style={{ background: '#161830', borderRadius: 8, overflow: 'hidden' }}>
               {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 32px', gap: 8, padding: '8px 12px', borderBottom: '1px solid #252523', fontSize: 11, color: '#4a4845', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 32px', gap: 8, padding: '8px 12px', borderBottom: '1px solid #e5e7ef', fontSize: 11, color: '#8e8ea0', fontWeight: 700, textTransform: 'uppercase' }}>
                 <span>Description</span><span>Qty</span><span>Rate ($)</span><span>Amount</span><span></span>
               </div>
               {form.items.map((item, idx) => (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 32px', gap: 8, padding: '8px 12px', borderBottom: '1px solid #111110', alignItems: 'center' }}>
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 32px', gap: 8, padding: '8px 12px', borderBottom: '1px solid #ffffff', alignItems: 'center' }}>
                   <input style={{ ...inp, padding: '5px 8px' }} placeholder="Description" value={item.description} onChange={e => updateItem(idx, 'description', e.target.value)} />
                   <input style={{ ...inp, padding: '5px 8px' }} type="number" min="1" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} />
                   <input style={{ ...inp, padding: '5px 8px' }} type="number" min="0" step="0.01" value={item.rate} onChange={e => updateItem(idx, 'rate', e.target.value)} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#ff9b26' }}>${((item.qty || 1) * (parseFloat(item.rate) || 0)).toLocaleString()}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4a6cf7' }}>${((item.qty || 1) * (parseFloat(item.rate) || 0)).toLocaleString()}</span>
                   <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', padding: 0 }}>
                     <X size={13} />
                   </button>
                 </div>
               ))}
               <div style={{ padding: '8px 12px' }}>
-                <button onClick={addItem} style={{ background: 'none', border: '1px dashed #252523', borderRadius: 6, cursor: 'pointer', color: '#ff9b26', fontSize: 12, padding: '5px 12px', width: '100%' }}>
+                <button onClick={addItem} style={{ background: 'none', border: '1px dashed #e5e7ef', borderRadius: 6, cursor: 'pointer', color: '#4a6cf7', fontSize: 12, padding: '5px 12px', width: '100%' }}>
                   + Add Item
                 </button>
               </div>
@@ -458,8 +458,8 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
             {/* Total */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, paddingRight: 44 }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 12, color: '#4a4845', marginBottom: 3 }}>Total</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#ff9b26' }}>${subtotal.toLocaleString()}</div>
+                <div style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 3 }}>Total</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#4a6cf7' }}>${subtotal.toLocaleString()}</div>
               </div>
             </div>
           </div>
@@ -467,7 +467,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {/* Payment Instructions + Notes */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, color: '#4a4845', display: 'block', marginBottom: 6 }}>Payment Instructions</label>
+              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 6 }}>Payment Instructions</label>
               <textarea
                 style={{ ...inp, minHeight: 80, resize: 'vertical', lineHeight: 1.5 }}
                 placeholder="e.g. Please pay via Zelle to: 5551234567 or venmo.com/yourname"
@@ -476,7 +476,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: '#4a4845', display: 'block', marginBottom: 6 }}>Notes</label>
+              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 6 }}>Notes</label>
               <textarea
                 style={{ ...inp, minHeight: 80, resize: 'vertical', lineHeight: 1.5 }}
                 placeholder="Thank you for your business!"
@@ -489,7 +489,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {err && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{err}</div>}
 
           {saved && (
-            <div style={{ color: '#ff9b26', fontSize: 13, background: '#ff9b2615', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ color: '#4a6cf7', fontSize: 13, background: '#4a6cf715', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
               <Check size={14} /> Invoice #{saved.invoice_number} saved successfully
             </div>
           )}
@@ -497,7 +497,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 22px', borderTop: '1px solid #252523', display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '14px 22px', borderTop: '1px solid #e5e7ef', display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <button className="btn-ghost" onClick={onClose}>Close</button>
           {mode === 'stripe' ? (
             <button onClick={sendStripe} disabled={strLoading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -551,7 +551,7 @@ function buildInvoiceHTML({ invoice_number, invoice_date, due_date, bill_to_name
     .company { font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 6px; }
     .from-details { font-size: 13px; color: #6b7280; line-height: 1.6; }
     .invoice-meta { text-align: right; }
-    .invoice-title { font-size: 28px; font-weight: 800; color: #ff9b26; margin-bottom: 8px; }
+    .invoice-title { font-size: 28px; font-weight: 800; color: #4a6cf7; margin-bottom: 8px; }
     .meta-row { font-size: 13px; color: #6b7280; margin-bottom: 3px; }
     .meta-row span { color: #111827; font-weight: 600; }
     .bill-to { margin-bottom: 32px; }
@@ -636,9 +636,9 @@ function buildInvoiceHTML({ invoice_number, invoice_date, due_date, bill_to_name
 
 // ── Deal Tasks Panel ──────────────────────────────────────────────────────────
 const TASK_STATUS_STYLE = {
-  'Not Started':   { background: 'rgba(74,72,69,0.35)',   color: '#7a7870' },
+  'Not Started':   { background: 'rgba(74,72,69,0.35)',   color: '#8e8ea0' },
   'Working on it': { background: 'rgba(253,171,61,0.15)', color: '#fdab3d' },
-  'Done':          { background: 'rgba(255,155,38,0.12)', color: '#ff9b26' },
+  'Done':          { background: 'rgba(74,108,247,0.12)', color: '#4a6cf7' },
   'Stuck':         { background: 'rgba(255,92,92,0.15)',  color: '#ff5c5c' },
   'In Review':     { background: 'rgba(91,156,246,0.15)', color: '#5b9cf6' },
 };
@@ -659,15 +659,15 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
   const done = todos.filter(t => t.completed).length;
 
   return (
-    <div style={{ padding: '10px 16px 14px 12px', background: '#0d0d0b', borderTop: '1px solid #1c1c1a' }}>
+    <div style={{ padding: '10px 16px 14px 12px', background: '#0d0d0b', borderTop: '1px solid #f0f2f8' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <ClipboardList size={13} style={{ color: '#ff9b26' }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#7a7870', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'DM Mono, monospace' }}>
+        <ClipboardList size={13} style={{ color: '#4a6cf7' }} />
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Inter, sans-serif' }}>
           Tasks
         </span>
         {todos.length > 0 && (
-          <span style={{ fontSize: 11, color: '#4a4845', fontFamily: 'DM Mono, monospace' }}>
+          <span style={{ fontSize: 11, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>
             {done}/{todos.length} done
           </span>
         )}
@@ -679,7 +679,7 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '5px 6px', borderRadius: 6, marginBottom: 2,
         }}
-          onMouseEnter={e => e.currentTarget.style.background = '#161614'}
+          onMouseEnter={e => e.currentTarget.style.background = '#ffffff'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           {/* Checkbox */}
@@ -688,8 +688,8 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}
           >
             {todo.completed
-              ? <div style={{ width: 14, height: 14, borderRadius: 3, background: '#ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Check size={10} color="#0a0a08" strokeWidth={3} />
+              ? <div style={{ width: 14, height: 14, borderRadius: 3, background: '#4a6cf7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Check size={10} color="#f5f7fa" strokeWidth={3} />
                 </div>
               : <div style={{ width: 14, height: 14, borderRadius: 3, border: '1.5px solid #3a3a38' }} />
             }
@@ -697,9 +697,9 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
 
           {/* Title */}
           <span style={{
-            flex: 1, fontSize: 13, color: todo.completed ? '#4a4845' : '#e8e6df',
+            flex: 1, fontSize: 13, color: todo.completed ? '#8e8ea0' : '#1a1a2e',
             textDecoration: todo.completed ? 'line-through' : 'none',
-            fontFamily: 'Poppins, sans-serif',
+            fontFamily: 'Inter, sans-serif',
           }}>
             {todo.title}
           </span>
@@ -712,7 +712,7 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
                 ...(TASK_STATUS_STYLE[todo.status] || TASK_STATUS_STYLE['Not Started']),
                 border: 'none', cursor: 'pointer', borderRadius: 4,
                 fontSize: 10, fontWeight: 600, padding: '2px 7px',
-                fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap',
+                fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap',
               }}
             >
               {todo.status || 'Not Started'}
@@ -720,7 +720,7 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
             {statusOpen === todo.id && (
               <div style={{
                 position: 'absolute', top: '100%', right: 0, zIndex: 200, marginTop: 4,
-                background: '#161614', border: '1px solid #252523', borderRadius: 8, padding: 4, minWidth: 140,
+                background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8, padding: 4, minWidth: 140,
               }}>
                 {TASK_STATUSES.map(s => (
                   <button
@@ -730,10 +730,10 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
                       display: 'block', width: '100%', textAlign: 'left', border: 'none',
                       background: 'none', cursor: 'pointer', padding: '5px 8px', borderRadius: 5,
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#252523'}
+                    onMouseEnter={e => e.currentTarget.style.background = '#e5e7ef'}
                     onMouseLeave={e => e.currentTarget.style.background = 'none'}
                   >
-                    <span style={{ ...(TASK_STATUS_STYLE[s] || {}), borderRadius: 4, padding: '2px 7px', fontSize: 10, fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{s}</span>
+                    <span style={{ ...(TASK_STATUS_STYLE[s] || {}), borderRadius: 4, padding: '2px 7px', fontSize: 10, fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>{s}</span>
                   </button>
                 ))}
               </div>
@@ -743,9 +743,9 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
           {/* Delete */}
           <button
             onClick={() => onDelete(todo.id)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2e2e2b', padding: 0, display: 'flex', transition: 'color 0.15s' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d8dbe6', padding: 0, display: 'flex', transition: 'color 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-            onMouseLeave={e => e.currentTarget.style.color = '#2e2e2b'}
+            onMouseLeave={e => e.currentTarget.style.color = '#d8dbe6'}
           >
             <Trash2 size={12} />
           </button>
@@ -764,8 +764,8 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
             onBlur={submit}
             placeholder="Task name…"
             style={{
-              flex: 1, background: 'none', border: 'none', borderBottom: '1px solid rgba(255,155,38,0.35)',
-              outline: 'none', color: '#e8e6df', fontSize: 13, fontFamily: 'Poppins, sans-serif', padding: '2px 0',
+              flex: 1, background: 'none', border: 'none', borderBottom: '1px solid rgba(74,108,247,0.35)',
+              outline: 'none', color: '#1a1a2e', fontSize: 13, fontFamily: 'Inter, sans-serif', padding: '2px 0',
             }}
           />
         </div>
@@ -774,11 +774,11 @@ function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChan
           onClick={() => setAdding(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
-            cursor: 'pointer', color: '#4a4845', fontSize: 12, padding: '5px 6px', fontFamily: 'Poppins, sans-serif',
+            cursor: 'pointer', color: '#8e8ea0', fontSize: 12, padding: '5px 6px', fontFamily: 'Inter, sans-serif',
             transition: 'color 0.15s',
           }}
-          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
-          onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+          onMouseEnter={e => e.currentTarget.style.color = '#4a6cf7'}
+          onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
         >
           <Plus size={12} /> Add Task
         </button>
@@ -926,19 +926,19 @@ export default function Deals() {
 
   // Group color by label
   const groupLabelColor = (label) => {
-    if (label === 'Closed Won') return '#ff9b26';
+    if (label === 'Closed Won') return '#4a6cf7';
     if (label === 'Closed Lost') return '#ff5c5c';
     if (label === 'Completed') return '#784bd1';
-    return '#ff9b26';
+    return '#4a6cf7';
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#0a0a08' }}>
+    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       <div className="page-header">
         <div className="page-title">Projects</div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a4845' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
             <input className="search-input" placeholder="Search deals..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="btn-primary" onClick={() => openAdd()}><Plus size={16} /> New Deal</button>
@@ -964,21 +964,21 @@ export default function Deals() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11} style={{ textAlign: 'center', color: '#4a4845', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={11} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
             ) : groups.map(({ label, items, stages }) => (
               <React.Fragment key={label}>
                 <tr>
-                  <td colSpan={11} style={{ padding: 0, background: '#161614' }}>
+                  <td colSpan={11} style={{ padding: 0, background: '#ffffff' }}>
                     <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))}>
                       {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                       <span style={{ color: groupLabelColor(label) }}>{label}</span>
-                      <span style={{ background: '#252523', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#7a7870' }}>{items.length}</span>
+                      <span style={{ background: '#e5e7ef', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#8e8ea0' }}>{items.length}</span>
                     </div>
                   </td>
                 </tr>
                 {!collapsed[label] && items.map(deal => (
                   <React.Fragment key={deal.id}>
-                  <tr style={{ background: selectedIds.has(deal.id) ? '#252060' : undefined }}>
+                  <tr style={{ background: selectedIds.has(deal.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
                     <td><input type="checkbox" checked={selectedIds.has(deal.id)} onChange={() => toggleSelect(deal.id)} /></td>
                     <td
                       style={{ fontWeight: 500 }}
@@ -1005,9 +1005,9 @@ export default function Deals() {
                           placeholder="Task name…"
                           style={{
                             display: 'block', marginTop: 4, width: '100%',
-                            background: '#1c1c1a', border: '1px solid rgba(255,155,38,0.4)',
-                            borderRadius: 5, outline: 'none', color: '#e8e6df',
-                            fontSize: 12, padding: '3px 8px', fontFamily: 'Poppins, sans-serif',
+                            background: '#f0f2f8', border: '1px solid rgba(74,108,247,0.4)',
+                            borderRadius: 5, outline: 'none', color: '#1a1a2e',
+                            fontSize: 12, padding: '3px 8px', fontFamily: 'Inter, sans-serif',
                           }}
                         />
                       ) : hoveredDeal === deal.id ? (
@@ -1016,11 +1016,11 @@ export default function Deals() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: 4, marginTop: 4,
                             background: 'none', border: 'none', cursor: 'pointer',
-                            color: '#4a4845', fontSize: 11, padding: 0,
-                            fontFamily: 'Poppins, sans-serif', transition: 'color 0.15s',
+                            color: '#8e8ea0', fontSize: 11, padding: 0,
+                            fontFamily: 'Inter, sans-serif', transition: 'color 0.15s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
-                          onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+                          onMouseEnter={e => e.currentTarget.style.color = '#4a6cf7'}
+                          onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
                         >
                           <Plus size={11} /> Add Task
                         </button>
@@ -1029,18 +1029,18 @@ export default function Deals() {
                     <td>
                       <StatusBadge status={deal.stage} options={STAGES} onChange={s => handleStageChange(deal, s)} />
                     </td>
-                    <td style={{ fontSize: 12, color: '#7a7870' }}>
+                    <td style={{ fontSize: 12, color: '#8e8ea0' }}>
                       <InlineEdit value={deal.created_date || ''} type="date" onSave={val => handleFieldSave(deal.id, 'created_date', val)} placeholder={formatDate(deal.created_date)} />
                     </td>
                     <td>
                       <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <DollarSign size={13} style={{ color: '#ff9b26', flexShrink: 0 }} />
+                        <DollarSign size={13} style={{ color: '#4a6cf7', flexShrink: 0 }} />
                         <InlineEdit value={String(deal.value || '')} type="number" onSave={val => handleFieldSave(deal.id, 'value', val)} placeholder="0" />
                       </div>
                     </td>
                     <td>
                       <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <DollarSign size={13} style={{ color: deal.amount_paid > 0 ? '#ff9b26' : '#555880', flexShrink: 0 }} />
+                        <DollarSign size={13} style={{ color: deal.amount_paid > 0 ? '#4a6cf7' : '#555880', flexShrink: 0 }} />
                         <InlineEdit value={String(deal.amount_paid || '')} type="number" onSave={val => handleAmountPaidSave(deal, val)} placeholder="0" />
                       </div>
                     </td>
@@ -1058,8 +1058,8 @@ export default function Deals() {
                         <button
                           onClick={() => setManualDeal(deal)}
                           title="Create or Send Invoice"
-                          style={{ background: 'none', border: '1px solid #252523', borderRadius: 6, cursor: 'pointer', color: '#ff9b26', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#ff9b2622'}
+                          style={{ background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', color: '#4a6cf7', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#4a6cf722'}
                           onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
                           <FileText size={11} /> Invoice
@@ -1072,17 +1072,17 @@ export default function Deals() {
                           onClick={() => toggleTasks(deal.id)}
                           title="Toggle tasks"
                           style={{
-                            background: expandedTasks.has(deal.id) ? 'rgba(255,155,38,0.1)' : 'none',
-                            border: expandedTasks.has(deal.id) ? '1px solid rgba(255,155,38,0.3)' : '1px solid transparent',
-                            borderRadius: 6, cursor: 'pointer', color: expandedTasks.has(deal.id) ? '#ff9b26' : '#4a4845',
+                            background: expandedTasks.has(deal.id) ? 'rgba(74,108,247,0.1)' : 'none',
+                            border: expandedTasks.has(deal.id) ? '1px solid rgba(74,108,247,0.3)' : '1px solid transparent',
+                            borderRadius: 6, cursor: 'pointer', color: expandedTasks.has(deal.id) ? '#4a6cf7' : '#8e8ea0',
                             padding: '3px 6px', display: 'flex', alignItems: 'center', gap: 3, transition: 'all 0.15s',
                           }}
-                          onMouseEnter={e => { if (!expandedTasks.has(deal.id)) { e.currentTarget.style.color = '#e8e6df'; e.currentTarget.style.borderColor = '#252523'; } }}
-                          onMouseLeave={e => { if (!expandedTasks.has(deal.id)) { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.borderColor = 'transparent'; } }}
+                          onMouseEnter={e => { if (!expandedTasks.has(deal.id)) { e.currentTarget.style.color = '#1a1a2e'; e.currentTarget.style.borderColor = '#e5e7ef'; } }}
+                          onMouseLeave={e => { if (!expandedTasks.has(deal.id)) { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.borderColor = 'transparent'; } }}
                         >
                           <ClipboardList size={13} />
                           {getDealTodos(deal.id).length > 0 && (
-                            <span style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fontWeight: 700 }}>
+                            <span style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>
                               {getDealTodos(deal.id).filter(t => t.completed).length}/{getDealTodos(deal.id).length}
                             </span>
                           )}
@@ -1119,10 +1119,10 @@ export default function Deals() {
                 ))}
                 {!collapsed[label] && items.length > 0 && (
                   <tr className="sum-row">
-                    <td colSpan={3} style={{ textAlign: 'right', color: '#7a7870', fontSize: 12 }}>Total</td>
+                    <td colSpan={3} style={{ textAlign: 'right', color: '#8e8ea0', fontSize: 12 }}>Total</td>
                     <td></td>
-                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#ff9b26' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.value || 0), 0))}</span></div></td>
-                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#ff9b26' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.amount_paid || 0), 0))}</span></div></td>
+                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#4a6cf7' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.value || 0), 0))}</span></div></td>
+                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#4a6cf7' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.amount_paid || 0), 0))}</span></div></td>
                     <td colSpan={5}></td>
                   </tr>
                 )}
@@ -1220,7 +1220,7 @@ export default function Deals() {
 
       {modal === 'delete' && (
         <Modal title="Delete Deal" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#7a7870' }}>Delete <strong style={{ color: '#e8e6df' }}>{selected?.name}</strong>? This cannot be undone.</p>
+          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong>? This cannot be undone.</p>
         </Modal>
       )}
     </div>

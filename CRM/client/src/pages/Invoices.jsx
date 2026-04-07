@@ -11,15 +11,15 @@ import {
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
   open:          { bg: '#fdab3d22', color: '#fdab3d', label: 'Open' },
-  paid:          { bg: '#ff9b2622', color: '#ff9b26', label: 'Paid' },
-  void:          { bg: '#4a484522', color: '#4a4845', label: 'Void' },
+  paid:          { bg: '#4a6cf722', color: '#4a6cf7', label: 'Paid' },
+  void:          { bg: '#8e8ea022', color: '#8e8ea0', label: 'Void' },
   uncollectible: { bg: '#ff5c5c22', color: '#ff5c5c', label: 'Uncollectible' },
-  draft:         { bg: '#ff9b2622', color: '#ff9b26', label: 'Draft' },
-  cancelled:     { bg: '#4a484522', color: '#4a4845', label: 'Cancelled' },
+  draft:         { bg: '#4a6cf722', color: '#4a6cf7', label: 'Draft' },
+  cancelled:     { bg: '#8e8ea022', color: '#8e8ea0', label: 'Cancelled' },
 };
 
 function StatusBadge({ status }) {
-  const s = STATUS_STYLE[status] || { bg: '#252523', color: '#4a4845', label: status };
+  const s = STATUS_STYLE[status] || { bg: '#e5e7ef', color: '#8e8ea0', label: status };
   return (
     <span style={{ background: s.bg, color: s.color, borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
       {s.label}
@@ -30,7 +30,7 @@ function StatusBadge({ status }) {
 function TypeBadge({ type }) {
   const isStripe = type === 'stripe';
   return (
-    <span style={{ background: isStripe ? '#784bd122' : '#ff9b2622', color: isStripe ? '#a78bfa' : '#ff9b26', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
+    <span style={{ background: isStripe ? '#784bd122' : '#4a6cf722', color: isStripe ? '#a78bfa' : '#4a6cf7', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
       {isStripe ? 'Stripe' : 'Manual'}
     </span>
   );
@@ -40,11 +40,11 @@ function TypeBadge({ type }) {
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 12, padding: 28, width: 360, textAlign: 'center' }}>
-        <p style={{ color: '#7a7870', fontSize: 14, marginBottom: 24 }}>{message}</p>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12, padding: 28, width: 360, textAlign: 'center' }}>
+        <p style={{ color: '#8e8ea0', fontSize: 14, marginBottom: 24 }}>{message}</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={onCancel} className="btn-ghost" style={{ flex: 1 }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, background: '#ff5c5c', color: '#e8e6df', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+          <button onClick={onConfirm} style={{ flex: 1, background: '#ff5c5c', color: '#1a1a2e', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
             Confirm
           </button>
         </div>
@@ -192,16 +192,16 @@ export default function Invoices() {
     draft:  manualInvoices.filter(r => r.status === 'draft').reduce((s, r) => s + (r.total || 0), 0),
   };
 
-  const thStyle = { fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 14px', textAlign: 'left', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
-  const tdStyle = { padding: '12px 14px', fontSize: 13, color: '#7a7870', verticalAlign: 'middle' };
+  const thStyle = { fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 14px', textAlign: 'left', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
+  const tdStyle = { padding: '12px 14px', fontSize: 13, color: '#8e8ea0', verticalAlign: 'middle' };
 
   return (
-    <div style={{ minHeight: '100%', background: '#0a0a08' }}>
+    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       {/* Header */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="page-title">Invoices</div>
-          <span style={{ background: '#252523', color: '#4a4845', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
+          <span style={{ background: '#e5e7ef', color: '#8e8ea0', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
             {allRows.length}
           </span>
         </div>
@@ -215,14 +215,14 @@ export default function Invoices() {
         {/* Summary cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 22 }}>
           {[
-            { label: 'Total Collected', value: `$${totals.all.toLocaleString()}`, color: '#ff9b26', note: 'paid invoices' },
+            { label: 'Total Collected', value: `$${totals.all.toLocaleString()}`, color: '#4a6cf7', note: 'paid invoices' },
             { label: 'Outstanding',     value: `$${totals.open.toLocaleString()}`, color: '#fdab3d', note: 'open / unpaid' },
-            { label: 'Draft',           value: `$${totals.draft.toLocaleString()}`, color: '#ff9b26', note: 'manual drafts' },
+            { label: 'Draft',           value: `$${totals.draft.toLocaleString()}`, color: '#4a6cf7', note: 'manual drafts' },
           ].map(({ label, value, color, note }) => (
-            <div key={label} style={{ background: '#161614', border: '1px solid #252523', borderRadius: 10, padding: '16px 20px' }}>
+            <div key={label} style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 20px' }}>
               <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#7a7870', marginTop: 2 }}>{label}</div>
-              <div style={{ fontSize: 11, color: '#4a4845', marginTop: 2 }}>{note}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#8e8ea0', marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{note}</div>
             </div>
           ))}
         </div>
@@ -236,14 +236,14 @@ export default function Invoices() {
                 onClick={() => setTab(key)}
                 style={{
                   padding: '5px 14px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-                  border: `1px solid ${tab === key ? '#ff9b26' : '#252523'}`,
-                  background: tab === key ? '#ff9b2622' : 'transparent',
-                  color: tab === key ? '#ff9b26' : '#4a4845',
+                  border: `1px solid ${tab === key ? '#4a6cf7' : '#e5e7ef'}`,
+                  background: tab === key ? '#4a6cf722' : 'transparent',
+                  color: tab === key ? '#4a6cf7' : '#8e8ea0',
                   fontWeight: tab === key ? 700 : 400,
                 }}
               >
                 {lbl}
-                <span style={{ marginLeft: 5, background: '#252523', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>
+                <span style={{ marginLeft: 5, background: '#e5e7ef', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>
                   {key === 'all' ? allRows.length : allRows.filter(r => r._type === key).length}
                 </span>
               </button>
@@ -251,28 +251,28 @@ export default function Invoices() {
           </div>
 
           <div style={{ flex: 1, position: 'relative', minWidth: 200 }}>
-            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a4845' }} />
+            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search invoices..."
-              style={{ width: '100%', background: '#161614', border: '1px solid #252523', borderRadius: 8, padding: '7px 10px 7px 30px', color: '#7a7870', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8, padding: '7px 10px 7px 30px', color: '#8e8ea0', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
         </div>
 
         {/* Table */}
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#4a4845', padding: 60, fontSize: 14 }}>Loading invoices...</div>
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 60, fontSize: 14 }}>Loading invoices...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
-            <FileText size={40} style={{ color: '#252523', marginBottom: 16 }} />
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#4a4845' }}>No invoices found</div>
+            <FileText size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#8e8ea0' }}>No invoices found</div>
           </div>
         ) : (
-          <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: '#111110', borderBottom: '1px solid #252523' }}>
+              <thead style={{ background: '#ffffff', borderBottom: '1px solid #e5e7ef' }}>
                 <tr>
                   <th style={thStyle} onClick={() => toggleSort('_number')}>#<SortIcon k="_number" /></th>
                   <th style={thStyle}>Type</th>
@@ -292,8 +292,8 @@ export default function Invoices() {
                     {/* # */}
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : '#ff9b2622', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: '#ff9b26' }} />}
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : '#4a6cf722', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: '#4a6cf7' }} />}
                         </div>
                         <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{inv._number}</span>
                       </div>
@@ -304,23 +304,23 @@ export default function Invoices() {
 
                     {/* Client */}
                     <td style={tdStyle}>
-                      <div style={{ fontWeight: 600, color: '#e8e6df' }}>{inv._client}</div>
+                      <div style={{ fontWeight: 600, color: '#1a1a2e' }}>{inv._client}</div>
                       {inv._type === 'stripe' && inv.email && inv.email !== inv._client && (
-                        <div style={{ fontSize: 11, color: '#4a4845', marginTop: 2 }}>{inv.email}</div>
+                        <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{inv.email}</div>
                       )}
                       {inv._type === 'manual' && inv.bill_to_email && (
-                        <div style={{ fontSize: 11, color: '#4a4845', marginTop: 2 }}>{inv.bill_to_email}</div>
+                        <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{inv.bill_to_email}</div>
                       )}
                       {(inv.description) && (
-                        <div style={{ fontSize: 11, color: '#4a4845', marginTop: 2 }}>{inv.description}</div>
+                        <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{inv.description}</div>
                       )}
                     </td>
 
                     {/* Amount */}
-                    <td className="private-value" style={{ ...tdStyle, fontWeight: 700, color: '#e8e6df' }}>
+                    <td className="private-value" style={{ ...tdStyle, fontWeight: 700, color: '#1a1a2e' }}>
                       ${inv._amount.toLocaleString()}
                       {inv._type === 'stripe' && inv.phase_number && inv.total_phases > 1 && (
-                        <div style={{ fontSize: 11, color: '#4a4845', fontWeight: 400 }}>Phase {inv.phase_number}/{inv.total_phases}</div>
+                        <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 400 }}>Phase {inv.phase_number}/{inv.total_phases}</div>
                       )}
                     </td>
 
@@ -328,10 +328,10 @@ export default function Invoices() {
                     <td style={tdStyle}><StatusBadge status={inv.status} /></td>
 
                     {/* Date */}
-                    <td style={{ ...tdStyle, color: '#4a4845', fontSize: 12 }}>
+                    <td style={{ ...tdStyle, color: '#8e8ea0', fontSize: 12 }}>
                       {inv._date ? new Date(inv._date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                       {inv.status === 'paid' && inv.paid_at && (
-                        <div style={{ fontSize: 11, color: '#ff9b26', marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: '#4a6cf7', marginTop: 2 }}>
                           Paid {new Date(inv.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </div>
                       )}
@@ -349,7 +349,7 @@ export default function Invoices() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="View on Stripe"
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#ff9b26', background: '#ff9b2618', border: '1px solid #ff9b2640', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#4a6cf7', background: '#4a6cf718', border: '1px solid #4a6cf740', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
                               >
                                 <ExternalLink size={12} /> View
                               </a>
@@ -358,7 +358,7 @@ export default function Invoices() {
                               onClick={() => handleRefreshStripe(inv)}
                               title="Refresh status from Stripe"
                               disabled={refreshingId === inv.id}
-                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#4a4845' }}
+                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#8e8ea0' }}
                             >
                               <RefreshCw size={12} style={{ animation: refreshingId === inv.id ? 'spin 0.8s linear infinite' : 'none' }} />
                             </button>
@@ -374,9 +374,9 @@ export default function Invoices() {
                             <button
                               onClick={() => handleDeleteStripe(inv)}
                               title="Remove record"
-                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#4a4845' }}
+                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#8e8ea0' }}
                               onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-                              onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+                              onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
                             >
                               <Trash2 size={12} />
                             </button>
@@ -427,7 +427,7 @@ export default function Invoices() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-          background: toast.error ? '#ff5c5c' : '#ff9b26', color: '#e8e6df',
+          background: toast.error ? '#ff5c5c' : '#4a6cf7', color: '#1a1a2e',
           borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600,
           zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
         }}>

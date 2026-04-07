@@ -19,8 +19,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (!verifyToken(req)) return res.status(401).json({ error: 'Unauthorized' });
 
-  const base = `${process.env.SUPABASE_URL}/rest/v1/blog_posts`;
-  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  const base = `${process.env.CRM_SUPABASE_URL || process.env.SUPABASE_URL}/rest/v1/blog_posts`;
+  const key = process.env.CRM_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
   const headers = {
     'apikey': key,
     'Authorization': `Bearer ${key}`,

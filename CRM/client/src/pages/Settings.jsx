@@ -12,7 +12,7 @@ function Toggle({ checked, onChange }) {
       aria-checked={checked}
       style={{
         width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
-        background: checked ? '#ff9b26' : '#252523',
+        background: checked ? '#4a6cf7' : '#e5e7ef',
         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
       }}
     >
@@ -30,10 +30,10 @@ function Toggle({ checked, onChange }) {
 // ── Section wrapper ───────────────────────────────────────────────────────────
 function Section({ title, icon: Icon, children }) {
   return (
-    <div style={{ background: '#161614', borderRadius: 10, padding: '20px 24px', border: '1px solid #252523' }}>
+    <div style={{ background: '#ffffff', borderRadius: 10, padding: '20px 24px', border: '1px solid #e5e7ef' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-        {Icon && <Icon size={16} color="#ff9b26" />}
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#e8e6df' }}>{title}</h3>
+        {Icon && <Icon size={16} color="#4a6cf7" />}
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>{title}</h3>
       </div>
       {children}
     </div>
@@ -45,8 +45,8 @@ function FormRow({ label, hint, children }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
       <div>
-        <label style={{ fontSize: 13, color: '#7a7870', display: 'block', paddingTop: 6 }}>{label}</label>
-        {hint && <div style={{ fontSize: 11, color: '#4a4845', marginTop: 2 }}>{hint}</div>}
+        <label style={{ fontSize: 13, color: '#8e8ea0', display: 'block', paddingTop: 6 }}>{label}</label>
+        {hint && <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{hint}</div>}
       </div>
       <div>{children}</div>
     </div>
@@ -54,8 +54,8 @@ function FormRow({ label, hint, children }) {
 }
 
 const INPUT_STYLE = {
-  width: '100%', padding: '7px 10px', borderRadius: 6, fontSize: 13, color: '#e8e6df',
-  background: '#111328', border: '1px solid #252523', outline: 'none', boxSizing: 'border-box',
+  width: '100%', padding: '7px 10px', borderRadius: 6, fontSize: 13, color: '#1a1a2e',
+  background: '#111328', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box',
 };
 const TEXTAREA_STYLE = {
   ...INPUT_STYLE, resize: 'vertical', minHeight: 80, lineHeight: 1.5, fontFamily: 'inherit',
@@ -130,7 +130,7 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#4a4845' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#8e8ea0' }}>
         <Loader size={20} className="animate-spin" /> &nbsp; Loading settings…
       </div>
     );
@@ -152,7 +152,7 @@ export default function Settings() {
 
         {/* ── Business Profile ─────────────────────────────────────────────── */}
         <Section title="Business Profile" icon={SettingsIcon}>
-          <p style={{ fontSize: 12, color: '#4a4845', margin: '0 0 16px' }}>
+          <p style={{ fontSize: 12, color: '#8e8ea0', margin: '0 0 16px' }}>
             Used by the AI email generator in every prompt. Be specific — the more detail, the better the emails.
           </p>
           <FormRow label="Company Name">
@@ -213,10 +213,10 @@ export default function Settings() {
           </FormRow>
           {settings.email_signature && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 11, color: '#4a4845', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Preview</div>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Preview</div>
               <div style={{
-                background: '#111328', border: '1px solid #252523', borderRadius: 6,
-                padding: '10px 14px', fontSize: 13, color: '#7a7870',
+                background: '#111328', border: '1px solid #e5e7ef', borderRadius: 6,
+                padding: '10px 14px', fontSize: 13, color: '#8e8ea0',
                 whiteSpace: 'pre-wrap', fontFamily: 'inherit',
               }}>
                 {settings.email_signature}
@@ -229,7 +229,7 @@ export default function Settings() {
         <Section title="Gmail Connection" icon={Mail}>
           {/* Status messages */}
           {gmailMsg === 'connected' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#ff9b2620', border: '1px solid #ff9b26', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#ff9b26', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#4a6cf720', border: '1px solid #4a6cf7', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#4a6cf7', fontSize: 13 }}>
               <CheckCircle size={15} /> Gmail connected successfully!
             </div>
           )}
@@ -243,11 +243,11 @@ export default function Settings() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <div style={{
               width: 10, height: 10, borderRadius: '50%',
-              background: gmailStatus.connected && !gmailStatus.expired ? '#ff9b26' : '#ff5c5c',
-              boxShadow: gmailStatus.connected && !gmailStatus.expired ? '0 0 6px #ff9b26' : '0 0 6px #ff5c5c',
+              background: gmailStatus.connected && !gmailStatus.expired ? '#4a6cf7' : '#ff5c5c',
+              boxShadow: gmailStatus.connected && !gmailStatus.expired ? '0 0 6px #4a6cf7' : '0 0 6px #ff5c5c',
               flexShrink: 0,
             }} />
-            <span style={{ fontSize: 13, color: '#7a7870' }}>
+            <span style={{ fontSize: 13, color: '#8e8ea0' }}>
               {gmailStatus.connected
                 ? `Connected as ${gmailStatus.email}${gmailStatus.expired ? ' (token expired — reconnect)' : ''}`
                 : 'Not connected'}
@@ -256,24 +256,24 @@ export default function Settings() {
 
           {!gmailStatus.connected ? (
             <div>
-              <p style={{ fontSize: 12, color: '#4a4845', margin: '0 0 14px', lineHeight: 1.6 }}>
+              <p style={{ fontSize: 12, color: '#8e8ea0', margin: '0 0 14px', lineHeight: 1.6 }}>
                 Connecting Gmail lets you send emails and save drafts directly from the Email Campaign page.
                 You'll be redirected to Google to authorise access.
               </p>
-              <div style={{ background: '#111328', border: '1px solid #252523', borderRadius: 8, padding: '14px 16px', marginBottom: 14, fontSize: 12, color: '#4a4845' }}>
-                <div style={{ fontWeight: 600, color: '#7a7870', marginBottom: 8 }}>Before connecting, make sure you have:</div>
+              <div style={{ background: '#111328', border: '1px solid #e5e7ef', borderRadius: 8, padding: '14px 16px', marginBottom: 14, fontSize: 12, color: '#8e8ea0' }}>
+                <div style={{ fontWeight: 600, color: '#8e8ea0', marginBottom: 8 }}>Before connecting, make sure you have:</div>
                 <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.9 }}>
                   <li>Created a Google Cloud project and enabled the Gmail API</li>
                   <li>Set up OAuth2 credentials (Web Application type)</li>
-                  <li>Added <code style={{ background: '#161614', padding: '1px 5px', borderRadius: 3 }}>http://localhost:3001/auth/gmail/callback</code> as a redirect URI</li>
-                  <li>Added <code style={{ background: '#161614', padding: '1px 5px', borderRadius: 3 }}>GOOGLE_CLIENT_ID</code>, <code style={{ background: '#161614', padding: '1px 5px', borderRadius: 3 }}>GOOGLE_CLIENT_SECRET</code> to <code style={{ background: '#161614', padding: '1px 5px', borderRadius: 3 }}>server/.env</code></li>
+                  <li>Added <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>http://localhost:3001/auth/gmail/callback</code> as a redirect URI</li>
+                  <li>Added <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>GOOGLE_CLIENT_ID</code>, <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>GOOGLE_CLIENT_SECRET</code> to <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>server/.env</code></li>
                   <li>Added your Gmail as a test user in the OAuth consent screen</li>
                 </ol>
                 <a
                   href="https://console.cloud.google.com"
                   target="_blank"
                   rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#ff9b26', fontSize: 12, marginTop: 8 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4a6cf7', fontSize: 12, marginTop: 8 }}
                 >
                   Open Google Cloud Console <ExternalLink size={11} />
                 </a>
@@ -307,7 +307,7 @@ export default function Settings() {
                 checked={settings.auto_draft_enabled === 'true'}
                 onChange={v => set('auto_draft_enabled', String(v))}
               />
-              <span style={{ fontSize: 13, color: '#7a7870' }}>
+              <span style={{ fontSize: 13, color: '#8e8ea0' }}>
                 {settings.auto_draft_enabled === 'true' ? 'ON — Approved emails will be saved to Gmail Drafts' : 'OFF'}
               </span>
             </div>
@@ -326,7 +326,7 @@ export default function Settings() {
                 value={settings.daily_send_cap || '50'}
                 onChange={e => set('daily_send_cap', e.target.value)}
               />
-              <span style={{ fontSize: 12, color: '#4a4845' }}>emails / day</span>
+              <span style={{ fontSize: 12, color: '#8e8ea0' }}>emails / day</span>
             </div>
           </FormRow>
         </Section>
@@ -339,7 +339,7 @@ export default function Settings() {
                 checked={settings.unsubscribe_enabled === 'true'}
                 onChange={v => set('unsubscribe_enabled', String(v))}
               />
-              <span style={{ fontSize: 13, color: '#7a7870' }}>
+              <span style={{ fontSize: 13, color: '#8e8ea0' }}>
                 {settings.unsubscribe_enabled === 'true' ? 'ON' : 'OFF'}
               </span>
             </div>
@@ -361,7 +361,7 @@ export default function Settings() {
             {saving ? <><Loader size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</> : 'Save Settings'}
           </button>
           {saveMsg === 'saved' && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ff9b26', fontSize: 13 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4a6cf7', fontSize: 13 }}>
               <CheckCircle size={15} /> Saved successfully
             </span>
           )}

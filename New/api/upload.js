@@ -35,13 +35,16 @@ export default async function handler(req, res) {
     const ext = contentType.includes('video') ? 'mp4' : contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
     const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
 
+    const SUPA_URL = process.env.CRM_SUPABASE_URL || process.env.SUPABASE_URL;
+    const SUPA_KEY = process.env.CRM_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
     const uploadRes = await fetch(
-      `${process.env.SUPABASE_URL}/storage/v1/object/blog-media/${filename}`,
+      `${SUPA_URL}/storage/v1/object/blog-media/${filename}`,
       {
         method: 'POST',
         headers: {
-          'apikey': process.env.SUPABASE_SERVICE_KEY,
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+          'apikey': SUPA_KEY,
+          'Authorization': `Bearer ${SUPA_KEY}`,
           'Content-Type': contentType,
         },
         body: body,
@@ -54,7 +57,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Upload failed' });
     }
 
-    const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/blog-media/${filename}`;
+    const publicUrl = `${SUPA_URL}/storage/v1/object/public/blog-media/${filename}`;
     return res.status(200).json({ url: publicUrl });
   } catch (err) {
     console.error('Upload handler error:', err);

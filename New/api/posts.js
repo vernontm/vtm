@@ -4,16 +4,19 @@ export default async function handler(req, res) {
 
   try {
     const { id } = req.query;
-    let url = `${process.env.SUPABASE_URL}/rest/v1/blog_posts?published=eq.true&order=created_at.desc`;
+    const SUPA_URL = process.env.CRM_SUPABASE_URL || process.env.SUPABASE_URL;
+    const SUPA_KEY = process.env.CRM_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+    let url = `${SUPA_URL}/rest/v1/blog_posts?published=eq.true&order=created_at.desc`;
 
     if (id) {
-      url = `${process.env.SUPABASE_URL}/rest/v1/blog_posts?id=eq.${id}&published=eq.true`;
+      url = `${SUPA_URL}/rest/v1/blog_posts?id=eq.${id}&published=eq.true`;
     }
 
     const response = await fetch(url, {
       headers: {
-        'apikey': process.env.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
       },
     });
 

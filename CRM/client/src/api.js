@@ -159,6 +159,27 @@ export const createQuickNote  = (data)       => request('/quick-notes', { method
 export const updateQuickNote  = (id, data)   => request(`/quick-notes?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteQuickNote  = (id)         => request(`/quick-notes?id=${id}`, { method: 'DELETE' });
 
+// Blog Posts
+export const getBlogPosts    = ()           => request('/blog-posts');
+export const createBlogPost  = (data)       => request('/blog-posts', { method: 'POST', body: JSON.stringify(data) });
+export const updateBlogPost  = (id, data)   => request(`/blog-posts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteBlogPost  = (id)         => request(`/blog-posts?id=${id}`, { method: 'DELETE' });
+
+export async function uploadBlogMedia(file) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const res = await fetch(`${BASE}/upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: file,
+  });
+  if (!res.ok) throw new Error('Upload failed');
+  return res.json();
+}
+
 // Todos
 export const getTodoGroups   = ()       => request('/todos?type=groups');
 export const createTodoGroup = (data)   => request('/todos?type=groups', { method: 'POST', body: JSON.stringify(data) });

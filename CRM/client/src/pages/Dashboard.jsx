@@ -16,21 +16,21 @@ const fmt = (n) =>
   n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Number(n).toFixed(0)}`;
 
 const STAGE_COLORS = {
-  Won:      '#ff9b26',
+  Won:      '#22c55e',
   Lost:     '#ff5c5c',
   Proposal: '#fdab3d',
-  New:      '#ff9b26',
+  New:      '#4a6cf7',
   Qualified:'#784bd1',
   Negotiation: '#00d1d1',
 };
 
-const PIE_COLORS = ['#ff9b26','#784bd1','#ff9b26','#fdab3d','#ff5c5c','#00d1d1'];
+const PIE_COLORS = ['#4a6cf7','#784bd1','#22c55e','#fdab3d','#ff5c5c','#00d1d1'];
 
 // ── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, sub, color = '#ff9b26', trend, private: isPrivate }) {
+function StatCard({ icon: Icon, label, value, sub, color = '#4a6cf7', trend, private: isPrivate }) {
   return (
     <div style={{
-      background: '#161614', border: '1px solid #252523', borderRadius: 14,
+      background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14,
       padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 6,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -43,16 +43,16 @@ function StatCard({ icon: Icon, label, value, sub, color = '#ff9b26', trend, pri
         {trend !== undefined && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 3,
-            fontSize: 12, color: trend >= 0 ? '#ff9b26' : '#ff5c5c',
+            fontSize: 12, color: trend >= 0 ? '#4a6cf7' : '#ff5c5c',
           }}>
             <ArrowUpRight size={13} />
             {Math.abs(trend)}%
           </div>
         )}
       </div>
-      <div className={isPrivate ? 'private-value' : ''} style={{ fontSize: 26, fontWeight: 800, color: '#e8e6df', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: '#4a4845' }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: '#4a4845' }}>{sub}</div>}
+      <div className={isPrivate ? 'private-value' : ''} style={{ fontSize: 26, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 13, color: '#8e8ea0' }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: '#8e8ea0' }}>{sub}</div>}
     </div>
   );
 }
@@ -62,10 +62,10 @@ function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: '#111110', border: '1px solid #252523', borderRadius: 8,
+      background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
       padding: '8px 14px', fontSize: 13,
     }}>
-      <div style={{ color: '#4a4845', marginBottom: 4 }}>{label}</div>
+      <div style={{ color: '#8e8ea0', marginBottom: 4 }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color || '#fff', fontWeight: 600 }}>
           {p.name}: {p.name === 'revenue' || p.name === 'Revenue' ? fmt(p.value) : p.value}
@@ -77,7 +77,7 @@ function ChartTooltip({ active, payload, label }) {
 
 // ── Deal Stage Badge ──────────────────────────────────────────────────────────
 function StageBadge({ stage }) {
-  const color = STAGE_COLORS[stage] || '#4a4845';
+  const color = STAGE_COLORS[stage] || '#8e8ea0';
   return (
     <span style={{
       background: color + '22', color, border: `1px solid ${color}44`,
@@ -125,7 +125,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a4845', fontSize: 15 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8ea0', fontSize: 15 }}>
         Loading dashboard…
       </div>
     );
@@ -159,19 +159,19 @@ export default function Dashboard() {
     : 0;
 
   return (
-    <div style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: '#0a0a08' }}>
+    <div style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: '#f5f7fa' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#e8e6df' }}>Dashboard</div>
-          <div style={{ fontSize: 13, color: '#4a4845', marginTop: 2 }}>Vernon Tech &amp; Media — Business Overview</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>Dashboard</div>
+          <div style={{ fontSize: 13, color: '#8e8ea0', marginTop: 2 }}>Vernon Tech &amp; Media — Operations Overview</div>
         </div>
         <button
           onClick={handleRefresh}
           style={{
-            display: 'flex', alignItems: 'center', gap: 6, background: '#111110',
-            border: '1px solid #252523', borderRadius: 8, color: '#7a7870',
+            display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff',
+            border: '1px solid #e5e7ef', borderRadius: 8, color: '#8e8ea0',
             padding: '8px 14px', cursor: 'pointer', fontSize: 13,
           }}
         >
@@ -182,20 +182,20 @@ export default function Dashboard() {
 
       {/* KPI Cards Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
-        <StatCard icon={DollarSign}   label="Total Revenue (Won Deals)"  value={fmt(totalRevenue)}            color="#ff9b26" private />
-        <StatCard icon={Clock}        label="Last 30 Days Revenue"        value={fmt(last30DaysRevenue || 0)}  color="#ff9b26" sub="Paid deals only" private />
-        <StatCard icon={FileText}     label="Total Invoiced (Collected)"  value={fmt(totalInvoiced)}           color="#ff9b26" private />
+        <StatCard icon={DollarSign}   label="Total Revenue (Won Deals)"  value={fmt(totalRevenue)}            color="#4a6cf7" private />
+        <StatCard icon={Clock}        label="Last 30 Days Revenue"        value={fmt(last30DaysRevenue || 0)}  color="#4a6cf7" sub="Paid deals only" private />
+        <StatCard icon={FileText}     label="Total Invoiced (Collected)"  value={fmt(totalInvoiced)}           color="#4a6cf7" private />
         <StatCard icon={TrendingUp}   label="Pipeline Value"              value={fmt(pipelineValue)}           color="#fdab3d" private />
         <StatCard icon={Briefcase}    label="Active Deals"                value={activeDeals}                  color="#784bd1" />
       </div>
 
       {/* KPI Cards Row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
-        <StatCard icon={Users}      label="Contacts"            value={activeClients}    color="#ff9b26" />
+        <StatCard icon={Users}      label="Contacts"            value={activeClients}    color="#4a6cf7" />
         <StatCard icon={FolderOpen} label="Active Projects"     value={activeProjects}   color="#00d1d1"
           sub={`${completedProjects} completed`} />
         <StatCard icon={Star}       label="Open Leads"          value={openLeads}        color="#fdab3d" />
-        <StatCard icon={FileText}   label="Invoice Collection"  value={`${collectRate}%`} color="#ff9b26"
+        <StatCard icon={FileText}   label="Invoice Collection"  value={`${collectRate}%`} color="#4a6cf7"
           sub={`${invoiceStats.paid} / ${invoiceStats.total} invoices paid`} />
       </div>
 
@@ -203,36 +203,36 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 20 }}>
 
         {/* Monthly Revenue Area Chart */}
-        <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df', marginBottom: 18 }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 18 }}>
             Monthly Revenue (Last 12 Months)
           </div>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={monthlyChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#ff9b26" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#ff9b26" stopOpacity={0}   />
+                  <stop offset="5%"  stopColor="#4a6cf7" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#4a6cf7" stopOpacity={0}   />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#111110" />
-              <XAxis dataKey="label" tick={{ fill: '#4a4845', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => v >= 1000 ? `$${v/1000}k` : `$${v}`} tick={{ fill: '#4a4845', fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f8" />
+              <XAxis dataKey="label" tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={v => v >= 1000 ? `$${v/1000}k` : `$${v}`} tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
               <Tooltip content={<ChartTooltip />} />
               <Area
                 type="monotone" dataKey="revenue" name="Revenue"
-                stroke="#ff9b26" strokeWidth={2}
+                stroke="#4a6cf7" strokeWidth={2}
                 fill="url(#revGrad)"
-                dot={{ r: 3, fill: '#ff9b26', strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: '#ff9b26' }}
+                dot={{ r: 3, fill: '#4a6cf7', strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: '#4a6cf7' }}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* Deals by Stage Pie */}
-        <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df', marginBottom: 12 }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>
             Deals by Stage
           </div>
           {pieData.length > 0 ? (
@@ -249,15 +249,15 @@ export default function Dashboard() {
                     <Cell key={i} fill={STAGE_COLORS[entry.name] || PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val, name) => [val, name]} contentStyle={{ background: '#111110', border: '1px solid #252523', borderRadius: 8, fontSize: 12 }} />
+                <Tooltip formatter={(val, name) => [val, name]} contentStyle={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8, fontSize: 12 }} />
                 <Legend
                   iconType="circle" iconSize={8}
-                  formatter={v => <span style={{ color: '#7a7870', fontSize: 12 }}>{v}</span>}
+                  formatter={v => <span style={{ color: '#8e8ea0', fontSize: 12 }}>{v}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ color: '#4a4845', fontSize: 13, textAlign: 'center', paddingTop: 60 }}>No deal data yet</div>
+            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', paddingTop: 60 }}>No deal data yet</div>
           )}
         </div>
       </div>
@@ -266,14 +266,14 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gap: 20 }}>
 
         {/* Stage Count Bar Chart */}
-        <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df', marginBottom: 16 }}>Deal Counts</div>
+        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Deal Counts</div>
           {stageBarData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={stageBarData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#111110" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#4a4845', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="stage" tick={{ fill: '#7a7870', fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f8" horizontal={false} />
+                <XAxis type="number" tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="stage" tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="count" name="Deals" radius={[0, 4, 4, 0]}>
                   {stageBarData.map((entry, i) => (
@@ -283,29 +283,29 @@ export default function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ color: '#4a4845', fontSize: 13, textAlign: 'center', paddingTop: 40 }}>No deals yet</div>
+            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', paddingTop: 40 }}>No deals yet</div>
           )}
         </div>
 
         {/* Recent Deals */}
-        <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df', marginBottom: 14 }}>Recent Deals</div>
+        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Recent Deals</div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr>
                 {['Deal', 'Stage', 'Value'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '0 8px 10px 0', color: '#4a4845', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #252523' }}>{h}</th>
+                  <th key={h} style={{ textAlign: 'left', padding: '0 8px 10px 0', color: '#8e8ea0', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e5e7ef' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {recentDeals.length === 0 ? (
-                <tr><td colSpan={3} style={{ color: '#4a4845', padding: '20px 0', textAlign: 'center', fontSize: 13 }}>No deals yet</td></tr>
+                <tr><td colSpan={3} style={{ color: '#8e8ea0', padding: '20px 0', textAlign: 'center', fontSize: 13 }}>No deals yet</td></tr>
               ) : recentDeals.map((d, i) => (
-                <tr key={d.id} style={{ borderBottom: i < recentDeals.length - 1 ? '1px solid #111110' : 'none' }}>
-                  <td style={{ padding: '9px 8px 9px 0', color: '#e8e6df', fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</td>
+                <tr key={d.id} style={{ borderBottom: i < recentDeals.length - 1 ? '1px solid #ffffff' : 'none' }}>
+                  <td style={{ padding: '9px 8px 9px 0', color: '#1a1a2e', fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</td>
                   <td style={{ padding: '9px 8px 9px 0' }}><StageBadge stage={d.stage} /></td>
-                  <td style={{ padding: '9px 0', color: '#ff9b26', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '9px 0', color: '#4a6cf7', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {d.value ? `$${Number(d.value).toLocaleString()}` : '—'}
                   </td>
                 </tr>
@@ -315,34 +315,34 @@ export default function Dashboard() {
         </div>
 
         {/* Invoice Summary */}
-        <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df', marginBottom: 16 }}>Invoice Summary</div>
+        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Invoice Summary</div>
 
           {/* Collection progress bar */}
           <div style={{ marginBottom: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#4a4845', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8e8ea0', marginBottom: 6 }}>
               <span>Collection Rate</span>
-              <span style={{ color: '#e8e6df', fontWeight: 600 }}>{collectRate}%</span>
+              <span style={{ color: '#1a1a2e', fontWeight: 600 }}>{collectRate}%</span>
             </div>
-            <div style={{ height: 8, background: '#111110', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${collectRate}%`, background: collectRate === 100 ? '#ff9b26' : '#ff9b26', borderRadius: 4, transition: 'width 0.5s ease' }} />
+            <div style={{ height: 8, background: '#f0f2f8', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${collectRate}%`, background: collectRate === 100 ? '#4a6cf7' : '#4a6cf7', borderRadius: 4, transition: 'width 0.5s ease' }} />
             </div>
           </div>
 
           {/* Stats list */}
           {[
-            { label: 'Total Invoices',    value: invoiceStats.total,                         color: '#7a7870' },
-            { label: 'Sent / Open',       value: invoiceStats.sent,                          color: '#ff9b26' },
-            { label: 'Paid',              value: invoiceStats.paid,                          color: '#ff9b26' },
+            { label: 'Total Invoices',    value: invoiceStats.total,                         color: '#8e8ea0' },
+            { label: 'Sent / Open',       value: invoiceStats.sent,                          color: '#4a6cf7' },
+            { label: 'Paid',              value: invoiceStats.paid,                          color: '#4a6cf7' },
             { label: 'Total Billed',      value: `$${Number(invoiceStats.totalAmount).toLocaleString()}`, color: '#fdab3d' },
-            { label: 'Total Collected',   value: `$${Number(invoiceStats.paidAmount).toLocaleString()}`,  color: '#ff9b26' },
+            { label: 'Total Collected',   value: `$${Number(invoiceStats.paidAmount).toLocaleString()}`,  color: '#4a6cf7' },
             { label: 'Outstanding',
               value: `$${Number(invoiceStats.totalAmount - invoiceStats.paidAmount).toLocaleString()}`,
-              color: invoiceStats.totalAmount - invoiceStats.paidAmount > 0 ? '#ff5c5c' : '#4a4845',
+              color: invoiceStats.totalAmount - invoiceStats.paidAmount > 0 ? '#ff5c5c' : '#8e8ea0',
             },
           ].map(({ label, value, color }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #111110' }}>
-              <span style={{ fontSize: 13, color: '#4a4845' }}>{label}</span>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #f0f2f8' }}>
+              <span style={{ fontSize: 13, color: '#8e8ea0' }}>{label}</span>
               <span style={{ fontSize: 13, fontWeight: 600, color }}>{value}</span>
             </div>
           ))}
@@ -353,21 +353,21 @@ export default function Dashboard() {
 
       {/* Upcoming Meetings Widget */}
       {meetings.length > 0 && (
-        <div style={{ marginTop: 20, background: '#161614', border: '1px solid #252523', borderRadius: 14, padding: '18px 22px' }}>
+        <div style={{ marginTop: 20, background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '18px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Calendar size={16} color="#ff9b26" />
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#e8e6df' }}>Upcoming Meetings</span>
+              <Calendar size={16} color="#4a6cf7" />
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Upcoming Meetings</span>
             </div>
-            <Link to="/meetings" style={{ fontSize: 12, color: '#ff9b26', textDecoration: 'none', fontWeight: 600 }}>
+            <Link to="/meetings" style={{ fontSize: 12, color: '#4a6cf7', textDecoration: 'none', fontWeight: 600 }}>
               View All →
             </Link>
           </div>
           {meetings.map(m => (
-            <div key={m.google_event_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #111110' }}>
+            <div key={m.google_event_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f0f2f8' }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e6df' }}>{m.title}</div>
-                <div style={{ fontSize: 11, color: '#4a4845', marginTop: 2 }}>{fmtMeetingDate(m.start_time)}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{m.title}</div>
+                <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{fmtMeetingDate(m.start_time)}</div>
               </div>
               {m.meet_link && (
                 <button

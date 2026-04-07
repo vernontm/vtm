@@ -3,7 +3,7 @@ import { Pin, Plus, Trash2, Edit2, Check, X, Copy, ExternalLink, Search, StickyN
 import { getQuickNotes, createQuickNote, updateQuickNote, deleteQuickNote } from '../api';
 
 // ── Accent color palette ───────────────────────────────────────────────────────
-const COLORS = ['#ff9b26', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#7a7870'];
+const COLORS = ['#4a6cf7', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#8e8ea0'];
 
 // ── Detect URLs and render them as links ──────────────────────────────────────
 function RichContent({ text }) {
@@ -19,7 +19,7 @@ function RichContent({ text }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
-            style={{ color: '#ff9b26', textDecoration: 'underline', wordBreak: 'break-all' }}
+            style={{ color: '#4a6cf7', textDecoration: 'underline', wordBreak: 'break-all' }}
           >
             {part}
           </a>
@@ -73,8 +73,8 @@ function NoteCard({ note, onUpdate, onDelete }) {
 
   return (
     <div style={{
-      background: '#161614',
-      border: `1px solid ${editing ? color : '#252523'}`,
+      background: '#ffffff',
+      border: `1px solid ${editing ? color : '#e5e7ef'}`,
       borderLeft: `3px solid ${note.color}`,
       borderRadius: 10,
       padding: '14px 16px',
@@ -98,7 +98,7 @@ function NoteCard({ note, onUpdate, onDelete }) {
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Title (optional)"
-            style={{ background: '#111110', border: '1px solid #252523', borderRadius: 6, padding: '6px 10px', color: '#7a7870', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+            style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 6, padding: '6px 10px', color: '#8e8ea0', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }}
           />
           {/* Content textarea */}
           <textarea
@@ -110,11 +110,11 @@ function NoteCard({ note, onUpdate, onDelete }) {
               e.target.style.height = e.target.scrollHeight + 'px';
             }}
             placeholder="Note, link, or anything you want to save..."
-            style={{ background: '#111110', border: '1px solid #252523', borderRadius: 6, padding: '8px 10px', color: '#7a7870', fontSize: 13, outline: 'none', width: '100%', resize: 'none', minHeight: 80, boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5 }}
+            style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 6, padding: '8px 10px', color: '#8e8ea0', fontSize: 13, outline: 'none', width: '100%', resize: 'none', minHeight: 80, boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5 }}
           />
           {/* Color picker */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: '#4a4845' }}>Color:</span>
+            <span style={{ fontSize: 11, color: '#8e8ea0' }}>Color:</span>
             {COLORS.map(c => (
               <button
                 key={c}
@@ -125,7 +125,7 @@ function NoteCard({ note, onUpdate, onDelete }) {
           </div>
           {/* Save/Cancel */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleSave} style={{ flex: 1, background: '#ff9b26', color: '#0a0a08', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <button onClick={handleSave} style={{ flex: 1, background: '#4a6cf7', color: '#f5f7fa', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
               <Check size={13} /> Save
             </button>
             <button onClick={handleCancel} className="btn-ghost" style={{ flex: 1, fontSize: 13 }}>
@@ -136,13 +136,13 @@ function NoteCard({ note, onUpdate, onDelete }) {
       ) : (
         <>
           {note.title && (
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#e8e6df' }}>{note.title}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{note.title}</div>
           )}
-          <div style={{ fontSize: 13, color: '#7a7870', lineHeight: 1.6, wordBreak: 'break-word' }}>
+          <div style={{ fontSize: 13, color: '#8e8ea0', lineHeight: 1.6, wordBreak: 'break-word' }}>
             <RichContent text={note.content} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-            <span style={{ fontSize: 11, color: '#4a4845' }}>
+            <span style={{ fontSize: 11, color: '#8e8ea0' }}>
               {new Date(note.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -152,26 +152,26 @@ function NoteCard({ note, onUpdate, onDelete }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Open link"
-                  style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: '#ff9b26', cursor: 'pointer', textDecoration: 'none' }}
+                  style={{ display: 'flex', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '4px 7px', color: '#4a6cf7', cursor: 'pointer', textDecoration: 'none' }}
                 >
                   <ExternalLink size={12} />
                 </a>
               )}
-              <button onClick={handleCopy} title="Copy content" style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: copied ? '#ff9b26' : '#4a4845', cursor: 'pointer' }}>
+              <button onClick={handleCopy} title="Copy content" style={{ display: 'flex', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '4px 7px', color: copied ? '#4a6cf7' : '#8e8ea0', cursor: 'pointer' }}>
                 {copied ? <Check size={12} /> : <Copy size={12} />}
               </button>
-              <button onClick={handlePin} title={note.pinned ? 'Unpin' : 'Pin'} style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: note.pinned ? note.color : '#4a4845', cursor: 'pointer' }}>
+              <button onClick={handlePin} title={note.pinned ? 'Unpin' : 'Pin'} style={{ display: 'flex', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '4px 7px', color: note.pinned ? note.color : '#8e8ea0', cursor: 'pointer' }}>
                 <Pin size={12} />
               </button>
-              <button onClick={() => setEditing(true)} title="Edit" style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: '#4a4845', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#7a7870'}
-                onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+              <button onClick={() => setEditing(true)} title="Edit" style={{ display: 'flex', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '4px 7px', color: '#8e8ea0', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#8e8ea0'}
+                onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
               >
                 <Edit2 size={12} />
               </button>
-              <button onClick={() => onDelete(note.id)} title="Delete" style={{ display: 'flex', background: 'none', border: '1px solid #252523', borderRadius: 6, padding: '4px 7px', color: '#4a4845', cursor: 'pointer' }}
+              <button onClick={() => onDelete(note.id)} title="Delete" style={{ display: 'flex', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '4px 7px', color: '#8e8ea0', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-                onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+                onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
               >
                 <Trash2 size={12} />
               </button>
@@ -192,7 +192,7 @@ export default function QuickNotes() {
   // New note form
   const [newTitle,   setNewTitle]   = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newColor,   setNewColor]   = useState('#ff9b26');
+  const [newColor,   setNewColor]   = useState('#4a6cf7');
   const [adding,     setAdding]     = useState(false);
   const [saving,     setSaving]     = useState(false);
   const newTextRef = useRef(null);
@@ -216,7 +216,7 @@ export default function QuickNotes() {
       setNotes(prev => [note, ...prev]);
       setNewTitle('');
       setNewContent('');
-      setNewColor('#ff9b26');
+      setNewColor('#4a6cf7');
       setAdding(false);
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -248,20 +248,20 @@ export default function QuickNotes() {
   const unpinned = filtered.filter(n => !n.pinned);
 
   return (
-    <div style={{ minHeight: '100%', background: '#0a0a08' }}>
+    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       {/* Header */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="page-title">Quick Notes</div>
           {notes.length > 0 && (
-            <span style={{ background: '#252523', color: '#4a4845', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
+            <span style={{ background: '#e5e7ef', color: '#8e8ea0', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
               {notes.length}
             </span>
           )}
         </div>
         <button
           onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ff9b26', color: '#0a0a08', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#4a6cf7', color: '#f5f7fa', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
         >
           <Plus size={15} /> New Note
         </button>
@@ -271,12 +271,12 @@ export default function QuickNotes() {
 
         {/* Add note form */}
         {adding && (
-          <div style={{ background: '#161614', border: `1px solid ${newColor}`, borderLeft: `3px solid ${newColor}`, borderRadius: 10, padding: '16px', marginBottom: 24 }}>
+          <div style={{ background: '#ffffff', border: `1px solid ${newColor}`, borderLeft: `3px solid ${newColor}`, borderRadius: 10, padding: '16px', marginBottom: 24 }}>
             <input
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               placeholder="Title (optional)"
-              style={{ background: '#111110', border: '1px solid #252523', borderRadius: 6, padding: '7px 10px', color: '#7a7870', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 10 }}
+              style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 6, padding: '7px 10px', color: '#8e8ea0', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 10 }}
             />
             <textarea
               ref={newTextRef}
@@ -288,7 +288,7 @@ export default function QuickNotes() {
               }}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleAdd(); }}
               placeholder="Paste a link, write a note, save anything you'll need later..."
-              style={{ background: '#111110', border: '1px solid #252523', borderRadius: 6, padding: '8px 10px', color: '#7a7870', fontSize: 13, outline: 'none', width: '100%', resize: 'none', minHeight: 80, boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: 12 }}
+              style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 6, padding: '8px 10px', color: '#8e8ea0', fontSize: 13, outline: 'none', width: '100%', resize: 'none', minHeight: 80, boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: 12 }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -307,51 +307,51 @@ export default function QuickNotes() {
               <button
                 onClick={handleAdd}
                 disabled={!newContent.trim() || saving}
-                style={{ background: newContent.trim() ? '#ff9b26' : '#252523', color: '#e8e6df', border: 'none', borderRadius: 8, padding: '7px 18px', cursor: newContent.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13 }}
+                style={{ background: newContent.trim() ? '#4a6cf7' : '#e5e7ef', color: '#1a1a2e', border: 'none', borderRadius: 8, padding: '7px 18px', cursor: newContent.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13 }}
               >
                 {saving ? 'Saving...' : 'Save Note'}
               </button>
             </div>
-            <div style={{ fontSize: 11, color: '#4a4845', marginTop: 8 }}>Tip: ⌘↵ to save quickly</div>
+            <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 8 }}>Tip: ⌘↵ to save quickly</div>
           </div>
         )}
 
         {/* Search */}
         {notes.length > 0 && (
           <div style={{ position: 'relative', marginBottom: 20 }}>
-            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#4a4845' }} />
+            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search notes..."
-              style={{ width: '100%', background: '#161614', border: '1px solid #252523', borderRadius: 8, padding: '8px 12px 8px 32px', color: '#7a7870', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8, padding: '8px 12px 8px 32px', color: '#8e8ea0', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
         )}
 
         {/* Content */}
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#4a4845', padding: 60, fontSize: 14 }}>Loading notes...</div>
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 60, fontSize: 14 }}>Loading notes...</div>
         ) : notes.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
-            <StickyNote size={40} style={{ color: '#252523', marginBottom: 16 }} />
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#4a4845', marginBottom: 8 }}>No notes yet</div>
-            <div style={{ fontSize: 13, color: '#4a4845', marginBottom: 20 }}>Save links, credentials, snippets — anything you want to reuse.</div>
+            <StickyNote size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#8e8ea0', marginBottom: 8 }}>No notes yet</div>
+            <div style={{ fontSize: 13, color: '#8e8ea0', marginBottom: 20 }}>Save links, credentials, snippets — anything you want to reuse.</div>
             <button
               onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
-              style={{ background: '#ff9b26', color: '#0a0a08', border: 'none', borderRadius: 8, padding: '9px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+              style={{ background: '#4a6cf7', color: '#f5f7fa', border: 'none', borderRadius: 8, padding: '9px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
             >
               <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />Add your first note
             </button>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#4a4845', fontSize: 14 }}>No notes match "{search}"</div>
+          <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0', fontSize: 14 }}>No notes match "{search}"</div>
         ) : (
           <>
             {/* Pinned */}
             {pinned.length > 0 && (
               <>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Pin size={11} /> Pinned
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 24 }}>
@@ -366,7 +366,7 @@ export default function QuickNotes() {
             {unpinned.length > 0 && (
               <>
                 {pinned.length > 0 && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
                     Notes
                   </div>
                 )}

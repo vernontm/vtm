@@ -8,12 +8,12 @@ import {
 
 const STATUSES   = ['Not Started', 'Working on it', 'Done', 'Stuck', 'In Review'];
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
-const GROUP_COLORS = ['#ff9b26', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#e86df5', '#f5a623'];
+const GROUP_COLORS = ['#4a6cf7', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#e86df5', '#f5a623'];
 
 const STATUS_STYLE = {
-  'Not Started':   { background: 'rgba(74,72,69,0.35)',   color: '#7a7870' },
+  'Not Started':   { background: 'rgba(74,72,69,0.35)',   color: '#8e8ea0' },
   'Working on it': { background: 'rgba(253,171,61,0.15)', color: '#fdab3d' },
-  'Done':          { background: 'rgba(255,155,38,0.12)', color: '#ff9b26' },
+  'Done':          { background: 'rgba(74,108,247,0.12)', color: '#4a6cf7' },
   'Stuck':         { background: 'rgba(255,92,92,0.15)',  color: '#ff5c5c' },
   'In Review':     { background: 'rgba(91,156,246,0.15)', color: '#5b9cf6' },
 };
@@ -22,7 +22,7 @@ const PRIORITY_STYLE = {
   'Critical': { background: 'rgba(255,92,92,0.15)',  color: '#ff5c5c' },
   'High':     { background: 'rgba(253,171,61,0.15)', color: '#fdab3d' },
   'Medium':   { background: 'rgba(91,156,246,0.15)', color: '#5b9cf6' },
-  'Low':      { background: 'rgba(74,72,69,0.35)',   color: '#7a7870' },
+  'Low':      { background: 'rgba(74,72,69,0.35)',   color: '#8e8ea0' },
 };
 
 function nextVal(arr, cur) {
@@ -56,9 +56,9 @@ function EditableCell({ value, onSave, placeholder = '—', style = {} }) {
         onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setVal(value || ''); setEditing(false); } }}
         style={{
-          background: '#1c1c1a', border: '1px solid rgba(255,155,38,0.35)', borderRadius: 4,
-          color: '#e8e6df', fontSize: 13, padding: '3px 7px', width: '100%', outline: 'none',
-          fontFamily: 'Poppins, sans-serif', ...style,
+          background: '#f0f2f8', border: '1px solid rgba(74,108,247,0.35)', borderRadius: 4,
+          color: '#1a1a2e', fontSize: 13, padding: '3px 7px', width: '100%', outline: 'none',
+          fontFamily: 'Inter, sans-serif', ...style,
         }}
       />
     );
@@ -68,7 +68,7 @@ function EditableCell({ value, onSave, placeholder = '—', style = {} }) {
     <span
       onClick={() => { setVal(value || ''); setEditing(true); }}
       title="Click to edit"
-      style={{ cursor: 'text', color: value ? '#e8e6df' : '#4a4845', fontSize: 13, display: 'block', width: '100%', ...style }}
+      style={{ cursor: 'text', color: value ? '#1a1a2e' : '#8e8ea0', fontSize: 13, display: 'block', width: '100%', ...style }}
     >
       {value || placeholder}
     </span>
@@ -88,9 +88,9 @@ function DateCell({ value, onSave }) {
         onBlur={e => { onSave(e.target.value); setEditing(false); }}
         onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }}
         style={{
-          background: '#1c1c1a', border: '1px solid rgba(255,155,38,0.35)', borderRadius: 4,
-          color: '#e8e6df', fontSize: 12, padding: '3px 6px', outline: 'none',
-          fontFamily: 'DM Mono, monospace', colorScheme: 'dark',
+          background: '#f0f2f8', border: '1px solid rgba(74,108,247,0.35)', borderRadius: 4,
+          color: '#1a1a2e', fontSize: 12, padding: '3px 6px', outline: 'none',
+          fontFamily: 'Inter, sans-serif', colorScheme: 'dark',
         }}
       />
     );
@@ -100,7 +100,7 @@ function DateCell({ value, onSave }) {
     <span
       onClick={() => setEditing(true)}
       title="Click to set date"
-      style={{ cursor: 'pointer', fontSize: 12, color: value ? '#e8e6df' : '#4a4845', fontFamily: 'DM Mono, monospace' }}
+      style={{ cursor: 'pointer', fontSize: 12, color: value ? '#1a1a2e' : '#8e8ea0', fontFamily: 'Inter, sans-serif' }}
     >
       {value ? formatDate(value) : '—'}
     </span>
@@ -132,7 +132,7 @@ function ColorPicker({ color, onChange }) {
       {open && (
         <div style={{
           position: 'absolute', top: 20, left: 0, zIndex: 100,
-          background: '#1c1c1a', border: '1px solid #252523', borderRadius: 8,
+          background: '#f0f2f8', border: '1px solid #e5e7ef', borderRadius: 8,
           padding: 8, display: 'flex', gap: 6, flexWrap: 'wrap', width: 120,
         }}>
           {GROUP_COLORS.map(c => (
@@ -141,7 +141,7 @@ function ColorPicker({ color, onChange }) {
               onClick={() => { onChange(c); setOpen(false); }}
               style={{
                 width: 20, height: 20, borderRadius: 4, background: c, border: 'none', cursor: 'pointer',
-                outline: c === color ? '2px solid #e8e6df' : 'none', outlineOffset: 1,
+                outline: c === color ? '2px solid #1a1a2e' : 'none', outlineOffset: 1,
               }}
             />
           ))}
@@ -163,7 +163,7 @@ function BadgeDropdown({ value, options, styleMap, onChange }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const s = styleMap[value] || { background: '#252523', color: '#7a7870' };
+  const s = styleMap[value] || { background: '#e5e7ef', color: '#8e8ea0' };
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -172,7 +172,7 @@ function BadgeDropdown({ value, options, styleMap, onChange }) {
         style={{
           ...s, border: 'none', cursor: 'pointer', borderRadius: 5,
           fontSize: 11, fontWeight: 600, padding: '3px 8px',
-          fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap',
+          fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap',
           display: 'inline-block',
         }}
       >
@@ -181,11 +181,11 @@ function BadgeDropdown({ value, options, styleMap, onChange }) {
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4,
-          background: '#161614', border: '1px solid #252523', borderRadius: 8,
+          background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
           padding: 4, minWidth: 140,
         }}>
           {options.map(opt => {
-            const os = styleMap[opt] || { background: '#252523', color: '#7a7870' };
+            const os = styleMap[opt] || { background: '#e5e7ef', color: '#8e8ea0' };
             return (
               <button
                 key={opt}
@@ -195,12 +195,12 @@ function BadgeDropdown({ value, options, styleMap, onChange }) {
                   background: 'none', cursor: 'pointer', padding: '5px 8px', borderRadius: 5,
                   marginBottom: 2,
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = '#252523'}
+                onMouseEnter={e => e.currentTarget.style.background = '#e5e7ef'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
                 <span style={{
                   ...os, borderRadius: 4, padding: '2px 7px',
-                  fontSize: 11, fontWeight: 600, fontFamily: 'DM Mono, monospace',
+                  fontSize: 11, fontWeight: 600, fontFamily: 'Inter, sans-serif',
                 }}>
                   {opt}
                 </span>
@@ -214,7 +214,7 @@ function BadgeDropdown({ value, options, styleMap, onChange }) {
 }
 
 // ── Column header labels ──────────────────────────────────────────────────────
-const COL_LABEL = { fontSize: 11, color: '#4a4845', fontWeight: 600, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.05em' };
+const COL_LABEL = { fontSize: 11, color: '#8e8ea0', fontWeight: 600, fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' };
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function Todos() {
@@ -285,7 +285,7 @@ export default function Todos() {
     return (
       <div style={{
         display: 'grid', gridTemplateColumns: ROW_GRID,
-        padding: '6px 0', borderBottom: '1px solid #1c1c1a',
+        padding: '6px 0', borderBottom: '1px solid #f0f2f8',
         marginBottom: 2,
       }}>
         <div />
@@ -300,11 +300,11 @@ export default function Todos() {
   }
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', background: '#0a0a08' }}>
+    <div style={{ padding: '28px 32px', minHeight: '100vh', background: '#f5f7fa' }}>
 
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#e8e6df', fontFamily: 'Poppins, sans-serif', margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', fontFamily: 'Inter, sans-serif', margin: 0 }}>
           Todo Board
         </h1>
         <button
@@ -320,7 +320,7 @@ export default function Todos() {
       {addingGroup && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20,
-          background: '#161614', border: '1px solid rgba(255,155,38,0.25)', borderRadius: 8, padding: '10px 14px',
+          background: '#ffffff', border: '1px solid rgba(74,108,247,0.25)', borderRadius: 8, padding: '10px 14px',
         }}>
           <input
             id="new-group-input"
@@ -334,7 +334,7 @@ export default function Todos() {
             placeholder="Group name…"
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: '#e8e6df', fontSize: 14, fontFamily: 'Poppins, sans-serif',
+              color: '#1a1a2e', fontSize: 14, fontFamily: 'Inter, sans-serif',
             }}
           />
           <button className="btn-primary" onClick={handleAddGroup} style={{ fontSize: 12, padding: '5px 14px' }}>Add</button>
@@ -346,10 +346,10 @@ export default function Todos() {
       {groups.length === 0 && !addingGroup && todos.filter(t => t.deal_id).length === 0 && (
         <div style={{ textAlign: 'center', padding: '100px 0' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#e8e6df', fontFamily: 'Poppins, sans-serif', marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', fontFamily: 'Inter, sans-serif', marginBottom: 8 }}>
             No groups yet
           </div>
-          <div style={{ fontSize: 13, color: '#4a4845', marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: '#8e8ea0', marginBottom: 20 }}>
             Create a group to start organizing your tasks, or add tasks from the Deals page
           </div>
           <button className="btn-primary" onClick={() => setAddingGroup(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -383,14 +383,14 @@ export default function Todos() {
                 {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
               </button>
               <Briefcase size={14} style={{ color: '#5b9cf6', flexShrink: 0 }} />
-              <span style={{ color: '#5b9cf6', fontSize: 15, fontWeight: 700, fontFamily: 'Poppins, sans-serif' }}>Deal Tasks</span>
-              <span style={{ color: '#4a4845', fontSize: 12, fontFamily: 'DM Mono, monospace' }}>
+              <span style={{ color: '#5b9cf6', fontSize: 15, fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>Deal Tasks</span>
+              <span style={{ color: '#8e8ea0', fontSize: 12, fontFamily: 'Inter, sans-serif' }}>
                 {dealTodos.length} {dealTodos.length === 1 ? 'item' : 'items'} · {doneCount} done
               </span>
             </div>
 
             {!isCollapsed && (
-              <div style={{ background: '#111110', borderRadius: '0 0 8px 8px', overflow: 'hidden', border: '1px solid #1c1c1a', borderTop: 'none' }}>
+              <div style={{ background: '#ffffff', borderRadius: '0 0 8px 8px', overflow: 'hidden', border: '1px solid #f0f2f8', borderTop: 'none' }}>
                 <ColHeaders />
                 {Object.entries(byDeal).map(([dealId, dealTodoList]) => (
                   <React.Fragment key={dealId}>
@@ -401,10 +401,10 @@ export default function Todos() {
                       borderBottom: '1px solid #1a1a18',
                     }}>
                       <Briefcase size={11} style={{ color: '#5b9cf6', flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#5b9cf6', fontFamily: 'DM Mono, monospace' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#5b9cf6', fontFamily: 'Inter, sans-serif' }}>
                         {dealMap[dealId] || 'Deal'}
                       </span>
-                      <span style={{ fontSize: 10, color: '#4a4845', fontFamily: 'DM Mono, monospace' }}>
+                      <span style={{ fontSize: 10, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>
                         {dealTodoList.filter(t => t.completed).length}/{dealTodoList.length}
                       </span>
                     </div>
@@ -415,10 +415,10 @@ export default function Todos() {
                           display: 'grid', gridTemplateColumns: ROW_GRID,
                           alignItems: 'center', padding: '7px 0',
                           borderBottom: '1px solid #1a1a18',
-                          background: todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent',
+                          background: todo.completed ? 'rgba(74,108,247,0.02)' : 'transparent',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#161614'}
-                        onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent'}
+                        onMouseEnter={e => e.currentTarget.style.background = '#ffffff'}
+                        onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(74,108,247,0.02)' : 'transparent'}
                       >
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <button
@@ -426,7 +426,7 @@ export default function Todos() {
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
                           >
                             {todo.completed
-                              ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#0a0a08" strokeWidth={3} /></div>
+                              ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#4a6cf7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#f5f7fa" strokeWidth={3} /></div>
                               : <div style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid #3a3a38' }} />
                             }
                           </button>
@@ -435,7 +435,7 @@ export default function Todos() {
                           <EditableCell
                             value={todo.title}
                             onSave={val => handleUpdateTodo(todo.id, { title: val })}
-                            style={{ textDecoration: todo.completed ? 'line-through' : 'none', color: todo.completed ? '#4a4845' : '#e8e6df' }}
+                            style={{ textDecoration: todo.completed ? 'line-through' : 'none', color: todo.completed ? '#8e8ea0' : '#1a1a2e' }}
                           />
                         </div>
                         <div>
@@ -453,9 +453,9 @@ export default function Todos() {
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <button
                             onClick={() => handleDeleteTodo(todo.id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2e2e2b', padding: 0, display: 'flex', transition: 'color 0.15s' }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d8dbe6', padding: 0, display: 'flex', transition: 'color 0.15s' }}
                             onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-                            onMouseLeave={e => e.currentTarget.style.color = '#2e2e2b'}
+                            onMouseLeave={e => e.currentTarget.style.color = '#d8dbe6'}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -500,10 +500,10 @@ export default function Todos() {
               <EditableCell
                 value={group.name}
                 onSave={val => handleUpdateGroup(group.id, { name: val })}
-                style={{ fontWeight: 700, fontSize: 15, color: group.color, fontFamily: 'Poppins, sans-serif' }}
+                style={{ fontWeight: 700, fontSize: 15, color: group.color, fontFamily: 'Inter, sans-serif' }}
               />
 
-              <span style={{ color: '#4a4845', fontSize: 12, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
+              <span style={{ color: '#8e8ea0', fontSize: 12, fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
                 {groupTodos.length} {groupTodos.length === 1 ? 'item' : 'items'}
                 {doneCount > 0 && ` · ${doneCount} done`}
               </span>
@@ -517,7 +517,7 @@ export default function Todos() {
                   display: 'flex', alignItems: 'center', gap: 4,
                   background: 'none', border: `1px solid ${group.color}33`, borderRadius: 6,
                   color: group.color, fontSize: 12, padding: '4px 10px', cursor: 'pointer',
-                  fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+                  fontFamily: 'Inter, sans-serif', fontWeight: 600,
                   transition: 'background 0.15s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = `${group.color}11`}
@@ -530,9 +530,9 @@ export default function Todos() {
               <button
                 onClick={() => handleDeleteGroup(group.id)}
                 title="Delete group"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: '4px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '4px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-                onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+                onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
               >
                 <Trash2 size={14} />
               </button>
@@ -540,11 +540,11 @@ export default function Todos() {
 
             {/* Tasks */}
             {!isCollapsed && (
-              <div style={{ background: '#111110', borderRadius: '0 0 8px 8px', overflow: 'hidden', border: '1px solid #1c1c1a', borderTop: 'none' }}>
+              <div style={{ background: '#ffffff', borderRadius: '0 0 8px 8px', overflow: 'hidden', border: '1px solid #f0f2f8', borderTop: 'none' }}>
                 <ColHeaders />
 
                 {groupTodos.length === 0 && addingTask !== group.id && (
-                  <div style={{ padding: '14px 0 14px 36px', color: '#4a4845', fontSize: 13 }}>
+                  <div style={{ padding: '14px 0 14px 36px', color: '#8e8ea0', fontSize: 13 }}>
                     No tasks — click "Add Task" to get started
                   </div>
                 )}
@@ -556,19 +556,19 @@ export default function Todos() {
                       display: 'grid', gridTemplateColumns: ROW_GRID,
                       alignItems: 'center', padding: '7px 0',
                       borderBottom: idx < groupTodos.length - 1 ? '1px solid #1a1a18' : 'none',
-                      background: todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent',
+                      background: todo.completed ? 'rgba(74,108,247,0.02)' : 'transparent',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#161614'}
-                    onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(255,155,38,0.02)' : 'transparent'}
+                    onMouseEnter={e => e.currentTarget.style.background = '#ffffff'}
+                    onMouseLeave={e => e.currentTarget.style.background = todo.completed ? 'rgba(74,108,247,0.02)' : 'transparent'}
                   >
                     {/* Checkbox */}
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <button
                         onClick={() => handleUpdateTodo(todo.id, { completed: !todo.completed })}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: todo.completed ? '#ff9b26' : '#4a4845', padding: 0, display: 'flex' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: todo.completed ? '#4a6cf7' : '#8e8ea0', padding: 0, display: 'flex' }}
                       >
                         {todo.completed
-                          ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#ff9b26', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#0a0a08" strokeWidth={3} /></div>
+                          ? <div style={{ width: 16, height: 16, borderRadius: 4, background: '#4a6cf7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#f5f7fa" strokeWidth={3} /></div>
                           : <div style={{ width: 16, height: 16, borderRadius: 4, border: '1.5px solid #3a3a38' }} />
                         }
                       </button>
@@ -579,7 +579,7 @@ export default function Todos() {
                       <EditableCell
                         value={todo.title}
                         onSave={val => handleUpdateTodo(todo.id, { title: val })}
-                        style={{ textDecoration: todo.completed ? 'line-through' : 'none', color: todo.completed ? '#4a4845' : '#e8e6df' }}
+                        style={{ textDecoration: todo.completed ? 'line-through' : 'none', color: todo.completed ? '#8e8ea0' : '#1a1a2e' }}
                       />
                     </div>
 
@@ -617,7 +617,7 @@ export default function Todos() {
                         value={todo.owner}
                         onSave={val => handleUpdateTodo(todo.id, { owner: val })}
                         placeholder="—"
-                        style={{ fontSize: 12, color: todo.owner ? '#e8e6df' : '#4a4845' }}
+                        style={{ fontSize: 12, color: todo.owner ? '#1a1a2e' : '#8e8ea0' }}
                       />
                     </div>
 
@@ -626,9 +626,9 @@ export default function Todos() {
                       <button
                         onClick={() => handleDeleteTodo(todo.id)}
                         title="Delete task"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2e2e2b', padding: 0, display: 'flex', transition: 'color 0.15s' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d8dbe6', padding: 0, display: 'flex', transition: 'color 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-                        onMouseLeave={e => e.currentTarget.style.color = '#2e2e2b'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#d8dbe6'}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -641,7 +641,7 @@ export default function Todos() {
                   <div style={{
                     display: 'grid', gridTemplateColumns: ROW_GRID, alignItems: 'center',
                     padding: '7px 0', borderTop: groupTodos.length > 0 ? '1px solid #1a1a18' : 'none',
-                    background: '#161614',
+                    background: '#ffffff',
                   }}>
                     <div />
                     <div style={{ paddingRight: 16 }}>
@@ -656,26 +656,26 @@ export default function Todos() {
                         onBlur={() => handleAddTask(group.id)}
                         placeholder="Task name…"
                         style={{
-                          width: '100%', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,155,38,0.35)',
-                          outline: 'none', color: '#e8e6df', fontSize: 13, fontFamily: 'Poppins, sans-serif',
+                          width: '100%', background: 'none', border: 'none', borderBottom: '1px solid rgba(74,108,247,0.35)',
+                          outline: 'none', color: '#1a1a2e', fontSize: 13, fontFamily: 'Inter, sans-serif',
                           padding: '2px 0',
                         }}
                       />
                     </div>
-                    <div style={{ color: '#4a4845', fontSize: 11, fontFamily: 'DM Mono, monospace' }}>↵ to add</div>
+                    <div style={{ color: '#8e8ea0', fontSize: 11, fontFamily: 'Inter, sans-serif' }}>↵ to add</div>
                   </div>
                 ) : (
                   <button
                     onClick={() => { setAddingTask(group.id); setNewTaskTitle(''); }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-                      background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845',
-                      fontSize: 13, padding: '9px 0 9px 36px', fontFamily: 'Poppins, sans-serif',
+                      background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0',
+                      fontSize: 13, padding: '9px 0 9px 36px', fontFamily: 'Inter, sans-serif',
                       borderTop: groupTodos.length > 0 ? '1px solid #1a1a18' : 'none',
                       transition: 'color 0.15s',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#e8e6df'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+                    onMouseEnter={e => e.currentTarget.style.color = '#1a1a2e'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
                   >
                     <Plus size={13} /> Add Task
                   </button>

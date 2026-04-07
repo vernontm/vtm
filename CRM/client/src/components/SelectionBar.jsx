@@ -9,10 +9,10 @@ function ActionBtn({ icon, label, onClick, color }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        background: hov ? '#252523' : 'none',
+        background: hov ? '#f0f2f8' : 'none',
         border: 'none',
         cursor: 'pointer',
-        color: color || '#7a7870',
+        color: color || '#8e8ea0',
         padding: '5px 10px',
         borderRadius: 8,
         display: 'flex',
@@ -31,7 +31,7 @@ function ActionBtn({ icon, label, onClick, color }) {
 }
 
 const VDivider = () => (
-  <div style={{ width: 1, height: 32, background: '#252523', flexShrink: 0, margin: '0 4px' }} />
+  <div style={{ width: 1, height: 32, background: '#e5e7ef', flexShrink: 0, margin: '0 4px' }} />
 );
 
 export default function SelectionBar({
@@ -67,46 +67,38 @@ export default function SelectionBar({
       bottom: 24,
       left: '50%',
       transform: 'translateX(-50%)',
-      background: '#161614',
-      border: '1px solid #4a4f7a',
+      background: '#ffffff',
+      border: '1px solid #e5e7ef',
       borderRadius: 14,
       padding: '8px 14px',
       display: 'flex',
       alignItems: 'center',
       gap: 2,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.65)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
       zIndex: 1000,
       whiteSpace: 'nowrap',
     }}>
-      {/* Count badge */}
       <div style={{
-        background: '#ff9b26',
+        background: '#4a6cf7',
         borderRadius: '50%',
         width: 26, height: 26,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 12, fontWeight: 700, color: '#e8e6df', flexShrink: 0,
+        fontSize: 12, fontWeight: 700, color: '#ffffff', flexShrink: 0,
       }}>{count}</div>
-      <span style={{ color: '#7a7870', fontSize: 13, paddingLeft: 6, paddingRight: 10 }}>
+      <span style={{ color: '#8e8ea0', fontSize: 13, paddingLeft: 6, paddingRight: 10 }}>
         {count === 1 ? '1 item selected' : `${count} items selected`}
       </span>
 
       <VDivider />
 
-      {/* Move to */}
       {moveToOptions && onMoveTo && (
         <div style={{ position: 'relative' }}>
           <ActionBtn icon={<ArrowRight size={14} />} label="Move to" onClick={() => setShowMoveTo(v => !v)} />
           {showMoveTo && (
             <div style={{
-              position: 'absolute',
-              bottom: 'calc(100% + 8px)',
-              left: 0,
-              background: '#111110',
-              border: '1px solid #252523',
-              borderRadius: 8,
-              overflow: 'hidden',
-              minWidth: 160,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+              background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+              overflow: 'hidden', minWidth: 160, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             }}>
               {moveToOptions.map(opt => (
                 <button
@@ -115,9 +107,9 @@ export default function SelectionBar({
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
                     padding: '8px 14px', background: 'none', border: 'none',
-                    color: '#7a7870', fontSize: 13, cursor: 'pointer',
+                    color: '#1a1a2e', fontSize: 13, cursor: 'pointer',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#252523'}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f0f2f8'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
                   {opt.label}
@@ -132,32 +124,21 @@ export default function SelectionBar({
       {onArchive && <ActionBtn icon={<Archive size={14} />} label="Archive" onClick={onArchive} />}
       {onDelete && <ActionBtn icon={<Trash2 size={14} />} label="Delete" onClick={onDelete} color="#ff5c5c" />}
 
-      <ActionBtn
-        icon={<Mail size={14} />}
-        label="Send Email"
-        onClick={() => window.open(gmailHref, '_blank')}
-      />
-      <ActionBtn
-        icon={<Calendar size={14} />}
-        label="Calendar"
-        onClick={() => window.open(calHref, '_blank')}
-      />
-      {onConvert && (
-        <ActionBtn icon={<RefreshCw size={14} />} label="Convert" onClick={onConvert} />
-      )}
+      <ActionBtn icon={<Mail size={14} />} label="Send Email" onClick={() => window.open(gmailHref, '_blank')} />
+      <ActionBtn icon={<Calendar size={14} />} label="Calendar" onClick={() => window.open(calHref, '_blank')} />
+      {onConvert && <ActionBtn icon={<RefreshCw size={14} />} label="Convert" onClick={onConvert} />}
 
       <VDivider />
 
-      {/* Close */}
       <button
         onClick={onClear}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          color: '#4a4845', padding: '4px 6px', borderRadius: 6,
+          color: '#b0b0c0', padding: '4px 6px', borderRadius: 6,
           display: 'flex', alignItems: 'center',
         }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = '#252523'; }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#4a4845'; e.currentTarget.style.background = 'none'; }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#1a1a2e'; e.currentTarget.style.background = '#f0f2f8'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#b0b0c0'; e.currentTarget.style.background = 'none'; }}
         title="Clear selection"
       >
         <X size={16} />

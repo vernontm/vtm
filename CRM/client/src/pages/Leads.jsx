@@ -10,7 +10,7 @@ import BulkImport from '../components/BulkImport';
 
 const LEAD_STATUSES = ['Cold', 'Warm', 'Hot', 'Unqualified'];
 const LEAD_SOURCES = ['', 'Website', 'Referral', 'Cold Outreach', 'LinkedIn', 'Email Campaign', 'Social Media', 'Other'];
-const ACTIVITY_COLORS = ['#ff9b26', '#ff9b26', '#fdab3d', '#784bd1', '#ff5c5c'];
+const ACTIVITY_COLORS = ['#4a6cf7', '#4a6cf7', '#fdab3d', '#784bd1', '#ff5c5c'];
 
 function ActivityBar({ id }) {
   const blocks = useMemo(() => {
@@ -74,34 +74,34 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
   const highlightRE = new RegExp(`(${escapeRE(bizName)}${niche !== bizName ? '|' + escapeRE(niche) : ''})`, 'g');
 
   const navBtnStyle = (disabled) => ({
-    background: disabled ? 'none' : 'rgba(255,155,38,0.08)',
-    border: '1px solid', borderColor: disabled ? '#1c1c1a' : 'rgba(255,155,38,0.25)',
+    background: disabled ? 'none' : 'rgba(74,108,247,0.08)',
+    border: '1px solid', borderColor: disabled ? '#f0f2f8' : 'rgba(74,108,247,0.25)',
     borderRadius: 6, padding: '5px 8px',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    color: disabled ? '#2a2a28' : '#ff9b26',
+    color: disabled ? '#2a2a28' : '#4a6cf7',
     display: 'flex', alignItems: 'center', transition: 'all 0.15s',
   });
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
       onClick={onClose}>
-      <div style={{ background: '#161614', border: '1px solid #252523', borderRadius: 16, width: '100%', maxWidth: 560, boxShadow: '0 24px 80px rgba(0,0,0,0.6)', overflow: 'hidden' }}
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 16, width: '100%', maxWidth: 560, boxShadow: '0 24px 80px rgba(0,0,0,0.6)', overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #252523', background: '#111110' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7ef', background: '#ffffff' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,155,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ScrollText size={15} color="#ff9b26" />
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(74,108,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ScrollText size={15} color="#4a6cf7" />
               </div>
               <div>
-                <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: 14, fontWeight: 700, color: '#e8e6df' }}>Phone Script</div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#7a7870', marginTop: 1 }}>{lead.name}</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Phone Script</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#8e8ea0', marginTop: 1 }}>{lead.name}</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#4a4845', marginRight: 4 }}>
+              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#8e8ea0', marginRight: 4 }}>
                 {index + 1} / {total}
               </span>
               <button onClick={() => onNavigate(index - 1)} disabled={index === 0} style={navBtnStyle(index === 0)} title="Previous (←)">
@@ -110,7 +110,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
               <button onClick={() => onNavigate(index + 1)} disabled={index === total - 1} style={navBtnStyle(index === total - 1)} title="Next (→)">
                 <ChevronRight size={14} />
               </button>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: 4, marginLeft: 4 }}>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, marginLeft: 4 }}>
                 <X size={18} />
               </button>
             </div>
@@ -122,20 +122,20 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
               <>
                 <a
                   href={`tel:${lead.phone}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(255,155,38,0.08)', border: '1px solid rgba(255,155,38,0.2)', borderRadius: 8, padding: '7px 14px', color: '#ff9b26', textDecoration: 'none', fontFamily: 'DM Mono, monospace', fontSize: 13, fontWeight: 600, flex: 1 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(74,108,247,0.08)', border: '1px solid rgba(74,108,247,0.2)', borderRadius: 8, padding: '7px 14px', color: '#4a6cf7', textDecoration: 'none', fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: 600, flex: 1 }}
                 >
                   <Phone size={13} /> {lead.phone}
                 </a>
                 <button
                   onClick={handleCopyPhone}
                   title="Copy number"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: copiedPhone ? 'rgba(255,155,38,0.15)' : '#1c1c1a', border: '1px solid', borderColor: copiedPhone ? 'rgba(255,155,38,0.4)' : '#252523', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', color: copiedPhone ? '#ff9b26' : '#7a7870', fontFamily: 'DM Mono, monospace', fontSize: 11, transition: 'all 0.2s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: copiedPhone ? 'rgba(74,108,247,0.15)' : '#f0f2f8', border: '1px solid', borderColor: copiedPhone ? 'rgba(74,108,247,0.4)' : '#e5e7ef', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', color: copiedPhone ? '#4a6cf7' : '#8e8ea0', fontFamily: 'Inter, sans-serif', fontSize: 11, transition: 'all 0.2s' }}
                 >
                   {copiedPhone ? <><CheckCheck size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
                 </button>
               </>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#4a4845' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#8e8ea0' }}>
                 <Phone size={12} /> No phone number on file
               </div>
             )}
@@ -145,10 +145,10 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
         {/* Script body */}
         <div style={{ padding: '20px 22px' }}>
           {script.split('\n\n').map((para, i) => (
-            <p key={i} style={{ fontSize: 14, lineHeight: 1.75, color: '#e8e6df', margin: 0, marginBottom: i < 3 ? 16 : 0 }}>
+            <p key={i} style={{ fontSize: 14, lineHeight: 1.75, color: '#1a1a2e', margin: 0, marginBottom: i < 3 ? 16 : 0 }}>
               {para.split(highlightRE).map((chunk, j) =>
                 chunk === bizName || chunk === niche
-                  ? <span key={j} style={{ color: '#ff9b26', fontWeight: 700, fontFamily: 'Poppins, sans-serif' }}>{chunk}</span>
+                  ? <span key={j} style={{ color: '#4a6cf7', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{chunk}</span>
                   : chunk
               )}
             </p>
@@ -159,7 +159,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
         <div style={{ padding: '12px 22px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             onClick={handleCopy}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: copied ? 'rgba(255,155,38,0.15)' : '#ff9b26', color: copied ? '#ff9b26' : '#0a0a08', border: copied ? '1px solid rgba(255,155,38,0.4)' : 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Poppins, sans-serif', transition: 'all 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, background: copied ? 'rgba(74,108,247,0.15)' : '#4a6cf7', color: copied ? '#4a6cf7' : '#f5f7fa', border: copied ? '1px solid rgba(74,108,247,0.4)' : 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
           >
             {copied ? <><CheckCheck size={14} /> Copied!</> : <><Copy size={14} /> Copy Script</>}
           </button>
@@ -169,23 +169,23 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
             <button
               title="Interested → next"
               onClick={() => { onInterest(lead.id, 'up'); if (index < total - 1) onNavigate(index + 1); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'up' ? 'rgba(255,155,38,0.15)' : '#1c1c1a', border: '1px solid', borderColor: lead.interest === 'up' ? 'rgba(255,155,38,0.4)' : '#252523', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'up' ? '#ff9b26' : '#4a4845', fontSize: 12, transition: 'all 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'up' ? 'rgba(74,108,247,0.15)' : '#f0f2f8', border: '1px solid', borderColor: lead.interest === 'up' ? 'rgba(74,108,247,0.4)' : '#e5e7ef', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'up' ? '#4a6cf7' : '#8e8ea0', fontSize: 12, transition: 'all 0.15s' }}
             >
               <ThumbsUp size={14} />
             </button>
             <button
               title="Not interested → next"
               onClick={() => { onInterest(lead.id, 'down'); if (index < total - 1) onNavigate(index + 1); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'down' ? 'rgba(255,92,92,0.15)' : '#1c1c1a', border: '1px solid', borderColor: lead.interest === 'down' ? 'rgba(255,92,92,0.4)' : '#252523', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'down' ? '#ff5c5c' : '#4a4845', fontSize: 12, transition: 'all 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'down' ? 'rgba(255,92,92,0.15)' : '#f0f2f8', border: '1px solid', borderColor: lead.interest === 'down' ? 'rgba(255,92,92,0.4)' : '#e5e7ef', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'down' ? '#ff5c5c' : '#8e8ea0', fontSize: 12, transition: 'all 0.15s' }}
             >
               <ThumbsDown size={14} />
             </button>
             <button
               title="No answer → mark Unqualified + next"
               onClick={() => { if (onNoAnswer) onNoAnswer(lead); if (index < total - 1) onNavigate(index + 1); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1c1c1a', border: '1px solid #252523', borderRadius: 8, padding: '8px 12px', cursor: index < total - 1 ? 'pointer' : 'not-allowed', color: '#7a7870', fontSize: 12, fontFamily: 'DM Mono, monospace', transition: 'all 0.15s', opacity: index < total - 1 ? 1 : 0.4 }}
-              onMouseEnter={e => { if (index < total - 1) { e.currentTarget.style.borderColor = '#7a7870'; e.currentTarget.style.color = '#e8e6df'; } }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#252523'; e.currentTarget.style.color = '#7a7870'; }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0f2f8', border: '1px solid #e5e7ef', borderRadius: 8, padding: '8px 12px', cursor: index < total - 1 ? 'pointer' : 'not-allowed', color: '#8e8ea0', fontSize: 12, fontFamily: 'Inter, sans-serif', transition: 'all 0.15s', opacity: index < total - 1 ? 1 : 0.4 }}
+              onMouseEnter={e => { if (index < total - 1) { e.currentTarget.style.borderColor = '#8e8ea0'; e.currentTarget.style.color = '#1a1a2e'; } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7ef'; e.currentTarget.style.color = '#8e8ea0'; }}
             >
               <PhoneCall size={13} /> No Answer
             </button>
@@ -194,7 +194,7 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
           <button
             title="Schedule demo call"
             onClick={() => onSchedule && onSchedule(lead)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111328', border: '1px solid #5b9cf630', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#5b9cf6', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111328', border: '1px solid #5b9cf630', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#5b9cf6', fontSize: 12, fontWeight: 600, fontFamily: 'Inter, sans-serif', transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.background = '#5b9cf620'; e.currentTarget.style.borderColor = '#5b9cf660'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#111328'; e.currentTarget.style.borderColor = '#5b9cf630'; }}
           >
@@ -203,11 +203,11 @@ Are you open to hopping on a quick 15-minute call so I can walk you through how 
 
           <button
             onClick={onClose}
-            style={{ background: 'none', border: '1px solid #252523', color: '#7a7870', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontSize: 13 }}
+            style={{ background: 'none', border: '1px solid #e5e7ef', color: '#8e8ea0', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontSize: 13 }}
           >
             Close
           </button>
-          <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: 10, color: '#2a2a28' }}>← → to cycle</span>
+          <span style={{ marginLeft: 'auto', fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#2a2a28' }}>← → to cycle</span>
         </div>
       </div>
     </div>
@@ -250,7 +250,7 @@ const DETAIL_SECTIONS = [
 
 const inputStyle = {
   width: '100%', padding: '6px 9px', borderRadius: 5, fontSize: 12,
-  color: '#7a7870', background: '#111328', border: '1px solid #252523',
+  color: '#8e8ea0', background: '#111328', border: '1px solid #e5e7ef',
   outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
 };
 
@@ -316,17 +316,17 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
 
       {/* Panel */}
       <div style={{
-        position: 'relative', width: 540, background: '#161614',
-        borderLeft: '1px solid #252523', overflowY: 'auto',
+        position: 'relative', width: 540, background: '#ffffff',
+        borderLeft: '1px solid #e5e7ef', overflowY: 'auto',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
         display: 'flex', flexDirection: 'column',
       }}>
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #252523', position: 'sticky', top: 0, background: '#161614', zIndex: 2 }}>
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #e5e7ef', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                 Edit Lead
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -339,8 +339,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '4px 11px', borderRadius: 12, cursor: 'pointer',
                     fontSize: 11, fontWeight: 600, border: 'none',
-                    background: draft.call_completed ? '#ff9b2625' : '#25252340',
-                    color: draft.call_completed ? '#ff9b26' : '#4a4845',
+                    background: draft.call_completed ? '#4a6cf725' : '#e5e7ef40',
+                    color: draft.call_completed ? '#4a6cf7' : '#8e8ea0',
                     transition: 'all 0.15s',
                   }}
                   title={draft.call_completed ? 'Click to unmark call' : 'Mark call as completed'}
@@ -352,7 +352,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
                 </button>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: 4, flexShrink: 0 }}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, flexShrink: 0 }}>
               <X size={20} />
             </button>
           </div>
@@ -362,13 +362,13 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
           {DETAIL_SECTIONS.map(section => (
             <div key={section.title}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
                 {section.title}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {section.fields.map(({ key, label }) => (
                   <div key={key} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 12, color: '#4a4845', paddingTop: 8 }}>{label}</span>
+                    <span style={{ fontSize: 12, color: '#8e8ea0', paddingTop: 8 }}>{label}</span>
                     <EditableField fieldKey={key} value={draft[key]} onChange={val => set(key, val)} />
                   </div>
                 ))}
@@ -380,7 +380,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
         {/* ── Sticky save bar ─────────────────────────────────────────────── */}
         <div style={{
           position: 'sticky', bottom: 0, padding: '12px 24px',
-          background: '#161614', borderTop: '1px solid #252523',
+          background: '#ffffff', borderTop: '1px solid #e5e7ef',
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
           <button
@@ -389,8 +389,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
             style={{
               flex: 1, padding: '9px 0', borderRadius: 6, cursor: isDirty ? 'pointer' : 'not-allowed',
               fontSize: 13, fontWeight: 700, border: 'none',
-              background: isDirty ? '#ff9b26' : '#252523',
-              color: isDirty ? '#fff' : '#4a4845',
+              background: isDirty ? '#4a6cf7' : '#e5e7ef',
+              color: isDirty ? '#fff' : '#8e8ea0',
               transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
           >
@@ -398,7 +398,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
           </button>
           <button
             onClick={onClose}
-            style={{ padding: '9px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 13, background: 'none', border: '1px solid #252523', color: '#4a4845' }}
+            style={{ padding: '9px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 13, background: 'none', border: '1px solid #e5e7ef', color: '#8e8ea0' }}
           >
             Close
           </button>
@@ -411,9 +411,9 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
 
 // ── Truncate helper ───────────────────────────────────────────────────────────
 function Trunc({ value, max = 22 }) {
-  if (!value) return <span style={{ color: '#252523' }}>—</span>;
+  if (!value) return <span style={{ color: '#e5e7ef' }}>—</span>;
   return (
-    <span title={value} style={{ fontSize: 12, color: '#7a7870' }}>
+    <span title={value} style={{ fontSize: 12, color: '#8e8ea0' }}>
       {value.length > max ? value.slice(0, max) + '…' : value}
     </span>
   );
@@ -528,27 +528,27 @@ export default function Leads() {
   const COL_COUNT = 10; // checkbox, Lead, Status, Interest, Action, Email, Phone, Business, Budget Tier, Actions
 
   return (
-    <div style={{ minHeight: '100%', background: '#0a0a08' }}>
+    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="page-title">Leads</div>
         </div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4a4845' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
             <input className="search-input" placeholder="Search leads..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select
             value={sort}
             onChange={e => setSort(e.target.value)}
-            style={{ background: '#161614', border: '1px solid #252523', color: '#7a7870', borderRadius: 6, fontSize: 12, padding: '6px 10px', cursor: 'pointer', outline: 'none' }}
+            style={{ background: '#ffffff', border: '1px solid #e5e7ef', color: '#8e8ea0', borderRadius: 6, fontSize: 12, padding: '6px 10px', cursor: 'pointer', outline: 'none' }}
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
             <option value="name_az">Name A→Z</option>
             <option value="name_za">Name Z→A</option>
           </select>
-          <button className="btn-ghost" onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#7a7870', border: '1px solid #252523', padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>
+          <button className="btn-ghost" onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8e8ea0', border: '1px solid #e5e7ef', padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>
             <Upload size={14} /> Import
           </button>
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Lead</button>
@@ -573,22 +573,22 @@ export default function Leads() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={COL_COUNT} style={{ textAlign: 'center', color: '#4a4845', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={COL_COUNT} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
             ) : groups.length === 0 ? (
-              <tr><td colSpan={COL_COUNT} style={{ textAlign: 'center', color: '#4a4845', padding: 40 }}>No leads yet. Click "New Lead" to add one.</td></tr>
+              <tr><td colSpan={COL_COUNT} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No leads yet. Click "New Lead" to add one.</td></tr>
             ) : groups.map(([status, items]) => (
               <React.Fragment key={status}>
                 <tr>
-                  <td colSpan={COL_COUNT} style={{ padding: 0, background: '#161614' }}>
+                  <td colSpan={COL_COUNT} style={{ padding: 0, background: '#ffffff' }}>
                     <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [status]: !c[status] }))}>
                       {collapsed[status] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                      <span style={{ color: '#e8e6df' }}>{status}</span>
-                      <span style={{ background: '#252523', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#7a7870' }}>{items.length}</span>
+                      <span style={{ color: '#1a1a2e' }}>{status}</span>
+                      <span style={{ background: '#e5e7ef', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#8e8ea0' }}>{items.length}</span>
                     </div>
                   </td>
                 </tr>
                 {!collapsed[status] && items.map(lead => (
-                  <tr key={lead.id} style={{ background: selectedIds.has(lead.id) ? '#252060' : undefined }}>
+                  <tr key={lead.id} style={{ background: selectedIds.has(lead.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
                     <td>
                       <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
                     </td>
@@ -604,14 +604,14 @@ export default function Leads() {
                           title="Interested"
                           onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'up' ? null : 'up')}
                           style={{
-                            background: lead.interest === 'up' ? 'rgba(255,155,38,0.15)' : 'none',
-                            border: lead.interest === 'up' ? '1px solid rgba(255,155,38,0.4)' : '1px solid transparent',
+                            background: lead.interest === 'up' ? 'rgba(74,108,247,0.15)' : 'none',
+                            border: lead.interest === 'up' ? '1px solid rgba(74,108,247,0.4)' : '1px solid transparent',
                             borderRadius: 6, cursor: 'pointer', padding: '4px 6px',
-                            color: lead.interest === 'up' ? '#ff9b26' : '#4a4845',
+                            color: lead.interest === 'up' ? '#4a6cf7' : '#8e8ea0',
                             transition: 'all 0.15s', display: 'flex', alignItems: 'center',
                           }}
-                          onMouseEnter={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#ff9b26'; }}
-                          onMouseLeave={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#4a4845'; }}
+                          onMouseEnter={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#4a6cf7'; }}
+                          onMouseLeave={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#8e8ea0'; }}
                         >
                           <ThumbsUp size={13} />
                         </button>
@@ -622,11 +622,11 @@ export default function Leads() {
                             background: lead.interest === 'down' ? 'rgba(255,92,92,0.15)' : 'none',
                             border: lead.interest === 'down' ? '1px solid rgba(255,92,92,0.4)' : '1px solid transparent',
                             borderRadius: 6, cursor: 'pointer', padding: '4px 6px',
-                            color: lead.interest === 'down' ? '#ff5c5c' : '#4a4845',
+                            color: lead.interest === 'down' ? '#ff5c5c' : '#8e8ea0',
                             transition: 'all 0.15s', display: 'flex', alignItems: 'center',
                           }}
                           onMouseEnter={e => { if (lead.interest !== 'down') e.currentTarget.style.color = '#ff5c5c'; }}
-                          onMouseLeave={e => { if (lead.interest !== 'down') e.currentTarget.style.color = '#4a4845'; }}
+                          onMouseLeave={e => { if (lead.interest !== 'down') e.currentTarget.style.color = '#8e8ea0'; }}
                         >
                           <ThumbsDown size={13} />
                         </button>
@@ -638,14 +638,14 @@ export default function Leads() {
                           <UserPlus size={12} /> Move to Contacts
                         </button>
                       ) : (
-                        <span style={{ fontSize: 12, color: '#4a4845' }}>Converted</span>
+                        <span style={{ fontSize: 12, color: '#8e8ea0' }}>Converted</span>
                       )}
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {lead.email && (
                           <a href={gmailLink(lead.email)} target="_blank" rel="noreferrer" title="Compose in Gmail">
-                            <Mail size={13} style={{ color: '#ff9b26' }} />
+                            <Mail size={13} style={{ color: '#4a6cf7' }} />
                           </a>
                         )}
                         <InlineEdit value={lead.email} type="email" onSave={val => handleFieldSave(lead.id, 'email', val)} placeholder="Add email" />
@@ -655,7 +655,7 @@ export default function Leads() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {lead.phone && (
                           <a href={`tel:${lead.phone}`} title="Call" style={{ display: 'flex' }}>
-                            <Phone size={13} style={{ color: '#ff9b26' }} />
+                            <Phone size={13} style={{ color: '#4a6cf7' }} />
                           </a>
                         )}
                         <InlineEdit value={lead.phone} onSave={val => handleFieldSave(lead.id, 'phone', val)} placeholder="Add phone" />
@@ -663,7 +663,7 @@ export default function Leads() {
                     </td>
                     <td><Trunc value={lead.company} max={20} /></td>
                     <td>
-                      <span style={{ fontSize: 12, color: lead.budget ? '#ff9b26' : '#252523', fontWeight: lead.budget ? 600 : 400 }}>
+                      <span style={{ fontSize: 12, color: lead.budget ? '#4a6cf7' : '#e5e7ef', fontWeight: lead.budget ? 600 : 400 }}>
                         {lead.budget || '—'}
                       </span>
                     </td>
@@ -672,9 +672,9 @@ export default function Leads() {
                         <button
                           title="Edit lead"
                           onClick={() => setDetailLead(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#ff9b26'}
-                          onMouseLeave={e => e.currentTarget.style.color = '#4a4845'}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
+                          onMouseEnter={e => e.currentTarget.style.color = '#4a6cf7'}
+                          onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
                         >
                           <Eye size={14} />
                         </button>
@@ -773,12 +773,12 @@ export default function Leads() {
       )}
       {modal === 'delete' && (
         <Modal title="Delete Lead" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#7a7870' }}>Delete <strong style={{ color: '#e8e6df' }}>{selected?.name}</strong>? This cannot be undone.</p>
+          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong>? This cannot be undone.</p>
         </Modal>
       )}
       {modal === 'convert' && (
         <Modal title="Move to Contacts" onClose={() => setModal(null)} onSubmit={handleConvert} submitLabel="Convert to Contact">
-          <p style={{ color: '#7a7870' }}>Move <strong style={{ color: '#e8e6df' }}>{selected?.name}</strong> to Contacts?</p>
+          <p style={{ color: '#8e8ea0' }}>Move <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong> to Contacts?</p>
         </Modal>
       )}
     </div>

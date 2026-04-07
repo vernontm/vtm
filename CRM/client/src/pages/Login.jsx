@@ -23,22 +23,22 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: 360, padding: 40 }}>
+    <div style={{ minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 380, padding: 40, background: '#ffffff', borderRadius: 16, border: '1px solid #e5e7ef', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #ff9b26, #ee4c27)', borderRadius: 10 }} className="flex items-center justify-center">
-            <BarChart3 size={22} color="#0a0a08" />
+          <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', borderRadius: 10 }} className="flex items-center justify-center">
+            <BarChart3 size={22} color="#ffffff" />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#e8e6df', fontFamily: 'Poppins, sans-serif' }}>Vernon Tech</div>
-            <div style={{ fontSize: 11, color: '#4a4845', fontFamily: 'DM Mono, monospace' }}>&amp; Media CRM</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', fontFamily: 'Inter, sans-serif' }}>Vernon Tech</div>
+            <div style={{ fontSize: 11, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>&amp; Media CRM</div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#4a4845', marginBottom: 6, fontFamily: 'DM Mono, monospace' }}>Email</label>
+            <label style={{ display: 'block', fontSize: 13, color: '#8e8ea0', marginBottom: 6, fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>Email</label>
             <input
               type="email"
               value={email}
@@ -46,16 +46,16 @@ export default function Login() {
               required
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 8,
-                background: '#111110', border: '1px solid #252523', color: '#e8e6df',
-                fontSize: 14, outline: 'none', fontFamily: 'DM Mono, monospace',
+                background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e',
+                fontSize: 14, outline: 'none', fontFamily: 'Inter, sans-serif',
               }}
-              onFocus={e => e.target.style.borderColor = 'rgba(255,155,38,0.5)'}
-              onBlur={e => e.target.style.borderColor = '#252523'}
+              onFocus={e => { e.target.style.borderColor = '#4a6cf7'; e.target.style.boxShadow = '0 0 0 3px rgba(74,108,247,0.1)'; }}
+              onBlur={e => { e.target.style.borderColor = '#e5e7ef'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#4a4845', marginBottom: 6, fontFamily: 'DM Mono, monospace' }}>Password</label>
+            <label style={{ display: 'block', fontSize: 13, color: '#8e8ea0', marginBottom: 6, fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>Password</label>
             <input
               type="password"
               value={password}
@@ -63,16 +63,16 @@ export default function Login() {
               required
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 8,
-                background: '#111110', border: '1px solid #252523', color: '#e8e6df',
-                fontSize: 14, outline: 'none', fontFamily: 'DM Mono, monospace',
+                background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e',
+                fontSize: 14, outline: 'none', fontFamily: 'Inter, sans-serif',
               }}
-              onFocus={e => e.target.style.borderColor = 'rgba(255,155,38,0.5)'}
-              onBlur={e => e.target.style.borderColor = '#252523'}
+              onFocus={e => { e.target.style.borderColor = '#4a6cf7'; e.target.style.boxShadow = '0 0 0 3px rgba(74,108,247,0.1)'; }}
+              onBlur={e => { e.target.style.borderColor = '#e5e7ef'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
 
           {error && (
-            <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,92,92,0.1)', border: '1px solid rgba(255,92,92,0.3)', color: '#ff5c5c', fontSize: 13 }}>
+            <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,92,92,0.06)', border: '1px solid rgba(255,92,92,0.2)', color: '#ff5c5c', fontSize: 13 }}>
               {error}
             </div>
           )}
@@ -82,8 +82,8 @@ export default function Login() {
             disabled={loading}
             style={{
               width: '100%', padding: '10px 0', borderRadius: 8, cursor: loading ? 'wait' : 'pointer',
-              background: 'linear-gradient(135deg, #ff9b26, #ee4c27)', border: 'none',
-              color: '#0a0a08', fontSize: 14, fontWeight: 700, fontFamily: 'Poppins, sans-serif',
+              background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
+              color: '#ffffff', fontSize: 14, fontWeight: 600, fontFamily: 'Inter, sans-serif',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               opacity: loading ? 0.7 : 1,
             }}
