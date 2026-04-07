@@ -177,7 +177,7 @@ export default async function handler(req, res) {
           await supaFetch('crm_gmail_cache?on_conflict=gmail_id', {
             method: 'POST',
             body: JSON.stringify(chunk),
-            headers: { 'Prefer': 'resolution=merge-duplicates' },
+            headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
           });
         } catch (e) {
           console.error('Cache upsert error:', e.message);
@@ -194,7 +194,7 @@ export default async function handler(req, res) {
       );
     } catch {}
 
-    // ── Return full cached data after sync ────────────────────────────────
+    // ── Return full cached data after sync (fallback to parsed if cache empty) ─
     let allCached = [];
     try {
       allCached = await supaFetch(
@@ -202,20 +202,39 @@ export default async function handler(req, res) {
       );
     } catch {}
 
-    const messages = allCached
-      .filter(c => labelId !== 'INBOX' || !spamIds.has(c.gmail_id))
-      .map(c => ({
-        id: c.gmail_id,
-        threadId: c.thread_id,
-        from: { name: c.from_name || '', email: c.from_email || '' },
-        to: c.to_email || '',
-        subject: c.subject || '(no subject)',
-        snippet: c.snippet || '',
-        date: c.raw_date || (c.date ? new Date(c.date).toISOString() : ''),
-        labelIds: c.label_ids || [],
-        isReply: c.is_reply || false,
-        crmLabels: labelMap[c.gmail_id] || [],
-      }));
+    let messages;
+    if (allCached && allCached.length > 0) {
+      messages = allCached
+        .filter(c => labelId !== 'INBOX' || !spamIds.has(c.gmail_id))
+        .map(c => ({
+          id: c.gmail_id,
+          threadId: c.thread_id,
+          from: { name: c.from_name || '', email: c.from_email || '' },
+          to: c.to_email || '',
+          subject: c.subject || '(no subject)',
+          snippet: c.snippet || '',
+          date: c.raw_date || (c.date ? new Date(c.date).toISOString() : ''),
+          labelIds: c.label_ids || [],
+          isReply: c.is_reply || false,
+          crmLabels: labelMap[c.gmail_id] || [],
+        }));
+    } else {
+      // Cache upsert may have failed — return parsed Gmail results directly
+      messages = parsed
+        .filter(m => labelId !== 'INBOX' || !spamIds.has(m.id))
+        .map(m => ({
+          id: m.id,
+          threadId: m.threadId,
+          from: m.from,
+          to: m.to,
+          subject: m.subject,
+          snippet: m.snippet,
+          date: m.date,
+          labelIds: m.labelIds,
+          isReply: m.isReply,
+          crmLabels: m.crmLabels,
+        }));
+    }
 
     return res.json({
       messages,

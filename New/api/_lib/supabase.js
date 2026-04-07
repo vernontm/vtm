@@ -32,7 +32,8 @@ async function requireAuth(req) {
 
 async function supaFetch(path, options = {}) {
   const url = `${SUPABASE_URL}/rest/v1/${path}`;
-  const res = await fetch(url, { headers, ...options });
+  const mergedHeaders = { ...headers, ...(options.headers || {}) };
+  const res = await fetch(url, { ...options, headers: mergedHeaders });
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`Supabase error ${res.status}: ${err}`);
