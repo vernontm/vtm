@@ -1,5 +1,10 @@
 import crypto from 'crypto';
 
+function generateSlug(title) {
+  if (!title) return null;
+  return title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+
 function verifyToken(req) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) return false;
@@ -38,10 +43,12 @@ export default async function handler(req, res) {
 
     // POST create new post
     if (req.method === 'POST') {
+      const body = { ...req.body };
+      if (body.title && !body.slug) body.slug = generateSlug(body.title);
       const response = await fetch(base, {
         method: 'POST',
         headers,
-        body: JSON.stringify(req.body),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         const err = await response.text();
@@ -57,6 +64,7 @@ export default async function handler(req, res) {
       const { id, ...data } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
       data.updated_at = new Date().toISOString();
+      if (data.title && !data.slug) data.slug = generateSlug(data.title);
       const response = await fetch(`${base}?id=eq.${id}`, {
         method: 'PATCH',
         headers,

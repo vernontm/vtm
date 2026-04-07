@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { id } = req.query;
+    const { id, slug } = req.query;
     const SUPA_URL = process.env.CRM_SUPABASE_URL || process.env.SUPABASE_URL;
     const SUPA_KEY = process.env.CRM_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
@@ -11,6 +11,8 @@ export default async function handler(req, res) {
 
     if (id) {
       url = `${SUPA_URL}/rest/v1/blog_posts?id=eq.${id}&published=eq.true`;
+    } else if (slug) {
+      url = `${SUPA_URL}/rest/v1/blog_posts?slug=eq.${encodeURIComponent(slug)}&published=eq.true`;
     }
 
     const response = await fetch(url, {
@@ -24,7 +26,7 @@ export default async function handler(req, res) {
 
     const posts = await response.json();
 
-    if (id) {
+    if (id || slug) {
       return res.status(200).json(posts[0] || null);
     }
 

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <title>vernontm. - Post</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -400,7 +401,11 @@
         const params = new URLSearchParams(window.location.search);
         const postId = params.get('id');
 
-        if (!postId) {
+        // Extract slug from /tutorials/:slug path
+        const pathMatch = window.location.pathname.match(/^\/tutorials\/(.+)$/);
+        const postSlug = pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+
+        if (!postId && !postSlug) {
             container.innerHTML = '<div class="loading">Post not found. <a href="/creators" style="color:var(--orange)">Back to tutorials</a></div>';
         } else {
             loadPost();
@@ -408,7 +413,8 @@
 
         async function loadPost() {
             try {
-                const res = await fetch(`/api/posts?id=${postId}`);
+                const query = postSlug ? `slug=${encodeURIComponent(postSlug)}` : `id=${postId}`;
+                const res = await fetch(`/api/posts?${query}`);
                 const post = await res.json();
 
                 if (!post || !post.title) {
@@ -418,8 +424,15 @@
 
                 document.title = `vernontm. - ${post.title}`;
 
+                // If accessed via old ?id= URL, redirect to clean slug URL
+                if (postId && !postSlug && post.slug) {
+                    window.history.replaceState(null, '', `/tutorials/${post.slug}`);
+                }
+
+                const postKey = post.id || postSlug;
+
                 // Check if gated and user hasn't unlocked
-                if (post.gated && !sessionStorage.getItem(`post_unlocked_${postId}`)) {
+                if (post.gated && !sessionStorage.getItem(`post_unlocked_${postKey}`)) {
                     showGate(post);
                     return;
                 }
@@ -535,7 +548,7 @@
                     });
                 } catch (e) { console.error(e); }
 
-                sessionStorage.setItem(`post_unlocked_${postId}`, 'true');
+                sessionStorage.setItem(`post_unlocked_${post.id || postSlug}`, 'true');
                 overlay.remove();
                 renderPost(post);
             });

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <title>vernontm. - Creators Hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -357,7 +358,7 @@
                 const thumb = p.media_url && p.media_type === 'image'
                     ? `<img src="${p.media_url}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover" />`
                     : (p.thumbnail_emoji || '📝');
-                const href = p.id ? `/post?id=${p.id}` : '#';
+                const href = p.slug ? `/tutorials/${p.slug}` : (p.id ? `/post?id=${p.id}` : '#');
                 return `
                     <a href="${href}" class="tutorial-card" style="text-decoration:none;color:inherit">
                         <div class="card-thumb">${thumb}</div>
