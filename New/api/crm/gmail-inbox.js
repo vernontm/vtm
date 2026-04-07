@@ -32,32 +32,94 @@ export default async function handler(req, res) {
   if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { maxResults = '200', label = 'INBOX' } = req.query;
+  const { label = 'INBOX', sync } = req.query;
+  const validLabels = ['INBOX', 'SENT', 'DRAFT'];
+  const labelId = validLabels.includes(label.toUpperCase()) ? label.toUpperCase() : 'INBOX';
 
   try {
+    // Load CRM labels (spam, favorite, follow-up, etc.)
+    let crmLabels = [];
+    try {
+      crmLabels = await supaFetch('crm_email_labels?select=gmail_message_id,label');
+    } catch {}
+    const labelMap = {};
+    crmLabels.forEach(l => {
+      if (!labelMap[l.gmail_message_id]) labelMap[l.gmail_message_id] = [];
+      labelMap[l.gmail_message_id].push(l.label);
+    });
+    const spamIds = new Set(crmLabels.filter(l => l.label === 'spam').map(l => l.gmail_message_id));
+
+    // ── Return cached data if not syncing ─────────────────────────────────
+    if (sync !== 'true') {
+      let cached = [];
+      try {
+        cached = await supaFetch(
+          `crm_gmail_cache?label=eq.${labelId}&order=date.desc.nullslast&limit=200`
+        );
+      } catch {}
+
+      if (cached.length > 0) {
+        const messages = cached
+          .filter(c => labelId !== 'INBOX' || !spamIds.has(c.gmail_id))
+          .map(c => ({
+            id: c.gmail_id,
+            threadId: c.thread_id,
+            from: { name: c.from_name || '', email: c.from_email || '' },
+            to: c.to_email || '',
+            subject: c.subject || '(no subject)',
+            snippet: c.snippet || '',
+            date: c.raw_date || (c.date ? new Date(c.date).toISOString() : ''),
+            labelIds: c.label_ids || [],
+            isReply: c.is_reply || false,
+            crmLabels: labelMap[c.gmail_id] || [],
+            _cached: true,
+          }));
+
+        return res.json({
+          messages,
+          resultCount: messages.length,
+          cached: true,
+        });
+      }
+      // No cache yet — fall through to full sync
+    }
+
+    // ── Sync: fetch from Gmail ────────────────────────────────────────────
     const { accessToken } = await getGmailAuth();
 
-    // Determine label filter
-    const validLabels = ['INBOX', 'SENT', 'DRAFT'];
-    const labelId = validLabels.includes(label.toUpperCase()) ? label.toUpperCase() : 'INBOX';
+    // Find most recent cached date to only fetch newer emails
+    let newestCached = null;
+    try {
+      const [newest] = await supaFetch(
+        `crm_gmail_cache?label=eq.${labelId}&order=date.desc.nullslast&limit=1`
+      );
+      if (newest?.date) newestCached = newest.date;
+    } catch {}
 
     const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
-    const maxTotal = Math.min(parseInt(maxResults), 200);
+    let afterTs = thirtyDaysAgo;
+
+    // If we have cache, only fetch emails newer than the most recent cached one
+    // Subtract 1 hour buffer to catch any overlap
+    if (newestCached) {
+      const cachedTs = Math.floor(new Date(newestCached).getTime() / 1000) - 3600;
+      afterTs = Math.max(cachedTs, thirtyDaysAgo);
+    }
+
+    const maxTotal = newestCached ? 50 : 200; // Fewer if just catching up
     let fetchedMessages = [];
     let allMessageIds = [];
     let nextPage = null;
 
-    // Paginate through Gmail API (up to 200 messages, 50 per page)
     while (fetchedMessages.length < maxTotal) {
       const perPage = Math.min(50, maxTotal - fetchedMessages.length);
-      let query = `/messages?labelIds=${labelId}&maxResults=${perPage}&q=after:${thirtyDaysAgo}`;
+      let query = `/messages?labelIds=${labelId}&maxResults=${perPage}&q=after:${afterTs}`;
       if (nextPage) query += `&pageToken=${nextPage}`;
 
       const listRes = await gmailFetch(query, accessToken);
       const messages = listRes.messages || [];
       if (messages.length === 0) break;
 
-      // Fetch metadata for each message in parallel
       const pageMeta = await Promise.all(
         messages.map(m =>
           gmailFetch(`/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date&metadataHeaders=In-Reply-To`, accessToken)
@@ -71,81 +133,95 @@ export default async function handler(req, res) {
       if (!nextPage) break;
     }
 
-    const detailed = fetchedMessages;
-
-    // Load CRM labels (spam, favorite, follow-up, etc.)
-    let crmLabels = [];
-    try {
-      crmLabels = await supaFetch('crm_email_labels?select=gmail_message_id,label');
-    } catch {}
-    const labelMap = {};
-    crmLabels.forEach(l => {
-      if (!labelMap[l.gmail_message_id]) labelMap[l.gmail_message_id] = [];
-      labelMap[l.gmail_message_id].push(l.label);
+    // Parse fetched messages
+    const parsed = fetchedMessages.filter(Boolean).map(d => {
+      const from = parseFrom(getHeader(d, 'From'));
+      const rawDate = getHeader(d, 'Date');
+      let parsedDate = null;
+      try { parsedDate = new Date(rawDate).toISOString(); } catch {}
+      return {
+        id: d.id,
+        threadId: d.threadId,
+        from,
+        to: getHeader(d, 'To'),
+        subject: getHeader(d, 'Subject') || '(no subject)',
+        snippet: d.snippet || '',
+        date: rawDate,
+        parsedDate,
+        labelIds: d.labelIds || [],
+        isReply: !!getHeader(d, 'In-Reply-To'),
+        crmLabels: labelMap[d.id] || [],
+      };
     });
 
-    // For INBOX: load persisted labeled messages older than 30 days
-    let persistedMessages = [];
-    if (labelId === 'INBOX') {
-      try {
-        const labeled = await supaFetch('crm_email_labels?label=neq.spam&select=gmail_message_id,gmail_thread_id,label,from_email,to_email,subject,snippet,date&order=date.desc');
-        const inboxIds = new Set(allMessageIds.map(m => m.id));
-        const unseenLabeled = labeled.filter(l => !inboxIds.has(l.gmail_message_id));
-        const seen = new Set();
-        unseenLabeled.forEach(l => {
-          if (!seen.has(l.gmail_message_id)) {
-            seen.add(l.gmail_message_id);
-            persistedMessages.push({
-              id: l.gmail_message_id,
-              threadId: l.gmail_thread_id || '',
-              from: { name: l.from_email || '', email: l.from_email || '' },
-              to: l.to_email || '',
-              subject: l.subject || '(no subject)',
-              snippet: l.snippet || '',
-              date: l.date || '',
-              labelIds: [],
-              isReply: false,
-              crmLabels: labelMap[l.gmail_message_id] || [],
-              _persisted: true,
-            });
-          }
-        });
-      } catch {}
+    // ── Upsert into cache ─────────────────────────────────────────────────
+    if (parsed.length > 0) {
+      // Batch upsert in chunks of 50
+      for (let i = 0; i < parsed.length; i += 50) {
+        const chunk = parsed.slice(i, i + 50).map(m => ({
+          gmail_id: m.id,
+          thread_id: m.threadId,
+          label: labelId,
+          from_name: m.from.name || '',
+          from_email: m.from.email || '',
+          to_email: m.to || '',
+          subject: m.subject,
+          snippet: m.snippet,
+          date: m.parsedDate,
+          label_ids: JSON.stringify(m.labelIds),
+          is_reply: m.isReply,
+          raw_date: m.date,
+          cached_at: new Date().toISOString(),
+        }));
+        try {
+          await supaFetch('crm_gmail_cache?on_conflict=gmail_id', {
+            method: 'POST',
+            body: JSON.stringify(chunk),
+            headers: { 'Prefer': 'resolution=merge-duplicates' },
+          });
+        } catch (e) {
+          console.error('Cache upsert error:', e.message);
+        }
+      }
     }
 
-    // Filter out spam-labeled messages (inbox only)
-    const spamIds = new Set(
-      crmLabels.filter(l => l.label === 'spam').map(l => l.gmail_message_id)
-    );
+    // ── Clean up old cache (older than 30 days) ───────────────────────────
+    const thirtyDaysAgoISO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    try {
+      await supaFetch(
+        `crm_gmail_cache?label=eq.${labelId}&date=lt.${thirtyDaysAgoISO}`,
+        { method: 'DELETE' }
+      );
+    } catch {}
 
-    const result = detailed
-      .filter(Boolean)
-      .filter(d => labelId !== 'INBOX' || !spamIds.has(d.id))
-      .map(d => {
-        const from = parseFrom(getHeader(d, 'From'));
-        return {
-          id: d.id,
-          threadId: d.threadId,
-          from,
-          to: getHeader(d, 'To'),
-          subject: getHeader(d, 'Subject') || '(no subject)',
-          snippet: d.snippet || '',
-          date: getHeader(d, 'Date'),
-          labelIds: d.labelIds || [],
-          isReply: !!getHeader(d, 'In-Reply-To'),
-          crmLabels: labelMap[d.id] || [],
-        };
-      });
+    // ── Return full cached data after sync ────────────────────────────────
+    let allCached = [];
+    try {
+      allCached = await supaFetch(
+        `crm_gmail_cache?label=eq.${labelId}&order=date.desc.nullslast&limit=200`
+      );
+    } catch {}
 
-    // Append persisted labeled messages (inbox only, also filter spam)
-    const combinedMessages = labelId === 'INBOX'
-      ? [...result, ...persistedMessages.filter(m => !spamIds.has(m.id))]
-      : result;
+    const messages = allCached
+      .filter(c => labelId !== 'INBOX' || !spamIds.has(c.gmail_id))
+      .map(c => ({
+        id: c.gmail_id,
+        threadId: c.thread_id,
+        from: { name: c.from_name || '', email: c.from_email || '' },
+        to: c.to_email || '',
+        subject: c.subject || '(no subject)',
+        snippet: c.snippet || '',
+        date: c.raw_date || (c.date ? new Date(c.date).toISOString() : ''),
+        labelIds: c.label_ids || [],
+        isReply: c.is_reply || false,
+        crmLabels: labelMap[c.gmail_id] || [],
+      }));
 
     return res.json({
-      messages: combinedMessages,
-      nextPageToken: null,
-      resultCount: combinedMessages.length,
+      messages,
+      resultCount: messages.length,
+      newMessages: parsed.length,
+      cached: false,
     });
   } catch (err) {
     console.error('Gmail inbox error:', err.message);

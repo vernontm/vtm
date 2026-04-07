@@ -293,24 +293,37 @@ export default function EmailPage() {
   const [composeOpen, setComposeOpen]       = useState(false); // true = new, or an email obj for reply
   const [sending, setSending]               = useState(false);
 
-  /* ── data loading ────────────────────────────────────────────────────── */
+  /* ── data loading (cache-first, then background sync) ─────────────── */
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceSync = false) => {
     setLoading(true);
 
+    // Step 1: Load from cache (instant)
     const [queueRes, inboxRes, sentRes, draftRes] = await Promise.allSettled([
       getEmailQueue(),
-      getGmailInbox({ maxResults:'200' }),
-      getGmailInbox({ maxResults:'100', label:'SENT' }),
-      getGmailInbox({ maxResults:'50', label:'DRAFT' }),
+      getGmailInbox({ label:'INBOX' }),
+      getGmailInbox({ label:'SENT' }),
+      getGmailInbox({ label:'DRAFT' }),
     ]);
 
     setQueueEmails(queueRes.status==='fulfilled' && Array.isArray(queueRes.value) ? queueRes.value : []);
     setInboxMessages(inboxRes.status==='fulfilled' && inboxRes.value?.messages ? inboxRes.value.messages : []);
     setSentMessages(sentRes.status==='fulfilled' && sentRes.value?.messages ? sentRes.value.messages : []);
     setDraftMessages(draftRes.status==='fulfilled' && draftRes.value?.messages ? draftRes.value.messages : []);
-
     setLoading(false);
+
+    // Step 2: Background sync for new emails (don't block UI)
+    if (forceSync || inboxRes.value?.cached) {
+      Promise.allSettled([
+        getGmailInbox({ label:'INBOX', sync:'true' }),
+        getGmailInbox({ label:'SENT', sync:'true' }),
+        getGmailInbox({ label:'DRAFT', sync:'true' }),
+      ]).then(([inboxSync, sentSync, draftSync]) => {
+        if (inboxSync.status==='fulfilled' && inboxSync.value?.messages) setInboxMessages(inboxSync.value.messages);
+        if (sentSync.status==='fulfilled' && sentSync.value?.messages) setSentMessages(sentSync.value.messages);
+        if (draftSync.status==='fulfilled' && draftSync.value?.messages) setDraftMessages(draftSync.value.messages);
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -328,7 +341,7 @@ export default function EmailPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  const handleRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+  const handleRefresh = async () => { setRefreshing(true); await load(true); setRefreshing(false); };
 
   // Label management
   const handleCreateLabel = async () => {
