@@ -84,10 +84,14 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
   const handleDealSelect = (dealId) => {
     const deal = deals.find(d => d.id === dealId);
     if (deal) {
+      // Look up the contact by the deal's contact_id to get name/email
+      const linkedContact = deal.contact_id
+        ? (contacts||[]).find(c => c.id === deal.contact_id || c.email === deal.contact_id)
+        : null;
       setForm(f => ({
         ...f, deal_id: dealId,
-        bill_to_name: deal.contact_name || deal.account_name || f.bill_to_name,
-        bill_to_email: deal.contact_email || f.bill_to_email,
+        bill_to_name: linkedContact?.name || deal.company || f.bill_to_name,
+        bill_to_email: linkedContact?.email || f.bill_to_email,
         description: deal.name || f.description,
       }));
     } else {
@@ -278,8 +282,8 @@ export default function Invoices() {
     // Load all contacts for bill-to search
     async function loadContacts() {
       const results = [];
-      try { const c = await getContacts(); (c||[]).forEach(x => { if(x.email) results.push({name:x.name||'',email:x.email,_source:'contact'}); }); } catch{}
-      try { const l = await getLeads(); (l||[]).forEach(x => { if(x.email) results.push({name:x.name||'',email:x.email,_source:'lead'}); }); } catch{}
+      try { const c = await getContacts(); (c||[]).forEach(x => { if(x.email) results.push({id:x.id,name:x.name||'',email:x.email,_source:'contact'}); }); } catch{}
+      try { const l = await getLeads(); (l||[]).forEach(x => { if(x.email) results.push({id:x.id,name:x.name||'',email:x.email,_source:'lead'}); }); } catch{}
       try { const gc = await getGmailContacts({pageSize:'100'}); (gc?.contacts||[]).forEach(x => { if(x.email) results.push({name:x.name||'',email:x.email,_source:'gmail'}); }); } catch{}
       const seen = new Set();
       setAllContacts(results.filter(c => { const k=c.email.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; }));

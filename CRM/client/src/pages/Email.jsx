@@ -28,6 +28,19 @@ const LABEL_CONFIG = {
   spam:        { icon: Ban,           color: '#8e8ea0', label: 'Spam' },
 };
 
+/* ── linkify + wrap helper ────────────────────────────────────────────────── */
+
+function Linkify({ text }) {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s<>"')\]]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    urlRegex.test(part)
+      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color:'#4a6cf7', wordBreak:'break-all' }}>{part}</a>
+      : part
+  );
+}
+
 /* ── tiny helpers ─────────────────────────────────────────────────────────── */
 
 function timeAgo(iso) {
@@ -595,8 +608,8 @@ export default function EmailPage() {
                           <span style={{ fontSize:11, color:'#8e8ea0' }}>{fmtFullDate(msg.date)}</span>
                         </div>
                         {/* Message body */}
-                        <div style={{ padding:'16px 20px', fontSize:13, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap' }}>
-                          {msg.body || msg.snippet || '(empty)'}
+                        <div style={{ padding:'16px 20px', fontSize:13, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                          <Linkify text={msg.body || msg.snippet || '(empty)'} />
                         </div>
                       </div>
                     ))}
@@ -616,8 +629,8 @@ export default function EmailPage() {
                         <button onClick={() => handleDelete(selected.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ff5c5c', display:'flex', padding:6 }}><Trash2 size={15} /></button>
                       )}
                     </div>
-                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding:28, fontSize:14, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap' }}>
-                      {threadMessages.length === 1 ? (threadMessages[0].body || selected.snippet || '(empty)') : (selected.body||selected.generated_body||selected.snippet||'(empty)')}
+                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding:28, fontSize:14, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                      <Linkify text={threadMessages.length === 1 ? (threadMessages[0].body || selected.snippet || '(empty)') : (selected.body||selected.generated_body||selected.snippet||'(empty)')} />
                     </div>
                   </>
                 )}
