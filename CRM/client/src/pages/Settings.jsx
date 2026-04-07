@@ -55,7 +55,7 @@ function FormRow({ label, hint, children }) {
 
 const INPUT_STYLE = {
   width: '100%', padding: '7px 10px', borderRadius: 6, fontSize: 13, color: '#1a1a2e',
-  background: '#111328', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box',
+  background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box',
 };
 const TEXTAREA_STYLE = {
   ...INPUT_STYLE, resize: 'vertical', minHeight: 80, lineHeight: 1.5, fontFamily: 'inherit',
@@ -215,7 +215,7 @@ export default function Settings() {
             <div style={{ marginTop: 8 }}>
               <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Preview</div>
               <div style={{
-                background: '#111328', border: '1px solid #e5e7ef', borderRadius: 6,
+                background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 6,
                 padding: '10px 14px', fontSize: 13, color: '#8e8ea0',
                 whiteSpace: 'pre-wrap', fontFamily: 'inherit',
               }}>
@@ -260,7 +260,7 @@ export default function Settings() {
                 Connecting Gmail lets you send emails and save drafts directly from the Email Campaign page.
                 You'll be redirected to Google to authorise access.
               </p>
-              <div style={{ background: '#111328', border: '1px solid #e5e7ef', borderRadius: 8, padding: '14px 16px', marginBottom: 14, fontSize: 12, color: '#8e8ea0' }}>
+              <div style={{ background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 8, padding: '14px 16px', marginBottom: 14, fontSize: 12, color: '#8e8ea0' }}>
                 <div style={{ fontWeight: 600, color: '#8e8ea0', marginBottom: 8 }}>Before connecting, make sure you have:</div>
                 <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.9 }}>
                   <li>Created a Google Cloud project and enabled the Gmail API</li>
