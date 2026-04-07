@@ -9,6 +9,7 @@ import React, { useState, useRef, useEffect } from 'react';
  *   options    — array of strings → renders a <select> instead
  *   placeholder — shown when value is empty
  *   moneyFormat — if true, formats as $X,XXX on display
+ *   privacy    — 'name' | 'email' | 'money' | 'phone' | true → blurs in privacy mode
  */
 export default function InlineEdit({
   value,
@@ -17,6 +18,7 @@ export default function InlineEdit({
   options = null,
   placeholder = '—',
   moneyFormat = false,
+  privacy = false,
 }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value ?? '');
@@ -99,6 +101,7 @@ export default function InlineEdit({
     <span
       onClick={() => setEditing(true)}
       title="Click to edit"
+      className={privacy ? 'private-value' : ''}
       style={{
         cursor: 'text',
         display: 'block',
@@ -107,7 +110,7 @@ export default function InlineEdit({
         minWidth: 32,
         minHeight: 22,
         color: value ? '#1a1a2e' : '#b0b0c0',
-        transition: 'background 0.1s',
+        transition: 'background 0.1s, filter 0.25s ease',
         userSelect: 'none',
         lineHeight: '18px',
       }}

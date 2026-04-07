@@ -151,11 +151,11 @@ export default function SubscriptionsPage() {
           </div>
           <div style={{ flex:1, padding:'14px 18px', background:'#f8f9fc', borderRadius:10, border:'1px solid #e5e7ef' }}>
             <div style={{ fontSize:10, color:'#8e8ea0', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>Monthly Cost</div>
-            <div style={{ fontSize:22, fontWeight:700, color:'#4a6cf7' }}>${monthlyTotal.toFixed(2)}</div>
+            <div className="private-value" style={{ fontSize:22, fontWeight:700, color:'#4a6cf7' }}>${monthlyTotal.toFixed(2)}</div>
           </div>
           <div style={{ flex:1, padding:'14px 18px', background:'#f8f9fc', borderRadius:10, border:'1px solid #e5e7ef' }}>
             <div style={{ fontSize:10, color:'#8e8ea0', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>Yearly Cost</div>
-            <div style={{ fontSize:22, fontWeight:700, color:'#1a1a2e' }}>${yearlyTotal.toFixed(2)}</div>
+            <div className="private-value" style={{ fontSize:22, fontWeight:700, color:'#1a1a2e' }}>${yearlyTotal.toFixed(2)}</div>
           </div>
           <div style={{ flex:1, padding:'14px 18px', background:'#f8f9fc', borderRadius:10, border:'1px solid #e5e7ef' }}>
             <div style={{ fontSize:10, color:'#8e8ea0', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>Total Subs</div>
@@ -221,7 +221,7 @@ export default function SubscriptionsPage() {
                     {sub.service}
                     {sub.notes && <div style={{ fontSize:11, color:'#8e8ea0', fontWeight:400 }}>{sub.notes}</div>}
                   </td>
-                  <td style={{ padding:'12px', fontSize:13, fontWeight:600, color:'#4a6cf7' }}>{fmtAmount(sub.amount)}</td>
+                  <td className="private-value" style={{ padding:'12px', fontSize:13, fontWeight:600, color:'#4a6cf7' }}>{fmtAmount(sub.amount)}</td>
                   <td style={{ padding:'12px', fontSize:12, color:'#5a5a6e', textTransform:'capitalize' }}>{sub.billing_cycle || '—'}</td>
                   <td style={{ padding:'12px', fontSize:12, color:'#5a5a6e' }}>{fmtDate(sub.next_renewal)}</td>
                   <td style={{ padding:'12px' }}>

@@ -341,6 +341,23 @@ export default function EmailPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-sync every 5 minutes for new emails
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Promise.allSettled([
+        getGmailInbox({ label:'INBOX', sync:'true' }),
+        getGmailInbox({ label:'SENT', sync:'true' }),
+        getGmailInbox({ label:'DRAFT', sync:'true' }),
+      ]).then(([inboxSync, sentSync, draftSync]) => {
+        if (inboxSync.status==='fulfilled' && inboxSync.value?.messages) setInboxMessages(inboxSync.value.messages);
+        if (sentSync.status==='fulfilled' && sentSync.value?.messages) setSentMessages(sentSync.value.messages);
+        if (draftSync.status==='fulfilled' && draftSync.value?.messages) setDraftMessages(draftSync.value.messages);
+      });
+    }, 5 * 60 * 1000); // 5 minutes
+    return () => clearInterval(interval);
+  }, []);
+
   const handleRefresh = async () => { setRefreshing(true); await load(true); setRefreshing(false); };
 
   // Label management
@@ -611,10 +628,10 @@ export default function EmailPage() {
                           <Avatar name={msg.from?.name || msg.from?.email || '?'} size={32} color={msg.isFromMe ? '#4a6cf7' : undefined} />
                           <div style={{ flex:1 }}>
                             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                              <span style={{ fontSize:13, fontWeight:600, color:'#1a1a2e' }}>{msg.from?.name || msg.from?.email}</span>
+                              <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'#1a1a2e' }}>{msg.from?.name || msg.from?.email}</span>
                               {msg.isFromMe && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:4, background:'#4a6cf710', color:'#4a6cf7', fontWeight:700 }}>You</span>}
                             </div>
-                            <div style={{ fontSize:11, color:'#8e8ea0' }}>
+                            <div className="private-value" style={{ fontSize:11, color:'#8e8ea0' }}>
                               to {(msg.to||'').replace(/<.*>/,'').trim().split(',')[0]}
                             </div>
                           </div>
@@ -633,8 +650,8 @@ export default function EmailPage() {
                     <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'14px 18px', background:'#fff', borderRadius:10, border:'1px solid #e5e7ef' }}>
                       <Avatar name={getName(selected)} size={42} />
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:14, fontWeight:600, color:'#1a1a2e' }}>{getName(selected)}</div>
-                        <div style={{ fontSize:12, color:'#8e8ea0' }}>
+                        <div className="private-value" style={{ fontSize:14, fontWeight:600, color:'#1a1a2e' }}>{getName(selected)}</div>
+                        <div className="private-value" style={{ fontSize:12, color:'#8e8ea0' }}>
                           {selected._type==='gmail-sent'||selected._type==='queue' ? `To: ${getRecipient(selected)}` : getRecipient(selected)}
                         </div>
                       </div>
@@ -725,7 +742,7 @@ export default function EmailPage() {
                       <Avatar name={name} size={38} />
                       <div style={{ width:200, flexShrink:0 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                          <span style={{ fontSize:13, fontWeight:600, color:'#1a1a2e', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'#1a1a2e', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                             {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
                           </span>
                           {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'#4a6cf710', color:'#4a6cf7', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}

@@ -146,7 +146,7 @@ export default function Contacts() {
                     }}>
                       {initials(contact.name)}
                     </div>
-                    <InlineEdit value={contact.name} onSave={val => handleFieldSave(contact.id, 'name', val)} placeholder="Name" />
+                    <InlineEdit value={contact.name} onSave={val => handleFieldSave(contact.id, 'name', val)} placeholder="Name" privacy="name" />
                   </div>
                 </td>
                 <td>
@@ -156,13 +156,13 @@ export default function Contacts() {
                         <Mail size={13} style={{ color: '#4a6cf7' }} />
                       </a>
                     )}
-                    <InlineEdit value={contact.email} type="email" onSave={val => handleFieldSave(contact.id, 'email', val)} placeholder="Add email" />
+                    <InlineEdit value={contact.email} type="email" onSave={val => handleFieldSave(contact.id, 'email', val)} placeholder="Add email" privacy="email" />
                   </div>
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {contact.phone && <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />}
-                    <InlineEdit value={contact.phone} type="tel" onSave={val => handleFieldSave(contact.id, 'phone', val)} placeholder="Add phone" />
+                    <InlineEdit value={contact.phone} type="tel" onSave={val => handleFieldSave(contact.id, 'phone', val)} placeholder="Add phone" privacy="phone" />
                   </div>
                 </td>
                 <td><InlineEdit value={contact.company} onSave={val => handleFieldSave(contact.id, 'company', val)} placeholder="Company" /></td>

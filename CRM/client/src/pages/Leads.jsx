@@ -593,7 +593,7 @@ export default function Leads() {
                       <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
                     </td>
                     <td style={{ fontWeight: 500 }}>
-                      <InlineEdit value={lead.name} onSave={val => handleFieldSave(lead.id, 'name', val)} placeholder="Name" />
+                      <InlineEdit value={lead.name} onSave={val => handleFieldSave(lead.id, 'name', val)} placeholder="Name" privacy="name" />
                     </td>
                     <td>
                       <StatusBadge status={lead.status} options={LEAD_STATUSES} onChange={s => handleStatusChange(lead, s)} />
@@ -648,7 +648,7 @@ export default function Leads() {
                             <Mail size={13} style={{ color: '#4a6cf7' }} />
                           </a>
                         )}
-                        <InlineEdit value={lead.email} type="email" onSave={val => handleFieldSave(lead.id, 'email', val)} placeholder="Add email" />
+                        <InlineEdit value={lead.email} type="email" onSave={val => handleFieldSave(lead.id, 'email', val)} placeholder="Add email" privacy="email" />
                       </div>
                     </td>
                     <td>
@@ -658,12 +658,12 @@ export default function Leads() {
                             <Phone size={13} style={{ color: '#4a6cf7' }} />
                           </a>
                         )}
-                        <InlineEdit value={lead.phone} onSave={val => handleFieldSave(lead.id, 'phone', val)} placeholder="Add phone" />
+                        <InlineEdit value={lead.phone} onSave={val => handleFieldSave(lead.id, 'phone', val)} placeholder="Add phone" privacy="phone" />
                       </div>
                     </td>
                     <td><Trunc value={lead.company} max={20} /></td>
                     <td>
-                      <span style={{ fontSize: 12, color: lead.budget ? '#4a6cf7' : '#e5e7ef', fontWeight: lead.budget ? 600 : 400 }}>
+                      <span className="private-value" style={{ fontSize: 12, color: lead.budget ? '#4a6cf7' : '#e5e7ef', fontWeight: lead.budget ? 600 : 400 }}>
                         {lead.budget || '—'}
                       </span>
                     </td>

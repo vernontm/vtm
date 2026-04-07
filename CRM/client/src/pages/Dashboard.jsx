@@ -162,21 +162,21 @@ export default function Dashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
             <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Stripe Balance</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>${stats.stripeRevenue.available?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-              {stats.stripeRevenue.pending > 0 && <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>${stats.stripeRevenue.pending.toFixed(2)} pending</div>}
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>${stats.stripeRevenue.available?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              {stats.stripeRevenue.pending > 0 && <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>${stats.stripeRevenue.pending.toFixed(2)} pending</div>}
             </div>
             <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Last 30 Days</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#4a6cf7' }}>${stats.stripeRevenue.last30Days?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#4a6cf7' }}>${stats.stripeRevenue.last30Days?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
               <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{stats.stripeRevenue.last30Count} payment{stats.stripeRevenue.last30Count !== 1 ? 's' : ''}</div>
             </div>
             <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>12-Month Revenue</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>${stats.stripeRevenue.total?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>${stats.stripeRevenue.total?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
             </div>
             <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
               <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pipeline Value</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#784bd1' }}>${(stats?.pipelineValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#784bd1' }}>${(stats?.pipelineValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
             </div>
           </div>
 
@@ -215,15 +215,15 @@ export default function Dashboard() {
                       <DollarSign size={13} color="#22c55e" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div className="private-value" style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.customer}
                       </div>
-                      <div style={{ fontSize: 10, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div className="private-value" style={{ fontSize: 10, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.description || p.email || ''}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>+${p.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                      <div className="private-value" style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>+${p.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                       <div style={{ fontSize: 10, color: '#8e8ea0' }}>{timeAgo(p.date)}</div>
                     </div>
                   </div>
@@ -273,10 +273,10 @@ export default function Dashboard() {
                   {(lead.name || '?')[0].toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {lead.name || 'Unknown'}
                   </div>
-                  <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {lead.email || lead.company || lead.lead_source || ''}
                   </div>
                 </div>
