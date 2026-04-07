@@ -1,392 +1,350 @@
 import React, { useEffect, useState } from 'react';
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
-} from 'recharts';
-import {
-  DollarSign, TrendingUp, Briefcase, Users, FolderOpen,
-  Star, FileText, RefreshCw, ArrowUpRight, Calendar, Video, Clock,
-  ThumbsUp, ThumbsDown, PhoneCall,
+  RefreshCw, Star, Mail, Sparkles, FolderOpen, CheckSquare,
+  Calendar, Clock, ArrowRight, AlertCircle, Send, Video,
+  TrendingUp, Users, FileText,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getDashboardStats, getUpcomingMeetings } from '../api';
+import {
+  getDashboardStats, getUpcomingMeetings, getEmailQueue,
+  getTodos, getLeads, getProjects,
+} from '../api';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = (n) =>
-  n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Number(n).toFixed(0)}`;
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
 
-const STAGE_COLORS = {
-  Won:      '#22c55e',
-  Lost:     '#ff5c5c',
-  Proposal: '#fdab3d',
-  New:      '#4a6cf7',
-  Qualified:'#784bd1',
-  Negotiation: '#00d1d1',
-};
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso));
+  } catch { return iso; }
+}
 
-const PIE_COLORS = ['#4a6cf7','#784bd1','#22c55e','#fdab3d','#ff5c5c','#00d1d1'];
-
-// ── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, sub, color = '#4a6cf7', trend, private: isPrivate }) {
+function Card({ children, style }) {
   return (
-    <div style={{
-      background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14,
-      padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 6,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10,
-          background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon size={18} style={{ color }} />
+    <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px', ...style }}>
+      {children}
+    </div>
+  );
+}
+
+function CardHeader({ icon: Icon, title, color = '#4a6cf7', linkTo, linkLabel }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 8, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={15} color={color} />
         </div>
-        {trend !== undefined && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 3,
-            fontSize: 12, color: trend >= 0 ? '#4a6cf7' : '#ff5c5c',
-          }}>
-            <ArrowUpRight size={13} />
-            {Math.abs(trend)}%
-          </div>
-        )}
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{title}</span>
       </div>
-      <div className={isPrivate ? 'private-value' : ''} style={{ fontSize: 26, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: '#8e8ea0' }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: '#8e8ea0' }}>{sub}</div>}
+      {linkTo && (
+        <Link to={linkTo} style={{ fontSize: 12, color: '#4a6cf7', textDecoration: 'none', fontWeight: 600 }}>
+          {linkLabel || 'View All'} →
+        </Link>
+      )}
     </div>
   );
 }
 
-// ── Custom Tooltip ────────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
+function StatMini({ icon: Icon, label, value, color = '#4a6cf7' }) {
   return (
     <div style={{
-      background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
-      padding: '8px 14px', fontSize: 13,
+      background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12,
+      padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12,
     }}>
-      <div style={{ color: '#8e8ea0', marginBottom: 4 }}>{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color || '#fff', fontWeight: 600 }}>
-          {p.name}: {p.name === 'revenue' || p.name === 'Revenue' ? fmt(p.value) : p.value}
-        </div>
-      ))}
+      <div style={{
+        width: 38, height: 38, borderRadius: 10,
+        background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={17} color={color} />
+      </div>
+      <div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2 }}>{label}</div>
+      </div>
     </div>
   );
 }
 
-// ── Deal Stage Badge ──────────────────────────────────────────────────────────
-function StageBadge({ stage }) {
-  const color = STAGE_COLORS[stage] || '#8e8ea0';
-  return (
-    <span style={{
-      background: color + '22', color, border: `1px solid ${color}44`,
-      borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600,
-    }}>{stage}</span>
-  );
-}
-
-// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [stats, setStats]         = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState('');
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [meetings, setMeetings]   = useState([]);
+  const [stats, setStats] = useState(null);
+  const [meetings, setMeetings] = useState([]);
+  const [drafts, setDrafts] = useState([]);
+  const [todos, setTodos] = useState([]);
+  const [recentLeads, setRecentLeads] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   async function load() {
-    setLoading(true); setError('');
+    setLoading(true);
     try {
-      const data = await getDashboardStats();
-      setStats(data);
+      const [statsData, meetingsData, emailData, todoData, leadsData, projectsData] = await Promise.allSettled([
+        getDashboardStats(),
+        getUpcomingMeetings(),
+        getEmailQueue(),
+        getTodos(),
+        getLeads(),
+        getProjects(),
+      ]);
+      setStats(statsData.status === 'fulfilled' ? statsData.value : null);
+      setMeetings(meetingsData.status === 'fulfilled' ? (meetingsData.value || []).slice(0, 5) : []);
+      const allEmails = emailData.status === 'fulfilled' ? (emailData.value || []) : [];
+      setDrafts(allEmails.filter(e => (e.status === 'draft' || e.status === 'pending') && e.auto_generated));
+      const allTodos = todoData.status === 'fulfilled' ? (todoData.value || []) : [];
+      setTodos(allTodos.filter(t => !t.done).slice(0, 8));
+      const allLeads = leadsData.status === 'fulfilled' ? (leadsData.value || []) : [];
+      setRecentLeads(allLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6));
+      const allProjects = projectsData.status === 'fulfilled' ? (projectsData.value || []) : [];
+      setProjects(allProjects.filter(p => p.status === 'Active' || p.status === 'In Progress').slice(0, 5));
     } catch (e) {
-      setError(e.message);
+      console.error('Dashboard load error:', e);
     } finally {
       setLoading(false);
     }
-    // Load upcoming meetings silently (don't block dashboard if Calendar not connected)
-    getUpcomingMeetings().then(m => setMeetings(m.slice(0, 3))).catch(() => {});
   }
 
-  function fmtMeetingDate(iso) {
-    if (!iso) return '';
-    try {
-      return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso));
-    } catch { return iso; }
-  }
-
-  async function handleRefresh() {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }
-
+  async function handleRefresh() { setRefreshing(true); await load(); setRefreshing(false); }
   useEffect(() => { load(); }, []);
 
   if (loading) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8ea0', fontSize: 15 }}>
-        Loading dashboard…
+        Loading dashboard...
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#ff5c5c', fontSize: 14 }}>Error: {error}</div>
-      </div>
-    );
-  }
-
-  const {
-    totalRevenue, totalInvoiced, pipelineValue,
-    activeClients, activeProjects, completedProjects,
-    openLeads, activeDeals, last30DaysRevenue,
-    monthlyChart, dealsByStage, recentDeals, invoiceStats,
-    leadsContacted = 0, leadsInterested = 0, leadsUninterested = 0,
-  } = stats;
-
-  // Pie data for deals by stage
-  const pieData = Object.entries(dealsByStage || {}).map(([name, value]) => ({ name, value }));
-
-  // Collect bar data for deal stages
-  const stageBarData = Object.entries(dealsByStage || {}).map(([stage, count]) => ({ stage, count }));
-
-  // Invoice collection rate
-  const collectRate = invoiceStats.totalAmount > 0
-    ? Math.round((invoiceStats.paidAmount / invoiceStats.totalAmount) * 100)
-    : 0;
+  const openLeads = stats?.openLeads || 0;
+  const activeProjects = stats?.activeProjects || 0;
+  const activeDeals = stats?.activeDeals || 0;
+  const pendingDrafts = drafts.length;
 
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: '#f5f7fa' }}>
-
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>Dashboard</div>
-          <div style={{ fontSize: 13, color: '#8e8ea0', marginTop: 2 }}>Vernon Tech &amp; Media — Operations Overview</div>
+          <div style={{ fontSize: 13, color: '#8e8ea0', marginTop: 2 }}>Vernon Tech & Media — What needs your attention</div>
         </div>
-        <button
-          onClick={handleRefresh}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff',
-            border: '1px solid #e5e7ef', borderRadius: 8, color: '#8e8ea0',
-            padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-          }}
-        >
+        <button onClick={handleRefresh} style={{
+          display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff',
+          border: '1px solid #e5e7ef', borderRadius: 8, color: '#8e8ea0',
+          padding: '8px 14px', cursor: 'pointer', fontSize: 13,
+        }}>
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
           Refresh
         </button>
       </div>
 
-      {/* KPI Cards Row 1 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
-        <StatCard icon={DollarSign}   label="Total Revenue (Won Deals)"  value={fmt(totalRevenue)}            color="#4a6cf7" private />
-        <StatCard icon={Clock}        label="Last 30 Days Revenue"        value={fmt(last30DaysRevenue || 0)}  color="#4a6cf7" sub="Paid deals only" private />
-        <StatCard icon={FileText}     label="Total Invoiced (Collected)"  value={fmt(totalInvoiced)}           color="#4a6cf7" private />
-        <StatCard icon={TrendingUp}   label="Pipeline Value"              value={fmt(pipelineValue)}           color="#fdab3d" private />
-        <StatCard icon={Briefcase}    label="Active Deals"                value={activeDeals}                  color="#784bd1" />
+      {/* Quick Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
+        <StatMini icon={Star} label="Open Leads" value={openLeads} color="#f5a623" />
+        <StatMini icon={Mail} label="Drafts to Review" value={pendingDrafts} color={pendingDrafts > 0 ? '#ff5c5c' : '#4a6cf7'} />
+        <StatMini icon={FolderOpen} label="Active Projects" value={activeProjects} color="#00b8d4" />
+        <StatMini icon={TrendingUp} label="Active Deals" value={activeDeals} color="#22c55e" />
       </div>
 
-      {/* KPI Cards Row 2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
-        <StatCard icon={Users}      label="Contacts"            value={activeClients}    color="#4a6cf7" />
-        <StatCard icon={FolderOpen} label="Active Projects"     value={activeProjects}   color="#00d1d1"
-          sub={`${completedProjects} completed`} />
-        <StatCard icon={Star}       label="Open Leads"          value={openLeads}        color="#fdab3d" />
-        <StatCard icon={FileText}   label="Invoice Collection"  value={`${collectRate}%`} color="#4a6cf7"
-          sub={`${invoiceStats.paid} / ${invoiceStats.total} invoices paid`} />
-      </div>
-
-      {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 20 }}>
-
-        {/* Monthly Revenue Area Chart */}
-        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 18 }}>
-            Monthly Revenue (Last 12 Months)
+      {/* Action Items Banner */}
+      {pendingDrafts > 0 && (
+        <Link to="/email" style={{ textDecoration: 'none' }}>
+          <div style={{
+            background: 'rgba(74,108,247,0.06)', border: '1px solid rgba(74,108,247,0.15)',
+            borderRadius: 12, padding: '14px 20px', marginBottom: 20,
+            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+          }}>
+            <Sparkles size={18} color="#4a6cf7" />
+            <span style={{ fontSize: 14, color: '#4a6cf7', fontWeight: 600, flex: 1 }}>
+              {pendingDrafts} auto-drafted email{pendingDrafts > 1 ? 's' : ''} waiting for your review
+            </span>
+            <ArrowRight size={16} color="#4a6cf7" />
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={monthlyChart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#4a6cf7" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#4a6cf7" stopOpacity={0}   />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f8" />
-              <XAxis dataKey="label" tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => v >= 1000 ? `$${v/1000}k` : `$${v}`} tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
-              <Tooltip content={<ChartTooltip />} />
-              <Area
-                type="monotone" dataKey="revenue" name="Revenue"
-                stroke="#4a6cf7" strokeWidth={2}
-                fill="url(#revGrad)"
-                dot={{ r: 3, fill: '#4a6cf7', strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: '#4a6cf7' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Deals by Stage Pie */}
-        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>
-            Deals by Stage
-          </div>
-          {pieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%" cy="45%"
-                  innerRadius={55} outerRadius={85}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={STAGE_COLORS[entry.name] || PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(val, name) => [val, name]} contentStyle={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8, fontSize: 12 }} />
-                <Legend
-                  iconType="circle" iconSize={8}
-                  formatter={v => <span style={{ color: '#8e8ea0', fontSize: 12 }}>{v}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', paddingTop: 60 }}>No deal data yet</div>
-          )}
-        </div>
-      </div>
-
-      {/* Bottom Row: Deal Stage Bar + Recent Deals + Invoice Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1fr', gap: 20 }}>
-
-        {/* Stage Count Bar Chart */}
-        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Deal Counts</div>
-          {stageBarData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={stageBarData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f8" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="stage" tick={{ fill: '#8e8ea0', fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" name="Deals" radius={[0, 4, 4, 0]}>
-                  {stageBarData.map((entry, i) => (
-                    <Cell key={i} fill={STAGE_COLORS[entry.stage] || PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', paddingTop: 40 }}>No deals yet</div>
-          )}
-        </div>
-
-        {/* Recent Deals */}
-        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Recent Deals</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr>
-                {['Deal', 'Stage', 'Value'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '0 8px 10px 0', color: '#8e8ea0', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e5e7ef' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentDeals.length === 0 ? (
-                <tr><td colSpan={3} style={{ color: '#8e8ea0', padding: '20px 0', textAlign: 'center', fontSize: 13 }}>No deals yet</td></tr>
-              ) : recentDeals.map((d, i) => (
-                <tr key={d.id} style={{ borderBottom: i < recentDeals.length - 1 ? '1px solid #ffffff' : 'none' }}>
-                  <td style={{ padding: '9px 8px 9px 0', color: '#1a1a2e', fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</td>
-                  <td style={{ padding: '9px 8px 9px 0' }}><StageBadge stage={d.stage} /></td>
-                  <td style={{ padding: '9px 0', color: '#4a6cf7', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {d.value ? `$${Number(d.value).toLocaleString()}` : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Invoice Summary */}
-        <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Invoice Summary</div>
-
-          {/* Collection progress bar */}
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8e8ea0', marginBottom: 6 }}>
-              <span>Collection Rate</span>
-              <span style={{ color: '#1a1a2e', fontWeight: 600 }}>{collectRate}%</span>
-            </div>
-            <div style={{ height: 8, background: '#f0f2f8', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${collectRate}%`, background: collectRate === 100 ? '#4a6cf7' : '#4a6cf7', borderRadius: 4, transition: 'width 0.5s ease' }} />
-            </div>
-          </div>
-
-          {/* Stats list */}
-          {[
-            { label: 'Total Invoices',    value: invoiceStats.total,                         color: '#8e8ea0' },
-            { label: 'Sent / Open',       value: invoiceStats.sent,                          color: '#4a6cf7' },
-            { label: 'Paid',              value: invoiceStats.paid,                          color: '#4a6cf7' },
-            { label: 'Total Billed',      value: `$${Number(invoiceStats.totalAmount).toLocaleString()}`, color: '#fdab3d' },
-            { label: 'Total Collected',   value: `$${Number(invoiceStats.paidAmount).toLocaleString()}`,  color: '#4a6cf7' },
-            { label: 'Outstanding',
-              value: `$${Number(invoiceStats.totalAmount - invoiceStats.paidAmount).toLocaleString()}`,
-              color: invoiceStats.totalAmount - invoiceStats.paidAmount > 0 ? '#ff5c5c' : '#8e8ea0',
-            },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #f0f2f8' }}>
-              <span style={{ fontSize: 13, color: '#8e8ea0' }}>{label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color }}>{value}</span>
-            </div>
-          ))}
-        </div>
-
-      </div>
-
-
-      {/* Upcoming Meetings Widget */}
-      {meetings.length > 0 && (
-        <div style={{ marginTop: 20, background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '18px 22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Calendar size={16} color="#4a6cf7" />
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Upcoming Meetings</span>
-            </div>
-            <Link to="/meetings" style={{ fontSize: 12, color: '#4a6cf7', textDecoration: 'none', fontWeight: 600 }}>
-              View All →
-            </Link>
-          </div>
-          {meetings.map(m => (
-            <div key={m.google_event_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f0f2f8' }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{m.title}</div>
-                <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{fmtMeetingDate(m.start_time)}</div>
-              </div>
-              {m.meet_link && (
-                <button
-                  onClick={() => window.open(m.meet_link, '_blank')}
-                  className="btn-green"
-                  style={{ fontSize: 11, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5 }}
-                >
-                  <Video size={11} /> Join
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        </Link>
       )}
 
-      {/* Spin animation */}
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      {/* Main Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+
+        {/* Recent Leads */}
+        <Card>
+          <CardHeader icon={Star} title="Recent Leads" color="#f5a623" linkTo="/leads" />
+          {recentLeads.length === 0 ? (
+            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No leads yet</div>
+          ) : (
+            recentLeads.map(lead => (
+              <div key={lead.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', background: '#f5a62318',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 700, color: '#f5a623', flexShrink: 0,
+                }}>
+                  {(lead.name || '?')[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lead.name || 'Unknown'}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lead.email || lead.company || lead.lead_source || ''}
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: '#8e8ea0', flexShrink: 0 }}>
+                  {timeAgo(lead.created_at)}
+                </div>
+              </div>
+            ))
+          )}
+        </Card>
+
+        {/* Email Drafts to Review */}
+        <Card>
+          <CardHeader icon={Mail} title="Drafts to Review" color="#4a6cf7" linkTo="/email" />
+          {drafts.length === 0 ? (
+            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+              <CheckSquare size={20} style={{ opacity: 0.3, marginBottom: 6, display: 'block', margin: '0 auto 6px' }} />
+              All caught up — no pending drafts
+            </div>
+          ) : (
+            drafts.slice(0, 5).map(email => (
+              <div key={email.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', background: '#4a6cf718',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Sparkles size={13} color="#4a6cf7" />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {email.lead_name || email.to_email || 'Unknown'}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {email.subject || '(no subject)'}
+                  </div>
+                </div>
+                {email.follow_up_date && (
+                  <div style={{ fontSize: 10, color: '#4a6cf7', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                    <Clock size={10} /> Follow-up
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </Card>
+
+        {/* Upcoming Meetings */}
+        <Card>
+          <CardHeader icon={Calendar} title="Upcoming Meetings" color="#784bd1" linkTo="/meetings" />
+          {meetings.length === 0 ? (
+            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No upcoming meetings</div>
+          ) : (
+            meetings.map(m => (
+              <div key={m.google_event_id || m.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{m.title}</div>
+                  <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{fmtDate(m.start_time)}</div>
+                </div>
+                {m.meet_link && (
+                  <button
+                    onClick={() => window.open(m.meet_link, '_blank')}
+                    style={{
+                      background: '#22c55e18', color: '#22c55e', border: '1px solid #22c55e30',
+                      borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    <Video size={11} /> Join
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </Card>
+
+        {/* Active Projects */}
+        <Card>
+          <CardHeader icon={FolderOpen} title="Active Projects" color="#00b8d4" linkTo="/projects" />
+          {projects.length === 0 ? (
+            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No active projects</div>
+          ) : (
+            projects.map(p => (
+              <div key={p.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, background: '#00b8d418',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <FolderOpen size={14} color="#00b8d4" />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+                    {p.client || p.status || ''}
+                  </div>
+                </div>
+                {p.deadline && (
+                  <div style={{ fontSize: 11, color: new Date(p.deadline) < new Date() ? '#ff5c5c' : '#8e8ea0', flexShrink: 0 }}>
+                    {new Date(p.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </Card>
+      </div>
+
+      {/* Todos */}
+      <Card style={{ marginBottom: 20 }}>
+        <CardHeader icon={CheckSquare} title="Tasks Due" color="#22c55e" linkTo="/todos" />
+        {todos.length === 0 ? (
+          <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>No pending tasks</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+            {todos.map(t => (
+              <div key={t.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 0', borderBottom: '1px solid #f0f2f8',
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, border: '2px solid #e5e7ef', flexShrink: 0,
+                }} />
+                <span style={{ fontSize: 13, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {t.text || t.title}
+                </span>
+                {t.due_date && (
+                  <span style={{ fontSize: 10, color: new Date(t.due_date) < new Date() ? '#ff5c5c' : '#8e8ea0', flexShrink: 0 }}>
+                    {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
