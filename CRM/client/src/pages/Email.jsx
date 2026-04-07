@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
   Star, MoreVertical, Reply, Forward, Archive, Paperclip,
 } from 'lucide-react';
-import { getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem, createQueueItem, getLeads } from '../api';
+import { getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem, createQueueItem, getGmailInbox } from '../api';
 
 const TABS = [
   { key: 'inbox',  label: 'Inbox',  icon: Inbox },
@@ -59,6 +59,7 @@ export default function EmailPage() {
   const [composeData, setComposeData] = useState({ to: '', subject: '', body: '' });
   const [sending, setSending] = useState(false);
   const [editingDraft, setEditingDraft] = useState(null);
+  const [gmailThreads, setGmailThreads] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,9 +68,28 @@ export default function EmailPage() {
       setEmails(Array.isArray(queue) ? queue : []);
     } catch (err) {
       console.error('Email load error:', err);
-    } finally {
-      setLoading(false);
     }
+    // Load Gmail threads silently (don't block if not connected)
+    try {
+      const data = await getGmailInbox();
+      if (data?.threads) {
+        setGmailThreads(data.threads.map(t => ({
+          id: t.threadId,
+          _gmail: true,
+          lead_name: (t.from || '').replace(/<.*>/, '').trim() || t.from,
+          to_email: t.to,
+          subject: t.subject,
+          body: t.snippet,
+          status: 'received',
+          created_at: t.date ? new Date(t.date).toISOString() : '',
+          messageCount: t.messageCount,
+          hasReply: t.hasReply,
+        })));
+      }
+    } catch (err) {
+      // Gmail not connected — that's fine
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);

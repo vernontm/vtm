@@ -261,22 +261,9 @@ export default function Settings() {
                 You'll be redirected to Google to authorise access.
               </p>
               <div style={{ background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 8, padding: '14px 16px', marginBottom: 14, fontSize: 12, color: '#8e8ea0' }}>
-                <div style={{ fontWeight: 600, color: '#8e8ea0', marginBottom: 8 }}>Before connecting, make sure you have:</div>
-                <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.9 }}>
-                  <li>Created a Google Cloud project and enabled the Gmail API</li>
-                  <li>Set up OAuth2 credentials (Web Application type)</li>
-                  <li>Added <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>http://localhost:3001/auth/gmail/callback</code> as a redirect URI</li>
-                  <li>Added <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>GOOGLE_CLIENT_ID</code>, <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>GOOGLE_CLIENT_SECRET</code> to <code style={{ background: '#ffffff', padding: '1px 5px', borderRadius: 3 }}>server/.env</code></li>
-                  <li>Added your Gmail as a test user in the OAuth consent screen</li>
-                </ol>
-                <a
-                  href="https://console.cloud.google.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4a6cf7', fontSize: 12, marginTop: 8 }}
-                >
-                  Open Google Cloud Console <ExternalLink size={11} />
-                </a>
+                <p style={{ margin: '0 0 6px', lineHeight: 1.6 }}>
+                  Click below to connect your Gmail account via Google OAuth. This allows the CRM to send emails and save drafts on your behalf.
+                </p>
               </div>
               <button
                 className="btn-primary"

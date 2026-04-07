@@ -28,12 +28,17 @@ export default async function handler(req, res) {
       const userData = await userRes.json();
 
       // Save tokens to Supabase
-      await setSetting('gmail_access_token', tokens.access_token || '');
-      await setSetting('gmail_refresh_token', tokens.refresh_token || '');
-      if (tokens.expires_in) {
-        await setSetting('gmail_token_expiry', String(Date.now() + tokens.expires_in * 1000));
+      try {
+        await setSetting('gmail_access_token', tokens.access_token || '');
+        await setSetting('gmail_refresh_token', tokens.refresh_token || '');
+        if (tokens.expires_in) {
+          await setSetting('gmail_token_expiry', String(Date.now() + tokens.expires_in * 1000));
+        }
+        await setSetting('gmail_connected_email', userData.email || '');
+      } catch (saveErr) {
+        console.error('Failed to save Gmail tokens:', saveErr.message);
+        return res.redirect(`${FRONTEND_URL}/admin/settings?gmail_error=${encodeURIComponent('OAuth succeeded but failed to save tokens. Make sure the crm_app_settings table exists.')}`);
       }
-      await setSetting('gmail_connected_email', userData.email || '');
 
       console.log(`Gmail connected: ${userData.email}`);
       return res.redirect(`${FRONTEND_URL}/admin/settings?gmail_connected=true`);
