@@ -189,7 +189,7 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
   const handleCustomSchedule = () => { if (!to || !subject || !customSchedule) return; onSchedule({ to, subject, body, scheduleDate: new Date(customSchedule).toISOString() }); };
 
   return (
-    <div style={{
+    <div className="compose-popup" style={{
       position:'fixed', bottom:0, right:80, width:480, maxWidth:'100vw', zIndex:8000,
       background:'#fff', borderRadius:'12px 12px 0 0', boxShadow:'0 -4px 32px rgba(0,0,0,0.15)',
       border:'1px solid #e5e7ef', borderBottom:'none', display:'flex', flexDirection:'column',
@@ -487,19 +487,19 @@ export default function EmailPage() {
 
       {/* ── Left Sidebar ── */}
       <div className="email-sidebar" style={{ width:200, background:'#fff', borderRight:'1px solid #e5e7ef', display:'flex', flexDirection:'column', flexShrink:0 }}>
-        <div style={{ padding:'16px 14px 12px' }}>
+        <div className="email-sidebar-compose" style={{ padding:'16px 14px 12px' }}>
           <button onClick={openCompose} style={{ width:'100%', padding:'10px 0', borderRadius:10, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
             <Edit3 size={14} /> Compose
           </button>
         </div>
-        <div style={{ padding:'0 14px 12px' }}>
+        <div className="email-sidebar-search" style={{ padding:'0 14px 12px' }}>
           <div style={{ position:'relative' }}>
             <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#b0b0c0' }} />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
               style={{ width:'100%', padding:'8px 10px 8px 30px', borderRadius:8, fontSize:12, background:'#f5f7fa', border:'1px solid #e5e7ef', color:'#1a1a2e', outline:'none' }} />
           </div>
         </div>
-        <div style={{ flex:1 }}>
+        <div className="email-sidebar-tabs" style={{ flex:1 }}>
           {TABS.map(t => {
             const isActive = tab===t.key;
             let count = 0;
@@ -516,7 +516,7 @@ export default function EmailPage() {
           })}
         </div>
         {/* ── Custom Labels ── */}
-        <div style={{ borderTop:'1px solid #f0f2f8', padding:'8px 14px' }}>
+        <div className="email-sidebar-labels" style={{ borderTop:'1px solid #f0f2f8', padding:'8px 14px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
             <span style={{ fontSize:10, fontWeight:600, color:'#8e8ea0', textTransform:'uppercase', letterSpacing:'0.05em' }}>Labels</span>
             <button onClick={() => setShowNewLabel(!showNewLabel)} style={{ background:'none', border:'none', cursor:'pointer', color:'#4a6cf7', display:'flex', padding:2 }}>
@@ -554,7 +554,7 @@ export default function EmailPage() {
         </div>
 
         {/* ── AI Follow-ups & Refresh ── */}
-        <div style={{ padding:'8px 14px 12px', borderTop:'1px solid #f0f2f8', display:'flex', flexDirection:'column', gap:6 }}>
+        <div className="email-sidebar-actions" style={{ padding:'8px 14px 12px', borderTop:'1px solid #f0f2f8', display:'flex', flexDirection:'column', gap:6 }}>
           <button onClick={loadFollowups} disabled={followupsLoading}
             style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid #e5e7ef', borderRadius:8, background:followupsLoading?'#f5f7fa':'linear-gradient(135deg,rgba(74,108,247,0.05),rgba(110,142,251,0.05))', color:followupsLoading?'#b0b0c0':'#4a6cf7', fontSize:12, cursor:followupsLoading?'wait':'pointer', fontWeight:500 }}>
             <Zap size={12} /> {followupsLoading ? 'Analyzing...' : 'AI Follow-ups'}
@@ -572,7 +572,7 @@ export default function EmailPage() {
           /* ── Detail View ── */
           <div style={{ flex:1, display:'flex', flexDirection:'column' }}>
             {/* Header */}
-            <div style={{ padding:'12px 24px', background:'#fff', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:10 }}>
+            <div className="email-detail-header" style={{ padding:'12px 24px', background:'#fff', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:10 }}>
               <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'#4a6cf7', display:'flex', alignItems:'center', gap:4, fontSize:13, fontWeight:500 }}>
                 <ChevronLeft size={16} /> Back
               </button>
@@ -594,8 +594,8 @@ export default function EmailPage() {
             </div>
 
             {/* Content */}
-            <div style={{ flex:1, overflow:'auto', padding:24 }}>
-              <div style={{ maxWidth:740, margin:'0 auto' }}>
+            <div className="email-detail-content" style={{ flex:1, overflow:'auto', padding:24 }}>
+              <div className="email-detail-inner" style={{ maxWidth:740, margin:'0 auto' }}>
                 <h1 style={{ fontSize:22, fontWeight:700, color:'#1a1a2e', margin:'0 0 6px' }}>{selected.subject||'(no subject)'}</h1>
                 <div style={{ fontSize:12, color:'#8e8ea0', marginBottom:20 }}>{fmtFullDate(getDate(selected))}</div>
 
@@ -700,7 +700,7 @@ export default function EmailPage() {
         ) : (
           /* ── Email List (full width) ── */
           <>
-            <div style={{ padding:'14px 24px', background:'#fff', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:10 }}>
+            <div className="email-list-header" style={{ padding:'14px 24px', background:'#fff', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ fontSize:16, fontWeight:700, color:'#1a1a2e', flex:1 }}>
                 {TABS.find(t=>t.key===tab)?.label||'Email'}
               </span>
@@ -708,7 +708,7 @@ export default function EmailPage() {
             </div>
 
             {tab==='drafts' && autoDraftCount > 0 && (
-              <div style={{ padding:'8px 24px', background:'rgba(74,108,247,0.04)', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
+              <div className="email-draft-banner" style={{ padding:'8px 24px', background:'rgba(74,108,247,0.04)', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
                 <Sparkles size={12} color="#4a6cf7" />
                 <span style={{ color:'#4a6cf7', fontWeight:500 }}>{autoDraftCount} auto-drafted — review & approve</span>
               </div>
@@ -733,6 +733,7 @@ export default function EmailPage() {
 
                   return (
                     <div key={email.id} onClick={() => selectEmail(email)}
+                      className="email-list-item"
                       style={{
                         display:'flex', alignItems:'center', gap:14, padding:'12px 24px', cursor:'pointer',
                         borderBottom:'1px solid #f0f2f8', transition:'background 0.1s',
@@ -740,7 +741,7 @@ export default function EmailPage() {
                       onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'}
                       onMouseLeave={e => e.currentTarget.style.background='#fff'}>
                       <Avatar name={name} size={38} />
-                      <div style={{ width:200, minWidth:0, flexShrink:1 }}>
+                      <div className="email-item-name" style={{ width:200, minWidth:0, flexShrink:1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                           <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'#1a1a2e', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                             {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
@@ -749,20 +750,20 @@ export default function EmailPage() {
                           {email.isReply && <Reply size={11} color="#4a6cf7" style={{flexShrink:0}} />}
                         </div>
                       </div>
-                      <div style={{ flex:1, minWidth:0, display:'flex', alignItems:'baseline', gap:8 }}>
+                      <div className="email-item-preview" style={{ flex:1, minWidth:0, display:'flex', alignItems:'baseline', gap:8 }}>
                         <span style={{ fontSize:13, fontWeight:600, color:'#1a1a2e', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:300 }}>
                           {email.subject||'(no subject)'}
                         </span>
-                        <span style={{ fontSize:12, color:'#8e8ea0', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1 }}>
+                        <span className="email-item-snippet" style={{ fontSize:12, color:'#8e8ea0', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1 }}>
                           — {getPreview(email)}
                         </span>
                       </div>
-                      <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
+                      <div className="email-item-labels" style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                         {isGmail && <LabelButton labelKey="favorite" active={isFav} onClick={e => { e.stopPropagation(); toggleLabel(email,'favorite'); }} size={13} />}
                         {crmLabels.filter(l=>l!=='spam'&&l!=='favorite').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:cfg.color+'15',color:cfg.color,fontWeight:600}}>{cfg.label}</span> : null; })}
                         {email.auto_generated && <span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'#4a6cf710',color:'#4a6cf7',fontWeight:600,display:'flex',alignItems:'center',gap:2}}><Sparkles size={8} /> Auto</span>}
                       </div>
-                      <span style={{ fontSize:11, color:'#8e8ea0', flexShrink:0, width:70, textAlign:'right' }}>
+                      <span className="email-item-time" style={{ fontSize:11, color:'#8e8ea0', flexShrink:0, width:70, textAlign:'right' }}>
                         {timeAgo(getDate(email))}
                       </span>
                     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Users, Briefcase, Star, BarChart3, LayoutDashboard, RefreshCw,
+  Users, Briefcase, Star, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
   Eye, EyeOff, FileText, CreditCard,
 } from 'lucide-react';
@@ -86,9 +86,7 @@ export default function Sidebar() {
         {/* Logo */}
         <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #e5e7ef' }}>
           <div className="flex items-center gap-2">
-            <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', borderRadius: 8 }} className="flex items-center justify-center">
-              <BarChart3 size={18} color="#ffffff" />
-            </div>
+            <img src={import.meta.env.BASE_URL + 'vtm-icon.png'} alt="VTM" style={{ width:32, height:32, borderRadius:8, objectFit:'cover' }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.2, fontFamily: 'Inter, sans-serif' }}>Vernon Tech</div>
               <div style={{ fontSize: 10, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>&amp; Media CRM</div>

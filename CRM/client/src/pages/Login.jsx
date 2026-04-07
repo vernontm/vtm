@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -26,13 +26,11 @@ export default function Login() {
     <div style={{ minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: 380, padding: 40, background: '#ffffff', borderRadius: 16, border: '1px solid #e5e7ef', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
         {/* Logo */}
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', borderRadius: 10 }} className="flex items-center justify-center">
-            <BarChart3 size={22} color="#ffffff" />
-          </div>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', fontFamily: 'Inter, sans-serif' }}>Vernon Tech</div>
-            <div style={{ fontSize: 11, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>&amp; Media CRM</div>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, marginBottom:32 }}>
+          <img src={import.meta.env.BASE_URL + 'vtm-icon.png'} alt="VTM" style={{ width:64, height:64, borderRadius:14, objectFit:'cover' }} />
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:18, fontWeight:800, color:'#1a1a2e', fontFamily:'Inter, sans-serif' }}>Vernon Tech & Media</div>
+            <div style={{ fontSize:12, color:'#8e8ea0', fontFamily:'Inter, sans-serif', marginTop:2 }}>CRM</div>
           </div>
         </div>
 
