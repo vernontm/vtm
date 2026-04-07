@@ -1,4 +1,5 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { disconnectGmail } from '../_lib/gmail.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -33,6 +34,12 @@ export default async function handler(req, res) {
         method: 'PATCH', body: JSON.stringify({ value: value || '' }),
       });
       return res.json({ success: true });
+    }
+
+    // POST /api/crm/settings?action=disconnect-gmail
+    if (req.method === 'POST' && action === 'disconnect-gmail') {
+      await disconnectGmail();
+      return res.json({ disconnected: true });
     }
 
     // POST /api/crm/settings?action=bulk - bulk update
