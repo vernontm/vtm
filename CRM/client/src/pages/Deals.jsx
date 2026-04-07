@@ -985,7 +985,7 @@ export default function Deals() {
                       onMouseEnter={() => setHoveredDeal(deal.id)}
                       onMouseLeave={() => setHoveredDeal(null)}
                     >
-                      <InlineEdit value={deal.name} onSave={val => handleFieldSave(deal.id, 'name', val)} placeholder="Deal name" />
+                      <InlineEdit value={deal.name} onSave={val => handleFieldSave(deal.id, 'name', val)} placeholder="Deal name" privacy="name" />
                       {quickAddDeal === deal.id ? (
                         <input
                           autoFocus
@@ -1094,11 +1094,11 @@ export default function Deals() {
                     </td>
                     <td>
                       {deal.contact_id
-                        ? <span className="contact-chip">{getContactName(deal.contact_id)}</span>
+                        ? <span className="contact-chip private-value">{getContactName(deal.contact_id)}</span>
                         : <span style={{ color: '#555880', fontSize: 13, paddingLeft: 6 }}>—</span>}
                     </td>
                     <td>
-                      <InlineEdit value={deal.company} onSave={val => handleFieldSave(deal.id, 'company', val)} placeholder="Company" />
+                      <InlineEdit value={deal.company} onSave={val => handleFieldSave(deal.id, 'company', val)} placeholder="Company" privacy="name" />
                     </td>
                   </tr>
                   {expandedTasks.has(deal.id) && (

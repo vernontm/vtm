@@ -312,6 +312,10 @@ tr:hover td { background-color: var(--surface2); }
   display: inline-block;
 }
 
+/* Email list trash on hover */
+.email-list-item .email-trash-btn { opacity: 0 !important; }
+.email-list-item:hover .email-trash-btn { opacity: 1 !important; }
+
 input[type="checkbox"] {
   accent-color: var(--accent);
   width: 15px;

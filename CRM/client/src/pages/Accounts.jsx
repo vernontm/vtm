@@ -147,7 +147,7 @@ export default function Accounts() {
                     }}>
                       <Building2 size={14} color="white" />
                     </div>
-                    <InlineEdit value={account.name} onSave={val => handleFieldSave(account.id, 'name', val)} placeholder="Account name" />
+                    <InlineEdit value={account.name} onSave={val => handleFieldSave(account.id, 'name', val)} placeholder="Account name" privacy="name" />
                   </div>
                 </td>
                 <td>

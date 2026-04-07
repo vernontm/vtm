@@ -376,10 +376,10 @@ export default function Dashboard() {
                   <FolderOpen size={14} color="#00b8d4" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
                   </div>
-                  <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+                  <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0' }}>
                     {p.client || p.status || ''}
                   </div>
                 </div>

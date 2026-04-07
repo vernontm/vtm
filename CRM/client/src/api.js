@@ -125,6 +125,9 @@ export const getGmailInbox = (params = {}) => {
 // Gmail Thread
 export const getGmailThread = (threadId) => request(`/gmail-thread?threadId=${encodeURIComponent(threadId)}`);
 
+// Gmail Trash
+export const trashGmailMessage = (messageId) => request('/gmail-trash', { method: 'POST', body: JSON.stringify({ messageId }) });
+
 // AI Follow-ups
 export const getAIFollowups = () => request('/ai-followups');
 

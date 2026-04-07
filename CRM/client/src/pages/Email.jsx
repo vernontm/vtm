@@ -8,7 +8,7 @@ import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
   addEmailLabel, removeEmailLabel, getGmailContacts, getGmailThread,
-  getLabelDefs, createLabelDef, deleteLabelDef, getAIFollowups,
+  getLabelDefs, createLabelDef, deleteLabelDef, getAIFollowups, trashGmailMessage,
 } from '../api';
 
 const TABS = [
@@ -447,6 +447,16 @@ export default function EmailPage() {
 
   const handleSendQueue = async id => { try { await sendQueueItem(id); await load(); setSelected(null); } catch(e) { alert('Send failed: '+e.message); } };
   const handleDelete = async id => { try { await deleteQueueItem(id); await load(); if(selected?.id===id) setSelected(null); } catch(e) { alert('Delete failed: '+e.message); } };
+  const handleTrashGmail = async (email, e) => {
+    e.stopPropagation();
+    if (!confirm('Move this email to trash?')) return;
+    try {
+      await trashGmailMessage(email.id);
+      const remove = prev => prev.filter(m => m.id !== email.id);
+      setInboxMessages(remove); setSentMessages(remove); setDraftMessages(remove);
+      if (selected?.id === email.id) setSelected(null);
+    } catch(err) { alert('Trash failed: ' + err.message); }
+  };
   const handleApprove = async email => { try { await updateQueueItem(email.id, {status:'pending'}); await load(); } catch(e) { alert('Approve failed: '+e.message); } };
 
   const openCompose = () => { setComposeOpen(true); setSelected(null); };
@@ -766,6 +776,13 @@ export default function EmailPage() {
                       <span className="email-item-time" style={{ fontSize:11, color:'#8e8ea0', flexShrink:0, width:70, textAlign:'right' }}>
                         {timeAgo(getDate(email))}
                       </span>
+                      <button className="email-trash-btn"
+                        onClick={e => isGmail ? handleTrashGmail(email, e) : (e.stopPropagation(), handleDelete(email.id))}
+                        style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:'#d0d0d8', display:'flex', opacity:0, transition:'opacity 0.15s, color 0.15s', flexShrink:0 }}
+                        onMouseEnter={e => e.currentTarget.style.color='#ff5c5c'}
+                        onMouseLeave={e => e.currentTarget.style.color='#d0d0d8'}>
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   );
                 })

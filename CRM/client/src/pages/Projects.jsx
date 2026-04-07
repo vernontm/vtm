@@ -299,7 +299,7 @@ export default function Projects() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <InlineEdit value={project.name} onSave={v => handleProjectField(project.id, 'name', v)} placeholder="Project name" />
+                            <InlineEdit value={project.name} onSave={v => handleProjectField(project.id, 'name', v)} placeholder="Project name" privacy="name" />
                             {isExp && items_.length > 0 && (
                               <span style={{ background: '#e5e7ef', borderRadius: 10, padding: '0px 6px', fontSize: 11, color: '#8e8ea0', flexShrink: 0 }}>
                                 {items_.length}
@@ -308,7 +308,7 @@ export default function Projects() {
                           </div>
                         </td>
                         <td>
-                          <InlineEdit value={project.client} onSave={v => handleProjectField(project.id, 'client', v)} placeholder="Client" />
+                          <InlineEdit value={project.client} onSave={v => handleProjectField(project.id, 'client', v)} placeholder="Client" privacy="name" />
                         </td>
                         <td>
                           <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
