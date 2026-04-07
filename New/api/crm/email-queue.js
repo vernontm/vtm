@@ -1,6 +1,12 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import { sendEmail, createDraft } from '../_lib/gmail.js';
 
+/** Strip em dashes (—) and en dashes (–), replace with hyphens */
+function stripDashes(text) {
+  if (!text) return text;
+  return text.replace(/\u2014/g, '-').replace(/\u2013/g, '-');
+}
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -19,7 +25,10 @@ export default async function handler(req, res) {
 
     // ── POST: create new queue item ──────────────────────────────────────
     if (req.method === 'POST' && !action) {
-      const result = await supaFetch('crm_email_queue', { method: 'POST', body: JSON.stringify(req.body) });
+      const data = { ...req.body };
+      if (data.subject) data.subject = stripDashes(data.subject);
+      if (data.body) data.body = stripDashes(data.body);
+      const result = await supaFetch('crm_email_queue', { method: 'POST', body: JSON.stringify(data) });
       return res.status(201).json(result[0] || result);
     }
 
@@ -33,8 +42,8 @@ export default async function handler(req, res) {
       const toEmail = item.to_email || item.lead_email;
       if (!toEmail) return res.status(400).json({ error: 'No email address' });
 
-      const subject = item.subject || '(no subject)';
-      const body = item.body || item.generated_body || '';
+      const subject = stripDashes(item.subject || '(no subject)');
+      const body = stripDashes(item.body || item.generated_body || '');
 
       try {
         const result = await sendEmail({
@@ -89,8 +98,8 @@ export default async function handler(req, res) {
       try {
         const draft = await createDraft({
           to: toEmail,
-          subject: item.subject || '(no subject)',
-          body: item.body || item.generated_body || '',
+          subject: stripDashes(item.subject || '(no subject)'),
+          body: stripDashes(item.body || item.generated_body || ''),
           threadId: item.reply_thread_id || undefined,
           inReplyTo: item.reply_rfc_message_id || undefined,
           references: item.reply_rfc_message_id || undefined,

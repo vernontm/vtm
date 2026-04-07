@@ -2,6 +2,12 @@ import { setCors, requireAuth } from '../_lib/supabase.js';
 import { getGmailAuth } from '../_lib/gmail.js';
 import Anthropic from '@anthropic-ai/sdk';
 
+/** Strip em dashes (—), en dashes (–), and replace with hyphens */
+function stripDashes(text) {
+  if (!text) return text;
+  return text.replace(/\u2014/g, '-').replace(/\u2013/g, '-');
+}
+
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
 async function gmailFetch(path, accessToken) {
@@ -147,6 +153,7 @@ export default async function handler(req, res) {
       max_tokens: 2048,
       system: `You are a professional business follow-up email assistant for Vernon Tech & Media.
 Generate concise, friendly follow-up emails that are not pushy. Keep them short (2-4 sentences).
+IMPORTANT: Never use em dashes (—) or en dashes (–). Use hyphens (-) or commas instead.
 Return valid JSON only, no markdown.`,
       messages: [{
         role: 'user',
@@ -188,8 +195,8 @@ Return ONLY the JSON array, no other text.`,
         original_to: c.to,
         original_date: c.date,
         days_since_sent: c.daysSinceSent,
-        suggested_subject: ai.suggested_subject || `Re: ${c.subject.replace(/^Re:\s*/i, '')}`,
-        suggested_body: ai.suggested_body || '',
+        suggested_subject: stripDashes(ai.suggested_subject) || `Re: ${c.subject.replace(/^Re:\s*/i, '')}`,
+        suggested_body: stripDashes(ai.suggested_body) || '',
         threadId: c.threadId,
         priority: ai.priority || (c.daysSinceSent >= 7 ? 'high' : c.daysSinceSent >= 5 ? 'medium' : 'low'),
       };

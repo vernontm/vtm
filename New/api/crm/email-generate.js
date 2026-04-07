@@ -1,6 +1,12 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import Anthropic from '@anthropic-ai/sdk';
 
+/** Strip em dashes (—), en dashes (–), and replace with hyphens or commas */
+function stripDashes(text) {
+  if (!text) return text;
+  return text.replace(/\u2014/g, '-').replace(/\u2013/g, '-');
+}
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -32,6 +38,8 @@ Tone: ${settingsMap.tone_preference || 'professional'}.
 Services: ${settingsMap.services_offered || 'web development, AI automation, social media'}.
 Target client: ${settingsMap.target_client || 'small business owners'}.
 Sender name: ${settingsMap.sender_name || 'Vernon'}.
+
+IMPORTANT: Never use em dashes (—) or en dashes (–) in any text. Use hyphens (-) or commas instead.
 
 Generate a personalized outreach email. Return JSON with:
 {
@@ -70,6 +78,12 @@ ${commLog.length > 0 ? `Recent emails sent: ${commLog.map(c => c.subject).join('
       } catch {
         parsed = { subject_lines: ['Follow up'], body: text, email_type: 'follow_up', reasoning: '', confidence_score: 0.5, personalization_hooks_used: [], suggested_next_action: '' };
       }
+
+      // Strip em/en dashes from AI output
+      parsed.body = stripDashes(parsed.body);
+      parsed.subject_lines = (parsed.subject_lines || []).map(s => stripDashes(s));
+      parsed.reasoning = stripDashes(parsed.reasoning);
+      parsed.suggested_next_action = stripDashes(parsed.suggested_next_action);
 
       // Save to email queue
       const queueItem = {
