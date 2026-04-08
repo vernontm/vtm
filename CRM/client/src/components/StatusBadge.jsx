@@ -2,14 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const STATUS_COLORS = {
   // Lead statuses
-  'New Lead':   { bg: '#ff9b26', text: '#fff' },
   'Contacted':  { bg: '#fdab3d', text: '#fff' },
   'Qualified':  { bg: '#ff9b26', text: '#fff' },
   'Converted':  { bg: '#784bd1', text: '#fff' },
-  'Cold':       { bg: '#4a4845', text: '#fff' },
-  'Warm':       { bg: '#ff9b26', text: '#fff' },
-  'Hot':        { bg: '#fdab3d', text: '#0a0a08' },
-  'Unqualified':{ bg: '#ff5c5c', text: '#fff' },
+  'Warm':       { bg: '#4a6cf7', text: '#fff' },
+  'Hot':        { bg: '#ff5c5c', text: '#fff' },
+  'Unqualified':{ bg: '#8e8ea0', text: '#fff' },
   // Deal stages
   'New':        { bg: '#ff9b26', text: '#fff' },
   'Discovery':  { bg: '#fdab3d', text: '#fff' },
@@ -66,8 +64,8 @@ export default function StatusBadge({ status, options = [], onChange }) {
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4,
-          background: '#111110', border: '1px solid #252523', borderRadius: 8,
-          padding: 6, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
+          background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+          padding: 6, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
         }}>
           {options.map((opt) => {
             const c = getStatusColor(opt);
@@ -80,14 +78,14 @@ export default function StatusBadge({ status, options = [], onChange }) {
                   display: 'flex', alignItems: 'center', gap: 8,
                   transition: 'background 0.1s',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = '#1c1c1a'}
+                onMouseEnter={e => e.currentTarget.style.background = '#f5f7fa'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <span style={{
                   display: 'inline-block', width: 12, height: 12,
                   borderRadius: 3, background: c.bg, flexShrink: 0
                 }} />
-                <span style={{ fontSize: 13, color: '#e8e6df' }}>{opt}</span>
+                <span style={{ fontSize: 13, color: '#1a1a2e' }}>{opt}</span>
               </div>
             );
           })}

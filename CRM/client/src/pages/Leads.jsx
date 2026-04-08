@@ -474,10 +474,7 @@ export default function Leads() {
                       <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
                     </td>
                     <td style={{ fontWeight: 500 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <StatusBadge status={lead.status} options={LEAD_STATUSES} onChange={s => handleStatusChange(lead, s)} />
-                        <span className="private-value" style={{ fontSize: 13, color: '#1a1a2e' }}>{lead.name || '—'}</span>
-                      </div>
+                      <span className="private-value" style={{ fontSize: 13, color: '#1a1a2e' }}>{lead.name || '—'}</span>
                     </td>
                     <td>
                       <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.email || '—'}</span>
