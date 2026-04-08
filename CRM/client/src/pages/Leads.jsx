@@ -424,7 +424,75 @@ export default function Leads() {
         </div>
       </div>
 
-      <div className="table-container">
+      {/* ── Mobile card view ── */}
+      <div className="mobile-cards">
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</div>
+        ) : groups.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No leads yet.</div>
+        ) : groups.map(([status, items]) => (
+          <React.Fragment key={status}>
+            <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [status]: !c[status] }))} style={{ margin: '4px 0' }}>
+              {collapsed[status] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              <span style={{ color: '#1a1a2e' }}>{status}</span>
+              <span style={{ background: '#e5e7ef', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#8e8ea0' }}>{items.length}</span>
+            </div>
+            {!collapsed[status] && items.map(lead => (
+              <div key={lead.id} className="mobile-card" onClick={() => setDetailLead(lead)}>
+                <div className="mobile-card-row primary">
+                  <span className="private-value">{lead.name || '—'}</span>
+                </div>
+                {lead.email && (
+                  <div className="mobile-card-row">
+                    <Mail size={12} style={{ color: '#4a6cf7', flexShrink: 0 }} />
+                    <span className="private-value">{lead.email}</span>
+                  </div>
+                )}
+                {lead.phone && (
+                  <div className="mobile-card-row">
+                    <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />
+                    <span className="private-value">{lead.phone}</span>
+                  </div>
+                )}
+                {summarizeGoal(lead) && (
+                  <div className="mobile-card-row">
+                    <span className="mobile-card-label">Goal</span>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{summarizeGoal(lead)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
+                  {lead.budget && (
+                    <div className="mobile-card-row" style={{ padding: 0 }}>
+                      <span className="mobile-card-label">Budget</span>
+                      <span className="private-value" style={{ color: '#4a6cf7', fontWeight: 600 }}>{lead.budget}</span>
+                    </div>
+                  )}
+                  {(lead.best_time || lead.time_available) && (
+                    <div className="mobile-card-row" style={{ padding: 0 }}>
+                      <span className="mobile-card-label">Time</span>
+                      <span>{lead.best_time || lead.time_available}</span>
+                    </div>
+                  )}
+                  {lead.lead_source && (
+                    <div className="mobile-card-row" style={{ padding: 0 }}>
+                      <span className="mobile-card-label">Source</span>
+                      <span>{lead.lead_source}</span>
+                    </div>
+                  )}
+                </div>
+                {lastFollowUps[lead.id] && (
+                  <div className="mobile-card-row" style={{ fontSize: 11, color: '#b0b0c0', marginTop: 2 }}>
+                    <Clock size={10} /> Last follow-up: {formatFollowUp(lastFollowUps[lead.id])}
+                  </div>
+                )}
+              </div>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* ── Desktop table view ── */}
+      <div className="table-container desktop-table">
         <table>
           <thead>
             <tr>

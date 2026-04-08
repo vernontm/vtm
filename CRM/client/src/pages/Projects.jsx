@@ -239,7 +239,73 @@ export default function Projects() {
         </div>
       </div>
 
-      <div className="table-container">
+      {/* ── Mobile card view ── */}
+      <div className="mobile-cards">
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</div>
+        ) : groups.map(({ label, items }) => (
+          <React.Fragment key={label}>
+            {items.length > 0 && (
+              <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))} style={{ margin: '4px 0' }}>
+                {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                <span style={{ color: label === 'Completed' ? '#4a6cf7' : '#fdab3d' }}>{label}</span>
+                <span style={{ background: '#e5e7ef', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#8e8ea0' }}>{items.length}</span>
+              </div>
+            )}
+            {!collapsed[label] && items.map(project => {
+              const pct = progressPercent(project);
+              return (
+                <div key={project.id} className="mobile-card" onClick={() => toggleExpand(project.id)}>
+                  <div className="mobile-card-row primary">
+                    <span className="private-value">{project.name || '—'}</span>
+                  </div>
+                  {project.client && (
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Client</span>
+                      <span className="private-value">{project.client}</span>
+                    </div>
+                  )}
+                  <div className="mobile-card-row">
+                    <span className="mobile-card-label">Status</span>
+                    <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
+                  </div>
+                  {(project.start_date || project.end_date) && (
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Timeline</span>
+                      <Calendar size={11} style={{ color: '#8e8ea0' }} />
+                      <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
+                    </div>
+                  )}
+                  {project.value > 0 && (
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Value</span>
+                      <DollarSign size={12} style={{ color: '#4a6cf7' }} />
+                      <span className="private-value" style={{ fontWeight: 600 }}>{Number(project.value).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {pct > 0 && (
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Progress</span>
+                      <div style={{ flex: 1, height: 6, background: '#e5e7ef', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: '#4a6cf7', borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontSize: 11, color: '#8e8ea0' }}>{pct}%</span>
+                    </div>
+                  )}
+                  {project.notes && (
+                    <div className="mobile-card-row" style={{ fontSize: 11, color: '#b0b0c0', marginTop: 2 }}>
+                      {project.notes.length > 60 ? project.notes.slice(0, 60) + '…' : project.notes}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* ── Desktop table view ── */}
+      <div className="table-container desktop-table">
         <table>
           <thead>
             <tr>

@@ -109,7 +109,68 @@ export default function Contacts() {
         </div>
       </div>
 
-      <div className="table-container">
+      {/* ── Mobile card view ── */}
+      <div className="mobile-cards">
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No contacts yet.</div>
+        ) : filtered.map(contact => (
+          <div key={contact.id} className="mobile-card">
+            <div className="mobile-card-row primary">
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: avatarColor(contact.name),
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 10, fontWeight: 700, color: '#ffffff', flexShrink: 0
+              }}>
+                {initials(contact.name)}
+              </div>
+              <span className="private-value">{contact.name || '—'}</span>
+            </div>
+            {contact.email && (
+              <div className="mobile-card-row">
+                <Mail size={12} style={{ color: '#4a6cf7', flexShrink: 0 }} />
+                <span className="private-value">{contact.email}</span>
+              </div>
+            )}
+            {contact.phone && (
+              <div className="mobile-card-row">
+                <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />
+                <span className="private-value">{contact.phone}</span>
+              </div>
+            )}
+            {(contact.company || contact.title) && (
+              <div className="mobile-card-row">
+                {contact.company && <span>{contact.company}</span>}
+                {contact.company && contact.title && <span style={{ color: '#d0d0d0' }}>·</span>}
+                {contact.title && <span>{contact.title}</span>}
+              </div>
+            )}
+            <div className="mobile-card-actions">
+              {contact.email && (
+                <a href={gmailLink(contact.email)} target="_blank" rel="noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#4a6cf7', textDecoration: 'none' }}>
+                  <Mail size={12} /> Email
+                </a>
+              )}
+              {contact.phone && (
+                <a href={`tel:${contact.phone}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#8e8ea0', textDecoration: 'none' }}>
+                  <Phone size={12} /> Call
+                </a>
+              )}
+              <button onClick={() => openDelete(contact)}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <Trash2 size={12} /> Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Desktop table view ── */}
+      <div className="table-container desktop-table">
         <table>
           <thead>
             <tr>
