@@ -80,32 +80,34 @@ function looksLikeHtml(text) {
 
 function HtmlEmail({ html }) {
   const ref = React.useRef(null);
-  React.useEffect(() => {
-    if (!ref.current || !html) return;
-    const doc = ref.current.contentDocument;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    // Auto-resize iframe to content height
-    const resize = () => {
-      try {
-        if (ref.current && doc.body) {
-          ref.current.style.height = Math.max(doc.body.scrollHeight + 20, 100) + 'px';
-        }
-      } catch(e) {}
-    };
-    setTimeout(resize, 200);
-    setTimeout(resize, 800);
-    setTimeout(resize, 2000);
-    // Open links in new tab
-    try {
-      doc.addEventListener('click', (e) => {
-        const a = e.target.closest('a');
-        if (a) { e.preventDefault(); window.open(a.href, '_blank'); }
-      });
-    } catch(e) {}
+  // Inject a <base target="_blank"> so all links open in new tab,
+  // and a small script to post height back for auto-resize.
+  const patched = React.useMemo(() => {
+    if (!html) return '';
+    const base = '<base target="_blank">';
+    const resizeScript = `<script>
+      function postH(){window.parent.postMessage({iframeHeight:document.body.scrollHeight},'*');}
+      window.addEventListener('load',function(){postH();setTimeout(postH,500);setTimeout(postH,1500);});
+      new MutationObserver(postH).observe(document.body,{childList:true,subtree:true});
+    <\/script>`;
+    // Insert base+script right after <head> if present, otherwise prepend
+    if (/<head[^>]*>/i.test(html)) {
+      return html.replace(/<head[^>]*>/i, '$&' + base + resizeScript);
+    }
+    return base + resizeScript + html;
   }, [html]);
-  return <iframe ref={ref} sandbox="allow-same-origin" style={{ width:'100%', border:'none', minHeight:200, borderRadius:8 }} />;
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.iframeHeight && ref.current) {
+        ref.current.style.height = Math.max(e.data.iframeHeight + 20, 100) + 'px';
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  return <iframe ref={ref} srcDoc={patched} sandbox="allow-same-origin allow-scripts allow-popups" style={{ width:'100%', border:'none', minHeight:200, borderRadius:8 }} />;
 }
 
 /* Helper: render body as HTML iframe or plain text with Linkify */
