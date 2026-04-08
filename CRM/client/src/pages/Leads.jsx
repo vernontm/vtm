@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, ChevronDown, ChevronRight, ChevronLeft, Trash2, UserPlus, Mail, Phone, Upload, Eye, X, Globe, AtSign, Check, PhoneCall, ThumbsUp, ThumbsDown, ScrollText, Copy, CheckCheck, Calendar } from 'lucide-react';
-import { getLeads, createLead, updateLead, deleteLead, convertLead } from '../api';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Plus, Search, ChevronDown, ChevronRight, ChevronLeft, Trash2, UserPlus, Mail, Phone, Upload, X, Check, PhoneCall, ThumbsUp, ThumbsDown, ScrollText, Copy, CheckCheck, Calendar, Send, Clock } from 'lucide-react';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
@@ -10,208 +10,31 @@ import BulkImport from '../components/BulkImport';
 
 const LEAD_STATUSES = ['Cold', 'Warm', 'Hot', 'Unqualified'];
 const LEAD_SOURCES = ['', 'Website', 'Referral', 'Cold Outreach', 'LinkedIn', 'Email Campaign', 'Social Media', 'Other'];
-const ACTIVITY_COLORS = ['#4a6cf7', '#4a6cf7', '#fdab3d', '#784bd1', '#ff5c5c'];
-
-function ActivityBar({ id }) {
-  const blocks = useMemo(() => {
-    const seed = id ? id.charCodeAt(0) + id.charCodeAt(1) : 3;
-    return Array.from({ length: seed % 4 + 1 }, (_, i) => ACTIVITY_COLORS[(seed + i) % ACTIVITY_COLORS.length]);
-  }, [id]);
-  return <div className="activity-bar">{blocks.map((c, i) => <div key={i} className="activity-block" style={{ background: c }} />)}</div>;
-}
 
 const EMPTY = { name: '', status: 'New Lead', company: '', email: '', phone: '', lead_source: '', notes: '' };
-const gmailLink = (email) => `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
 
-/*PhoneScriptModal removed*/
-function _skip({ leads, index, onNavigate, onClose, onInterest, onSchedule, onNoAnswer }) {
-  const [copied,       setCopied]       = useState(false);
-  const [copiedPhone,  setCopiedPhone]  = useState(false);
+/* Summarize goal from multiple fields into a concise string */
+function summarizeGoal(lead) {
+  const parts = [lead.problem, lead.current_situation, lead.financial_goal, lead.notes].filter(Boolean);
+  if (parts.length === 0) return '';
+  const combined = parts.join(' ').trim();
+  // Return first ~80 chars, cut at word boundary
+  if (combined.length <= 80) return combined;
+  return combined.slice(0, 80).replace(/\s+\S*$/, '') + '…';
+}
 
-  const lead    = leads[index] || {};
-  const bizName = lead.name || 'there';
-  const niche   = lead.company || lead.name || 'your type of business';
-  const total   = leads.length;
-
-  const script = `Hey, is this ${bizName}? Hey, my name is Ray, I'm calling from Vernon Tech. I'll be quick, I promise.
-
-The reason I'm reaching out is, I saw that you didn't have a website. I actually went ahead and built a demo landing page for your business.
-
-Right now a lot of people are searching for ${niche} in your area and if you don't have something clean and professional out there, those customers are going somewhere else.
-
-Are you open to hopping on a quick 15-minute call so I can walk you through how you'll be able to get more traffic and customers?`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(script).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  const handleCopyPhone = () => {
-    if (!lead.phone) return;
-    navigator.clipboard.writeText(lead.phone).then(() => {
-      setCopiedPhone(true);
-      setTimeout(() => setCopiedPhone(false), 2000);
-    });
-  };
-
-  // Reset states when lead changes
-  useEffect(() => { setCopied(false); setCopiedPhone(false); }, [index]);
-
-  // Keyboard arrow navigation
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'ArrowLeft'  && index > 0)          { e.preventDefault(); onNavigate(index - 1); }
-      if (e.key === 'ArrowRight' && index < total - 1)  { e.preventDefault(); onNavigate(index + 1); }
-      if (e.key === 'Escape')                           { onClose(); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [index, total]);
-
-  const escapeRE = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const highlightRE = new RegExp(`(${escapeRE(bizName)}${niche !== bizName ? '|' + escapeRE(niche) : ''})`, 'g');
-
-  const navBtnStyle = (disabled) => ({
-    background: disabled ? 'none' : 'rgba(74,108,247,0.08)',
-    border: '1px solid', borderColor: disabled ? '#f0f2f8' : 'rgba(74,108,247,0.25)',
-    borderRadius: 6, padding: '5px 8px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    color: disabled ? '#2a2a28' : '#4a6cf7',
-    display: 'flex', alignItems: 'center', transition: 'all 0.15s',
-  });
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-      onClick={onClose}>
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 16, width: '100%', maxWidth: 560, boxShadow: '0 24px 80px rgba(0,0,0,0.6)', overflow: 'hidden' }}
-        onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7ef', background: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(74,108,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ScrollText size={15} color="#4a6cf7" />
-              </div>
-              <div>
-                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Phone Script</div>
-                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#8e8ea0', marginTop: 1 }}>{lead.name}</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#8e8ea0', marginRight: 4 }}>
-                {index + 1} / {total}
-              </span>
-              <button onClick={() => onNavigate(index - 1)} disabled={index === 0} style={navBtnStyle(index === 0)} title="Previous (←)">
-                <ChevronLeft size={14} />
-              </button>
-              <button onClick={() => onNavigate(index + 1)} disabled={index === total - 1} style={navBtnStyle(index === total - 1)} title="Next (→)">
-                <ChevronRight size={14} />
-              </button>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, marginLeft: 4 }}>
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* Phone number bar */}
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-            {lead.phone ? (
-              <>
-                <a
-                  href={`tel:${lead.phone}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(74,108,247,0.08)', border: '1px solid rgba(74,108,247,0.2)', borderRadius: 8, padding: '7px 14px', color: '#4a6cf7', textDecoration: 'none', fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: 600, flex: 1 }}
-                >
-                  <Phone size={13} /> {lead.phone}
-                </a>
-                <button
-                  onClick={handleCopyPhone}
-                  title="Copy number"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: copiedPhone ? 'rgba(74,108,247,0.15)' : '#f0f2f8', border: '1px solid', borderColor: copiedPhone ? 'rgba(74,108,247,0.4)' : '#e5e7ef', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', color: copiedPhone ? '#4a6cf7' : '#8e8ea0', fontFamily: 'Inter, sans-serif', fontSize: 11, transition: 'all 0.2s' }}
-                >
-                  {copiedPhone ? <><CheckCheck size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
-                </button>
-              </>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#8e8ea0' }}>
-                <Phone size={12} /> No phone number on file
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Script body */}
-        <div style={{ padding: '20px 22px' }}>
-          {script.split('\n\n').map((para, i) => (
-            <p key={i} style={{ fontSize: 14, lineHeight: 1.75, color: '#1a1a2e', margin: 0, marginBottom: i < 3 ? 16 : 0 }}>
-              {para.split(highlightRE).map((chunk, j) =>
-                chunk === bizName || chunk === niche
-                  ? <span key={j} style={{ color: '#4a6cf7', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{chunk}</span>
-                  : chunk
-              )}
-            </p>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: '12px 22px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={handleCopy}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: copied ? 'rgba(74,108,247,0.15)' : '#4a6cf7', color: copied ? '#4a6cf7' : '#f5f7fa', border: copied ? '1px solid rgba(74,108,247,0.4)' : 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
-          >
-            {copied ? <><CheckCheck size={14} /> Copied!</> : <><Copy size={14} /> Copy Script</>}
-          </button>
-
-          {/* Interest buttons — each saves + advances to next lead */}
-          <div style={{ display: 'flex', gap: 6, marginLeft: 4 }}>
-            <button
-              title="Interested → next"
-              onClick={() => { onInterest(lead.id, 'up'); if (index < total - 1) onNavigate(index + 1); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'up' ? 'rgba(74,108,247,0.15)' : '#f0f2f8', border: '1px solid', borderColor: lead.interest === 'up' ? 'rgba(74,108,247,0.4)' : '#e5e7ef', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'up' ? '#4a6cf7' : '#8e8ea0', fontSize: 12, transition: 'all 0.15s' }}
-            >
-              <ThumbsUp size={14} />
-            </button>
-            <button
-              title="Not interested → next"
-              onClick={() => { onInterest(lead.id, 'down'); if (index < total - 1) onNavigate(index + 1); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, background: lead.interest === 'down' ? 'rgba(255,92,92,0.15)' : '#f0f2f8', border: '1px solid', borderColor: lead.interest === 'down' ? 'rgba(255,92,92,0.4)' : '#e5e7ef', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: lead.interest === 'down' ? '#ff5c5c' : '#8e8ea0', fontSize: 12, transition: 'all 0.15s' }}
-            >
-              <ThumbsDown size={14} />
-            </button>
-            <button
-              title="No answer → mark Unqualified + next"
-              onClick={() => { if (onNoAnswer) onNoAnswer(lead); if (index < total - 1) onNavigate(index + 1); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0f2f8', border: '1px solid #e5e7ef', borderRadius: 8, padding: '8px 12px', cursor: index < total - 1 ? 'pointer' : 'not-allowed', color: '#8e8ea0', fontSize: 12, fontFamily: 'Inter, sans-serif', transition: 'all 0.15s', opacity: index < total - 1 ? 1 : 0.4 }}
-              onMouseEnter={e => { if (index < total - 1) { e.currentTarget.style.borderColor = '#8e8ea0'; e.currentTarget.style.color = '#1a1a2e'; } }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7ef'; e.currentTarget.style.color = '#8e8ea0'; }}
-            >
-              <PhoneCall size={13} /> No Answer
-            </button>
-          </div>
-
-          <button
-            title="Schedule demo call"
-            onClick={() => onSchedule && onSchedule(lead)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111328', border: '1px solid #5b9cf630', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#5b9cf6', fontSize: 12, fontWeight: 600, fontFamily: 'Inter, sans-serif', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#5b9cf620'; e.currentTarget.style.borderColor = '#5b9cf660'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#111328'; e.currentTarget.style.borderColor = '#5b9cf630'; }}
-          >
-            <Calendar size={13} /> Schedule Demo
-          </button>
-
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: '1px solid #e5e7ef', color: '#8e8ea0', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontSize: 13 }}
-          >
-            Close
-          </button>
-          <span style={{ marginLeft: 'auto', fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#2a2a28' }}>← → to cycle</span>
-        </div>
-      </div>
-    </div>
-  );
+/* Format relative time for last follow-up */
+function formatFollowUp(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = now - d;
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return '1d ago';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
 }
 
 // ── Survey Detail / Edit Panel ────────────────────────────────────────────────
@@ -250,7 +73,7 @@ const DETAIL_SECTIONS = [
 
 const inputStyle = {
   width: '100%', padding: '6px 9px', borderRadius: 5, fontSize: 12,
-  color: '#8e8ea0', background: '#111328', border: '1px solid #e5e7ef',
+  color: '#1a1a2e', background: '#ffffff', border: '1px solid #e5e7ef',
   outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
 };
 
@@ -274,17 +97,15 @@ function EditableField({ fieldKey, value, onChange }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, lastFollowUp }) {
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
 
-  // Keep draft in sync when the parent lead object changes (e.g. after status badge auto-save)
   useEffect(() => { setDraft(d => ({ ...d, ...lead })); }, [lead]);
 
   const set = (key, val) => setDraft(d => ({ ...d, [key]: val }));
 
-  // Detect changes to any text-editable fields
   const editableKeys = DETAIL_SECTIONS.flatMap(s => s.fields.map(f => f.key));
   const isDirty = editableKeys.some(k => draft[k] !== lead[k]);
 
@@ -299,10 +120,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
     } finally { setSaving(false); }
   }
 
-  // Immediate-save: status badge
   const handleStatus = (s) => { set('status', s); onFieldSave(lead.id, 'status', s); };
 
-  // Immediate-save: call completed toggle
   const handleCallToggle = async () => {
     const next = !draft.call_completed;
     set('call_completed', next);
@@ -311,10 +130,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
-      {/* Backdrop */}
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-
-      {/* Panel */}
       <div style={{
         position: 'relative', width: 540, background: '#ffffff',
         borderLeft: '1px solid #e5e7ef', overflowY: 'auto',
@@ -322,7 +138,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
         display: 'flex', flexDirection: 'column',
       }}>
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* Header */}
         <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #e5e7ef', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -331,8 +147,6 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <StatusBadge status={draft.status} options={statuses} onChange={handleStatus} />
-
-                {/* Call Completed toggle */}
                 <button
                   onClick={handleCallToggle}
                   style={{
@@ -351,6 +165,38 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
                   }
                 </button>
               </div>
+
+              {/* Quick actions row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                {lead.email && (
+                  <button
+                    onClick={() => onEmail(lead)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, border: 'none',
+                      background: '#4a6cf7', color: '#fff',
+                    }}
+                  >
+                    <Send size={12} /> Email
+                  </button>
+                )}
+                {lead.phone && (
+                  <a href={`tel:${lead.phone}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                    fontSize: 12, fontWeight: 600,
+                    background: '#f0f2f8', color: '#1a1a2e', border: '1px solid #e5e7ef',
+                  }}>
+                    <Phone size={12} /> Call
+                  </a>
+                )}
+                {lastFollowUp && (
+                  <span style={{ fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Clock size={11} /> Last follow-up: {formatFollowUp(lastFollowUp)}
+                  </span>
+                )}
+              </div>
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, flexShrink: 0 }}>
               <X size={20} />
@@ -358,7 +204,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
           </div>
         </div>
 
-        {/* ── Editable sections ───────────────────────────────────────────── */}
+        {/* Editable sections */}
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
           {DETAIL_SECTIONS.map(section => (
             <div key={section.title}>
@@ -377,7 +223,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
           ))}
         </div>
 
-        {/* ── Sticky save bar ─────────────────────────────────────────────── */}
+        {/* Sticky save bar */}
         <div style={{
           position: 'sticky', bottom: 0, padding: '12px 24px',
           background: '#ffffff', borderTop: '1px solid #e5e7ef',
@@ -411,7 +257,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses }) {
 
 // ── Truncate helper ───────────────────────────────────────────────────────────
 function Trunc({ value, max = 22 }) {
-  if (!value) return <span style={{ color: '#e5e7ef' }}>—</span>;
+  if (!value) return <span style={{ color: '#c0c0c0' }}>—</span>;
   return (
     <span title={value} style={{ fontSize: 12, color: '#8e8ea0' }}>
       {value.length > max ? value.slice(0, max) + '…' : value}
@@ -421,6 +267,7 @@ function Trunc({ value, max = 22 }) {
 
 export default function Leads() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [collapsed, setCollapsed] = useState({});
@@ -431,7 +278,9 @@ export default function Leads() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showImport, setShowImport] = useState(false);
   const [detailLead, setDetailLead] = useState(null);
-  const [sort,        setSort]        = useState('newest');
+  const [sort, setSort] = useState('newest');
+  const [hoveredId, setHoveredId] = useState(null);
+  const [lastFollowUps, setLastFollowUps] = useState({});
 
   const load = async () => {
     try {
@@ -441,6 +290,19 @@ export default function Leads() {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+
+  // Load last follow-up dates from communication log
+  useEffect(() => {
+    getCommLog().then(logs => {
+      const map = {};
+      logs.forEach(log => {
+        if (log.lead_id && !map[log.lead_id]) {
+          map[log.lead_id] = log.created_at;
+        }
+      });
+      setLastFollowUps(map);
+    }).catch(() => {});
+  }, [leads]);
 
   const filtered = useMemo(() =>
     leads.filter(l => !search ||
@@ -497,6 +359,12 @@ export default function Leads() {
   const openDelete = (l) => { setSelected(l); setModal('delete'); };
   const openConvert = (l) => { setSelected(l); setModal('convert'); };
 
+  const handleEmail = (lead) => {
+    if (lead.email) {
+      navigate(`/email?compose=${encodeURIComponent(lead.email)}&name=${encodeURIComponent(lead.name || '')}`);
+    }
+  };
+
   const handleSave = async () => {
     if (!form.name.trim()) return;
     try { await createLead(form); await load(); setModal(null); } catch (e) { alert(e.message); }
@@ -525,7 +393,7 @@ export default function Leads() {
     try { await Promise.all([...selectedIds].map(id => updateLead(id, { status }))); setLeads(ls => ls.map(l => selectedIds.has(l.id) ? { ...l, status } : l)); clearSelection(); } catch (e) { console.error(e); }
   };
 
-  const COL_COUNT = 10; // checkbox, Lead, Status, Interest, Action, Email, Phone, Business, Budget Tier, Actions
+  const COL_COUNT = 9;
 
   return (
     <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
@@ -560,15 +428,14 @@ export default function Leads() {
           <thead>
             <tr>
               <th style={{ width: 36 }}></th>
-              <th style={{ minWidth: 180 }}>Lead</th>
-              <th style={{ minWidth: 130 }}>Status</th>
-              <th style={{ minWidth: 90 }}>Interest</th>
-              <th style={{ minWidth: 140 }}>Action</th>
-              <th style={{ minWidth: 155 }}>Email</th>
+              <th style={{ minWidth: 160 }}>Name</th>
+              <th style={{ minWidth: 160 }}>Email</th>
               <th style={{ minWidth: 120 }}>Phone</th>
-              <th style={{ minWidth: 140 }}>Business</th>
-              <th style={{ minWidth: 110 }}>Budget</th>
-              <th style={{ width: 80 }}></th>
+              <th style={{ minWidth: 200 }}>Goal</th>
+              <th style={{ minWidth: 100 }}>Budget</th>
+              <th style={{ minWidth: 110 }}>Best Time</th>
+              <th style={{ minWidth: 100 }}>Source</th>
+              <th style={{ minWidth: 90 }}>Last Email</th>
             </tr>
           </thead>
           <tbody>
@@ -588,101 +455,149 @@ export default function Leads() {
                   </td>
                 </tr>
                 {!collapsed[status] && items.map(lead => (
-                  <tr key={lead.id} style={{ background: selectedIds.has(lead.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
-                    <td>
+                  <tr
+                    key={lead.id}
+                    style={{
+                      background: selectedIds.has(lead.id) ? 'rgba(74,108,247,0.08)' : undefined,
+                      cursor: 'pointer',
+                      position: 'relative',
+                    }}
+                    onMouseEnter={() => setHoveredId(lead.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onClick={(e) => {
+                      // Don't open detail if clicking checkbox, inline edit, or action bar buttons
+                      if (e.target.closest('input[type="checkbox"]') || e.target.closest('.lead-action-bar') || e.target.closest('.inline-edit')) return;
+                      setDetailLead(lead);
+                    }}
+                  >
+                    <td onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
                     </td>
                     <td style={{ fontWeight: 500 }}>
-                      <InlineEdit value={lead.name} onSave={val => handleFieldSave(lead.id, 'name', val)} placeholder="Name" privacy="name" />
-                    </td>
-                    <td>
-                      <StatusBadge status={lead.status} options={LEAD_STATUSES} onChange={s => handleStatusChange(lead, s)} />
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button
-                          title="Interested"
-                          onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'up' ? null : 'up')}
-                          style={{
-                            background: lead.interest === 'up' ? 'rgba(74,108,247,0.15)' : 'none',
-                            border: lead.interest === 'up' ? '1px solid rgba(74,108,247,0.4)' : '1px solid transparent',
-                            borderRadius: 6, cursor: 'pointer', padding: '4px 6px',
-                            color: lead.interest === 'up' ? '#4a6cf7' : '#8e8ea0',
-                            transition: 'all 0.15s', display: 'flex', alignItems: 'center',
-                          }}
-                          onMouseEnter={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#4a6cf7'; }}
-                          onMouseLeave={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#8e8ea0'; }}
-                        >
-                          <ThumbsUp size={13} />
-                        </button>
-                        <button
-                          title="Not interested"
-                          onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'down' ? null : 'down')}
-                          style={{
-                            background: lead.interest === 'down' ? 'rgba(255,92,92,0.15)' : 'none',
-                            border: lead.interest === 'down' ? '1px solid rgba(255,92,92,0.4)' : '1px solid transparent',
-                            borderRadius: 6, cursor: 'pointer', padding: '4px 6px',
-                            color: lead.interest === 'down' ? '#ff5c5c' : '#8e8ea0',
-                            transition: 'all 0.15s', display: 'flex', alignItems: 'center',
-                          }}
-                          onMouseEnter={e => { if (lead.interest !== 'down') e.currentTarget.style.color = '#ff5c5c'; }}
-                          onMouseLeave={e => { if (lead.interest !== 'down') e.currentTarget.style.color = '#8e8ea0'; }}
-                        >
-                          <ThumbsDown size={13} />
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <StatusBadge status={lead.status} options={LEAD_STATUSES} onChange={s => handleStatusChange(lead, s)} />
+                        <span className="private-value" style={{ fontSize: 13, color: '#1a1a2e' }}>{lead.name || '—'}</span>
                       </div>
                     </td>
                     <td>
-                      {lead.status !== 'Converted' ? (
-                        <button className="btn-green" onClick={() => openConvert(lead)}>
-                          <UserPlus size={12} /> Move to Contacts
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: 12, color: '#8e8ea0' }}>Converted</span>
-                      )}
+                      <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.email || '—'}</span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {lead.email && (
-                          <a href={gmailLink(lead.email)} target="_blank" rel="noreferrer" title="Compose in Gmail">
-                            <Mail size={13} style={{ color: '#4a6cf7' }} />
-                          </a>
-                        )}
-                        <InlineEdit value={lead.email} type="email" onSave={val => handleFieldSave(lead.id, 'email', val)} placeholder="Add email" privacy="email" />
-                      </div>
+                      <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.phone || '—'}</span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {lead.phone && (
-                          <a href={`tel:${lead.phone}`} title="Call" style={{ display: 'flex' }}>
-                            <Phone size={13} style={{ color: '#4a6cf7' }} />
-                          </a>
-                        )}
-                        <InlineEdit value={lead.phone} onSave={val => handleFieldSave(lead.id, 'phone', val)} placeholder="Add phone" privacy="phone" />
-                      </div>
+                      <span style={{ fontSize: 12, color: '#8e8ea0', lineHeight: 1.4 }}>
+                        {summarizeGoal(lead) || <span style={{ color: '#c0c0c0' }}>—</span>}
+                      </span>
                     </td>
-                    <td><Trunc value={lead.company} max={20} /></td>
                     <td>
-                      <span className="private-value" style={{ fontSize: 12, color: lead.budget ? '#4a6cf7' : '#e5e7ef', fontWeight: lead.budget ? 600 : 400 }}>
+                      <span className="private-value" style={{ fontSize: 12, color: lead.budget ? '#4a6cf7' : '#c0c0c0', fontWeight: lead.budget ? 600 : 400 }}>
                         {lead.budget || '—'}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        <button
-                          title="Edit lead"
-                          onClick={() => setDetailLead(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#4a6cf7'}
-                          onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => openDelete(lead)} title="Delete">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      <Trunc value={lead.best_time || lead.time_available} max={18} />
                     </td>
+                    <td>
+                      <Trunc value={lead.lead_source} max={16} />
+                    </td>
+                    <td>
+                      {lastFollowUps[lead.id] ? (
+                        <span style={{ fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Clock size={10} /> {formatFollowUp(lastFollowUps[lead.id])}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#c0c0c0' }}>—</span>
+                      )}
+                    </td>
+
+                    {/* Floating action bar on hover */}
+                    {hoveredId === lead.id && (
+                      <td style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', padding: 0, border: 'none', width: 'auto', background: 'transparent' }}>
+                        <div
+                          className="lead-action-bar"
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 2,
+                            background: '#ffffff', border: '1px solid #e5e7ef',
+                            borderRadius: 8, padding: '3px 4px',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                          }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {lead.email && (
+                            <button
+                              title="Send email"
+                              onClick={() => handleEmail(lead)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a6cf7', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#4a6cf710'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                            >
+                              <Mail size={14} />
+                            </button>
+                          )}
+                          {lead.phone && (
+                            <a
+                              href={`tel:${lead.phone}`}
+                              title="Call"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a6cf7', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#4a6cf710'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <Phone size={14} />
+                            </a>
+                          )}
+                          <button
+                            title="Interested"
+                            onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'up' ? null : 'up')}
+                            style={{
+                              background: lead.interest === 'up' ? 'rgba(74,108,247,0.12)' : 'none',
+                              border: 'none', borderRadius: 5, cursor: 'pointer', padding: '5px 7px',
+                              color: lead.interest === 'up' ? '#4a6cf7' : '#8e8ea0',
+                              display: 'flex', alignItems: 'center',
+                            }}
+                            onMouseEnter={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#4a6cf7'; }}
+                            onMouseLeave={e => { if (lead.interest !== 'up') e.currentTarget.style.color = '#8e8ea0'; }}
+                          >
+                            <ThumbsUp size={13} />
+                          </button>
+                          <button
+                            title="Not interested"
+                            onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'down' ? null : 'down')}
+                            style={{
+                              background: lead.interest === 'down' ? 'rgba(255,92,92,0.12)' : 'none',
+                              border: 'none', borderRadius: 5, cursor: 'pointer', padding: '5px 7px',
+                              color: lead.interest === 'down' ? '#ff5c5c' : '#8e8ea0',
+                              display: 'flex', alignItems: 'center',
+                            }}
+                            onMouseEnter={e => { if (lead.interest !== 'down') e.currentTarget.style.color = '#ff5c5c'; }}
+                            onMouseLeave={e => { if (lead.interest !== 'down') e.currentTarget.style.color = '#8e8ea0'; }}
+                          >
+                            <ThumbsDown size={13} />
+                          </button>
+                          {lead.status !== 'Converted' && (
+                            <button
+                              title="Move to Contacts"
+                              onClick={() => openConvert(lead)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#4a6cf7'; e.currentTarget.style.background = '#4a6cf710'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
+                            >
+                              <UserPlus size={14} />
+                            </button>
+                          )}
+                          <button
+                            title="Delete"
+                            onClick={() => openDelete(lead)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#ff5c5c'; e.currentTarget.style.background = '#ff5c5c10'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {!collapsed[status] && (
@@ -718,6 +633,8 @@ export default function Leads() {
           onFieldSave={handleFieldSave}
           onSaveAll={handleSaveAllFields}
           statuses={LEAD_STATUSES}
+          onEmail={handleEmail}
+          lastFollowUp={lastFollowUps[detailLead.id]}
         />
       )}
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Mail, Send, FileText, Inbox, Search, RefreshCw, Trash2,
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
@@ -345,6 +346,7 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
 /* ════════════════════════════════════════════════════════════════════════════ */
 
 export default function EmailPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab]                       = useState('inbox');
   const [queueEmails, setQueueEmails]       = useState([]);
   const [inboxMessages, setInboxMessages]   = useState([]);
@@ -373,6 +375,16 @@ export default function EmailPage() {
   // Compose popup
   const [composeOpen, setComposeOpen]       = useState(false); // true = new, or an email obj for reply
   const [sending, setSending]               = useState(false);
+
+  // Auto-open compose if navigated with ?compose=email
+  useEffect(() => {
+    const composeEmail = searchParams.get('compose');
+    const composeName = searchParams.get('name');
+    if (composeEmail) {
+      setComposeOpen({ to_email: composeEmail, subject: '' });
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   /* ── data loading (cache-first, then background sync) ─────────────── */
 
