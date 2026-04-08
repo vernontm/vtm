@@ -73,6 +73,11 @@ function Linkify({ text }) {
 
 /* ── HTML email renderer (sandboxed iframe) ──────────────────────────────── */
 
+function looksLikeHtml(text) {
+  if (!text) return false;
+  return /<!DOCTYPE|<html|<head|<body|<table|<div\s|<style/i.test(text);
+}
+
 function HtmlEmail({ html }) {
   const ref = React.useRef(null);
   React.useEffect(() => {
@@ -83,19 +88,36 @@ function HtmlEmail({ html }) {
     doc.close();
     // Auto-resize iframe to content height
     const resize = () => {
-      if (ref.current && doc.body) {
-        ref.current.style.height = Math.max(doc.body.scrollHeight + 20, 100) + 'px';
-      }
+      try {
+        if (ref.current && doc.body) {
+          ref.current.style.height = Math.max(doc.body.scrollHeight + 20, 100) + 'px';
+        }
+      } catch(e) {}
     };
-    setTimeout(resize, 100);
-    setTimeout(resize, 500);
+    setTimeout(resize, 200);
+    setTimeout(resize, 800);
+    setTimeout(resize, 2000);
     // Open links in new tab
-    doc.addEventListener('click', (e) => {
-      const a = e.target.closest('a');
-      if (a) { e.preventDefault(); window.open(a.href, '_blank'); }
-    });
+    try {
+      doc.addEventListener('click', (e) => {
+        const a = e.target.closest('a');
+        if (a) { e.preventDefault(); window.open(a.href, '_blank'); }
+      });
+    } catch(e) {}
   }, [html]);
-  return <iframe ref={ref} sandbox="allow-same-origin" style={{ width:'100%', border:'none', minHeight:100, borderRadius:8 }} />;
+  return <iframe ref={ref} sandbox="allow-same-origin" style={{ width:'100%', border:'none', minHeight:200, borderRadius:8 }} />;
+}
+
+/* Helper: render body as HTML iframe or plain text with Linkify */
+function EmailBody({ msg, fallbackText }) {
+  const html = msg?.bodyHtml || '';
+  const body = msg?.body || fallbackText || '';
+  // If bodyHtml is set from API, use it
+  if (html) return <HtmlEmail html={html} />;
+  // If the plain body looks like HTML (detection fallback), render in iframe
+  if (looksLikeHtml(body)) return <HtmlEmail html={body} />;
+  // Otherwise render as plain text with linkify
+  return <Linkify text={body || '(empty)'} />;
 }
 
 /* ── tiny helpers ─────────────────────────────────────────────────────────── */
@@ -705,15 +727,9 @@ export default function EmailPage() {
                           <span style={{ fontSize:11, color:'#8e8ea0' }}>{fmtFullDate(msg.date)}</span>
                         </div>
                         {/* Message body */}
-                        {msg.bodyHtml ? (
-                          <div style={{ padding:'16px 20px' }}>
-                            <HtmlEmail html={msg.bodyHtml} />
-                          </div>
-                        ) : (
-                          <div style={{ padding:'16px 20px', fontSize:13, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
-                            <Linkify text={msg.body || msg.snippet || '(empty)'} />
-                          </div>
-                        )}
+                        <div style={{ padding:'16px 20px', fontSize:13, lineHeight:1.8, color:'#1a1a2e', whiteSpace: (msg.bodyHtml || looksLikeHtml(msg.body)) ? 'normal' : 'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                          <EmailBody msg={msg} fallbackText={msg.snippet} />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -732,12 +748,11 @@ export default function EmailPage() {
                         <button onClick={() => handleDelete(selected.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ff5c5c', display:'flex', padding:6 }}><Trash2 size={15} /></button>
                       )}
                     </div>
-                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding: (threadMessages.length === 1 && threadMessages[0].bodyHtml) ? 16 : 28, fontSize:14, lineHeight:1.8, color:'#1a1a2e', whiteSpace: (threadMessages.length === 1 && threadMessages[0].bodyHtml) ? 'normal' : 'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
-                      {threadMessages.length === 1 && threadMessages[0].bodyHtml ? (
-                        <HtmlEmail html={threadMessages[0].bodyHtml} />
-                      ) : (
-                        <Linkify text={threadMessages.length === 1 ? (threadMessages[0].body || selected.snippet || '(empty)') : (selected.body||selected.generated_body||selected.snippet||'(empty)')} />
-                      )}
+                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding:16, fontSize:14, lineHeight:1.8, color:'#1a1a2e', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                      <EmailBody
+                        msg={threadMessages.length === 1 ? threadMessages[0] : null}
+                        fallbackText={threadMessages.length === 1 ? (threadMessages[0]?.body || selected.snippet) : (selected.body||selected.generated_body||selected.snippet)}
+                      />
                     </div>
                   </>
                 )}
