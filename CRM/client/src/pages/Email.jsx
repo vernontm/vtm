@@ -41,8 +41,9 @@ function Linkify({ text }) {
   if (!text) return null;
   const urlRegex = /(https?:\/\/[^\s<>"')\]]+)/g;
   const parts = text.split(urlRegex);
+  const isUrl = /^https?:\/\//;
   return parts.map((part, i) => {
-    if (!urlRegex.test(part)) return part;
+    if (!isUrl.test(part)) return part;
     // YouTube embed
     const ytId = getYouTubeId(part);
     if (ytId) return (
