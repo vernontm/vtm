@@ -31,35 +31,33 @@ function parseFrom(fromStr) {
  * Returns { text, isHtml } — plain text preferred, HTML returned raw if no plain text.
  */
 function decodeBody(payload) {
-  if (!payload) return { text: '', isHtml: false };
+  if (!payload) return { text: '', html: '' };
 
   // Direct body data — check mime type
   if (payload.body?.data) {
     const raw = base64Decode(payload.body.data);
     const isHtml = (payload.mimeType || '').includes('html');
-    return { text: raw, isHtml };
+    return isHtml ? { text: '', html: raw } : { text: raw, html: '' };
   }
 
-  // Multipart — walk parts
+  // Multipart — extract both plain and html parts
   if (payload.parts) {
-    // Prefer text/plain
-    const plain = findPart(payload.parts, 'text/plain');
-    if (plain?.body?.data) return { text: base64Decode(plain.body.data), isHtml: false };
-
-    // Fall back to text/html — return raw HTML
-    const html = findPart(payload.parts, 'text/html');
-    if (html?.body?.data) return { text: base64Decode(html.body.data), isHtml: true };
+    const plainPart = findPart(payload.parts, 'text/plain');
+    const htmlPart = findPart(payload.parts, 'text/html');
+    const text = plainPart?.body?.data ? base64Decode(plainPart.body.data) : '';
+    const html = htmlPart?.body?.data ? base64Decode(htmlPart.body.data) : '';
+    if (text || html) return { text, html };
 
     // Nested multipart
     for (const part of payload.parts) {
       if (part.parts) {
         const nested = decodeBody(part);
-        if (nested.text) return nested;
+        if (nested.text || nested.html) return nested;
       }
     }
   }
 
-  return { text: '', isHtml: false };
+  return { text: '', html: '' };
 }
 
 function findPart(parts, mimeType) {
@@ -114,7 +112,7 @@ export default async function handler(req, res) {
     const thread = await gmailFetch(`/threads/${threadId}?format=full`, accessToken);
     const messages = (thread.messages || []).map(msg => {
       const from = parseFrom(getHeader(msg, 'From'));
-      const { text: body, isHtml } = decodeBody(msg.payload);
+      const { text, html } = decodeBody(msg.payload);
 
       return {
         id: msg.id,
@@ -124,8 +122,8 @@ export default async function handler(req, res) {
         subject: getHeader(msg, 'Subject') || '(no subject)',
         date: getHeader(msg, 'Date'),
         snippet: msg.snippet || '',
-        body: isHtml ? '' : body,
-        bodyHtml: isHtml ? body : '',
+        body: text,
+        bodyHtml: html,
         labelIds: msg.labelIds || [],
         isFromMe: from.email.toLowerCase() === (userEmail || '').toLowerCase(),
       };
