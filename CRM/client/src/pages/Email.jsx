@@ -28,17 +28,46 @@ const LABEL_CONFIG = {
   spam:        { icon: Ban,           color: '#8e8ea0', label: 'Spam' },
 };
 
-/* ── linkify + wrap helper ────────────────────────────────────────────────── */
+/* ── linkify + wrap helper (renders images/videos/YouTube inline) ─────────── */
+
+function isImageUrl(url) { return /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url); }
+function isVideoUrl(url) { return /\.(mp4|webm|mov|avi)(\?|$)/i.test(url); }
+function getYouTubeId(url) {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
 
 function Linkify({ text }) {
   if (!text) return null;
   const urlRegex = /(https?:\/\/[^\s<>"')\]]+)/g;
   const parts = text.split(urlRegex);
-  return parts.map((part, i) =>
-    urlRegex.test(part)
-      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color:'#4a6cf7', wordBreak:'break-all' }}>{part}</a>
-      : part
-  );
+  return parts.map((part, i) => {
+    if (!urlRegex.test(part)) return part;
+    // YouTube embed
+    const ytId = getYouTubeId(part);
+    if (ytId) return (
+      <div key={i} style={{ margin:'12px 0', borderRadius:10, overflow:'hidden', border:'1px solid #e5e7ef', maxWidth:480 }}>
+        <iframe src={`https://www.youtube.com/embed/${ytId}`} style={{ width:'100%', aspectRatio:'16/9', border:'none', display:'block' }} allowFullScreen />
+      </div>
+    );
+    // Image
+    if (isImageUrl(part)) return (
+      <div key={i} style={{ margin:'12px 0' }}>
+        <a href={part} target="_blank" rel="noopener noreferrer">
+          <img src={part} alt="" style={{ maxWidth:'100%', maxHeight:400, borderRadius:10, border:'1px solid #e5e7ef', display:'block' }}
+            onError={e => { e.target.style.display='none'; e.target.parentElement.innerHTML=`<a href="${part}" target="_blank" rel="noopener noreferrer" style="color:#4a6cf7;word-break:break-all">${part}</a>`; }} />
+        </a>
+      </div>
+    );
+    // Video
+    if (isVideoUrl(part)) return (
+      <div key={i} style={{ margin:'12px 0', maxWidth:480 }}>
+        <video src={part} controls style={{ width:'100%', borderRadius:10, border:'1px solid #e5e7ef', display:'block' }} />
+      </div>
+    );
+    // Regular link
+    return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color:'#4a6cf7', wordBreak:'break-all' }}>{part}</a>;
+  });
 }
 
 /* ── tiny helpers ─────────────────────────────────────────────────────────── */
