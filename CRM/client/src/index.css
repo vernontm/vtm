@@ -289,6 +289,8 @@ tr:hover td { background-color: var(--surface2); }
 .sidebar-item:hover { background-color: #14141f; color: #d0d0e0; }
 .sidebar-item.active { background-color: rgba(74,108,247,0.15); color: #4a6cf7; font-weight: 600; }
 
+.copy-cell:hover .copy-cell-btn { opacity: 1 !important; }
+
 .deal-value-cell {
   font-weight: 700;
   color: var(--accent);

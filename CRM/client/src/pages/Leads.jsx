@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
 import BulkImport from '../components/BulkImport';
+import CopyCell from '../components/CopyCell';
 
 const LEAD_STATUSES = ['Warm', 'Hot', 'Unqualified'];
 const LEAD_SOURCES = ['', 'Website', 'Referral', 'Cold Outreach', 'LinkedIn', 'Email Campaign', 'Social Media', 'Other'];
@@ -474,13 +475,19 @@ export default function Leads() {
                       <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
                     </td>
                     <td style={{ fontWeight: 500 }}>
-                      <span className="private-value" style={{ fontSize: 13, color: '#1a1a2e' }}>{lead.name || '—'}</span>
+                      <CopyCell value={lead.name}>
+                        <span className="private-value" style={{ fontSize: 13, color: '#1a1a2e' }}>{lead.name || '—'}</span>
+                      </CopyCell>
                     </td>
                     <td>
-                      <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.email || '—'}</span>
+                      <CopyCell value={lead.email}>
+                        <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.email || '—'}</span>
+                      </CopyCell>
                     </td>
                     <td>
-                      <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.phone || '—'}</span>
+                      <CopyCell value={lead.phone}>
+                        <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.phone || '—'}</span>
+                      </CopyCell>
                     </td>
                     <td>
                       <span style={{ fontSize: 12, color: '#8e8ea0', lineHeight: 1.4 }}>

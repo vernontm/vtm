@@ -5,6 +5,7 @@ import { getContacts, createContact, updateContact, deleteContact } from '../api
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
+import CopyCell from '../components/CopyCell';
 
 const EMPTY = { name: '', email: '', phone: '', company: '', title: '', notes: '' };
 const gmailLink = (email) => `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
@@ -146,7 +147,9 @@ export default function Contacts() {
                     }}>
                       {initials(contact.name)}
                     </div>
-                    <InlineEdit value={contact.name} onSave={val => handleFieldSave(contact.id, 'name', val)} placeholder="Name" privacy="name" />
+                    <CopyCell value={contact.name}>
+                      <InlineEdit value={contact.name} onSave={val => handleFieldSave(contact.id, 'name', val)} placeholder="Name" privacy="name" />
+                    </CopyCell>
                   </div>
                 </td>
                 <td>
@@ -156,13 +159,17 @@ export default function Contacts() {
                         <Mail size={13} style={{ color: '#4a6cf7' }} />
                       </a>
                     )}
-                    <InlineEdit value={contact.email} type="email" onSave={val => handleFieldSave(contact.id, 'email', val)} placeholder="Add email" privacy="email" />
+                    <CopyCell value={contact.email}>
+                      <InlineEdit value={contact.email} type="email" onSave={val => handleFieldSave(contact.id, 'email', val)} placeholder="Add email" privacy="email" />
+                    </CopyCell>
                   </div>
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {contact.phone && <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />}
-                    <InlineEdit value={contact.phone} type="tel" onSave={val => handleFieldSave(contact.id, 'phone', val)} placeholder="Add phone" privacy="phone" />
+                    <CopyCell value={contact.phone}>
+                      <InlineEdit value={contact.phone} type="tel" onSave={val => handleFieldSave(contact.id, 'phone', val)} placeholder="Add phone" privacy="phone" />
+                    </CopyCell>
                   </div>
                 </td>
                 <td><InlineEdit value={contact.company} onSave={val => handleFieldSave(contact.id, 'company', val)} placeholder="Company" /></td>
