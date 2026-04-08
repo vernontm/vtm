@@ -71,6 +71,33 @@ function Linkify({ text }) {
   });
 }
 
+/* ── HTML email renderer (sandboxed iframe) ──────────────────────────────── */
+
+function HtmlEmail({ html }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!ref.current || !html) return;
+    const doc = ref.current.contentDocument;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    // Auto-resize iframe to content height
+    const resize = () => {
+      if (ref.current && doc.body) {
+        ref.current.style.height = Math.max(doc.body.scrollHeight + 20, 100) + 'px';
+      }
+    };
+    setTimeout(resize, 100);
+    setTimeout(resize, 500);
+    // Open links in new tab
+    doc.addEventListener('click', (e) => {
+      const a = e.target.closest('a');
+      if (a) { e.preventDefault(); window.open(a.href, '_blank'); }
+    });
+  }, [html]);
+  return <iframe ref={ref} sandbox="allow-same-origin" style={{ width:'100%', border:'none', minHeight:100, borderRadius:8 }} />;
+}
+
 /* ── tiny helpers ─────────────────────────────────────────────────────────── */
 
 function timeAgo(iso) {
@@ -678,9 +705,15 @@ export default function EmailPage() {
                           <span style={{ fontSize:11, color:'#8e8ea0' }}>{fmtFullDate(msg.date)}</span>
                         </div>
                         {/* Message body */}
-                        <div style={{ padding:'16px 20px', fontSize:13, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
-                          <Linkify text={msg.body || msg.snippet || '(empty)'} />
-                        </div>
+                        {msg.bodyHtml ? (
+                          <div style={{ padding:'16px 20px' }}>
+                            <HtmlEmail html={msg.bodyHtml} />
+                          </div>
+                        ) : (
+                          <div style={{ padding:'16px 20px', fontSize:13, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                            <Linkify text={msg.body || msg.snippet || '(empty)'} />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -699,8 +732,12 @@ export default function EmailPage() {
                         <button onClick={() => handleDelete(selected.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ff5c5c', display:'flex', padding:6 }}><Trash2 size={15} /></button>
                       )}
                     </div>
-                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding:28, fontSize:14, lineHeight:1.8, color:'#1a1a2e', whiteSpace:'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
-                      <Linkify text={threadMessages.length === 1 ? (threadMessages[0].body || selected.snippet || '(empty)') : (selected.body||selected.generated_body||selected.snippet||'(empty)')} />
+                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding: (threadMessages.length === 1 && threadMessages[0].bodyHtml) ? 16 : 28, fontSize:14, lineHeight:1.8, color:'#1a1a2e', whiteSpace: (threadMessages.length === 1 && threadMessages[0].bodyHtml) ? 'normal' : 'pre-wrap', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                      {threadMessages.length === 1 && threadMessages[0].bodyHtml ? (
+                        <HtmlEmail html={threadMessages[0].bodyHtml} />
+                      ) : (
+                        <Linkify text={threadMessages.length === 1 ? (threadMessages[0].body || selected.snippet || '(empty)') : (selected.body||selected.generated_body||selected.snippet||'(empty)')} />
+                      )}
                     </div>
                   </>
                 )}

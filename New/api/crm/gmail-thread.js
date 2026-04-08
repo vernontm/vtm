@@ -28,36 +28,38 @@ function parseFrom(fromStr) {
 
 /**
  * Decode the email body from a Gmail message payload.
- * Handles multipart (text/plain preferred, falls back to text/html stripped).
+ * Returns { text, isHtml } — plain text preferred, HTML returned raw if no plain text.
  */
 function decodeBody(payload) {
-  if (!payload) return '';
+  if (!payload) return { text: '', isHtml: false };
 
-  // Direct body data
+  // Direct body data — check mime type
   if (payload.body?.data) {
-    return base64Decode(payload.body.data);
+    const raw = base64Decode(payload.body.data);
+    const isHtml = (payload.mimeType || '').includes('html');
+    return { text: raw, isHtml };
   }
 
   // Multipart — walk parts
   if (payload.parts) {
     // Prefer text/plain
     const plain = findPart(payload.parts, 'text/plain');
-    if (plain?.body?.data) return base64Decode(plain.body.data);
+    if (plain?.body?.data) return { text: base64Decode(plain.body.data), isHtml: false };
 
-    // Fall back to text/html, strip tags
+    // Fall back to text/html — return raw HTML
     const html = findPart(payload.parts, 'text/html');
-    if (html?.body?.data) return stripHtml(base64Decode(html.body.data));
+    if (html?.body?.data) return { text: base64Decode(html.body.data), isHtml: true };
 
     // Nested multipart
     for (const part of payload.parts) {
       if (part.parts) {
         const nested = decodeBody(part);
-        if (nested) return nested;
+        if (nested.text) return nested;
       }
     }
   }
 
-  return '';
+  return { text: '', isHtml: false };
 }
 
 function findPart(parts, mimeType) {
@@ -112,7 +114,7 @@ export default async function handler(req, res) {
     const thread = await gmailFetch(`/threads/${threadId}?format=full`, accessToken);
     const messages = (thread.messages || []).map(msg => {
       const from = parseFrom(getHeader(msg, 'From'));
-      const body = decodeBody(msg.payload);
+      const { text: body, isHtml } = decodeBody(msg.payload);
 
       return {
         id: msg.id,
@@ -122,7 +124,8 @@ export default async function handler(req, res) {
         subject: getHeader(msg, 'Subject') || '(no subject)',
         date: getHeader(msg, 'Date'),
         snippet: msg.snippet || '',
-        body,
+        body: isHtml ? '' : body,
+        bodyHtml: isHtml ? body : '',
         labelIds: msg.labelIds || [],
         isFromMe: from.email.toLowerCase() === (userEmail || '').toLowerCase(),
       };
