@@ -80,16 +80,16 @@ export default function Sidebar() {
   return (
     <>
       <aside
-        style={{ width: 230, minWidth: 230, background: '#f0f2f8', borderRight: '1px solid #e5e7ef' }}
+        style={{ width: 230, minWidth: 230, background: '#0a0a12', borderRight: '1px solid #1e1e2e' }}
         className={`app-sidebar flex flex-col h-full${sidebarOpen ? ' sidebar-open' : ''}`}
       >
         {/* Logo */}
-        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #e5e7ef' }}>
+        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #1e1e2e' }}>
           <div className="flex items-center gap-2">
             <img src={import.meta.env.BASE_URL + 'vtm-icon.png'} alt="VTM" style={{ width:32, height:32, borderRadius:8, objectFit:'cover' }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.2, fontFamily: 'Inter, sans-serif' }}>Vernon Tech</div>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>&amp; Media CRM</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#ffffff', lineHeight: 1.2, fontFamily: 'Inter, sans-serif' }}>Vernon Tech</div>
+              <div style={{ fontSize: 10, color: '#6b6b80', fontFamily: 'Inter, sans-serif' }}>&amp; Media CRM</div>
             </div>
           </div>
         </div>
@@ -102,22 +102,22 @@ export default function Sidebar() {
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 8,
               padding: '7px 10px', borderRadius: 8, cursor: 'pointer',
-              background: '#ffffff', border: '1px solid #e5e7ef',
-              color: '#b0b0c0', fontSize: 12, transition: 'all 0.15s',
+              background: '#14141f', border: '1px solid #2a2a3d',
+              color: '#6b6b80', fontSize: 12, transition: 'all 0.15s',
               textAlign: 'left', fontFamily: 'Inter, sans-serif',
             }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#4a6cf7'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7ef'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a3d'; }}
           >
             <Search size={13} style={{ flexShrink: 0 }} />
             <span style={{ flex: 1 }}>Search...</span>
-            <span style={{ fontSize: 10, background: '#f0f2f8', border: '1px solid #e5e7ef', borderRadius: 4, padding: '1px 5px', color: '#8e8ea0' }}>Cmd+K</span>
+            <span style={{ fontSize: 10, background: '#1e1e2e', border: '1px solid #2a2a3d', borderRadius: 4, padding: '1px 5px', color: '#6b6b80' }}>Cmd+K</span>
           </button>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 py-3" style={{ overflowY: 'auto' }}>
-          <div style={{ padding: '4px 16px 8px', fontSize: 10, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ padding: '4px 16px 8px', fontSize: 10, fontWeight: 600, color: '#505068', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif' }}>
             Workspace
           </div>
           {nav.map(({ to, icon: Icon, label }) => (
@@ -131,7 +131,7 @@ export default function Sidebar() {
             </NavLink>
           ))}
 
-          <div style={{ padding: '12px 16px 8px', fontSize: 10, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>
+          <div style={{ padding: '12px 16px 8px', fontSize: 10, fontWeight: 600, color: '#505068', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>
             Tools
           </div>
           {navTools.map(({ to, icon: Icon, label }) => (
@@ -157,15 +157,15 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7ef', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid #1e1e2e', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button
             onClick={togglePrivacy}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
-              background: privacyMode ? 'rgba(74,108,247,0.08)' : '#ffffff',
-              border: privacyMode ? '1px solid rgba(74,108,247,0.3)' : '1px solid #e5e7ef',
-              color: privacyMode ? '#4a6cf7' : '#8e8ea0',
+              background: privacyMode ? 'rgba(74,108,247,0.15)' : '#14141f',
+              border: privacyMode ? '1px solid rgba(74,108,247,0.3)' : '1px solid #2a2a3d',
+              color: privacyMode ? '#4a6cf7' : '#6b6b80',
               fontSize: 12, fontWeight: 600, transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
             }}
           >
@@ -177,7 +177,7 @@ export default function Sidebar() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
-              background: '#ffffff', border: '1px solid #e5e7ef', color: '#8e8ea0',
+              background: '#14141f', border: '1px solid #2a2a3d', color: '#6b6b80',
               fontSize: 12, fontWeight: 600, transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
             }}
           >
@@ -189,14 +189,14 @@ export default function Sidebar() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '7px 0', borderRadius: 8, cursor: 'pointer',
-              background: '#ffffff', border: '1px solid #e5e7ef', color: '#8e8ea0',
+              background: '#14141f', border: '1px solid #2a2a3d', color: '#6b6b80',
               fontSize: 12, fontWeight: 600, transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
             }}
           >
             <LogOut size={13} />
             Sign Out
           </button>
-          <div style={{ fontSize: 10, color: '#b0b0c0', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ fontSize: 10, color: '#505068', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
             Vernon Tech &amp; Media
           </div>
         </div>

@@ -281,13 +281,13 @@ tr:hover td { background-color: var(--surface2); }
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: #8e8ea0;
   transition: all 0.15s;
   text-decoration: none;
   margin: 1px 8px;
 }
-.sidebar-item:hover { background-color: #e8ecf4; color: var(--text); }
-.sidebar-item.active { background-color: rgba(74,108,247,0.1); color: var(--accent); font-weight: 600; }
+.sidebar-item:hover { background-color: #14141f; color: #d0d0e0; }
+.sidebar-item.active { background-color: rgba(74,108,247,0.15); color: #4a6cf7; font-weight: 600; }
 
 .deal-value-cell {
   font-weight: 700;
