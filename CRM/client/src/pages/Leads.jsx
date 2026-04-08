@@ -8,10 +8,10 @@ import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
 import BulkImport from '../components/BulkImport';
 
-const LEAD_STATUSES = ['Cold', 'Warm', 'Hot', 'Unqualified'];
+const LEAD_STATUSES = ['Warm', 'Hot', 'Unqualified'];
 const LEAD_SOURCES = ['', 'Website', 'Referral', 'Cold Outreach', 'LinkedIn', 'Email Campaign', 'Social Media', 'Other'];
 
-const EMPTY = { name: '', status: 'New Lead', company: '', email: '', phone: '', lead_source: '', notes: '' };
+const EMPTY = { name: '', status: 'Warm', company: '', email: '', phone: '', lead_source: '', notes: '' };
 
 /* Summarize goal from multiple fields into a concise string */
 function summarizeGoal(lead) {
