@@ -33,41 +33,54 @@ export default async function handler(req, res) {
     }
 
     const result = await response.json();
-    const taskData = result.data || result;
-    const status = taskData.status?.toLowerCase() || 'processing';
+    console.log('NanoBanana record-info response:', JSON.stringify(result).slice(0, 800));
 
+    // API response format:
+    // Success: { code: 200, msg: "...", data: { taskId, info: { resultImageUrl: "..." } } }
+    // Failed:  { code: 400|500|501, msg: "...", data: { taskId, info: { resultImageUrl: "" } } }
+    // Processing: code may differ or info may be missing
+
+    const code = result.code;
+    const taskData = result.data || {};
+    const info = taskData.info || {};
+
+    if (code === 200 && info.resultImageUrl) {
+      return res.status(200).json({
+        status: 'completed',
+        resultUrl: info.resultImageUrl,
+      });
+    }
+
+    if (code === 400 || code === 500 || code === 501) {
+      return res.status(200).json({
+        status: 'failed',
+        error: result.msg || 'Generation failed',
+      });
+    }
+
+    // Also check legacy/alternative response shapes just in case
+    const status = taskData.status?.toLowerCase();
     if (status === 'completed') {
-      console.log('NanoBanana completed response:', JSON.stringify(taskData).slice(0, 800));
-
-      // Extract image URL — try all known response shapes
-      let resultUrl =
+      const resultUrl =
         taskData.result_urls?.[0] ||
-        taskData.result_urls ||
         taskData.imageUrl ||
         taskData.image_url ||
         taskData.images?.[0]?.url ||
         taskData.images?.[0] ||
         taskData.output?.[0]?.url ||
         taskData.output?.[0] ||
-        taskData.url;
+        taskData.url ||
+        info.resultImageUrl;
 
-      // Handle case where result_urls is a string (single URL)
-      if (typeof resultUrl === 'object' && !Array.isArray(resultUrl)) {
-        resultUrl = null;
+      if (resultUrl && typeof resultUrl === 'string') {
+        return res.status(200).json({ status: 'completed', resultUrl });
       }
-
-      if (!resultUrl) {
-        console.error('No image URL in completed result:', JSON.stringify(taskData).slice(0, 800));
-        return res.status(200).json({ status: 'processing' });
-      }
-
-      return res.status(200).json({ status: 'completed', resultUrl });
     }
 
     if (status === 'failed') {
       return res.status(200).json({
         status: 'failed',
-        error: taskData.error || taskData.msg || 'Generation failed',
+        error: taskData.error || result.msg || 'Generation failed',
       });
     }
 
