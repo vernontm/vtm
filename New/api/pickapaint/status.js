@@ -61,11 +61,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Explicit failure
-    if (taskData.successFlag === 0 || taskData.errorMessage) {
+    // Explicit failure — only if there's an actual error message/code
+    // successFlag: 0 just means "not completed yet", not necessarily failed
+    if (taskData.errorMessage || taskData.errorCode) {
       return res.status(200).json({
         status: 'failed',
-        error: taskData.errorMessage || result.msg || 'Generation failed',
+        error: taskData.errorMessage || 'Generation failed',
       });
     }
 
