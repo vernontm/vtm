@@ -126,9 +126,12 @@ function EditModal({ item, onClose, onSave }) {
     category: item?.category || 'websites',
     media_url: item?.media_url || '',
     media_type: item?.media_type || 'image',
+    thumbnail_url: item?.thumbnail_url || '',
+    link_url: item?.link_url || '',
     visible: item?.visible !== false,
   });
   const [uploading, setUploading] = useState(false);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleUpload = async (e) => {
@@ -147,6 +150,20 @@ function EditModal({ item, onClose, onSave }) {
       alert('Upload failed: ' + err.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleThumbUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingThumb(true);
+    try {
+      const result = await uploadBlogMedia(file);
+      setForm(f => ({ ...f, thumbnail_url: result.url }));
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploadingThumb(false);
     }
   };
 
@@ -238,6 +255,55 @@ function EditModal({ item, onClose, onSave }) {
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Category</label>
             <CategorySlider value={form.category} onChange={cat => setForm(f => ({ ...f, category: cat }))} />
+          </div>
+
+          {/* Thumbnail Upload */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Display Image (Thumbnail)</label>
+            {form.thumbnail_url ? (
+              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
+                <img src={form.thumbnail_url} alt="" style={{ width: '100%', maxHeight: 140, objectFit: 'cover' }} />
+                <button
+                  onClick={() => setForm(f => ({ ...f, thumbnail_url: '' }))}
+                  style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 6, padding: 4, cursor: 'pointer', color: '#fff', display: 'flex' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <label style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                padding: 16, border: '2px dashed #e5e7ef', borderRadius: 10, cursor: 'pointer',
+                color: '#8e8ea0', fontSize: 12, transition: 'border-color 0.15s',
+              }}>
+                <input type="file" accept="image/*" onChange={handleThumbUpload} style={{ display: 'none' }} />
+                {uploadingThumb ? <span>Uploading...</span> : (
+                  <>
+                    <Image size={20} />
+                    <span>Upload display image for portfolio grid</span>
+                  </>
+                )}
+              </label>
+            )}
+          </div>
+
+          {/* Project URL */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Project URL</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                value={form.link_url}
+                onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))}
+                placeholder="https://vernontm.com/portfolio/pickapaint"
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' }}
+              />
+              {form.link_url && (
+                <a href={form.link_url} target="_blank" rel="noopener noreferrer" style={{ color: '#4a6cf7', display: 'flex' }}>
+                  <ExternalLink size={16} />
+                </a>
+              )}
+            </div>
+            <span style={{ fontSize: 11, color: '#b0b0c0', marginTop: 4, display: 'block' }}>Link visitors can click to try out the project</span>
           </div>
 
           {/* Visibility Toggle */}

@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
     // POST create
     if (req.method === 'POST') {
-      const { title, description, category, media_url, media_type, thumbnail_url, visible } = req.body;
+      const { title, description, category, media_url, media_type, thumbnail_url, link_url, visible } = req.body;
       if (!title) return res.status(400).json({ error: 'Title is required' });
       const data = {
         title,
@@ -38,6 +38,7 @@ export default async function handler(req, res) {
         media_url: media_url || '',
         media_type: media_type || 'image',
         thumbnail_url: thumbnail_url || '',
+        link_url: link_url || '',
         visible: visible !== false,
       };
       const result = await supaFetch('crm_portfolio', { method: 'POST', body: JSON.stringify(data) });

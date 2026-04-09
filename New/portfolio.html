@@ -71,15 +71,20 @@
         .portfolio-info p { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
         /* Lightbox */
-        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s; padding: 40px; }
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s; padding: 40px; backdrop-filter: blur(8px); }
         .lightbox.open { opacity: 1; visibility: visible; }
         .lightbox-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; z-index: 201; opacity: 0.7; transition: opacity 0.2s; }
         .lightbox-close:hover { opacity: 1; }
-        .lightbox-content { max-width: 900px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .lightbox-content img, .lightbox-content video { max-width: 100%; max-height: 70vh; border-radius: 12px; object-fit: contain; }
-        .lightbox-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #fff; text-align: center; }
-        .lightbox-desc { font-size: 14px; color: var(--muted); text-align: center; max-width: 600px; line-height: 1.6; }
-        .lightbox-cat { font-size: 12px; color: var(--orange); font-weight: 600; font-family: var(--font-display); }
+        .lightbox-content { max-width: 600px; width: 100%; max-height: 90vh; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+        .lightbox-media { width: 100%; aspect-ratio: 16/10; overflow: hidden; border-radius: 20px 20px 0 0; background: #0d0d0f; }
+        .lightbox-media img, .lightbox-media video { width: 100%; height: 100%; object-fit: cover; }
+        .lightbox-body { padding: 28px 28px 24px; }
+        .lightbox-cat { font-size: 11px; color: var(--orange); font-weight: 700; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+        .lightbox-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+        .lightbox-desc { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
+        .lightbox-cta { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border-radius: 10px; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 14px; text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 20px rgba(255,155,38,0.25); }
+        .lightbox-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,155,38,0.35); }
+        .lightbox-cta svg { width: 16px; height: 16px; }
 
         /* Empty */
         .empty-state { text-align: center; padding: 80px 40px; color: var(--muted); font-size: 15px; }
@@ -109,7 +114,11 @@
             .cat-pill { padding: 6px 14px; font-size: 12px; }
             .portfolio-grid { grid-template-columns: 1fr; padding: 20px 20px 60px; gap: 16px; }
             .cta-section { padding: 30px 20px 60px; }
-            .lightbox { padding: 20px; }
+            .lightbox { padding: 16px; }
+            .lightbox-content { max-width: 100%; border-radius: 16px; }
+            .lightbox-media { border-radius: 16px 16px 0 0; }
+            .lightbox-body { padding: 20px 20px 18px; }
+            .lightbox-title { font-size: 18px; }
         }
     </style>
 </head>
@@ -153,10 +162,13 @@
         <div class="lightbox" id="lightbox">
             <button class="lightbox-close" id="lightboxClose">&times;</button>
             <div class="lightbox-content">
-                <div id="lightboxMedia"></div>
-                <div class="lightbox-cat" id="lightboxCat"></div>
-                <div class="lightbox-title" id="lightboxTitle"></div>
-                <div class="lightbox-desc" id="lightboxDesc"></div>
+                <div class="lightbox-media" id="lightboxMedia"></div>
+                <div class="lightbox-body">
+                    <div class="lightbox-cat" id="lightboxCat"></div>
+                    <div class="lightbox-title" id="lightboxTitle"></div>
+                    <div class="lightbox-desc" id="lightboxDesc"></div>
+                    <div id="lightboxCta"></div>
+                </div>
             </div>
         </div>
 
@@ -291,14 +303,28 @@
         // Lightbox
         function openLightbox(item) {
             const mediaEl = document.getElementById('lightboxMedia');
-            if (item.media_type === 'video') {
-                mediaEl.innerHTML = `<video src="${item.media_url}" controls autoplay playsinline style="max-width:100%;max-height:70vh;border-radius:12px;"></video>`;
+            const mediaSrc = item.thumbnail_url || item.media_url;
+            if (item.media_type === 'video' && !item.thumbnail_url) {
+                mediaEl.innerHTML = `<video src="${item.media_url}" controls autoplay playsinline></video>`;
+            } else if (mediaSrc) {
+                mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${item.title}" />`;
             } else {
-                mediaEl.innerHTML = `<img src="${item.media_url}" alt="${item.title}" />`;
+                mediaEl.innerHTML = '';
             }
             document.getElementById('lightboxCat').textContent = item.category || '';
             document.getElementById('lightboxTitle').textContent = item.title;
             document.getElementById('lightboxDesc').textContent = item.description || '';
+
+            const ctaEl = document.getElementById('lightboxCta');
+            if (item.link_url) {
+                ctaEl.innerHTML = `<a href="${item.link_url}" class="lightbox-cta" target="_blank" rel="noopener noreferrer">
+                    Test it out
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                </a>`;
+            } else {
+                ctaEl.innerHTML = '';
+            }
+
             lightbox.classList.add('open');
             document.body.style.overflow = 'hidden';
         }
