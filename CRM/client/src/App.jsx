@@ -20,6 +20,7 @@ import Todos from './pages/Todos';
 import Blog from './pages/Blog';
 import EmailPage from './pages/Email';
 import Subscriptions from './pages/Subscriptions';
+import Portfolio from './pages/Portfolio';
 
 export const MobileContext = createContext({ sidebarOpen: false, setSidebarOpen: () => {} });
 export const useMobile = () => useContext(MobileContext);
@@ -61,6 +62,7 @@ function AppLayout() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/email" element={<EmailPage />} />
             <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>

@@ -146,6 +146,12 @@ export const getLabelDefs = () => request('/label-defs');
 export const createLabelDef = (data) => request('/label-defs', { method: 'POST', body: JSON.stringify(data) });
 export const deleteLabelDef = (id) => request(`/label-defs?id=${id}`, { method: 'DELETE' });
 
+// Portfolio
+export const getPortfolio = () => request('/portfolio');
+export const createPortfolioItem = (data) => request('/portfolio', { method: 'POST', body: JSON.stringify(data) });
+export const updatePortfolioItem = (id, data) => request(`/portfolio?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deletePortfolioItem = (id) => request(`/portfolio?id=${id}`, { method: 'DELETE' });
+
 // Gmail Contacts
 export const getGmailContacts = (params = {}) => {
   const qs = new URLSearchParams(params).toString();

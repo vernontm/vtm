@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, Briefcase, Star, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
-  Eye, EyeOff, FileText, CreditCard,
+  Eye, EyeOff, FileText, CreditCard, FolderOpen,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -19,6 +19,7 @@ const nav = [
   { to: '/projects',       icon: Briefcase,       label: 'Projects' },
   { to: '/todos',          icon: CheckSquare,     label: 'Todo Board' },
   { to: '/blog',           icon: FileText,        label: 'Blog' },
+  { to: '/portfolio',      icon: FolderOpen,      label: 'Portfolio' },
 ];
 
 const navTools = [

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>vernontm. - About Us</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange: #ff9b26; --orange-dark: #ee4c27;
+            --bg: #111112; --surface: #1a1a1c; --surface-2: #222226;
+            --border: rgba(255,255,255,0.07); --text: #f0f0f0; --muted: #6b6b72;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+        html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+        .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* Nav */
+        nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; animation: fadeDown 0.6s ease both; flex-shrink: 0; position: relative; z-index: 101; }
+        .logo img { height: 28px; }
+        .nav-links { display: flex; align-items: center; gap: 28px; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .nav-links a.nav-mode-btn { background: var(--surface-2); padding: 8px 18px; border-radius: 8px; color: var(--text); font-weight: 500; }
+        .nav-links a:hover { color: var(--text); }
+        .hamburger { display: none; background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: pointer; flex-direction: column; gap: 4px; width: 36px; height: 36px; align-items: center; justify-content: center; }
+        .hamburger span { display: block; width: 16px; height: 1.5px; background: var(--text); transition: all 0.3s; }
+        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(3px, 3px); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(3px, -3px); }
+        .menu-overlay { position: fixed; inset: 0; background: rgba(17,17,18,0.97); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .menu-overlay.open { opacity: 1; visibility: visible; }
+        .menu-overlay a { color: var(--text); text-decoration: none; font-family: var(--font-display); font-size: 28px; font-weight: 700; opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s, color 0.2s; }
+        .menu-overlay.open a { opacity: 1; transform: translateY(0); }
+        .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+        .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+        .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay a:hover { color: var(--orange); }
+
+        /* About Content */
+        .about-hero { text-align: center; padding: 60px 40px 40px; max-width: 800px; margin: 0 auto; }
+        .about-hero h1 { font-family: var(--font-display); font-size: clamp(32px, 5vw, 52px); font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+        .about-hero h1 em { font-style: italic; color: var(--orange); }
+        .about-hero p { font-size: 16px; color: var(--muted); line-height: 1.7; max-width: 600px; margin: 0 auto; }
+
+        .about-section { max-width: 900px; margin: 0 auto; padding: 40px 40px; }
+        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; }
+        .about-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
+        .about-card h3 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+        .about-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+        .about-card .icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(255,155,38,0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 20px; }
+
+        .values-section { max-width: 900px; margin: 0 auto; padding: 60px 40px; text-align: center; }
+        .values-section h2 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 32px; }
+        .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .value-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; }
+        .value-item h4 { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--orange); }
+        .value-item p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+        .cta-section { text-align: center; padding: 60px 40px 80px; }
+        .cta-section h2 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 16px; }
+        .cta-section p { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
+        .cta-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--orange); color: #111; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; }
+        .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,155,38,0.3); }
+
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .about-hero, .about-section, .values-section, .cta-section { animation: fadeUp 0.7s ease both; }
+        .about-section { animation-delay: 0.1s; }
+        .values-section { animation-delay: 0.2s; }
+        .cta-section { animation-delay: 0.3s; }
+
+        @media (max-width: 768px) {
+            nav { padding: 16px 20px; }
+            .nav-links a:not(.nav-mode-btn) { display: none; }
+            .hamburger { display: flex; }
+            .about-hero { padding: 40px 20px 20px; }
+            .about-section { padding: 20px 20px; }
+            .about-grid { grid-template-columns: 1fr; }
+            .values-grid { grid-template-columns: 1fr; }
+            .values-section { padding: 40px 20px; }
+            .cta-section { padding: 40px 20px 60px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <nav>
+            <a href="/" class="logo">
+                <img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" />
+            </a>
+            <div class="nav-links">
+                <a href="/contact">Contact Us</a>
+                <a href="/book-call">Book a Call</a>
+                <a href="/creators" class="nav-mode-btn">For Creators</a>
+                <button class="hamburger" id="menuToggle" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="menu-overlay" id="menuOverlay">
+            <a href="/portfolio">Portfolio</a>
+            <a href="/about">About Us</a>
+            <a href="/creators">For Creators</a>
+        </div>
+
+        <div class="about-hero">
+            <h1>We build what your <em>business</em> needs to grow</h1>
+            <p>Vernon Tech & Media is a creative technology studio that designs, develops, and automates digital solutions for businesses and creators who want to stand out.</p>
+        </div>
+
+        <div class="about-section">
+            <div class="about-grid">
+                <div class="about-card">
+                    <div class="icon">&#127760;</div>
+                    <h3>Web Development</h3>
+                    <p>Custom websites and web apps built to convert visitors into customers. Clean, fast, and mobile-first.</p>
+                </div>
+                <div class="about-card">
+                    <div class="icon">&#9889;</div>
+                    <h3>Automation</h3>
+                    <p>Streamline your business with AI-powered workflows, CRMs, and tools that save hours every week.</p>
+                </div>
+                <div class="about-card">
+                    <div class="icon">&#127912;</div>
+                    <h3>Branding & Design</h3>
+                    <p>Visual identity that makes your brand memorable. Logos, graphics, social media assets, and more.</p>
+                </div>
+                <div class="about-card">
+                    <div class="icon">&#128250;</div>
+                    <h3>Content & Media</h3>
+                    <p>Video production, editing, and content strategy to help you build an audience and tell your story.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="values-section">
+            <h2>What drives us</h2>
+            <div class="values-grid">
+                <div class="value-item">
+                    <h4>Quality over quantity</h4>
+                    <p>Every project gets our full attention. We don't cut corners or rush deliverables.</p>
+                </div>
+                <div class="value-item">
+                    <h4>Built to last</h4>
+                    <p>We design systems and solutions that scale with your business, not against it.</p>
+                </div>
+                <div class="value-item">
+                    <h4>Real results</h4>
+                    <p>We measure success by the impact on your business, not by the number of hours billed.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <h2>Ready to build something?</h2>
+            <p>Book a free discovery call and let's talk about what your business needs.</p>
+            <a href="/book-call" class="cta-btn">Book a Call &#8594;</a>
+        </div>
+    </div>
+
+    <script>
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('open');
+            menuOverlay.classList.toggle('open');
+            document.body.style.overflow = menuOverlay.classList.contains('open') ? 'hidden' : '';
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menuOverlay.classList.contains('open')) {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        });
+        menuOverlay.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+        });
+    </script>
+</body>
+</html>
