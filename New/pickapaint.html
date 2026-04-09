@@ -466,23 +466,36 @@
 
     function startPolling() {
       if (pollInterval) clearInterval(pollInterval);
+      let attempts = 0;
       pollInterval = setInterval(async () => {
+        attempts++;
         try {
           const res = await fetch(`/api/pickapaint/status?taskId=${currentTaskId}`);
+          if (!res.ok) { console.error('Status poll HTTP error:', res.status); return; }
           const data = await res.json();
-          if (data.status === 'completed') {
+          console.log('Poll #' + attempts + ':', JSON.stringify(data));
+          if (data.status === 'completed' && data.resultUrl) {
             clearInterval(pollInterval); pollInterval = null;
             showResult(uploadedUrl, data.resultUrl, selectedColor);
           } else if (data.status === 'failed') {
             clearInterval(pollInterval); pollInterval = null;
             showError(data.error || 'Generation failed. Please try again.');
           }
-        } catch (err) { /* keep polling */ }
+          // If completed but no resultUrl, keep polling
+        } catch (err) {
+          console.error('Poll error:', err);
+        }
+        if (attempts >= 60) {
+          clearInterval(pollInterval); pollInterval = null;
+          showError('Generation timed out. Please try again.');
+        }
       }, 3000);
     }
 
     function showResult(originalUrl, resultUrl, hexColor) {
+      console.log('showResult called:', { originalUrl, resultUrl, hexColor });
       loadingState.style.display = 'none';
+      errorState.classList.remove('visible');
       comparisonContainer.classList.add('visible');
       beforeImg.src = originalUrl;
       afterImg.src = resultUrl;
@@ -492,7 +505,9 @@
     }
 
     function showError(message) {
+      console.error('showError called:', message);
       loadingState.style.display = 'none';
+      comparisonContainer.classList.remove('visible');
       errorState.classList.add('visible');
       document.getElementById('errorMessage').textContent = message;
       generateBtn.disabled = false;
