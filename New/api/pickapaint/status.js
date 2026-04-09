@@ -37,8 +37,12 @@ export default async function handler(req, res) {
     const status = taskData.status?.toLowerCase() || 'processing';
 
     if (status === 'completed') {
-      // Extract image URL from various possible response shapes
-      const resultUrl =
+      console.log('NanoBanana completed response:', JSON.stringify(taskData).slice(0, 800));
+
+      // Extract image URL — try all known response shapes
+      let resultUrl =
+        taskData.result_urls?.[0] ||
+        taskData.result_urls ||
         taskData.imageUrl ||
         taskData.image_url ||
         taskData.images?.[0]?.url ||
@@ -47,8 +51,13 @@ export default async function handler(req, res) {
         taskData.output?.[0] ||
         taskData.url;
 
+      // Handle case where result_urls is a string (single URL)
+      if (typeof resultUrl === 'object' && !Array.isArray(resultUrl)) {
+        resultUrl = null;
+      }
+
       if (!resultUrl) {
-        console.error('No image URL in completed result:', JSON.stringify(taskData).slice(0, 500));
+        console.error('No image URL in completed result:', JSON.stringify(taskData).slice(0, 800));
         return res.status(200).json({ status: 'processing' });
       }
 
