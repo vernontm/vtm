@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <title>vernontm. - PickAPaint | AI Wall Color Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange: #ff9b26; --orange-dark: #ee4c27;
+      --bg: #111112; --surface: #1a1a1c; --surface-2: #222226;
+      --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.14);
+      --text: #f0f0f0; --muted: #6b6b72;
+      --font-display: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 16px;
+      --glass-bg: rgba(26, 26, 28, 0.55);
+      --glass-blur: blur(24px);
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+    .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    h1, h2, h3, h4 { font-family: var(--font-display); }
+
+    /* ── Nav (matches VTM site) ── */
+    nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; animation: fadeDown 0.6s ease both; flex-shrink: 0; position: relative; z-index: 101; }
+    .logo img { height: 46px; width: auto; display: block; }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    .nav-links a.nav-mode-btn { background: var(--surface-2); padding: 8px 18px; border-radius: 8px; color: var(--text); font-weight: 500; }
+    .nav-links a:hover { color: var(--text); }
+    .hamburger { width: 40px; height: 40px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; transition: all 0.2s; }
+    .hamburger:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+    .hamburger span { display: block; width: 18px; height: 1.5px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+    .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
+    .menu-overlay { position: fixed; inset: 0; background: rgba(17,17,18,0.97); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; opacity: 0; visibility: hidden; transition: all 0.3s; }
+    .menu-overlay.open { opacity: 1; visibility: visible; }
+    .menu-overlay a { color: var(--text); text-decoration: none; font-family: var(--font-display); font-size: 28px; font-weight: 700; opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s, color 0.2s; }
+    .menu-overlay.open a { opacity: 1; transform: translateY(0); }
+    .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+    .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+    .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+    .menu-overlay.open a:nth-child(4) { transition-delay: 0.26s; }
+    .menu-overlay a:hover { color: var(--orange); }
+
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Container ── */
+    .container { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 0 24px; flex: 1; }
+
+    /* ── Hero ── */
+    .hero { text-align: center; padding: 60px 0 40px; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.1; margin-bottom: 20px; letter-spacing: -0.02em; }
+    .hero h1 em { font-style: italic; color: var(--orange); }
+    .hero p { color: var(--muted); font-size: 1.05rem; max-width: 520px; margin: 0 auto; line-height: 1.7; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: 0.85rem; margin-bottom: 16px; transition: color 0.2s; }
+    .back-link:hover { color: var(--orange); }
+
+    /* ── Glass Card ── */
+    .glass-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; margin-bottom: 24px; transition: border-color 0.3s; }
+    .glass-card:hover { border-color: var(--border-hover); }
+    .step-label { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--orange); margin-bottom: 16px; }
+    .step-number { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; }
+    .card-desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+
+    /* ── Upload Zone ── */
+    .upload-zone { border: 2px dashed rgba(255,255,255,0.12); border-radius: 12px; padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
+    .upload-zone:hover, .upload-zone.dragover { border-color: var(--orange); background: rgba(255,155,38,0.04); }
+    .upload-zone.has-image { padding: 0; border-style: solid; border-color: rgba(255,155,38,0.3); }
+    .upload-icon { width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 12px; background: rgba(255,155,38,0.1); display: flex; align-items: center; justify-content: center; }
+    .upload-icon svg { width: 24px; height: 24px; stroke: var(--orange); }
+    .upload-text { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+    .upload-text strong { color: var(--text); }
+    .upload-formats { font-size: 0.75rem; color: var(--muted); margin-top: 8px; opacity: 0.6; }
+    .preview-img { width: 100%; display: block; border-radius: 10px; }
+    .preview-overlay { position: absolute; bottom: 12px; right: 12px; display: flex; gap: 8px; }
+    .preview-btn { padding: 8px 14px; border-radius: 8px; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(12px); transition: all 0.2s; }
+    .preview-btn.change { background: rgba(255,255,255,0.15); color: #fff; }
+    .preview-btn.change:hover { background: rgba(255,255,255,0.25); }
+    input[type="file"] { display: none; }
+
+    /* ── Color Picker ── */
+    .color-section { opacity: 0.4; pointer-events: none; transition: opacity 0.4s; }
+    .color-section.active { opacity: 1; pointer-events: all; }
+    .preset-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+    .preset-swatch { aspect-ratio: 1; border-radius: 12px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; position: relative; }
+    .preset-swatch:hover { transform: scale(1.1); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .preset-swatch.selected { border-color: var(--orange); transform: scale(1.1); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--orange); }
+    .preset-swatch .swatch-label { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: var(--muted); white-space: nowrap; opacity: 0; transition: opacity 0.2s; }
+    .preset-swatch:hover .swatch-label, .preset-swatch.selected .swatch-label { opacity: 1; }
+    .divider { display: flex; align-items: center; gap: 16px; margin: 32px 0 24px; color: var(--muted); font-size: 0.8rem; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .custom-color-row { display: flex; align-items: center; gap: 16px; }
+    .color-input-group { flex: 1; display: flex; align-items: center; gap: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; }
+    .hex-prefix { color: var(--muted); font-family: var(--font-display), monospace; font-weight: 600; font-size: 1rem; }
+    .hex-input { background: none; border: none; color: var(--text); font-family: var(--font-display), monospace; font-weight: 600; font-size: 1rem; width: 80px; outline: none; text-transform: uppercase; }
+    .native-picker-wrap { width: 48px; height: 48px; border-radius: 12px; overflow: hidden; border: 2px solid var(--border); cursor: pointer; flex-shrink: 0; }
+    .native-picker { width: 64px; height: 64px; border: none; cursor: pointer; margin: -8px; }
+    .selected-preview { display: flex; align-items: center; gap: 16px; margin-top: 20px; padding: 16px; background: var(--surface-2); border-radius: 12px; border: 1px solid var(--border); }
+    .selected-swatch-lg { width: 56px; height: 56px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+    .selected-info { flex: 1; }
+    .selected-hex { font-family: var(--font-display), monospace; font-weight: 700; font-size: 1.1rem; }
+    .selected-name { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+
+    /* ── Generate Button ── */
+    .generate-section { text-align: center; margin: 16px 0 24px; }
+    .generate-btn { display: inline-flex; align-items: center; gap: 10px; padding: 16px 40px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 24px rgba(255,155,38,0.25); }
+    .generate-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,155,38,0.35); }
+    .generate-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .generate-btn svg { width: 20px; height: 20px; }
+
+    /* ── Results ── */
+    .results-card { display: none; }
+    .results-card.visible { display: block; }
+    .loading-state { text-align: center; padding: 48px 0; }
+    .loading-spinner { width: 48px; height: 48px; border: 3px solid var(--surface-2); border-top-color: var(--orange); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--muted); font-size: 0.95rem; margin-bottom: 8px; }
+    .loading-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+    @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+    .comparison-container { display: none; }
+    .comparison-container.visible { display: block; }
+    .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .comparison-item { position: relative; }
+    .comparison-item img { width: 100%; border-radius: 12px; display: block; }
+    .comparison-label { position: absolute; top: 12px; left: 12px; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; font-family: var(--font-display); backdrop-filter: blur(12px); }
+    .comparison-label.before { background: rgba(0,0,0,0.6); color: #fff; }
+    .comparison-label.after { background: rgba(255,155,38,0.8); color: #fff; }
+    .result-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .result-btn { padding: 12px 24px; border-radius: 10px; border: none; font-family: var(--font-display); font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+    .result-btn.primary { background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; }
+    .result-btn.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .result-btn:hover { transform: translateY(-1px); }
+
+    /* ── Error ── */
+    .error-state { display: none; text-align: center; padding: 32px; }
+    .error-state.visible { display: block; }
+    .error-icon { font-size: 2rem; margin-bottom: 12px; }
+    .error-message { color: #ff5c5c; font-size: 0.9rem; margin-bottom: 16px; }
+
+    /* ── Footer ── */
+    footer { position: relative; z-index: 1; text-align: center; padding: 48px 24px 32px; color: var(--muted); font-size: 0.8rem; }
+    footer a { color: var(--orange); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      nav { padding: 16px 20px; }
+      .nav-links a:not(.nav-mode-btn) { display: none; }
+      .hero { padding: 40px 0 28px; }
+      .hero h1 { font-size: 1.8rem; }
+      .glass-card { padding: 24px 20px; }
+      .preset-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+      .comparison-grid { grid-template-columns: 1fr; }
+      .custom-color-row { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Nav (matches VTM site) -->
+    <nav>
+      <a href="/" class="logo">
+        <img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" />
+      </a>
+      <div class="nav-links">
+        <a href="/contact">Contact Us</a>
+        <a href="/book-call">Book a Call</a>
+        <a href="/creators" class="nav-mode-btn">For Creators</a>
+        <button class="hamburger" id="menuToggle" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="menu-overlay" id="menuOverlay">
+      <a href="/portfolio">Portfolio</a>
+      <a href="/about">About Us</a>
+      <a href="/contact">Contact</a>
+      <a href="/creators">For Creators</a>
+    </div>
+
+    <div class="container">
+      <!-- Back link -->
+      <a href="/portfolio" class="back-link">&larr; Back to Portfolio</a>
+
+      <!-- Hero -->
+      <section class="hero">
+        <h1>See Your Walls in <em>Any Color</em>, Instantly</h1>
+        <p>Upload a photo of your room, choose any color, and our AI will show you exactly how it looks -- no brushes, no samples, no guesswork. Preview before you paint.</p>
+      </section>
+
+      <!-- Step 1: Upload -->
+      <div class="glass-card" id="uploadCard">
+        <div class="step-label">
+          <span class="step-number">1</span>
+          Upload Your Room
+        </div>
+        <p class="card-desc">Drag and drop a photo of the wall you want to repaint, or click to browse your files.</p>
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+            </svg>
+          </div>
+          <p class="upload-text"><strong>Drag & drop your room photo here</strong><br>or click to browse</p>
+          <p class="upload-formats">JPG, PNG, or WebP up to 10MB</p>
+        </div>
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+      </div>
+
+      <!-- Step 2: Pick a Color -->
+      <div class="glass-card color-section" id="colorCard">
+        <div class="step-label">
+          <span class="step-number">2</span>
+          Pick a Wall Color
+        </div>
+        <p class="card-desc">Choose from popular wall colors or enter any hex code.</p>
+        <div class="preset-grid" id="presetGrid"></div>
+        <div class="divider">or choose your own</div>
+        <div class="custom-color-row">
+          <div class="color-input-group">
+            <span class="hex-prefix">#</span>
+            <input type="text" class="hex-input" id="hexInput" placeholder="FF9B26" maxlength="6" spellcheck="false">
+          </div>
+          <div class="native-picker-wrap">
+            <input type="color" class="native-picker" id="nativePicker" value="#ff9b26">
+          </div>
+        </div>
+        <div class="selected-preview" id="selectedPreview" style="display:none">
+          <div class="selected-swatch-lg" id="selectedSwatch"></div>
+          <div class="selected-info">
+            <div class="selected-hex" id="selectedHex">#FF9B26</div>
+            <div class="selected-name" id="selectedName">Custom Color</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <div class="generate-section">
+        <button class="generate-btn" id="generateBtn" disabled>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/>
+          </svg>
+          Visualize My Wall
+        </button>
+      </div>
+
+      <!-- Step 3: Results -->
+      <div class="glass-card results-card" id="resultsCard">
+        <div class="step-label">
+          <span class="step-number">3</span>
+          Your Result
+        </div>
+        <div class="loading-state" id="loadingState">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Our AI is painting your walls<span class="loading-dots"></span></p>
+          <p style="color:var(--muted); font-size:0.8rem; margin-top:4px">This usually takes 30-60 seconds</p>
+        </div>
+        <div class="comparison-container" id="comparisonContainer">
+          <div class="comparison-grid">
+            <div class="comparison-item">
+              <img id="beforeImg" src="" alt="Before">
+              <div class="comparison-label before">Before</div>
+            </div>
+            <div class="comparison-item">
+              <img id="afterImg" src="" alt="After">
+              <div class="comparison-label after" id="afterLabel">After</div>
+            </div>
+          </div>
+          <div class="result-actions">
+            <a id="downloadBtn" class="result-btn primary" download="pickapaint-result.png">Download Result</a>
+            <button class="result-btn secondary" id="tryAnotherBtn">Try Another Color</button>
+            <button class="result-btn secondary" id="startOverBtn">Start Over</button>
+          </div>
+        </div>
+        <div class="error-state" id="errorState">
+          <div class="error-icon">!</div>
+          <p class="error-message" id="errorMessage"></p>
+          <button class="result-btn secondary" id="retryBtn">Try Again</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Powered by <a href="/">Vernon Tech & Media</a>
+    </footer>
+  </div>
+
+  <script>
+    // ── Menu toggle (matches VTM site) ──
+    const menuToggle = document.getElementById('menuToggle');
+    const menuOverlay = document.getElementById('menuOverlay');
+    menuToggle.addEventListener('click', () => {
+      menuToggle.classList.toggle('open');
+      menuOverlay.classList.toggle('open');
+    });
+
+    // ── Preset Colors ──
+    const PRESETS = [
+      { hex: '#FAF3E0', name: 'Warm White' },
+      { hex: '#D5D5D5', name: 'Cloud Gray' },
+      { hex: '#2C3E50', name: 'Navy' },
+      { hex: '#9CAF88', name: 'Sage Green' },
+      { hex: '#DCAE96', name: 'Dusty Rose' },
+      { hex: '#4A90D9', name: 'Ocean Blue' },
+      { hex: '#36454F', name: 'Charcoal' },
+      { hex: '#E07A5F', name: 'Terracotta' },
+      { hex: '#B4A7D6', name: 'Lavender' },
+      { hex: '#FFF8DC', name: 'Cream' },
+      { hex: '#2D5F2D', name: 'Forest' },
+      { hex: '#6C7A89', name: 'Slate Blue' },
+    ];
+
+    // ── State ──
+    let uploadedUrl = null;
+    let selectedColor = null;
+    let selectedName = null;
+    let currentTaskId = null;
+    let pollInterval = null;
+
+    // ── DOM refs ──
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const colorCard = document.getElementById('colorCard');
+    const presetGrid = document.getElementById('presetGrid');
+    const hexInput = document.getElementById('hexInput');
+    const nativePicker = document.getElementById('nativePicker');
+    const selectedPreview = document.getElementById('selectedPreview');
+    const selectedSwatchEl = document.getElementById('selectedSwatch');
+    const selectedHexEl = document.getElementById('selectedHex');
+    const selectedNameEl = document.getElementById('selectedName');
+    const generateBtn = document.getElementById('generateBtn');
+    const resultsCard = document.getElementById('resultsCard');
+    const loadingState = document.getElementById('loadingState');
+    const comparisonContainer = document.getElementById('comparisonContainer');
+    const errorState = document.getElementById('errorState');
+    const beforeImg = document.getElementById('beforeImg');
+    const afterImg = document.getElementById('afterImg');
+    const afterLabel = document.getElementById('afterLabel');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    // ── Render Presets ──
+    PRESETS.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'preset-swatch';
+      el.style.background = p.hex;
+      el.innerHTML = `<span class="swatch-label">${p.name}</span>`;
+      el.addEventListener('click', () => selectColor(p.hex, p.name));
+      presetGrid.appendChild(el);
+    });
+
+    // ── Upload handlers ──
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => { uploadZone.classList.remove('dragover'); });
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleFile(file);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+    async function handleFile(file) {
+      if (file.size > 10 * 1024 * 1024) { alert('File too large. Maximum size is 10MB.'); return; }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        uploadZone.classList.add('has-image');
+        uploadZone.innerHTML = `
+          <img class="preview-img" src="${e.target.result}" alt="Room preview">
+          <div class="preview-overlay">
+            <button class="preview-btn change" onclick="event.stopPropagation(); resetUpload();">Change Photo</button>
+          </div>`;
+      };
+      reader.readAsDataURL(file);
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const res = await fetch('/api/pickapaint/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        uploadedUrl = data.url;
+        colorCard.classList.add('active');
+        updateGenerateBtn();
+      } catch (err) {
+        alert('Upload failed: ' + err.message);
+        resetUpload();
+      }
+    }
+
+    function resetUpload() {
+      uploadedUrl = null;
+      fileInput.value = '';
+      uploadZone.classList.remove('has-image');
+      uploadZone.innerHTML = `
+        <div class="upload-icon">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+          </svg>
+        </div>
+        <p class="upload-text"><strong>Drag & drop your room photo here</strong><br>or click to browse</p>
+        <p class="upload-formats">JPG, PNG, or WebP up to 10MB</p>`;
+      colorCard.classList.remove('active');
+      updateGenerateBtn();
+    }
+
+    // ── Color selection ──
+    function selectColor(hex, name = 'Custom Color') {
+      selectedColor = hex.toUpperCase();
+      selectedName = name;
+      document.querySelectorAll('.preset-swatch').forEach((el, i) => {
+        el.classList.toggle('selected', PRESETS[i].hex.toUpperCase() === selectedColor);
+      });
+      hexInput.value = selectedColor.replace('#', '');
+      nativePicker.value = selectedColor;
+      selectedPreview.style.display = 'flex';
+      selectedSwatchEl.style.background = selectedColor;
+      selectedHexEl.textContent = selectedColor;
+      selectedNameEl.textContent = name;
+      updateGenerateBtn();
+    }
+
+    hexInput.addEventListener('input', () => {
+      let val = hexInput.value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+      hexInput.value = val;
+      if (val.length === 6) selectColor('#' + val, 'Custom Color');
+    });
+
+    nativePicker.addEventListener('input', () => { selectColor(nativePicker.value, 'Custom Color'); });
+
+    // ── Generate ──
+    function updateGenerateBtn() { generateBtn.disabled = !(uploadedUrl && selectedColor); }
+
+    generateBtn.addEventListener('click', async () => {
+      if (!uploadedUrl || !selectedColor) return;
+      resultsCard.classList.add('visible');
+      loadingState.style.display = 'block';
+      comparisonContainer.classList.remove('visible');
+      errorState.classList.remove('visible');
+      generateBtn.disabled = true;
+      resultsCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      try {
+        const res = await fetch('/api/pickapaint/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: uploadedUrl, hexColor: selectedColor }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Generation failed');
+        currentTaskId = data.taskId;
+        startPolling();
+      } catch (err) { showError(err.message); }
+    });
+
+    function startPolling() {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/pickapaint/status?taskId=${currentTaskId}`);
+          const data = await res.json();
+          if (data.status === 'completed') {
+            clearInterval(pollInterval); pollInterval = null;
+            showResult(uploadedUrl, data.resultUrl, selectedColor);
+          } else if (data.status === 'failed') {
+            clearInterval(pollInterval); pollInterval = null;
+            showError(data.error || 'Generation failed. Please try again.');
+          }
+        } catch (err) { /* keep polling */ }
+      }, 3000);
+    }
+
+    function showResult(originalUrl, resultUrl, hexColor) {
+      loadingState.style.display = 'none';
+      comparisonContainer.classList.add('visible');
+      beforeImg.src = originalUrl;
+      afterImg.src = resultUrl;
+      afterLabel.textContent = `After - ${hexColor}`;
+      downloadBtn.href = resultUrl;
+      generateBtn.disabled = false;
+    }
+
+    function showError(message) {
+      loadingState.style.display = 'none';
+      errorState.classList.add('visible');
+      document.getElementById('errorMessage').textContent = message;
+      generateBtn.disabled = false;
+    }
+
+    document.getElementById('tryAnotherBtn').addEventListener('click', () => {
+      resultsCard.classList.remove('visible');
+      comparisonContainer.classList.remove('visible');
+      colorCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    document.getElementById('startOverBtn').addEventListener('click', () => {
+      resultsCard.classList.remove('visible');
+      comparisonContainer.classList.remove('visible');
+      selectedColor = null; selectedName = null;
+      selectedPreview.style.display = 'none';
+      hexInput.value = '';
+      document.querySelectorAll('.preset-swatch').forEach(el => el.classList.remove('selected'));
+      resetUpload();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      errorState.classList.remove('visible');
+      resultsCard.classList.remove('visible');
+      generateBtn.click();
+    });
+  </script>
+</body>
+</html>

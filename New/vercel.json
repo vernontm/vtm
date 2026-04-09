@@ -12,6 +12,7 @@
     { "source": "/creators", "destination": "/creators.html" },
     { "source": "/contact", "destination": "/contact.html" },
     { "source": "/about", "destination": "/about.html" },
+    { "source": "/portfolio/pickapaint", "destination": "/pickapaint.html" },
     { "source": "/portfolio", "destination": "/portfolio.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
