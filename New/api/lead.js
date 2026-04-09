@@ -17,38 +17,91 @@ export default async function handler(req, res) {
 
   const results = { supabase: null, zapier: null };
 
-  // 1. Save to CRM Supabase (crm_leads table)
+  // 1. Save to CRM Supabase (crm_leads table) — upsert by email to avoid duplicates
+  let isNewLead = true;
   try {
-    const supabaseRes = await fetch(
-      `${CRM_URL}/rest/v1/crm_leads`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': CRM_KEY,
-          'Authorization': `Bearer ${CRM_KEY}`,
-          'Prefer': 'return=representation',
-        },
-        body: JSON.stringify({
-          name: lead.name || '',
-          email: lead.email || '',
-          phone: lead.phone || '',
-          company: lead.business || '',
-          lead_source: lead.source || 'vtm-chat',
-          problem: lead.problem || '',
-          current_situation: lead.current_state || '',
-          financial_goal: lead.goal || '',
-          budget: lead.budget_tier || '',
-          best_time: lead.best_time || '',
-          notes: lead.notes || '',
-          status: 'New Lead',
-          lead_segment: 'warm',
-        }),
+    const leadRow = {
+      name: lead.name || '',
+      email: lead.email || '',
+      phone: lead.phone || '',
+      company: lead.business || '',
+      lead_source: lead.source || 'vtm-chat',
+      problem: lead.problem || '',
+      current_situation: lead.current_state || '',
+      financial_goal: lead.goal || '',
+      budget: lead.budget_tier || '',
+      best_time: lead.best_time || '',
+      notes: lead.notes || '',
+      status: 'Warm',
+      lead_segment: 'warm',
+    };
+
+    // If we have an email, check for existing lead and update instead
+    let supabaseRes;
+    if (lead.email) {
+      const checkRes = await fetch(
+        `${CRM_URL}/rest/v1/crm_leads?email=eq.${encodeURIComponent(lead.email)}&select=id&limit=1`,
+        { headers: { 'apikey': CRM_KEY, 'Authorization': `Bearer ${CRM_KEY}` } }
+      );
+      const existing = await checkRes.json();
+
+      if (existing && existing.length > 0) {
+        // Update existing lead — only overwrite non-empty fields
+        isNewLead = false;
+        const updateData = {};
+        Object.entries(leadRow).forEach(([k, v]) => {
+          if (v && k !== 'status' && k !== 'lead_segment' && k !== 'lead_source') updateData[k] = v;
+        });
+        updateData.updated_at = new Date().toISOString();
+
+        supabaseRes = await fetch(
+          `${CRM_URL}/rest/v1/crm_leads?id=eq.${existing[0].id}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': CRM_KEY,
+              'Authorization': `Bearer ${CRM_KEY}`,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify(updateData),
+          }
+        );
+      } else {
+        // Insert new lead
+        supabaseRes = await fetch(
+          `${CRM_URL}/rest/v1/crm_leads`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': CRM_KEY,
+              'Authorization': `Bearer ${CRM_KEY}`,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify(leadRow),
+          }
+        );
       }
-    );
+    } else {
+      // No email — just insert (can't deduplicate without email)
+      supabaseRes = await fetch(
+        `${CRM_URL}/rest/v1/crm_leads`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': CRM_KEY,
+            'Authorization': `Bearer ${CRM_KEY}`,
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify(leadRow),
+        }
+      );
+    }
 
     if (supabaseRes.ok) {
-      results.supabase = 'saved';
+      results.supabase = isNewLead ? 'saved' : 'updated';
     } else {
       const err = await supabaseRes.text();
       console.error('Supabase error:', err);

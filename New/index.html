@@ -1278,27 +1278,15 @@
 
             // Cancel the timer — send immediately with full data
             if (zapierTimer) clearTimeout(zapierTimer);
+            zapierSent = true; // Prevent any further sends
 
             if (lead.name) {
-                // Save full lead to CRM
+                // Save full lead to CRM (upserts by email, so no duplicates)
                 fetch('/api/lead', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(lead),
+                    body: JSON.stringify({ ...collectedLead, source: 'vtm-chat' }),
                 }).catch(err => console.error('Lead save failed:', err));
-
-                // Send to Zapier immediately with all collected data
-                if (!zapierSent && collectedLead.email) {
-                    zapierSent = true;
-                    // Small delay to let CRM save finish first
-                    setTimeout(() => {
-                        fetch('/api/lead', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ...collectedLead, source: 'vtm-chat' }),
-                        }).catch(err => console.error('Zapier lead send failed:', err));
-                    }, 500);
-                }
             }
         }
 
