@@ -28,11 +28,12 @@
         .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
         .nav-links a.nav-mode-btn { background: var(--surface-2); padding: 8px 18px; border-radius: 8px; color: var(--text); font-weight: 500; }
         .nav-links a:hover { color: var(--text); }
-        .hamburger { display: none; background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: pointer; flex-direction: column; gap: 4px; width: 36px; height: 36px; align-items: center; justify-content: center; }
-        .hamburger span { display: block; width: 16px; height: 1.5px; background: var(--text); transition: all 0.3s; }
-        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(3px, 3px); }
+        .hamburger { width: 40px; height: 40px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; transition: all 0.2s; }
+        .hamburger:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+        .hamburger span { display: block; width: 18px; height: 1.5px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
         .hamburger.open span:nth-child(2) { opacity: 0; }
-        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(3px, -3px); }
+        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
         .menu-overlay { position: fixed; inset: 0; background: rgba(17,17,18,0.97); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; opacity: 0; visibility: hidden; transition: all 0.3s; }
         .menu-overlay.open { opacity: 1; visibility: visible; }
         .menu-overlay a { color: var(--text); text-decoration: none; font-family: var(--font-display); font-size: 28px; font-weight: 700; opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s, color 0.2s; }
@@ -40,6 +41,7 @@
         .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
         .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
         .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay.open a:nth-child(4) { transition-delay: 0.26s; }
         .menu-overlay a:hover { color: var(--orange); }
 
         /* About Content */
@@ -78,7 +80,6 @@
         @media (max-width: 768px) {
             nav { padding: 16px 20px; }
             .nav-links a:not(.nav-mode-btn) { display: none; }
-            .hamburger { display: flex; }
             .about-hero { padding: 40px 20px 20px; }
             .about-section { padding: 20px 20px; }
             .about-grid { grid-template-columns: 1fr; }
@@ -107,6 +108,7 @@
         <div class="menu-overlay" id="menuOverlay">
             <a href="/portfolio">Portfolio</a>
             <a href="/about">About Us</a>
+            <a href="/contact">Contact</a>
             <a href="/creators">For Creators</a>
         </div>
 
