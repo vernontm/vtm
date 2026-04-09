@@ -292,7 +292,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
 
   const inp = {
     width: '100%', boxSizing: 'border-box',
-    background: '#111328', border: '1px solid #e5e7ef', borderRadius: 6,
+    background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 6,
     padding: '7px 10px', fontSize: 12, color: '#1a1a2e', outline: 'none',
   };
 

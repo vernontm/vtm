@@ -63,7 +63,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: '#161614', border: '1px solid #252523', borderRadius: 12,
+        background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12,
         width: 680, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
       }}>
@@ -71,7 +71,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px 14px', borderBottom: '1px solid #252523', flexShrink: 0,
+          padding: '16px 20px 14px', borderBottom: '1px solid #e5e7ef', flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Inbox size={16} color="#ff9b26" />
@@ -119,7 +119,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
 
           {!loading && !error && threads.length === 0 && (
             <div style={{ textAlign: 'center', padding: 48, color: '#4a4845', fontSize: 13 }}>
-              No threads found in <strong style={{ color: '#7a7870' }}>{labelName}</strong>.<br />
+              No threads found in <strong style={{ color: '#8e8ea0' }}>{labelName}</strong>.<br />
               <span style={{ fontSize: 11, marginTop: 6, display: 'block' }}>
                 Threads appear here automatically once you send or draft an email via the CRM.
               </span>
@@ -135,11 +135,11 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 12,
                 padding: '12px 20px', textDecoration: 'none',
-                borderBottom: '1px solid #252523',
+                borderBottom: '1px solid #e5e7ef',
                 background: 'transparent',
                 transition: 'background 0.1s',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = '#111110'}
+              onMouseEnter={e => e.currentTarget.style.background = '#e8ecf4'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               {/* Left: reply indicator dot */}
@@ -153,7 +153,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Row 1: from + date */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
-                  <span style={{ fontSize: 12, fontWeight: t.hasReply ? 700 : 500, color: t.hasReply ? '#fff' : '#7a7870', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 12, fontWeight: t.hasReply ? 700 : 500, color: t.hasReply ? '#fff' : '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {stripEmail(t.from) || stripEmail(t.to) || '(unknown)'}
                   </span>
                   <span style={{ fontSize: 11, color: '#4a4845', flexShrink: 0 }}>
@@ -162,7 +162,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
                 </div>
 
                 {/* Row 2: subject */}
-                <div style={{ fontSize: 12, color: '#7a7870', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+                <div style={{ fontSize: 12, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
                   {t.subject}
                   {t.messageCount > 1 && (
                     <span style={{ fontSize: 10, color: '#4a4845', marginLeft: 6 }}>({t.messageCount})</span>
@@ -178,7 +178,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
               </div>
 
               {/* Right: open in Gmail icon */}
-              <div style={{ paddingTop: 2, flexShrink: 0, color: '#252523' }}>
+              <div style={{ paddingTop: 2, flexShrink: 0, color: '#e5e7ef' }}>
                 <ExternalLink size={12} />
               </div>
             </a>
@@ -194,7 +194,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '7px 18px', borderRadius: 6, fontSize: 12, fontWeight: 600,
                   cursor: loadingMore ? 'not-allowed' : 'pointer',
-                  background: '#111110', border: '1px solid #252523', color: '#7a7870',
+                  background: '#e8ecf4', border: '1px solid #e5e7ef', color: '#8e8ea0',
                   opacity: loadingMore ? 0.7 : 1,
                 }}
               >
@@ -210,7 +210,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
         {/* Footer */}
         {!loading && threads.length > 0 && (
           <div style={{
-            padding: '10px 20px', borderTop: '1px solid #252523', flexShrink: 0,
+            padding: '10px 20px', borderTop: '1px solid #e5e7ef', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <span style={{ fontSize: 11, color: '#4a4845' }}>

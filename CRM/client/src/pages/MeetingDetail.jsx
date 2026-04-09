@@ -391,7 +391,7 @@ export default function MeetingDetail() {
                     <Video size={12} /> Recording
                   </div>
                   {recordingUrl ? (
-                    <div style={{ background: '#111328', border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
+                    <div style={{ background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
                       <iframe
                         src={recordingUrl}
                         title="Meeting Recording"
@@ -625,7 +625,7 @@ export default function MeetingDetail() {
                   placeholder="Add meeting notes, follow-up reminders, or anything relevant…"
                   style={{
                     width: '100%', minHeight: 280, padding: '12px 14px', boxSizing: 'border-box',
-                    background: '#111328', border: '1px solid #e5e7ef', borderRadius: 8,
+                    background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 8,
                     color: '#1a1a2e', fontSize: 13, lineHeight: 1.7, fontFamily: 'inherit',
                     resize: 'vertical', outline: 'none',
                   }}
@@ -743,7 +743,7 @@ export default function MeetingDetail() {
                 placeholder="Ask about this meeting…"
                 disabled={chatLoading}
                 style={{
-                  flex: 1, background: '#111328', border: '1px solid #e5e7ef', borderRadius: 8,
+                  flex: 1, background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 8,
                   padding: '8px 12px', fontSize: 12, color: '#1a1a2e', outline: 'none',
                 }}
                 onFocus={e => e.target.style.borderColor = '#4a6cf7'}
@@ -787,7 +787,7 @@ export default function MeetingDetail() {
               <div style={{ position: 'relative' }}>
                 <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
                 <input
-                  style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 6, fontSize: 13, color: '#1a1a2e', background: '#111328', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 6, fontSize: 13, color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
                   placeholder="Search leads by name or email…"
                   value={leadSearch}
                   onChange={e => setLeadSearch(e.target.value)}

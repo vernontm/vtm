@@ -27,7 +27,7 @@ const STATUS_COLORS = {
   'Cancelled':  { bg: '#ff5c5c', text: '#fff' },
 };
 
-const DEFAULT_COLOR = { bg: '#252523', text: '#7a7870' };
+const DEFAULT_COLOR = { bg: '#e5e7ef', text: '#8e8ea0' };
 
 export function getStatusColor(status) {
   return STATUS_COLORS[status] || DEFAULT_COLOR;

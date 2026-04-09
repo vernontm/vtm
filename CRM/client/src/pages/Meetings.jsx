@@ -610,7 +610,7 @@ export default function Meetings() {
               <div style={{ position: 'relative' }}>
                 <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
                 <input
-                  style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 6, fontSize: 13, color: '#1a1a2e', background: '#111328', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 6, fontSize: 13, color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
                   placeholder="Search leads by name or email…"
                   value={leadSearch}
                   onChange={e => setLeadSearch(e.target.value)}

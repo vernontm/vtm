@@ -216,7 +216,7 @@ export default function BulkImport({ onClose, onImported }) {
                 </div>
               )}
               {done.skipped > 0 && (
-                <div style={{ background: '#4a484515', border: '1px solid #4a484540', borderRadius: 8, padding: '8px 16px', color: '#4a4845', fontSize: 14 }}>
+                <div style={{ background: '#8e8ea015', border: '1px solid #8e8ea040', borderRadius: 8, padding: '8px 16px', color: '#8e8ea0', fontSize: 14 }}>
                   — {done.skipped} duplicate{done.skipped !== 1 ? 's' : ''} skipped (no new info)
                 </div>
               )}
@@ -237,9 +237,9 @@ export default function BulkImport({ onClose, onImported }) {
     <div style={overlayStyle}>
       <div style={{ ...modalStyle, maxWidth: 620 }}>
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #252523', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: '#e8e6df' }}>Bulk Import Leads</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845' }}><X size={18} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={18} /></button>
         </div>
 
         <div style={{ padding: '20px 24px' }}>
@@ -248,8 +248,8 @@ export default function BulkImport({ onClose, onImported }) {
             {[['file', '📄 Upload File (CSV / XLSX)'], ['gsheets', '📊 Google Sheets URL']].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
-                background: tab === id ? '#111110' : 'transparent',
-                color: tab === id ? '#fff' : '#4a4845', fontSize: 13, fontWeight: tab === id ? 600 : 400,
+                background: tab === id ? '#e8ecf4' : 'transparent',
+                color: tab === id ? '#fff' : '#8e8ea0', fontSize: 13, fontWeight: tab === id ? 600 : 400,
               }}>{label}</button>
             ))}
           </div>
@@ -257,14 +257,14 @@ export default function BulkImport({ onClose, onImported }) {
           {/* File upload */}
           {tab === 'file' && (
             <div
-              style={{ border: '2px dashed #252523', borderRadius: 10, padding: '28px 20px', textAlign: 'center', cursor: 'pointer', marginBottom: 16 }}
+              style={{ border: '2px dashed #e5e7ef', borderRadius: 10, padding: '28px 20px', textAlign: 'center', cursor: 'pointer', marginBottom: 16 }}
               onClick={() => fileRef.current.click()}
               onDragOver={e => e.preventDefault()}
               onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { fileRef.current.files = e.dataTransfer.files; handleFile({ target: { files: [f] } }); } }}
             >
               <Upload size={28} style={{ color: '#ff9b26', marginBottom: 10 }} />
               <div style={{ color: '#e8e6df', fontWeight: 600, marginBottom: 4 }}>Drop a file or click to browse</div>
-              <div style={{ color: '#4a4845', fontSize: 13 }}>Supports .csv, .xlsx, .xls</div>
+              <div style={{ color: '#8e8ea0', fontSize: 13 }}>Supports .csv, .xlsx, .xls</div>
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={handleFile} />
             </div>
           )}
@@ -272,7 +272,7 @@ export default function BulkImport({ onClose, onImported }) {
           {/* Google Sheets */}
           {tab === 'gsheets' && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ color: '#7a7870', fontSize: 13, marginBottom: 8 }}>
+              <div style={{ color: '#8e8ea0', fontSize: 13, marginBottom: 8 }}>
                 Paste a Google Sheets link (sheet must be <strong style={{ color: '#ff9b26' }}>publicly viewable</strong>)
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -302,12 +302,12 @@ export default function BulkImport({ onClose, onImported }) {
           {headers.length > 0 && (
             <>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e6df', marginBottom: 10 }}>
-                Map columns <span style={{ color: '#4a4845', fontWeight: 400 }}>({rows.length} rows detected)</span>
+                Map columns <span style={{ color: '#8e8ea0', fontWeight: 400 }}>({rows.length} rows detected)</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
                 {LEAD_FIELDS.map(({ key, label, required }) => (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 12, color: required ? '#fdab3d' : '#7a7870', width: 80, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, color: required ? '#fdab3d' : '#8e8ea0', width: 80, flexShrink: 0 }}>
                       {label}{required ? ' *' : ''}
                     </span>
                     <div style={{ position: 'relative', flex: 1 }}>
@@ -328,19 +328,19 @@ export default function BulkImport({ onClose, onImported }) {
               {/* Preview */}
               {preview.length > 0 && (
                 <>
-                  <div style={{ fontSize: 12, color: '#4a4845', marginBottom: 8 }}>Preview (first {preview.length})</div>
+                  <div style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 8 }}>Preview (first {preview.length})</div>
                   <div style={{ overflowX: 'auto', marginBottom: 16 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                       <thead>
                         <tr>{LEAD_FIELDS.filter(f => mapping[f.key] !== undefined && mapping[f.key] !== '').map(f => (
-                          <th key={f.key} style={{ textAlign: 'left', padding: '4px 8px', color: '#4a4845', borderBottom: '1px solid #252523' }}>{f.label}</th>
+                          <th key={f.key} style={{ textAlign: 'left', padding: '4px 8px', color: '#8e8ea0', borderBottom: '1px solid #e5e7ef' }}>{f.label}</th>
                         ))}</tr>
                       </thead>
                       <tbody>
                         {preview.map((row, i) => (
                           <tr key={i}>
                             {LEAD_FIELDS.filter(f => mapping[f.key] !== undefined && mapping[f.key] !== '').map(f => (
-                              <td key={f.key} style={{ padding: '4px 8px', color: '#7a7870', borderBottom: '1px solid #111110' }}>
+                              <td key={f.key} style={{ padding: '4px 8px', color: '#8e8ea0', borderBottom: '1px solid #e8ecf4' }}>
                                 {row[f.key] || <span style={{ color: '#555' }}>—</span>}
                               </td>
                             ))}
@@ -356,14 +356,14 @@ export default function BulkImport({ onClose, onImported }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #252523' }}>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #e5e7ef' }}>
           {mergedCount > 0 && (
             <div style={{ marginBottom: 10, fontSize: 12, color: '#fdab3d', background: '#fdab3d12', border: '1px solid #fdab3d30', borderRadius: 6, padding: '6px 10px' }}>
               ⊕ {mergedCount} duplicate row{mergedCount !== 1 ? 's' : ''} in file merged — info consolidated
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ color: '#4a4845', fontSize: 13 }}>
+            <span style={{ color: '#8e8ea0', fontSize: 13 }}>
               {rows.length > 0 ? `${dedupedLeads.length} leads ready to import` : 'Upload a file to get started'}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -388,7 +388,7 @@ const overlayStyle = {
   alignItems: 'center', justifyContent: 'center', zIndex: 2000,
 };
 const modalStyle = {
-  background: '#161614', border: '1px solid #252523', borderRadius: 14,
+  background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14,
   width: '90vw', maxHeight: '90vh', overflow: 'auto',
   boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
 };
