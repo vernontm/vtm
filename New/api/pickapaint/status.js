@@ -35,19 +35,37 @@ export default async function handler(req, res) {
     const result = await response.json();
     console.log('NanoBanana record-info response:', JSON.stringify(result).slice(0, 800));
 
-    // API response format:
-    // Success: { code: 200, msg: "...", data: { taskId, info: { resultImageUrl: "..." } } }
-    // Failed:  { code: 400|500|501, msg: "...", data: { taskId, info: { resultImageUrl: "" } } }
-    // Processing: code may differ or info may be missing
+    // Actual API response format (verified):
+    // Success: { code: 200, data: { taskId, successFlag: 1, response: { resultImageUrl: "..." } } }
+    // Failed:  { code: 200, data: { successFlag: 0, errorMessage: "..." } }
+    // Processing: code !== 200 or response missing
 
     const code = result.code;
     const taskData = result.data || {};
+    const responseObj = taskData.response || {};
     const info = taskData.info || {};
 
+    // Primary path: data.response.resultImageUrl (actual API shape)
+    if (code === 200 && taskData.successFlag === 1 && responseObj.resultImageUrl) {
+      return res.status(200).json({
+        status: 'completed',
+        resultUrl: responseObj.resultImageUrl,
+      });
+    }
+
+    // Fallback: data.info.resultImageUrl (per docs)
     if (code === 200 && info.resultImageUrl) {
       return res.status(200).json({
         status: 'completed',
         resultUrl: info.resultImageUrl,
+      });
+    }
+
+    // Explicit failure
+    if (taskData.successFlag === 0 || taskData.errorMessage) {
+      return res.status(200).json({
+        status: 'failed',
+        error: taskData.errorMessage || result.msg || 'Generation failed',
       });
     }
 
