@@ -250,3 +250,27 @@ export const getTodos        = ()       => request('/todos');
 export const createTodo      = (data)   => request('/todos', { method: 'POST', body: JSON.stringify(data) });
 export const updateTodo      = (id, data) => request(`/todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTodo      = (id)     => request(`/todos?id=${id}`, { method: 'DELETE' });
+
+// Outreach Clients
+export const getClients = () => request('/clients');
+export const getClient = (id) => request(`/clients?id=${id}`);
+export const createClient = (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) });
+export const updateClient = (id, data) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteClient = (id) => request(`/clients?id=${id}`, { method: 'DELETE' });
+
+// Client Leads
+export const getClientLeads = (clientId) => request(`/client-leads?client_id=${clientId}`);
+export const updateClientLead = (id, data) => request(`/client-leads?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteClientLead = (id) => request(`/client-leads?id=${id}`, { method: 'DELETE' });
+
+// Outreach Queue
+export const getOutreachQueue = (clientId) => request(`/outreach-queue?client_id=${clientId}`);
+export const updateOutreachItem = (id, data) => request(`/outreach-queue?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteOutreachItem = (id) => request(`/outreach-queue?id=${id}`, { method: 'DELETE' });
+export const sendApprovedEmails = (clientId) => request(`/outreach-queue?client_id=${clientId}&action=send-approved`, { method: 'POST', body: '{}' });
+
+// Outreach AI
+export const scanBrand = (data) => request('/scan-brand', { method: 'POST', body: JSON.stringify(data) });
+export const researchLeads = (data) => request('/research-leads', { method: 'POST', body: JSON.stringify(data) });
+export const generateOutreach = (data) => request('/generate-outreach', { method: 'POST', body: JSON.stringify(data) });
+export const outreachChat = (data) => request('/outreach-chat', { method: 'POST', body: JSON.stringify(data) });

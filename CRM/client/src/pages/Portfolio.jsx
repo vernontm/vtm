@@ -159,7 +159,12 @@ function EditModal({ item, onClose, onSave }) {
     setUploadingThumb(true);
     try {
       const result = await uploadBlogMedia(file);
-      setForm(f => ({ ...f, thumbnail_url: result.url }));
+      setForm(f => ({
+        ...f,
+        thumbnail_url: result.url,
+        // Also set media_url if empty so the card shows the image
+        media_url: f.media_url || result.url,
+      }));
     } catch (err) {
       alert('Upload failed: ' + err.message);
     } finally {

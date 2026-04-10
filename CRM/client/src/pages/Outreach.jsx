@@ -1,0 +1,901 @@
+import { useState, useEffect, useRef } from 'react';
+import {
+  getClients, createClient, updateClient, deleteClient,
+  getClientLeads, updateClientLead, deleteClientLead,
+  getOutreachQueue, updateOutreachItem, deleteOutreachItem, sendApprovedEmails,
+  scanBrand, researchLeads, generateOutreach, outreachChat
+} from '../api';
+import {
+  Search, Plus, Building2, Globe, Instagram, MapPin, Palette,
+  Users, Target, Mic, Send, ChevronDown, ChevronUp, Edit3,
+  Trash2, Check, X, Mail, Eye, RefreshCw, Loader, CheckCircle,
+  Clock, AlertCircle, ArrowRight, Sparkles, Zap
+} from 'lucide-react';
+
+const RETAINER_STATUSES = ['active', 'paused', 'completed'];
+const TONE_OPTIONS = ['formal', 'casual', 'friendly'];
+
+// Status colors for email pipeline
+const STATUS_COLORS = {
+  new: { bg: '#e8ecf4', text: '#4a6cf7' },
+  draft: { bg: '#fff3e0', text: '#f59e0b' },
+  pending_review: { bg: '#fff3e0', text: '#f59e0b' },
+  approved: { bg: '#e8f5e9', text: '#22c55e' },
+  sent: { bg: '#e8f5e9', text: '#22c55e' },
+  opened: { bg: '#e0f2fe', text: '#0ea5e9' },
+  replied: { bg: '#f3e8ff', text: '#a855f7' },
+  error: { bg: '#fee2e2', text: '#ef4444' },
+  no_response: { bg: '#f5f5f5', text: '#8e8ea0' },
+};
+
+function StatusPill({ status }) {
+  const colors = STATUS_COLORS[status] || STATUS_COLORS.new;
+  return (
+    <span style={{
+      padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+      background: colors.bg, color: colors.text, textTransform: 'capitalize',
+    }}>
+      {(status || 'new').replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+export default function Outreach() {
+  // Client state
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [client, setClient] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [editingClient, setEditingClient] = useState(false);
+  const [clientDraft, setClientDraft] = useState({});
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [scanning, setScanning] = useState(false);
+
+  // Leads + Queue
+  const [leads, setLeads] = useState([]);
+  const [queue, setQueue] = useState([]);
+  const [activeTab, setActiveTab] = useState('chat');
+  const [selectedLeads, setSelectedLeads] = useState(new Set());
+
+  // Chat state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const chatEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Loading states
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [generatingEmails, setGeneratingEmails] = useState(false);
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [editingQueueId, setEditingQueueId] = useState(null);
+  const [editDraft, setEditDraft] = useState({});
+
+  // Load clients
+  useEffect(() => {
+    getClients().then(setClients).catch(console.error);
+  }, []);
+
+  // Load client data when selected
+  useEffect(() => {
+    if (!selectedClientId) { setClient(null); setLeads([]); setQueue([]); return; }
+    const c = clients.find(c => c.id === selectedClientId);
+    setClient(c || null);
+    setShowProfile(true);
+    loadClientData(selectedClientId);
+  }, [selectedClientId, clients]);
+
+  async function loadClientData(cid) {
+    try {
+      const [l, q] = await Promise.all([
+        getClientLeads(cid),
+        getOutreachQueue(cid),
+      ]);
+      setLeads(l || []);
+      setQueue(q || []);
+    } catch (err) { console.error(err); }
+  }
+
+  // Chat scroll
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  // Speech-to-text setup
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      const recognition = new SR();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        setChatInput(prev => prev + text);
+        setIsListening(false);
+      };
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  function toggleMic() {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  }
+
+  // ── Client Management ──
+
+  async function handleCreateClient() {
+    try {
+      const newClient = await createClient({
+        business_name: clientDraft.business_name || 'New Client',
+        ...clientDraft,
+      });
+      setClients(prev => [newClient, ...prev]);
+      setSelectedClientId(newClient.id);
+      setShowNewClient(false);
+      setClientDraft({});
+    } catch (err) { console.error(err); }
+  }
+
+  async function handleScanBrand() {
+    if (!client) return;
+    setScanning(true);
+    try {
+      const data = await scanBrand({
+        website_url: client.website_url || clientDraft.website_url,
+        business_name: client.business_name || clientDraft.business_name,
+        instagram: client.instagram || clientDraft.instagram,
+        facebook: client.facebook || clientDraft.facebook,
+        tiktok: client.tiktok || clientDraft.tiktok,
+        youtube: client.youtube || clientDraft.youtube,
+        linkedin: client.linkedin || clientDraft.linkedin,
+      });
+      // Merge scanned data into client
+      const merged = { ...client };
+      Object.entries(data).forEach(([k, v]) => {
+        if (v && (typeof v === 'string' ? v.length > 0 : true)) {
+          if (!merged[k] || (typeof merged[k] === 'string' && merged[k].length === 0)) {
+            merged[k] = v;
+          }
+        }
+      });
+      const updated = await updateClient(client.id, merged);
+      setClients(prev => prev.map(c => c.id === client.id ? updated : c));
+      setClient(updated);
+    } catch (err) { console.error('Brand scan failed:', err); }
+    setScanning(false);
+  }
+
+  async function handleSaveClient() {
+    try {
+      const updated = await updateClient(client.id, clientDraft);
+      setClients(prev => prev.map(c => c.id === client.id ? { ...c, ...updated } : c));
+      setClient({ ...client, ...updated });
+      setEditingClient(false);
+    } catch (err) { console.error(err); }
+  }
+
+  async function handleDeleteClient() {
+    if (!confirm('Delete this client and all their leads?')) return;
+    try {
+      await deleteClient(client.id);
+      setClients(prev => prev.filter(c => c.id !== client.id));
+      setSelectedClientId('');
+    } catch (err) { console.error(err); }
+  }
+
+  // ── Chat / Agent ──
+
+  async function sendChatMessage() {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
+
+    const userMsg = { role: 'user', content: text };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setChatLoading(true);
+
+    try {
+      const { reply, action } = await outreachChat({
+        messages: [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content })),
+        client,
+      });
+
+      setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+
+      // Execute actions
+      if (action?.type === 'research' && client) {
+        setChatMessages(prev => [...prev, {
+          role: 'system', content: '🔍 Searching for leads...',
+        }]);
+        setLoadingLeads(true);
+        try {
+          const result = await researchLeads({ command: text, client });
+          await loadClientData(client.id);
+          setChatMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Found ${result.count} leads and added them to the lead list. Switch to the Leads tab to review.`,
+          }]);
+        } catch (err) {
+          setChatMessages(prev => [...prev, {
+            role: 'assistant', content: `Research failed: ${err.message}`,
+          }]);
+        }
+        setLoadingLeads(false);
+      }
+
+      if (action?.type === 'generate_emails' && client) {
+        const targetLeads = selectedLeads.size > 0
+          ? leads.filter(l => selectedLeads.has(l.id))
+          : leads.filter(l => l.email && l.email_status === 'new');
+        if (targetLeads.length === 0) {
+          setChatMessages(prev => [...prev, {
+            role: 'assistant', content: 'No leads with emails to generate outreach for. Research leads first or select leads from the Leads tab.',
+          }]);
+        } else {
+          setGeneratingEmails(true);
+          setChatMessages(prev => [...prev, {
+            role: 'system', content: `✉️ Generating emails for ${targetLeads.length} leads...`,
+          }]);
+          try {
+            const result = await generateOutreach({ client, leads: targetLeads });
+            await loadClientData(client.id);
+            setChatMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Generated ${result.queued} outreach emails. Check the Approval Queue tab to review and approve.`,
+            }]);
+            setActiveTab('queue');
+          } catch (err) {
+            setChatMessages(prev => [...prev, {
+              role: 'assistant', content: `Email generation failed: ${err.message}`,
+            }]);
+          }
+          setGeneratingEmails(false);
+        }
+      }
+
+      if (action?.type === 'send_approved' && client) {
+        const approved = queue.filter(q => q.status === 'approved');
+        if (approved.length === 0) {
+          setChatMessages(prev => [...prev, {
+            role: 'assistant', content: 'No approved emails in the queue. Approve some emails first.',
+          }]);
+        } else {
+          setSendingEmails(true);
+          setChatMessages(prev => [...prev, {
+            role: 'system', content: `📤 Sending ${approved.length} emails with randomized delays...`,
+          }]);
+          try {
+            const result = await sendApprovedEmails(client.id);
+            await loadClientData(client.id);
+            setChatMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Sent ${result.sent} of ${result.total} emails.${result.errors?.length ? ` ${result.errors.length} errors.` : ''}`,
+            }]);
+          } catch (err) {
+            setChatMessages(prev => [...prev, {
+              role: 'assistant', content: `Send failed: ${err.message}`,
+            }]);
+          }
+          setSendingEmails(false);
+        }
+      }
+
+    } catch (err) {
+      setChatMessages(prev => [...prev, {
+        role: 'assistant', content: 'Something went wrong. Check the console.',
+      }]);
+      console.error(err);
+    }
+    setChatLoading(false);
+  }
+
+  // ── Queue Actions ──
+
+  async function approveItem(id) {
+    const updated = await updateOutreachItem(id, { status: 'approved' });
+    setQueue(prev => prev.map(q => q.id === id ? { ...q, ...updated } : q));
+  }
+
+  async function rejectItem(id) {
+    await deleteOutreachItem(id);
+    setQueue(prev => prev.filter(q => q.id !== id));
+  }
+
+  async function saveQueueEdit(id) {
+    const updated = await updateOutreachItem(id, editDraft);
+    setQueue(prev => prev.map(q => q.id === id ? { ...q, ...updated } : q));
+    setEditingQueueId(null);
+    setEditDraft({});
+  }
+
+  // ── Bulk Actions ──
+
+  function toggleLeadSelect(id) {
+    setSelectedLeads(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllLeads() {
+    if (selectedLeads.size === leads.length) {
+      setSelectedLeads(new Set());
+    } else {
+      setSelectedLeads(new Set(leads.map(l => l.id)));
+    }
+  }
+
+  async function deleteSelectedLeads() {
+    if (!confirm(`Delete ${selectedLeads.size} leads?`)) return;
+    for (const id of selectedLeads) {
+      await deleteClientLead(id);
+    }
+    setSelectedLeads(new Set());
+    loadClientData(client.id);
+  }
+
+  // ── Styles ──
+
+  const pageStyle = { padding: '24px 28px', maxWidth: 1400, margin: '0 auto' };
+
+  const cardStyle = {
+    background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14,
+    padding: 20, marginBottom: 16,
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '10px 14px', borderRadius: 10,
+    border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 14,
+    color: '#1a1a2e', outline: 'none', fontFamily: 'inherit',
+  };
+
+  const btnPrimary = {
+    padding: '10px 20px', background: '#4a6cf7', color: '#fff', border: 'none',
+    borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13,
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+  };
+
+  const btnGhost = {
+    padding: '8px 14px', background: 'transparent', color: '#8e8ea0', border: '1px solid #e5e7ef',
+    borderRadius: 8, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4,
+  };
+
+  const tabStyle = (active) => ({
+    padding: '10px 20px', fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
+    borderBottom: active ? '2px solid #4a6cf7' : '2px solid transparent',
+    color: active ? '#4a6cf7' : '#8e8ea0', background: 'none', border: 'none',
+    borderBottomWidth: 2, borderBottomStyle: 'solid',
+    borderBottomColor: active ? '#4a6cf7' : 'transparent',
+  });
+
+  // ── Render ──
+
+  return (
+    <div style={pageStyle}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', margin: 0 }}>Client Outreach</h1>
+          <p style={{ fontSize: 13, color: '#8e8ea0', margin: '4px 0 0' }}>
+            Research leads, generate emails, and manage outreach campaigns
+          </p>
+        </div>
+        <button style={btnPrimary} onClick={() => setShowNewClient(true)}>
+          <Plus size={15} /> Add Client
+        </button>
+      </div>
+
+      {/* Client Selector */}
+      <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
+        <Building2 size={18} style={{ color: '#8e8ea0' }} />
+        <select
+          value={selectedClientId}
+          onChange={(e) => setSelectedClientId(e.target.value)}
+          style={{
+            ...inputStyle, flex: 1, cursor: 'pointer', fontWeight: 600,
+            background: 'transparent', border: 'none', fontSize: 15,
+          }}
+        >
+          <option value="">Select a client...</option>
+          {clients.map(c => (
+            <option key={c.id} value={c.id}>{c.business_name}{c.retainer_status === 'paused' ? ' (paused)' : ''}</option>
+          ))}
+        </select>
+        {client && (
+          <span style={{
+            padding: '4px 12px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+            background: client.retainer_status === 'active' ? '#e8f5e9' : '#fff3e0',
+            color: client.retainer_status === 'active' ? '#22c55e' : '#f59e0b',
+            textTransform: 'capitalize',
+          }}>
+            {client.retainer_status}
+          </span>
+        )}
+      </div>
+
+      {/* New Client Modal */}
+      {showNewClient && (
+        <div style={{ ...cardStyle, border: '2px solid #4a6cf7' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: '#1a1a2e' }}>New Client</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <input style={inputStyle} placeholder="Business Name *" value={clientDraft.business_name || ''} onChange={e => setClientDraft(p => ({ ...p, business_name: e.target.value }))} />
+            <input style={inputStyle} placeholder="Owner Name" value={clientDraft.owner_name || ''} onChange={e => setClientDraft(p => ({ ...p, owner_name: e.target.value }))} />
+            <input style={inputStyle} placeholder="Website URL" value={clientDraft.website_url || ''} onChange={e => setClientDraft(p => ({ ...p, website_url: e.target.value }))} />
+            <input style={inputStyle} placeholder="Industry" value={clientDraft.industry || ''} onChange={e => setClientDraft(p => ({ ...p, industry: e.target.value }))} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+            <button style={btnGhost} onClick={() => { setShowNewClient(false); setClientDraft({}); }}>Cancel</button>
+            <button style={btnPrimary} onClick={handleCreateClient} disabled={!clientDraft.business_name}>Create & Auto-Scan</button>
+          </div>
+        </div>
+      )}
+
+      {!client && !showNewClient && (
+        <div style={{ textAlign: 'center', padding: '80px 20px', color: '#8e8ea0' }}>
+          <Building2 size={48} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <p>Select or create a client to get started</p>
+        </div>
+      )}
+
+      {client && (
+        <>
+          {/* Client Profile (collapsible) */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowProfile(!showProfile)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {client.logo_url ? (
+                  <img src={client.logo_url} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: '#e8ecf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a6cf7', fontWeight: 700, fontSize: 15 }}>
+                    {(client.business_name || '?')[0].toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{client.business_name}</h2>
+                  <span style={{ fontSize: 12, color: '#8e8ea0' }}>
+                    {[client.industry, client.location_city, client.location_state].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  style={{ ...btnGhost, background: scanning ? '#f0f0ff' : undefined }}
+                  onClick={(e) => { e.stopPropagation(); handleScanBrand(); }}
+                  disabled={scanning}
+                >
+                  {scanning ? <Loader size={13} className="spin" /> : <Sparkles size={13} />}
+                  {scanning ? 'Scanning...' : 'Auto-Scan'}
+                </button>
+                <button style={btnGhost} onClick={(e) => { e.stopPropagation(); setEditingClient(true); setClientDraft(client); }}>
+                  <Edit3 size={13} /> Edit
+                </button>
+                <button style={{ ...btnGhost, color: '#ef4444' }} onClick={(e) => { e.stopPropagation(); handleDeleteClient(); }}>
+                  <Trash2 size={13} />
+                </button>
+                {showProfile ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </div>
+            </div>
+
+            {showProfile && !editingClient && (
+              <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                <ProfileField label="Owner" value={client.owner_name} />
+                <ProfileField label="Type" value={client.business_type} />
+                <ProfileField label="Website" value={client.website_url} link />
+                <ProfileField label="Location" value={[client.location_address, client.location_city, client.location_state].filter(Boolean).join(', ')} />
+                <ProfileField label="Instagram" value={client.instagram} />
+                <ProfileField label="TikTok" value={client.tiktok} />
+                <ProfileField label="Facebook" value={client.facebook} />
+                <ProfileField label="YouTube" value={client.youtube} />
+                <ProfileField label="LinkedIn" value={client.linkedin} />
+                <ProfileField label="Target Audience" value={client.target_audience} full />
+                <ProfileField label="Services" value={client.services} full />
+                <ProfileField label="USPs" value={client.unique_selling_points} full />
+                <ProfileField label="Campaign Goals" value={client.campaign_goals} full />
+                <ProfileField label="Budget Range" value={client.budget_range} />
+                <ProfileField label="Tone" value={client.outreach_tone} />
+                {client.brand_colors?.length > 0 && (
+                  <div style={{ gridColumn: 'span 1' }}>
+                    <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Brand Colors</span>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      {client.brand_colors.map((c, i) => (
+                        <div key={i} style={{ width: 24, height: 24, borderRadius: 6, background: c, border: '1px solid #e5e7ef' }} title={c} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {client.notes && <ProfileField label="Notes" value={client.notes} full />}
+              </div>
+            )}
+
+            {showProfile && editingClient && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[
+                    ['business_name', 'Business Name'], ['owner_name', 'Owner Name'],
+                    ['business_type', 'Business Type'], ['industry', 'Industry'],
+                    ['website_url', 'Website URL'], ['location_address', 'Address'],
+                    ['location_city', 'City'], ['location_state', 'State'],
+                    ['instagram', 'Instagram'], ['tiktok', 'TikTok'],
+                    ['facebook', 'Facebook'], ['youtube', 'YouTube'],
+                    ['linkedin', 'LinkedIn'], ['budget_range', 'Budget Range'],
+                  ].map(([key, label]) => (
+                    <input key={key} style={inputStyle} placeholder={label} value={clientDraft[key] || ''}
+                      onChange={e => setClientDraft(p => ({ ...p, [key]: e.target.value }))} />
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                  {[
+                    ['target_audience', 'Target Audience'], ['services', 'Services'],
+                    ['unique_selling_points', 'Unique Selling Points'], ['campaign_goals', 'Campaign Goals'],
+                  ].map(([key, label]) => (
+                    <textarea key={key} style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} placeholder={label}
+                      value={clientDraft[key] || ''} onChange={e => setClientDraft(p => ({ ...p, [key]: e.target.value }))} />
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                  <select style={inputStyle} value={clientDraft.outreach_tone || 'friendly'}
+                    onChange={e => setClientDraft(p => ({ ...p, outreach_tone: e.target.value }))}>
+                    {TONE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <select style={inputStyle} value={clientDraft.retainer_status || 'active'}
+                    onChange={e => setClientDraft(p => ({ ...p, retainer_status: e.target.value }))}>
+                    {RETAINER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <textarea style={{ ...inputStyle, marginTop: 10, minHeight: 50 }} placeholder="Notes / Instructions"
+                  value={clientDraft.notes || ''} onChange={e => setClientDraft(p => ({ ...p, notes: e.target.value }))} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+                  <button style={btnGhost} onClick={() => { setEditingClient(false); setClientDraft({}); }}>Cancel</button>
+                  <button style={btnPrimary} onClick={handleSaveClient}>Save</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e5e7ef', marginBottom: 16 }}>
+            <button style={tabStyle(activeTab === 'chat')} onClick={() => setActiveTab('chat')}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Zap size={14} /> Command Center
+              </span>
+            </button>
+            <button style={tabStyle(activeTab === 'leads')} onClick={() => setActiveTab('leads')}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Users size={14} /> Leads ({leads.length})
+              </span>
+            </button>
+            <button style={tabStyle(activeTab === 'queue')} onClick={() => setActiveTab('queue')}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Mail size={14} /> Approval Queue ({queue.filter(q => q.status === 'pending_review').length})
+              </span>
+            </button>
+          </div>
+
+          {/* Chat Tab */}
+          {activeTab === 'chat' && (
+            <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
+              {/* Chat Messages */}
+              <div style={{
+                minHeight: 300, maxHeight: 450, overflowY: 'auto', padding: '20px 24px',
+                display: 'flex', flexDirection: 'column', gap: 0,
+              }}>
+                {chatMessages.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8e8ea0' }}>
+                    <Sparkles size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
+                    <p style={{ fontSize: 14, marginBottom: 8 }}>What would you like to do for <strong style={{ color: '#1a1a2e' }}>{client.business_name}</strong>?</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 }}>
+                      {[
+                        `Find ${client.location_city || 'local'} influencers for ${client.business_name}`,
+                        'Generate outreach emails for all leads',
+                        'Send approved emails',
+                      ].map((suggestion, i) => (
+                        <button key={i} style={{
+                          padding: '8px 16px', background: 'rgba(74,108,247,0.06)', border: '1px solid rgba(74,108,247,0.2)',
+                          borderRadius: 20, color: '#4a6cf7', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                        }} onClick={() => { setChatInput(suggestion); }}>
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {chatMessages.map((msg, i) => (
+                  <div key={i} style={{
+                    display: 'flex', gap: 12, padding: '12px 0',
+                    borderTop: i > 0 ? '1px solid #f0f0f5' : 'none',
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, flexShrink: 0, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700,
+                      background: msg.role === 'user' ? 'rgba(74,108,247,0.12)' : msg.role === 'system' ? '#f8f9fc' : '#f0f0f5',
+                      color: msg.role === 'user' ? '#4a6cf7' : '#8e8ea0',
+                    }}>
+                      {msg.role === 'user' ? 'R' : msg.role === 'system' ? '⚡' : '✦'}
+                    </div>
+                    <div style={{
+                      flex: 1, fontSize: 14, lineHeight: 1.6, paddingTop: 4,
+                      color: msg.role === 'system' ? '#8e8ea0' : '#1a1a2e',
+                      fontStyle: msg.role === 'system' ? 'italic' : 'normal',
+                    }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div style={{ display: 'flex', gap: 12, padding: '12px 0', borderTop: '1px solid #f0f0f5' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8ea0', fontSize: 13 }}>✦</div>
+                    <div style={{ display: 'flex', gap: 5, alignItems: 'center', paddingTop: 8 }}>
+                      {[0, 1, 2].map(j => (
+                        <span key={j} style={{
+                          width: 6, height: 6, borderRadius: '50%', background: '#ccc',
+                          animation: 'blink 1.2s ease infinite', animationDelay: `${j * 0.2}s`,
+                        }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Input Area */}
+              <div style={{ borderTop: '1px solid #e5e7ef', padding: '14px 20px', display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+                <textarea
+                  ref={inputRef}
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                  placeholder={`Tell me what to do for ${client.business_name}...`}
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    color: '#1a1a2e', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.6,
+                    resize: 'none', minHeight: 40, maxHeight: 120,
+                  }}
+                  rows={1}
+                />
+                <button
+                  onClick={toggleMic}
+                  style={{
+                    width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7ef',
+                    background: isListening ? 'rgba(255,60,60,0.1)' : '#f8f9fc',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: isListening ? '#ef4444' : '#8e8ea0',
+                  }}
+                >
+                  <Mic size={16} />
+                </button>
+                <button
+                  onClick={sendChatMessage}
+                  disabled={chatLoading || !chatInput.trim()}
+                  style={{
+                    width: 36, height: 36, borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                    cursor: chatLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: chatLoading || !chatInput.trim() ? 0.4 : 1,
+                  }}
+                >
+                  <Send size={15} style={{ color: '#fff' }} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Leads Tab */}
+          {activeTab === 'leads' && (
+            <div style={cardStyle}>
+              {/* Toolbar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <label style={{ fontSize: 12, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={leads.length > 0 && selectedLeads.size === leads.length}
+                      onChange={selectAllLeads} style={{ accentColor: '#4a6cf7' }} />
+                    Select All
+                  </label>
+                  {selectedLeads.size > 0 && (
+                    <>
+                      <span style={{ fontSize: 12, color: '#4a6cf7', fontWeight: 600 }}>{selectedLeads.size} selected</span>
+                      <button style={{ ...btnGhost, fontSize: 11, color: '#ef4444' }} onClick={deleteSelectedLeads}>
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+                <button style={btnGhost} onClick={() => loadClientData(client.id)}>
+                  <RefreshCw size={12} /> Refresh
+                </button>
+              </div>
+
+              {leads.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#8e8ea0', fontSize: 13 }}>
+                  No leads yet. Use the Command Center to research leads.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #e5e7ef' }}>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', width: 30 }}></th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600 }}>Name</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600 }}>Email</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600 }}>Socials</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600 }}>Followers</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600 }}>Niche</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600 }}>Score</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600 }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leads.map(lead => (
+                        <tr key={lead.id} style={{ borderBottom: '1px solid #f5f5f8' }}>
+                          <td style={{ padding: '10px' }}>
+                            <input type="checkbox" checked={selectedLeads.has(lead.id)}
+                              onChange={() => toggleLeadSelect(lead.id)} style={{ accentColor: '#4a6cf7' }} />
+                          </td>
+                          <td style={{ padding: '10px', fontWeight: 600, color: '#1a1a2e' }}>{lead.name}</td>
+                          <td style={{ padding: '10px', color: '#4a6cf7', fontSize: 12 }}>{lead.email}</td>
+                          <td style={{ padding: '10px' }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              {lead.instagram && <span style={{ fontSize: 11, color: '#E1306C' }} title={lead.instagram}>IG</span>}
+                              {lead.tiktok && <span style={{ fontSize: 11, color: '#000' }} title={lead.tiktok}>TT</span>}
+                              {lead.youtube && <span style={{ fontSize: 11, color: '#FF0000' }} title={lead.youtube}>YT</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px', fontSize: 12, color: '#8e8ea0' }}>
+                            {lead.follower_count ? lead.follower_count.toLocaleString() : '-'}
+                          </td>
+                          <td style={{ padding: '10px', fontSize: 12, color: '#8e8ea0' }}>{lead.niche}</td>
+                          <td style={{ padding: '10px' }}>
+                            {lead.relevance_score > 0 && (
+                              <span style={{
+                                fontSize: 11, fontWeight: 700,
+                                color: lead.relevance_score >= 80 ? '#22c55e' : lead.relevance_score >= 50 ? '#f59e0b' : '#8e8ea0',
+                              }}>
+                                {lead.relevance_score}%
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '10px' }}>
+                            <StatusPill status={lead.email_status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Approval Queue Tab */}
+          {activeTab === 'queue' && (
+            <div>
+              {/* Bulk send button */}
+              {queue.filter(q => q.status === 'approved').length > 0 && (
+                <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    style={{ ...btnPrimary, background: sendingEmails ? '#8e8ea0' : '#22c55e' }}
+                    onClick={async () => {
+                      setSendingEmails(true);
+                      try {
+                        await sendApprovedEmails(client.id);
+                        await loadClientData(client.id);
+                      } catch (err) { console.error(err); }
+                      setSendingEmails(false);
+                    }}
+                    disabled={sendingEmails}
+                  >
+                    {sendingEmails ? <Loader size={14} className="spin" /> : <Send size={14} />}
+                    {sendingEmails ? 'Sending...' : `Send ${queue.filter(q => q.status === 'approved').length} Approved`}
+                  </button>
+                </div>
+              )}
+
+              {queue.length === 0 ? (
+                <div style={{ ...cardStyle, textAlign: 'center', padding: '40px 20px', color: '#8e8ea0', fontSize: 13 }}>
+                  No emails in the queue. Generate outreach emails from the Command Center.
+                </div>
+              ) : (
+                queue.map(item => (
+                  <div key={item.id} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>{item.to_name}</span>
+                          <span style={{ fontSize: 12, color: '#4a6cf7' }}>{item.to_email}</span>
+                          <StatusPill status={item.status} />
+                        </div>
+                        {editingQueueId === item.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                            <input
+                              style={inputStyle} placeholder="Subject" value={editDraft.subject || ''}
+                              onChange={e => setEditDraft(p => ({ ...p, subject: e.target.value }))}
+                            />
+                            <textarea
+                              style={{ ...inputStyle, minHeight: 120, fontFamily: 'inherit', lineHeight: 1.6 }}
+                              value={editDraft.body || ''}
+                              onChange={e => setEditDraft(p => ({ ...p, body: e.target.value }))}
+                            />
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                              <button style={btnGhost} onClick={() => { setEditingQueueId(null); setEditDraft({}); }}>Cancel</button>
+                              <button style={btnPrimary} onClick={() => saveQueueEdit(item.id)}>Save</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginTop: 6 }}>
+                              Subject: {item.subject}
+                            </div>
+                            <div style={{
+                              fontSize: 13, color: '#555', lineHeight: 1.7, marginTop: 6,
+                              padding: '12px 16px', background: '#f8f9fc', borderRadius: 10,
+                              whiteSpace: 'pre-wrap',
+                            }}>
+                              {item.body}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {editingQueueId !== item.id && item.status === 'pending_review' && (
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button style={{ ...btnGhost, color: '#ef4444' }} onClick={() => rejectItem(item.id)}>
+                          <X size={13} /> Reject
+                        </button>
+                        <button style={btnGhost} onClick={() => { setEditingQueueId(item.id); setEditDraft({ subject: item.subject, body: item.body }); }}>
+                          <Edit3 size={13} /> Edit
+                        </button>
+                        <button style={{ ...btnPrimary, background: '#22c55e' }} onClick={() => approveItem(item.id)}>
+                          <Check size={14} /> Approve
+                        </button>
+                      </div>
+                    )}
+                    {item.sent_at && (
+                      <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+                        Sent: {new Date(item.sent_at).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+        .spin { animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+}
+
+function ProfileField({ label, value, full, link }) {
+  if (!value) return null;
+  return (
+    <div style={{ gridColumn: full ? '1 / -1' : undefined }}>
+      <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</span>
+      <div style={{ fontSize: 13, color: '#1a1a2e', marginTop: 2, lineHeight: 1.5 }}>
+        {link ? <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener" style={{ color: '#4a6cf7' }}>{value}</a> : value}
+      </div>
+    </div>
+  );
+}
