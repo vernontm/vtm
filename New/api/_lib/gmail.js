@@ -195,9 +195,58 @@ function buildRawEmail({ to, from, subject, body, inReplyTo, references }) {
   return Buffer.from(lines.join('\r\n')).toString('base64url');
 }
 
+// ── Labels ──────────────────────────────────────────────────────────────────
+
+// Cache labels per request to avoid repeated API calls
+let _labelCache = null;
+let _labelCacheTime = 0;
+
+async function getOrCreateLabel(accessToken, labelName) {
+  // Refresh cache every 60s
+  if (!_labelCache || Date.now() - _labelCacheTime > 60000) {
+    const labelsRes = await gmailFetch('/labels', accessToken);
+    _labelCache = labelsRes.labels || [];
+    _labelCacheTime = Date.now();
+  }
+
+  // Check if label already exists
+  const existing = _labelCache.find(l => l.name === labelName);
+  if (existing) return existing.id;
+
+  // If nested (e.g. "Clients/Acme"), ensure parent exists first
+  const parts = labelName.split('/');
+  if (parts.length > 1) {
+    const parentName = parts[0];
+    const parentExists = _labelCache.find(l => l.name === parentName);
+    if (!parentExists) {
+      const parentLabel = await gmailFetch('/labels', accessToken, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: parentName,
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show',
+        }),
+      });
+      _labelCache.push(parentLabel);
+    }
+  }
+
+  // Create the label
+  const newLabel = await gmailFetch('/labels', accessToken, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: labelName,
+      labelListVisibility: 'labelShow',
+      messageListVisibility: 'show',
+    }),
+  });
+  _labelCache.push(newLabel);
+  return newLabel.id;
+}
+
 // ── Send + Draft ─────────────────────────────────────────────────────────────
 
-async function sendEmail({ to, from: fromOverride, subject, body, threadId, inReplyTo, references }) {
+async function sendEmail({ to, from: fromOverride, subject, body, threadId, inReplyTo, references, labelName }) {
   const { accessToken, email: defaultFrom } = await getGmailAuth();
   const from = fromOverride || defaultFrom;
   const raw = buildRawEmail({ to, from, subject, body, inReplyTo, references });
@@ -208,6 +257,21 @@ async function sendEmail({ to, from: fromOverride, subject, body, threadId, inRe
     method: 'POST',
     body: JSON.stringify(requestBody),
   });
+
+  // Apply label if specified
+  if (labelName && result.id) {
+    try {
+      const labelId = await getOrCreateLabel(accessToken, labelName);
+      await gmailFetch(`/messages/${result.id}/modify`, accessToken, {
+        method: 'POST',
+        body: JSON.stringify({ addLabelIds: [labelId] }),
+      });
+    } catch (err) {
+      console.error('Failed to apply label:', err.message);
+      // Don't fail the send if labeling fails
+    }
+  }
+
   return result; // { id, threadId, labelIds }
 }
 

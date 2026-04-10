@@ -30,6 +30,16 @@ module.exports = async function handler(req, res) {
       return res.json({ sent: 0, message: 'No approved emails to send' });
     }
 
+    // Get client name for Gmail label
+    let clientName = '';
+    try {
+      const clients = await supaFetch(`crm_clients?id=eq.${client_id}&select=business_name`);
+      clientName = clients?.[0]?.business_name || '';
+    } catch (e) { /* ignore */ }
+
+    // Build label name: "Clients/CompanyName"
+    const labelName = clientName ? `Clients/${clientName}` : '';
+
     let sent = 0;
     const errors = [];
 
@@ -47,6 +57,7 @@ module.exports = async function handler(req, res) {
           from: 'partners@vernontm.com',
           subject: item.subject,
           body: item.body,
+          labelName,
         });
 
         // Mark as sent
