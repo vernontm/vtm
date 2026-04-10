@@ -277,3 +277,4 @@ export const scanBrand = (data) => request('/scan-brand', { method: 'POST', body
 export const researchLeads = (data) => request('/research-leads', { method: 'POST', body: JSON.stringify(data) });
 export const generateOutreach = (data) => request('/generate-outreach', { method: 'POST', body: JSON.stringify(data) });
 export const outreachChat = (data) => request('/outreach-chat', { method: 'POST', body: JSON.stringify(data) });
+export const rewriteEmail = (data) => request('/rewrite-email', { method: 'POST', body: JSON.stringify(data) });

@@ -4,7 +4,7 @@ import {
   getClients, getClientByContact, createClient, updateClient, deleteClient,
   getClientLeads, updateClientLead, deleteClientLead,
   getOutreachQueue, updateOutreachItem, deleteOutreachItem, sendApprovedEmails, clearOutreachQueue, clearClientLeads,
-  scanBrand, researchLeads, generateOutreach, outreachChat
+  scanBrand, researchLeads, generateOutreach, outreachChat, rewriteEmail
 } from '../api';
 import {
   Search, Plus, Building2, Globe, Instagram, MapPin, Palette,
@@ -298,6 +298,41 @@ export default function Outreach() {
             }]);
           }
           setSendingEmails(false);
+        }
+      }
+
+      if (action?.type === 'edit_email' && client && action.name) {
+        const match = queue.find(q => q.to_name?.toLowerCase().includes(action.name.toLowerCase()));
+        if (match) {
+          try {
+            let updates = {};
+            if (action.subject && action.subject !== 'null') {
+              updates.subject = action.subject;
+            }
+            if (action.instructions) {
+              setChatMessages(prev => [...prev, { role: 'system', content: `✏️ Rewriting email to ${match.to_name}...` }]);
+              const rewritten = await rewriteEmail({
+                current_subject: match.subject,
+                current_body: match.body,
+                to_name: match.to_name,
+                instructions: action.instructions,
+                client_name: client.business_name,
+              });
+              updates.subject = rewritten.subject || updates.subject || match.subject;
+              updates.body = rewritten.body;
+            } else if (action.body && action.body !== 'null') {
+              updates.body = action.body;
+            }
+            if (Object.keys(updates).length > 0) {
+              await updateOutreachItem(match.id, updates);
+              await loadClientData(client.id);
+              setChatMessages(prev => [...prev, { role: 'assistant', content: `Updated email to ${match.to_name}. Check the Approval Queue to review.` }]);
+            }
+          } catch (err) {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed to edit: ${err.message}` }]);
+          }
+        } else {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Couldn't find a queued email for "${action.name}".` }]);
         }
       }
 
