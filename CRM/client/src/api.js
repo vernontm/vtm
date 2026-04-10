@@ -261,6 +261,7 @@ export const deleteClient = (id) => request(`/clients?id=${id}`, { method: 'DELE
 
 // Client Leads
 export const getClientLeads = (clientId) => request(`/client-leads?client_id=${clientId}`);
+export const createClientLead = (data) => request('/client-leads', { method: 'POST', body: JSON.stringify(data) });
 export const updateClientLead = (id, data) => request(`/client-leads?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClientLead = (id) => request(`/client-leads?id=${id}`, { method: 'DELETE' });
 

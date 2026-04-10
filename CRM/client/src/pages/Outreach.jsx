@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   getContacts,
   getClients, getClientByContact, createClient, updateClient, deleteClient,
-  getClientLeads, updateClientLead, deleteClientLead,
+  getClientLeads, createClientLead, updateClientLead, deleteClientLead,
   getOutreachQueue, updateOutreachItem, deleteOutreachItem, sendApprovedEmails, clearOutreachQueue, clearClientLeads,
   scanBrand, researchLeads, generateOutreach, outreachChat, rewriteEmail
 } from '../api';
@@ -58,6 +58,9 @@ export default function Outreach() {
   const [queue, setQueue] = useState([]);
   const [activeTab, setActiveTab] = useState('chat');
   const [selectedLeads, setSelectedLeads] = useState(new Set());
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [newLead, setNewLead] = useState({ name: '', email: '', instagram: '', tiktok: '', youtube: '', niche: '', follower_count: '', notes: '' });
+  const [savingLead, setSavingLead] = useState(false);
 
   // Chat state
   const [chatMessages, setChatMessages] = useState([]);
@@ -561,6 +564,30 @@ export default function Outreach() {
     loadClientData(client.id);
   }
 
+  async function saveNewLead() {
+    if (!newLead.name.trim()) return;
+    setSavingLead(true);
+    try {
+      await createClientLead({
+        client_id: client.id,
+        name: newLead.name.trim(),
+        email: newLead.email.trim() || null,
+        instagram: newLead.instagram.trim() || null,
+        tiktok: newLead.tiktok.trim() || null,
+        youtube: newLead.youtube.trim() || null,
+        niche: newLead.niche.trim() || null,
+        follower_count: newLead.follower_count ? parseInt(newLead.follower_count) : null,
+        notes: newLead.notes.trim() || null,
+        source: 'manual',
+        email_status: 'new',
+      });
+      setNewLead({ name: '', email: '', instagram: '', tiktok: '', youtube: '', niche: '', follower_count: '', notes: '' });
+      setShowAddLead(false);
+      loadClientData(client.id);
+    } catch (err) { console.error(err); }
+    setSavingLead(false);
+  }
+
   // ── Styles ──
 
   const pageStyle = { padding: '24px 28px', maxWidth: 1400, margin: '0 auto' };
@@ -1021,14 +1048,52 @@ export default function Outreach() {
                     </>
                   )}
                 </div>
-                <button style={btnGhost} onClick={() => loadClientData(client.id)}>
-                  <RefreshCw size={12} /> Refresh
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 14px' }} onClick={() => setShowAddLead(!showAddLead)}>
+                    <Plus size={13} /> Add Lead
+                  </button>
+                  <button style={btnGhost} onClick={() => loadClientData(client.id)}>
+                    <RefreshCw size={12} /> Refresh
+                  </button>
+                </div>
               </div>
 
-              {leads.length === 0 ? (
+              {/* Add Lead Form */}
+              {showAddLead && (
+                <div style={{ background: '#f8f9fc', border: '1px solid #e5e7ef', borderRadius: 12, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <input style={inputStyle} placeholder="Name *" value={newLead.name}
+                      onChange={e => setNewLead({ ...newLead, name: e.target.value })} />
+                    <input style={inputStyle} placeholder="Email" value={newLead.email}
+                      onChange={e => setNewLead({ ...newLead, email: e.target.value })} />
+                    <input style={inputStyle} placeholder="Instagram handle" value={newLead.instagram}
+                      onChange={e => setNewLead({ ...newLead, instagram: e.target.value })} />
+                    <input style={inputStyle} placeholder="TikTok handle" value={newLead.tiktok}
+                      onChange={e => setNewLead({ ...newLead, tiktok: e.target.value })} />
+                    <input style={inputStyle} placeholder="YouTube channel" value={newLead.youtube}
+                      onChange={e => setNewLead({ ...newLead, youtube: e.target.value })} />
+                    <input style={inputStyle} placeholder="Niche" value={newLead.niche}
+                      onChange={e => setNewLead({ ...newLead, niche: e.target.value })} />
+                    <input style={inputStyle} placeholder="Follower count" type="number" value={newLead.follower_count}
+                      onChange={e => setNewLead({ ...newLead, follower_count: e.target.value })} />
+                    <input style={inputStyle} placeholder="Notes" value={newLead.notes}
+                      onChange={e => setNewLead({ ...newLead, notes: e.target.value })} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button style={btnGhost} onClick={() => { setShowAddLead(false); setNewLead({ name: '', email: '', instagram: '', tiktok: '', youtube: '', niche: '', follower_count: '', notes: '' }); }}>
+                      Cancel
+                    </button>
+                    <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 16px', opacity: !newLead.name.trim() || savingLead ? 0.5 : 1 }}
+                      onClick={saveNewLead} disabled={!newLead.name.trim() || savingLead}>
+                      {savingLead ? <Loader size={13} className="spin" /> : <Check size={13} />} Save Lead
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {leads.length === 0 && !showAddLead ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: '#8e8ea0', fontSize: 13 }}>
-                  No leads yet. Use the Command Center to research leads.
+                  No leads yet. Use the Command Center to research leads or add them manually.
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
