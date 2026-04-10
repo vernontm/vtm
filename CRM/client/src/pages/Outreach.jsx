@@ -507,9 +507,8 @@ export default function Outreach() {
             tiktok: action.tiktok || null,
             youtube: action.youtube || null,
             niche: action.niche || null,
-            follower_count: action.follower_count || null,
+            follower_count: action.follower_count ? parseInt(action.follower_count) || null : null,
             notes: action.notes || null,
-            source: 'manual',
             email_status: 'new',
           });
           await loadClientData(client.id);
@@ -600,7 +599,6 @@ export default function Outreach() {
         niche: newLead.niche.trim() || null,
         follower_count: newLead.follower_count ? parseInt(newLead.follower_count) : null,
         notes: newLead.notes.trim() || null,
-        source: 'manual',
         email_status: 'new',
       });
       setNewLead({ name: '', email: '', instagram: '', tiktok: '', youtube: '', niche: '', follower_count: '', notes: '' });
