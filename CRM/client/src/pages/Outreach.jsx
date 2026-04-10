@@ -301,6 +301,31 @@ export default function Outreach() {
         }
       }
 
+      if (action?.type === 'edit_all_emails' && client && action.instructions) {
+        const pending = queue.filter(q => q.status === 'pending_review' || q.status === 'draft');
+        if (pending.length === 0) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: 'No emails in the queue to edit.' }]);
+        } else {
+          setChatMessages(prev => [...prev, { role: 'system', content: `✏️ Rewriting ${pending.length} emails...` }]);
+          let updated = 0;
+          for (const item of pending) {
+            try {
+              const rewritten = await rewriteEmail({
+                current_subject: item.subject,
+                current_body: item.body,
+                to_name: item.to_name,
+                instructions: action.instructions,
+                client_name: client.business_name,
+              });
+              await updateOutreachItem(item.id, { subject: rewritten.subject, body: rewritten.body });
+              updated++;
+            } catch (err) { console.error(`Failed to rewrite email to ${item.to_name}:`, err); }
+          }
+          await loadClientData(client.id);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Updated ${updated} of ${pending.length} emails. Check the Approval Queue to review.` }]);
+        }
+      }
+
       if (action?.type === 'edit_email' && client && action.name) {
         const match = queue.find(q => q.to_name?.toLowerCase().includes(action.name.toLowerCase()));
         if (match) {

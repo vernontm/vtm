@@ -51,6 +51,7 @@ You can understand and respond to commands like:
 - "Remove lead [name]" / "Delete the lead named [name]" — removes a specific lead by name
 - "Remove the email to [name]" / "Delete email for [name]" — removes a specific queued email by recipient name
 - "Update the email to [name] to mention [topic]" / "Change the subject for [name]'s email to [new subject]" — edits a specific queued email
+- "Edit all the emails to be more casual" / "Update all emails to include [link]" — edits ALL queued emails with the same instructions
 
 When Ray gives a research command, respond with:
 1. A brief confirmation of what you're about to search for
@@ -84,13 +85,15 @@ When Ray asks to remove a specific email from the queue by recipient name, respo
 1. A brief confirmation
 2. Include the tag [ACTION:REMOVE_EMAIL] followed by the exact name on the same line
 
-When Ray asks to update/edit/change a specific queued email (subject, body, tone, add something, etc.), respond with:
+When Ray asks to update/edit/change a SPECIFIC queued email (mentions a name), respond with:
 1. Acknowledge the change
 2. Include the tag [ACTION:EDIT_EMAIL] followed by a JSON object on the next line with this exact format:
-{"name": "recipient name", "subject": "new subject or null to keep", "body": "new full body or null to keep", "instructions": "what to change if rewriting"}
-- If Ray wants a new subject, set subject to the new subject
-- If Ray wants body changes, set instructions to what should change and set body to null. The frontend will use instructions to regenerate.
-- If Ray provides both a new subject and body changes, include both
+{"name": "recipient name", "instructions": "what to change"}
+
+When Ray asks to update/edit/change ALL queued emails (says "all", "every", "the emails"), respond with:
+1. Acknowledge the change
+2. Include the tag [ACTION:EDIT_ALL_EMAILS] followed by a JSON object on the next line with this exact format:
+{"instructions": "what to change for all emails"}
 
 For general questions or unclear commands, just respond conversationally and ask for clarification.
 
@@ -129,6 +132,14 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
     } else if (reply.includes('[ACTION:REMOVE_EMAIL]')) {
       const name = reply.split('[ACTION:REMOVE_EMAIL]')[1]?.trim().split('\n')[0] || '';
       action = { type: 'remove_email', name };
+    } else if (reply.includes('[ACTION:EDIT_ALL_EMAILS]')) {
+      const jsonLine = reply.split('[ACTION:EDIT_ALL_EMAILS]')[1]?.trim().split('\n')[0] || '';
+      try {
+        const parsed = JSON.parse(jsonLine);
+        action = { type: 'edit_all_emails', ...parsed };
+      } catch (e) {
+        action = { type: 'edit_all_emails', instructions: jsonLine };
+      }
     } else if (reply.includes('[ACTION:EDIT_EMAIL]')) {
       const jsonLine = reply.split('[ACTION:EDIT_EMAIL]')[1]?.trim().split('\n')[0] || '';
       try {
@@ -149,6 +160,7 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       .replace(/\[ACTION:CLEAR_LEADS\]/g, '')
       .replace(/\[ACTION:REMOVE_LEAD\].*$/m, '')
       .replace(/\[ACTION:REMOVE_EMAIL\].*$/m, '')
+      .replace(/\[ACTION:EDIT_ALL_EMAILS\][\s\S]*$/m, '')
       .replace(/\[ACTION:EDIT_EMAIL\][\s\S]*$/m, '')
       .trim();
 
