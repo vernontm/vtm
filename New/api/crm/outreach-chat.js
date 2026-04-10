@@ -53,6 +53,9 @@ You can understand and respond to commands like:
 - "Update the email to [name] to mention [topic]" / "Change the subject for [name]'s email to [new subject]" — edits a specific queued email
 - "Edit all the emails to be more casual" / "Update all emails to include [link]" — edits ALL queued emails with the same instructions
 - "Add a lead named John Doe with email john@email.com" / "Add lead Sarah, instagram @sarah_creates, niche: lifestyle" — manually adds a lead
+- "Approve all emails" / "Approve the emails" — approves all pending/draft emails in the queue
+- "Approve the email to [name]" — approves a specific email by recipient name
+- "Approve all and send" / "Approve and send everything" — approves all pending emails then sends them
 
 When Ray gives a research command, respond with:
 1. A brief confirmation of what you're about to search for
@@ -95,6 +98,18 @@ When Ray asks to update/edit/change ALL queued emails (says "all", "every", "the
 1. Acknowledge the change
 2. Include the tag [ACTION:EDIT_ALL_EMAILS] followed by a JSON object on the next line with this exact format:
 {"instructions": "what to change for all emails"}
+
+When Ray asks to approve ALL emails, respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:APPROVE_ALL]
+
+When Ray asks to approve a SPECIFIC email by recipient name, respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:APPROVE_EMAIL] followed by the exact name on the same line
+
+When Ray asks to approve and send (both at once), respond with:
+1. A brief confirmation with warning about sending
+2. Include the tag [ACTION:APPROVE_AND_SEND]
 
 When Ray asks to add a lead manually, respond with:
 1. A brief confirmation
@@ -155,6 +170,13 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       } catch (e) {
         action = { type: 'edit_email', name: jsonLine, instructions: '' };
       }
+    } else if (reply.includes('[ACTION:APPROVE_AND_SEND]')) {
+      action = { type: 'approve_and_send' };
+    } else if (reply.includes('[ACTION:APPROVE_ALL]')) {
+      action = { type: 'approve_all' };
+    } else if (reply.includes('[ACTION:APPROVE_EMAIL]')) {
+      const name = reply.split('[ACTION:APPROVE_EMAIL]')[1]?.trim().split('\n')[0] || '';
+      action = { type: 'approve_email', name };
     } else if (reply.includes('[ACTION:ADD_LEAD]')) {
       const jsonLine = reply.split('[ACTION:ADD_LEAD]')[1]?.trim().split('\n')[0] || '';
       try {
@@ -178,6 +200,9 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       .replace(/\[ACTION:EDIT_ALL_EMAILS\][\s\S]*$/m, '')
       .replace(/\[ACTION:EDIT_EMAIL\][\s\S]*$/m, '')
       .replace(/\[ACTION:ADD_LEAD\][\s\S]*$/m, '')
+      .replace(/\[ACTION:APPROVE_ALL\]/g, '')
+      .replace(/\[ACTION:APPROVE_EMAIL\].*$/m, '')
+      .replace(/\[ACTION:APPROVE_AND_SEND\]/g, '')
       .trim();
 
     return res.json({ reply: cleanReply, action });

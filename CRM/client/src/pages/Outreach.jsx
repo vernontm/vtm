@@ -518,6 +518,63 @@ export default function Outreach() {
         }
       }
 
+      if (action?.type === 'approve_all' && client) {
+        const pending = queue.filter(q => q.status === 'pending_review' || q.status === 'draft');
+        if (pending.length === 0) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: 'No pending emails to approve.' }]);
+        } else {
+          try {
+            for (const item of pending) {
+              await updateOutreachItem(item.id, { status: 'approved' });
+            }
+            await loadClientData(client.id);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Approved ${pending.length} emails. They're ready to send.` }]);
+          } catch (err) {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed to approve: ${err.message}` }]);
+          }
+        }
+      }
+
+      if (action?.type === 'approve_email' && client && action.name) {
+        const match = queue.find(q => q.to_name?.toLowerCase().includes(action.name.toLowerCase()) && (q.status === 'pending_review' || q.status === 'draft'));
+        if (match) {
+          try {
+            await updateOutreachItem(match.id, { status: 'approved' });
+            await loadClientData(client.id);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Approved email to ${match.to_name}.` }]);
+          } catch (err) {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed to approve: ${err.message}` }]);
+          }
+        } else {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Couldn't find a pending email for "${action.name}".` }]);
+        }
+      }
+
+      if (action?.type === 'approve_and_send' && client) {
+        const pending = queue.filter(q => q.status === 'pending_review' || q.status === 'draft');
+        if (pending.length === 0 && !queue.some(q => q.status === 'approved')) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: 'No emails to approve or send.' }]);
+        } else {
+          try {
+            // First approve all pending
+            if (pending.length > 0) {
+              for (const item of pending) {
+                await updateOutreachItem(item.id, { status: 'approved' });
+              }
+              setChatMessages(prev => [...prev, { role: 'system', content: `✅ Approved ${pending.length} emails. Now sending...` }]);
+            }
+            // Then send all approved
+            setSendingEmails(true);
+            const result = await sendApprovedEmails(client.id);
+            await loadClientData(client.id);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Sent ${result.sent} of ${result.total} emails.${result.errors?.length ? ` ${result.errors.length} errors.` : ''}` }]);
+          } catch (err) {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed: ${err.message}` }]);
+          }
+          setSendingEmails(false);
+        }
+      }
+
       if (action?.type === 'clear_all' && client) {
         try {
           await clearOutreachQueue(client.id);
