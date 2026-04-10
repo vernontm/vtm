@@ -3,7 +3,7 @@ import {
   getContacts,
   getClients, getClientByContact, createClient, updateClient, deleteClient,
   getClientLeads, updateClientLead, deleteClientLead,
-  getOutreachQueue, updateOutreachItem, deleteOutreachItem, sendApprovedEmails,
+  getOutreachQueue, updateOutreachItem, deleteOutreachItem, sendApprovedEmails, clearOutreachQueue, clearClientLeads,
   scanBrand, researchLeads, generateOutreach, outreachChat
 } from '../api';
 import {
@@ -298,6 +298,39 @@ export default function Outreach() {
             }]);
           }
           setSendingEmails(false);
+        }
+      }
+
+      if (action?.type === 'clear_queue' && client) {
+        try {
+          await clearOutreachQueue(client.id);
+          await loadClientData(client.id);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: 'Email queue cleared.' }]);
+        } catch (err) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed to clear queue: ${err.message}` }]);
+        }
+      }
+
+      if (action?.type === 'clear_leads' && client) {
+        try {
+          await clearClientLeads(client.id);
+          await loadClientData(client.id);
+          setSelectedLeads(new Set());
+          setChatMessages(prev => [...prev, { role: 'assistant', content: 'All leads cleared.' }]);
+        } catch (err) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed to clear leads: ${err.message}` }]);
+        }
+      }
+
+      if (action?.type === 'clear_all' && client) {
+        try {
+          await clearOutreachQueue(client.id);
+          await clearClientLeads(client.id);
+          await loadClientData(client.id);
+          setSelectedLeads(new Set());
+          setChatMessages(prev => [...prev, { role: 'assistant', content: 'All leads and queued emails cleared.' }]);
+        } catch (err) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed to clear: ${err.message}` }]);
         }
       }
 

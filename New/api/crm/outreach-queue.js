@@ -90,8 +90,12 @@ module.exports = async function handler(req, res) {
     return res.json(rows[0]);
   }
 
-  // DELETE
+  // DELETE — single item or clear all for a client
   if (req.method === 'DELETE') {
+    if (action === 'clear-all' && client_id) {
+      await supaFetch(`crm_outreach_queue?client_id=eq.${client_id}`, { method: 'DELETE' });
+      return res.json({ success: true, cleared: 'all' });
+    }
     if (!id) return res.status(400).json({ error: 'id required' });
     await supaFetch(`crm_outreach_queue?id=eq.${id}`, { method: 'DELETE' });
     return res.json({ success: true });

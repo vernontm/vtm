@@ -42,8 +42,13 @@ module.exports = async function handler(req, res) {
     return res.json(rows[0]);
   }
 
-  // DELETE
+  // DELETE — single or clear all for a client
   if (req.method === 'DELETE') {
+    const { action } = req.query;
+    if (action === 'clear-all' && client_id) {
+      await supaFetch(`crm_client_leads?client_id=eq.${client_id}`, { method: 'DELETE' });
+      return res.json({ success: true, cleared: 'all' });
+    }
     if (!id) return res.status(400).json({ error: 'id required' });
     await supaFetch(`crm_client_leads?id=eq.${id}`, { method: 'DELETE' });
     return res.json({ success: true });

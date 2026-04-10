@@ -269,6 +269,8 @@ export const getOutreachQueue = (clientId) => request(`/outreach-queue?client_id
 export const updateOutreachItem = (id, data) => request(`/outreach-queue?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteOutreachItem = (id) => request(`/outreach-queue?id=${id}`, { method: 'DELETE' });
 export const sendApprovedEmails = (clientId) => request(`/outreach-queue?client_id=${clientId}&action=send-approved`, { method: 'POST', body: '{}' });
+export const clearOutreachQueue = (clientId) => request(`/outreach-queue?client_id=${clientId}&action=clear-all`, { method: 'DELETE' });
+export const clearClientLeads = (clientId) => request(`/client-leads?client_id=${clientId}&action=clear-all`, { method: 'DELETE' });
 
 // Outreach AI
 export const scanBrand = (data) => request('/scan-brand', { method: 'POST', body: JSON.stringify(data) });

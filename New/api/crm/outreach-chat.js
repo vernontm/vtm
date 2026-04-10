@@ -45,6 +45,9 @@ You can understand and respond to commands like:
 - "Generate outreach emails for these leads" — triggers email generation
 - "Show me the approval queue" — shows pending emails
 - "Send approved emails" — triggers sending
+- "Clear the email queue" / "Remove all emails from the queue" — clears all queued emails
+- "Clear all leads" / "Remove all leads" — clears the lead list
+- "Clear everything" — clears both leads and queue
 
 When Ray gives a research command, respond with:
 1. A brief confirmation of what you're about to search for
@@ -57,6 +60,18 @@ When Ray asks to generate emails, respond with:
 When Ray asks to send approved emails, respond with:
 1. A confirmation with warning about sending
 2. Include the tag [ACTION:SEND_APPROVED]
+
+When Ray asks to clear/remove the email queue, respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:CLEAR_QUEUE]
+
+When Ray asks to clear/remove leads, respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:CLEAR_LEADS]
+
+When Ray asks to clear everything (both leads and queue), respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:CLEAR_ALL]
 
 For general questions or unclear commands, just respond conversationally and ask for clarification.
 
@@ -83,6 +98,12 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       action = { type: 'generate_emails' };
     } else if (reply.includes('[ACTION:SEND_APPROVED]')) {
       action = { type: 'send_approved' };
+    } else if (reply.includes('[ACTION:CLEAR_ALL]')) {
+      action = { type: 'clear_all' };
+    } else if (reply.includes('[ACTION:CLEAR_QUEUE]')) {
+      action = { type: 'clear_queue' };
+    } else if (reply.includes('[ACTION:CLEAR_LEADS]')) {
+      action = { type: 'clear_leads' };
     }
 
     // Clean the reply text (remove action tags)
@@ -90,6 +111,9 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       .replace(/\[ACTION:RESEARCH\].*$/m, '')
       .replace(/\[ACTION:GENERATE_EMAILS\]/g, '')
       .replace(/\[ACTION:SEND_APPROVED\]/g, '')
+      .replace(/\[ACTION:CLEAR_ALL\]/g, '')
+      .replace(/\[ACTION:CLEAR_QUEUE\]/g, '')
+      .replace(/\[ACTION:CLEAR_LEADS\]/g, '')
       .trim();
 
     return res.json({ reply: cleanReply, action });
