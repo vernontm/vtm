@@ -215,7 +215,9 @@ export default function Outreach() {
 
     try {
       const { reply, action } = await outreachChat({
-        messages: [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content })),
+        messages: [...chatMessages, userMsg]
+          .filter(m => m.role === 'user' || m.role === 'assistant')
+          .map(m => ({ role: m.role, content: m.content })),
         client,
       });
 

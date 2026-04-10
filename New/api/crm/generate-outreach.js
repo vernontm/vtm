@@ -63,7 +63,7 @@ Return ONLY valid JSON array, no markdown, no explanation.`;
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 6000,
+        max_tokens: 8000,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
