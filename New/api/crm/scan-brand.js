@@ -76,11 +76,13 @@ module.exports = async function handler(req, res) {
   "brand_fonts": ["font name 1", "font name 2"],
   "outreach_tone": "formal or casual or friendly",
   "campaign_goals": "suggested campaign goals based on their business type",
+  "website_url": "main website url",
   "instagram": "handle if found",
   "tiktok": "handle if found",
   "facebook": "url if found",
   "youtube": "channel if found",
-  "linkedin": "url if found"
+  "linkedin": "url if found",
+  "brand_bible": "A comprehensive brand bible summary including: brand voice and tone, visual identity (colors, fonts, imagery style), mission/vision, core values, key messaging pillars, target demographics, brand personality traits, do's and don'ts for brand communication. Write this as a detailed reference document that could be used for any future content or outreach. 3-5 paragraphs."
 }
 
 Business name provided: ${business_name || 'unknown'}

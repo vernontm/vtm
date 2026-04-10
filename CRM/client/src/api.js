@@ -254,6 +254,7 @@ export const deleteTodo      = (id)     => request(`/todos?id=${id}`, { method: 
 // Outreach Clients
 export const getClients = () => request('/clients');
 export const getClient = (id) => request(`/clients?id=${id}`);
+export const getClientByContact = (contactId) => request(`/clients?contact_id=${contactId}`);
 export const createClient = (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) });
 export const updateClient = (id, data) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClient = (id) => request(`/clients?id=${id}`, { method: 'DELETE' });

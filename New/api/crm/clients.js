@@ -7,21 +7,32 @@ module.exports = async function handler(req, res) {
   const auth = await requireAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { id } = req.query;
+  const { id, contact_id } = req.query;
 
-  // GET — list all or single
+  // GET — list all, by id, or by contact_id
   if (req.method === 'GET') {
     if (id) {
       const rows = await supaFetch(`crm_clients?id=eq.${id}`);
+      return res.json(rows[0] || null);
+    }
+    if (contact_id) {
+      const rows = await supaFetch(`crm_clients?contact_id=eq.${contact_id}`);
       return res.json(rows[0] || null);
     }
     const rows = await supaFetch('crm_clients?order=created_at.desc');
     return res.json(rows);
   }
 
-  // POST — create
+  // POST — create (optionally linked to a contact)
   if (req.method === 'POST') {
     const data = req.body;
+    // If contact_id provided, check if a client already exists for this contact
+    if (data.contact_id) {
+      const existing = await supaFetch(`crm_clients?contact_id=eq.${data.contact_id}`);
+      if (existing && existing.length > 0) {
+        return res.json(existing[0]); // Return existing client
+      }
+    }
     const rows = await supaFetch('crm_clients', {
       method: 'POST',
       body: JSON.stringify(data),

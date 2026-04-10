@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  getClients, createClient, updateClient, deleteClient,
+  getContacts,
+  getClients, getClientByContact, createClient, updateClient, deleteClient,
   getClientLeads, updateClientLead, deleteClientLead,
   getOutreachQueue, updateOutreachItem, deleteOutreachItem, sendApprovedEmails,
   scanBrand, researchLeads, generateOutreach, outreachChat
@@ -41,15 +42,16 @@ function StatusPill({ status }) {
 }
 
 export default function Outreach() {
-  // Client state
-  const [clients, setClients] = useState([]);
-  const [selectedClientId, setSelectedClientId] = useState('');
+  // Contacts + Client state
+  const [contacts, setContacts] = useState([]);
+  const [selectedContactId, setSelectedContactId] = useState('');
+  const [selectedContact, setSelectedContact] = useState(null);
   const [client, setClient] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [editingClient, setEditingClient] = useState(false);
   const [clientDraft, setClientDraft] = useState({});
-  const [showNewClient, setShowNewClient] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [loadingClient, setLoadingClient] = useState(false);
 
   // Leads + Queue
   const [leads, setLeads] = useState([]);
@@ -73,19 +75,38 @@ export default function Outreach() {
   const [editingQueueId, setEditingQueueId] = useState(null);
   const [editDraft, setEditDraft] = useState({});
 
-  // Load clients
+  // Load contacts
   useEffect(() => {
-    getClients().then(setClients).catch(console.error);
+    getContacts().then(c => setContacts(c.filter(x => !x.archived))).catch(console.error);
   }, []);
 
-  // Load client data when selected
+  // When a contact is selected, load or create their client profile
   useEffect(() => {
-    if (!selectedClientId) { setClient(null); setLeads([]); setQueue([]); return; }
-    const c = clients.find(c => c.id === selectedClientId);
-    setClient(c || null);
-    setShowProfile(true);
-    loadClientData(selectedClientId);
-  }, [selectedClientId, clients]);
+    if (!selectedContactId) { setSelectedContact(null); setClient(null); setLeads([]); setQueue([]); return; }
+    const contact = contacts.find(c => c.id === selectedContactId);
+    setSelectedContact(contact || null);
+    if (!contact) return;
+
+    setLoadingClient(true);
+    (async () => {
+      try {
+        // Check if a client profile already exists for this contact
+        let clientData = await getClientByContact(selectedContactId);
+        if (!clientData || (Array.isArray(clientData) && clientData.length === 0) || clientData.error) {
+          // Auto-create a client profile linked to this contact
+          clientData = await createClient({
+            contact_id: selectedContactId,
+            business_name: contact.company || contact.name,
+            owner_name: contact.name,
+          });
+        }
+        setClient(clientData);
+        setShowProfile(true);
+        await loadClientData(clientData.id);
+      } catch (err) { console.error(err); }
+      setLoadingClient(false);
+    })();
+  }, [selectedContactId, contacts]);
 
   async function loadClientData(cid) {
     try {
@@ -135,19 +156,6 @@ export default function Outreach() {
 
   // ── Client Management ──
 
-  async function handleCreateClient() {
-    try {
-      const newClient = await createClient({
-        business_name: clientDraft.business_name || 'New Client',
-        ...clientDraft,
-      });
-      setClients(prev => [newClient, ...prev]);
-      setSelectedClientId(newClient.id);
-      setShowNewClient(false);
-      setClientDraft({});
-    } catch (err) { console.error(err); }
-  }
-
   async function handleScanBrand() {
     if (!client) return;
     setScanning(true);
@@ -171,7 +179,6 @@ export default function Outreach() {
         }
       });
       const updated = await updateClient(client.id, merged);
-      setClients(prev => prev.map(c => c.id === client.id ? updated : c));
       setClient(updated);
     } catch (err) { console.error('Brand scan failed:', err); }
     setScanning(false);
@@ -180,18 +187,17 @@ export default function Outreach() {
   async function handleSaveClient() {
     try {
       const updated = await updateClient(client.id, clientDraft);
-      setClients(prev => prev.map(c => c.id === client.id ? { ...c, ...updated } : c));
       setClient({ ...client, ...updated });
       setEditingClient(false);
     } catch (err) { console.error(err); }
   }
 
   async function handleDeleteClient() {
-    if (!confirm('Delete this client and all their leads?')) return;
+    if (!confirm('Delete this client profile and all their outreach leads?')) return;
     try {
       await deleteClient(client.id);
-      setClients(prev => prev.filter(c => c.id !== client.id));
-      setSelectedClientId('');
+      setClient(null);
+      setSelectedContactId('');
     } catch (err) { console.error(err); }
   }
 
@@ -394,27 +400,26 @@ export default function Outreach() {
             Research leads, generate emails, and manage outreach campaigns
           </p>
         </div>
-        <button style={btnPrimary} onClick={() => setShowNewClient(true)}>
-          <Plus size={15} /> Add Client
-        </button>
+        <span style={{ fontSize: 12, color: '#8e8ea0' }}>{contacts.length} contacts</span>
       </div>
 
       {/* Client Selector */}
       <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
         <Building2 size={18} style={{ color: '#8e8ea0' }} />
         <select
-          value={selectedClientId}
-          onChange={(e) => setSelectedClientId(e.target.value)}
+          value={selectedContactId}
+          onChange={(e) => setSelectedContactId(e.target.value)}
           style={{
             ...inputStyle, flex: 1, cursor: 'pointer', fontWeight: 600,
             background: 'transparent', border: 'none', fontSize: 15,
           }}
         >
-          <option value="">Select a client...</option>
-          {clients.map(c => (
-            <option key={c.id} value={c.id}>{c.business_name}{c.retainer_status === 'paused' ? ' (paused)' : ''}</option>
+          <option value="">Select a contact...</option>
+          {contacts.map(c => (
+            <option key={c.id} value={c.id}>{c.name}{c.company ? ` — ${c.company}` : ''}</option>
           ))}
         </select>
+        {loadingClient && <Loader size={16} className="spin" style={{ color: '#8e8ea0' }} />}
         {client && (
           <span style={{
             padding: '4px 12px', borderRadius: 12, fontSize: 11, fontWeight: 600,
@@ -427,24 +432,7 @@ export default function Outreach() {
         )}
       </div>
 
-      {/* New Client Modal */}
-      {showNewClient && (
-        <div style={{ ...cardStyle, border: '2px solid #4a6cf7' }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: '#1a1a2e' }}>New Client</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input style={inputStyle} placeholder="Business Name *" value={clientDraft.business_name || ''} onChange={e => setClientDraft(p => ({ ...p, business_name: e.target.value }))} />
-            <input style={inputStyle} placeholder="Owner Name" value={clientDraft.owner_name || ''} onChange={e => setClientDraft(p => ({ ...p, owner_name: e.target.value }))} />
-            <input style={inputStyle} placeholder="Website URL" value={clientDraft.website_url || ''} onChange={e => setClientDraft(p => ({ ...p, website_url: e.target.value }))} />
-            <input style={inputStyle} placeholder="Industry" value={clientDraft.industry || ''} onChange={e => setClientDraft(p => ({ ...p, industry: e.target.value }))} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
-            <button style={btnGhost} onClick={() => { setShowNewClient(false); setClientDraft({}); }}>Cancel</button>
-            <button style={btnPrimary} onClick={handleCreateClient} disabled={!clientDraft.business_name}>Create & Auto-Scan</button>
-          </div>
-        </div>
-      )}
-
-      {!client && !showNewClient && (
+      {!client && !loadingClient && (
         <div style={{ textAlign: 'center', padding: '80px 20px', color: '#8e8ea0' }}>
           <Building2 size={48} style={{ marginBottom: 12, opacity: 0.3 }} />
           <p>Select or create a client to get started</p>
@@ -491,33 +479,76 @@ export default function Outreach() {
             </div>
 
             {showProfile && !editingClient && (
-              <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-                <ProfileField label="Owner" value={client.owner_name} />
-                <ProfileField label="Type" value={client.business_type} />
-                <ProfileField label="Website" value={client.website_url} link />
-                <ProfileField label="Location" value={[client.location_address, client.location_city, client.location_state].filter(Boolean).join(', ')} />
-                <ProfileField label="Instagram" value={client.instagram} />
-                <ProfileField label="TikTok" value={client.tiktok} />
-                <ProfileField label="Facebook" value={client.facebook} />
-                <ProfileField label="YouTube" value={client.youtube} />
-                <ProfileField label="LinkedIn" value={client.linkedin} />
-                <ProfileField label="Target Audience" value={client.target_audience} full />
-                <ProfileField label="Services" value={client.services} full />
-                <ProfileField label="USPs" value={client.unique_selling_points} full />
-                <ProfileField label="Campaign Goals" value={client.campaign_goals} full />
-                <ProfileField label="Budget Range" value={client.budget_range} />
-                <ProfileField label="Tone" value={client.outreach_tone} />
-                {client.brand_colors?.length > 0 && (
-                  <div style={{ gridColumn: 'span 1' }}>
-                    <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Brand Colors</span>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                      {client.brand_colors.map((c, i) => (
-                        <div key={i} style={{ width: 24, height: 24, borderRadius: 6, background: c, border: '1px solid #e5e7ef' }} title={c} />
-                      ))}
+              <div style={{ marginTop: 16 }}>
+                {/* Web & Social Section */}
+                <div style={{ marginBottom: 16, padding: '14px 16px', background: '#f8f9fc', borderRadius: 10 }}>
+                  <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Websites & Social Media</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, marginTop: 10 }}>
+                    {[
+                      { label: 'Website', value: client.website_url, icon: '🌐', link: true },
+                      { label: 'Instagram', value: client.instagram, icon: '📸', prefix: 'https://instagram.com/' },
+                      { label: 'TikTok', value: client.tiktok, icon: '🎵', prefix: 'https://tiktok.com/@' },
+                      { label: 'Facebook', value: client.facebook, icon: '📘', link: true },
+                      { label: 'YouTube', value: client.youtube, icon: '🎬', prefix: 'https://youtube.com/' },
+                      { label: 'LinkedIn', value: client.linkedin, icon: '💼', link: true },
+                    ].map(({ label, value, icon, link, prefix }) => (
+                      <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <span>{icon}</span>
+                        {value ? (
+                          <a
+                            href={link ? (value.startsWith('http') ? value : `https://${value}`) : `${prefix}${value.replace('@', '')}`}
+                            target="_blank" rel="noopener"
+                            style={{ color: '#4a6cf7', textDecoration: 'none', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          >
+                            {value}
+                          </a>
+                        ) : (
+                          <span style={{ color: '#ccc', fontStyle: 'italic', fontSize: 12 }}>Not set</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Brand Bible Section */}
+                {client.brand_bible && (
+                  <div style={{ marginBottom: 16, padding: '14px 16px', background: '#faf8ff', border: '1px solid #ede8ff', borderRadius: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <Sparkles size={14} style={{ color: '#a855f7' }} />
+                      <span style={{ fontSize: 11, color: '#a855f7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Brand Bible</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: '#1a1a2e', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                      {client.brand_bible}
                     </div>
                   </div>
                 )}
-                {client.notes && <ProfileField label="Notes" value={client.notes} full />}
+
+                {/* Details Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                  <ProfileField label="Owner" value={client.owner_name} />
+                  <ProfileField label="Type" value={client.business_type} />
+                  <ProfileField label="Location" value={[client.location_address, client.location_city, client.location_state].filter(Boolean).join(', ')} />
+                  <ProfileField label="Target Audience" value={client.target_audience} full />
+                  <ProfileField label="Services" value={client.services} full />
+                  <ProfileField label="USPs" value={client.unique_selling_points} full />
+                  <ProfileField label="Campaign Goals" value={client.campaign_goals} full />
+                  <ProfileField label="Budget Range" value={client.budget_range} />
+                  <ProfileField label="Tone" value={client.outreach_tone} />
+                  {client.brand_colors?.length > 0 && (
+                    <div style={{ gridColumn: 'span 1' }}>
+                      <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Brand Colors</span>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                        {client.brand_colors.map((c, i) => (
+                          <div key={i} style={{ width: 24, height: 24, borderRadius: 6, background: c, border: '1px solid #e5e7ef' }} title={c} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {client.brand_fonts?.length > 0 && (
+                    <ProfileField label="Fonts" value={client.brand_fonts.join(', ')} />
+                  )}
+                  {client.notes && <ProfileField label="Notes" value={client.notes} full />}
+                </div>
               </div>
             )}
 
@@ -556,6 +587,8 @@ export default function Outreach() {
                     {RETAINER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
+                <textarea style={{ ...inputStyle, marginTop: 10, minHeight: 100, fontFamily: 'inherit', lineHeight: 1.6 }} placeholder="Brand Bible (auto-generated by scan or edit manually)"
+                  value={clientDraft.brand_bible || ''} onChange={e => setClientDraft(p => ({ ...p, brand_bible: e.target.value }))} />
                 <textarea style={{ ...inputStyle, marginTop: 10, minHeight: 50 }} placeholder="Notes / Instructions"
                   value={clientDraft.notes || ''} onChange={e => setClientDraft(p => ({ ...p, notes: e.target.value }))} />
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
