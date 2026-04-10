@@ -608,6 +608,95 @@ export default function Outreach() {
     setSavingLead(false);
   }
 
+  // ── Smart Suggestions ──
+  function getQuickReplies() {
+    const hasLeads = leads.length > 0;
+    const hasQueue = queue.length > 0;
+    const hasApproved = queue.some(q => q.status === 'approved');
+    const hasPending = queue.some(q => q.status === 'pending_review' || q.status === 'draft');
+    const hasNewLeads = leads.some(l => l.email && l.email_status === 'new');
+    const hasBrand = client?.brand_bible;
+    const lastMsg = chatMessages.filter(m => m.role === 'assistant').slice(-1)[0]?.content || '';
+
+    // After research completes
+    if (lastMsg.includes('leads and added them') || lastMsg.includes('Added lead')) {
+      return [
+        hasNewLeads ? '✉️ Generate outreach emails' : '🔍 Research more leads',
+        '➕ Add a lead manually',
+        '📋 Show me the lead list',
+      ];
+    }
+    // After emails generated
+    if (lastMsg.includes('outreach emails') && lastMsg.includes('Approval Queue')) {
+      return [
+        '✅ Approve all emails',
+        '✏️ Make all emails more casual',
+        '👀 Show me the queue',
+      ];
+    }
+    // After sending
+    if (lastMsg.includes('Sent ')) {
+      return [
+        '🔍 Research more leads',
+        '📊 How did the campaign go?',
+        '🧹 Clear everything',
+      ];
+    }
+    // After clearing
+    if (lastMsg.includes('cleared')) {
+      return [
+        '🔍 Find new leads',
+        '➕ Add a lead manually',
+        '📖 Scan their brand',
+      ];
+    }
+    // Has approved emails ready to send
+    if (hasApproved) {
+      return [
+        `📤 Send ${queue.filter(q => q.status === 'approved').length} approved emails`,
+        hasPending ? '✅ Approve all emails' : '✏️ Edit the emails',
+        '🧹 Clear the email queue',
+      ];
+    }
+    // Has pending emails to review
+    if (hasPending) {
+      return [
+        '✅ Approve all emails',
+        '✏️ Make the emails shorter',
+        '🗑️ Clear the email queue',
+      ];
+    }
+    // Has leads but no emails yet
+    if (hasLeads && hasNewLeads) {
+      return [
+        '✉️ Generate outreach emails',
+        '🔍 Find more leads',
+        '➕ Add a lead',
+      ];
+    }
+    // Has leads, all emailed
+    if (hasLeads && !hasNewLeads) {
+      return [
+        '🔍 Research more leads',
+        '➕ Add a lead',
+        hasQueue ? '👀 Check the queue' : '🧹 Clear all leads',
+      ];
+    }
+    // No leads yet — fresh start
+    if (!hasBrand) {
+      return [
+        '📖 Scan their brand',
+        '🔍 Find leads for this client',
+        '➕ Add a lead',
+      ];
+    }
+    return [
+      '🔍 Find leads for this client',
+      '➕ Add a lead',
+      '📖 Rescan their brand',
+    ];
+  }
+
   // ── Styles ──
 
   const pageStyle = { padding: '24px 28px', maxWidth: 1400, margin: '0 auto' };
@@ -955,6 +1044,26 @@ export default function Outreach() {
                 )}
                 <div ref={chatEndRef} />
               </div>
+
+              {/* Quick Replies */}
+              {!chatLoading && (
+                <div style={{ borderTop: '1px solid #e5e7ef', padding: '10px 20px 0', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {getQuickReplies().map((text, i) => (
+                    <button key={i} onClick={() => { setChatInput(text.replace(/^[^\w]*\s/, '')); setTimeout(() => inputRef.current?.focus(), 50); }}
+                      style={{
+                        padding: '6px 14px', borderRadius: 20, border: '1px solid #e5e7ef',
+                        background: '#f8f9fc', color: '#4a6cf7', fontSize: 12, fontWeight: 500,
+                        cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'inherit',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { e.target.style.background = 'rgba(74,108,247,0.08)'; e.target.style.borderColor = '#4a6cf7'; }}
+                      onMouseLeave={e => { e.target.style.background = '#f8f9fc'; e.target.style.borderColor = '#e5e7ef'; }}
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Attachment Preview */}
               {attachments.length > 0 && (
