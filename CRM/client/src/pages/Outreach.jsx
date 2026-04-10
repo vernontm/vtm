@@ -497,6 +497,28 @@ export default function Outreach() {
         }
       }
 
+      if (action?.type === 'add_lead' && client && action.name) {
+        try {
+          await createClientLead({
+            client_id: client.id,
+            name: action.name,
+            email: action.email || null,
+            instagram: action.instagram || null,
+            tiktok: action.tiktok || null,
+            youtube: action.youtube || null,
+            niche: action.niche || null,
+            follower_count: action.follower_count || null,
+            notes: action.notes || null,
+            source: 'manual',
+            email_status: 'new',
+          });
+          await loadClientData(client.id);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Added lead: ${action.name}` }]);
+        } catch (err) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed to add lead: ${err.message}` }]);
+        }
+      }
+
       if (action?.type === 'clear_all' && client) {
         try {
           await clearOutreachQueue(client.id);

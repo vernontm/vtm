@@ -52,6 +52,7 @@ You can understand and respond to commands like:
 - "Remove the email to [name]" / "Delete email for [name]" — removes a specific queued email by recipient name
 - "Update the email to [name] to mention [topic]" / "Change the subject for [name]'s email to [new subject]" — edits a specific queued email
 - "Edit all the emails to be more casual" / "Update all emails to include [link]" — edits ALL queued emails with the same instructions
+- "Add a lead named John Doe with email john@email.com" / "Add lead Sarah, instagram @sarah_creates, niche: lifestyle" — manually adds a lead
 
 When Ray gives a research command, respond with:
 1. A brief confirmation of what you're about to search for
@@ -94,6 +95,12 @@ When Ray asks to update/edit/change ALL queued emails (says "all", "every", "the
 1. Acknowledge the change
 2. Include the tag [ACTION:EDIT_ALL_EMAILS] followed by a JSON object on the next line with this exact format:
 {"instructions": "what to change for all emails"}
+
+When Ray asks to add a lead manually, respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:ADD_LEAD] followed by a JSON object on the next line with this exact format:
+{"name": "full name", "email": "email or null", "instagram": "handle or null", "tiktok": "handle or null", "youtube": "channel or null", "niche": "their niche or null", "follower_count": number or null, "notes": "any notes or null"}
+Only include fields Ray provides. Use null for anything not mentioned.
 
 For general questions or unclear commands, just respond conversationally and ask for clarification.
 
@@ -148,6 +155,14 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       } catch (e) {
         action = { type: 'edit_email', name: jsonLine, instructions: '' };
       }
+    } else if (reply.includes('[ACTION:ADD_LEAD]')) {
+      const jsonLine = reply.split('[ACTION:ADD_LEAD]')[1]?.trim().split('\n')[0] || '';
+      try {
+        const parsed = JSON.parse(jsonLine);
+        action = { type: 'add_lead', ...parsed };
+      } catch (e) {
+        action = { type: 'add_lead', name: jsonLine };
+      }
     }
 
     // Clean the reply text (remove action tags)
@@ -162,6 +177,7 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       .replace(/\[ACTION:REMOVE_EMAIL\].*$/m, '')
       .replace(/\[ACTION:EDIT_ALL_EMAILS\][\s\S]*$/m, '')
       .replace(/\[ACTION:EDIT_EMAIL\][\s\S]*$/m, '')
+      .replace(/\[ACTION:ADD_LEAD\][\s\S]*$/m, '')
       .trim();
 
     return res.json({ reply: cleanReply, action });
