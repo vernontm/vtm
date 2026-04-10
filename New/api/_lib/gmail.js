@@ -197,8 +197,9 @@ function buildRawEmail({ to, from, subject, body, inReplyTo, references }) {
 
 // ── Send + Draft ─────────────────────────────────────────────────────────────
 
-async function sendEmail({ to, subject, body, threadId, inReplyTo, references }) {
-  const { accessToken, email: from } = await getGmailAuth();
+async function sendEmail({ to, from: fromOverride, subject, body, threadId, inReplyTo, references }) {
+  const { accessToken, email: defaultFrom } = await getGmailAuth();
+  const from = fromOverride || defaultFrom;
   const raw = buildRawEmail({ to, from, subject, body, inReplyTo, references });
   const requestBody = { raw };
   if (threadId) requestBody.threadId = threadId;

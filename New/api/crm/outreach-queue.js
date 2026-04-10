@@ -44,6 +44,7 @@ module.exports = async function handler(req, res) {
       try {
         await sendEmail({
           to: item.to_email,
+          from: 'partners@vernontm.com',
           subject: item.subject,
           body: item.body,
         });
