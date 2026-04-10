@@ -127,37 +127,52 @@ export default function Outreach() {
   }, [chatMessages]);
 
   // Speech-to-text setup
+  const listeningRef = useRef(false);
+
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SR) {
-      const recognition = new SR();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      recognition.onresult = (e) => {
-        let finalText = '';
-        for (let i = 0; i < e.results.length; i++) {
-          if (e.results[i].isFinal) {
-            finalText += e.results[i][0].transcript;
-          }
-        }
-        if (finalText) setChatInput(prev => prev + finalText);
-      };
-      recognition.onerror = (e) => {
-        if (e.error !== 'no-speech') setIsListening(false);
-      };
-      recognitionRef.current = recognition;
-    }
+    if (!SR) return;
+
+    const recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (e) => {
+      const last = e.results[e.results.length - 1];
+      if (last.isFinal) {
+        setChatInput(prev => (prev ? prev + ' ' : '') + last[0].transcript);
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if still supposed to be listening (browser stops after silence)
+      if (listeningRef.current) {
+        try { recognition.start(); } catch (e) { /* already started */ }
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'aborted' || e.error === 'not-allowed') {
+        listeningRef.current = false;
+        setIsListening(false);
+      }
+      // Ignore 'no-speech' — onend will auto-restart
+    };
+
+    recognitionRef.current = recognition;
   }, []);
 
   function toggleMic() {
     if (!recognitionRef.current) return;
-    if (isListening) {
+    if (listeningRef.current) {
+      listeningRef.current = false;
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      recognitionRef.current.start();
+      listeningRef.current = true;
       setIsListening(true);
+      try { recognitionRef.current.start(); } catch (e) { /* already started */ }
     }
   }
 
