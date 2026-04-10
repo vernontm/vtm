@@ -29,26 +29,32 @@ CLIENT PROFILE:
 - Preferred Tone: ${client.outreach_tone || 'friendly'}
 - Location: ${client.location_city}, ${client.location_state}
 
-LEADS TO EMAIL:
-${leads.map((l, i) => `${i + 1}. ${l.name} (${l.niche || 'general'}, ${l.follower_count || 0} followers, email: ${l.email})
-   Content style: ${l.content_style || 'unknown'}
-   Notes: ${l.notes || 'none'}`).join('\n')}
+LEADS TO EMAIL (generate one email per lead, using EXACTLY the name shown for each):
+${leads.map((l, i) => `--- LEAD ${i} ---
+NAME: ${l.name}
+EMAIL: ${l.email}
+NICHE: ${l.niche || 'general'}
+FOLLOWERS: ${l.follower_count || 0}
+CONTENT STYLE: ${l.content_style || 'unknown'}
+NOTES: ${l.notes || 'none'}`).join('\n')}
 
-For EACH lead, generate a personalized outreach email. The email should:
-1. Be written from the client's perspective (as ${client.business_name})
-2. Reference the lead's specific content/niche to show you've done your research
-3. Clearly state the collaboration opportunity
-4. Be concise (under 150 words per email)
-5. Match the tone: ${client.outreach_tone || 'friendly'}
-6. Include a clear call to action
-7. Feel personal, not templated
+RULES:
+1. Write from the client's perspective (as ${client.business_name})
+2. CRITICAL: The greeting and body MUST use the EXACT name from the NAME field for that lead. Do NOT mix up names between leads.
+3. Reference the lead's specific content/niche
+4. Clearly state the collaboration opportunity
+5. Be concise (under 150 words per email)
+6. Match the tone: ${client.outreach_tone || 'friendly'}
+7. Include a clear call to action
+8. Each email must feel personal, not templated
 
-Return a JSON array:
+Return a JSON array where lead_index matches the LEAD number above:
 [
   {
     "lead_index": 0,
+    "name": "exact name from NAME field",
     "subject": "email subject line",
-    "body": "full email body text"
+    "body": "full email body text starting with greeting using the correct name"
   }
 ]
 
