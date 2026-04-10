@@ -10,7 +10,7 @@ import {
   Search, Plus, Building2, Globe, Instagram, MapPin, Palette,
   Users, Target, Mic, Send, ChevronDown, ChevronUp, Edit3,
   Trash2, Check, X, Mail, Eye, RefreshCw, Loader, CheckCircle,
-  Clock, AlertCircle, ArrowRight, Sparkles, Zap
+  Clock, AlertCircle, ArrowRight, Sparkles, Zap, Paperclip, FileIcon, Image
 } from 'lucide-react';
 
 const RETAINER_STATUSES = ['active', 'paused', 'completed'];
@@ -64,9 +64,11 @@ export default function Outreach() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [attachments, setAttachments] = useState([]); // { file, preview, base64, type }
   const chatEndRef = useRef(null);
   const recognitionRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Loading states
   const [loadingLeads, setLoadingLeads] = useState(false);
@@ -129,16 +131,21 @@ export default function Outreach() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SR) {
       const recognition = new SR();
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.onresult = (e) => {
-        const text = e.results[0][0].transcript;
-        setChatInput(prev => prev + text);
-        setIsListening(false);
+        let finalText = '';
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            finalText += e.results[i][0].transcript;
+          }
+        }
+        if (finalText) setChatInput(prev => prev + finalText);
       };
-      recognition.onend = () => setIsListening(false);
-      recognition.onerror = () => setIsListening(false);
+      recognition.onerror = (e) => {
+        if (e.error !== 'no-speech') setIsListening(false);
+      };
       recognitionRef.current = recognition;
     }
   }, []);
@@ -152,6 +159,39 @@ export default function Outreach() {
       recognitionRef.current.start();
       setIsListening(true);
     }
+  }
+
+  // ── File Attachments ──
+
+  function handleFileSelect(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      const isImage = file.type.startsWith('image/');
+
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        setAttachments(prev => [...prev, {
+          file,
+          name: file.name,
+          type: file.type,
+          isImage,
+          base64,
+          preview: isImage ? reader.result : null,
+          size: file.size,
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  }
+
+  function removeAttachment(index) {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   }
 
   // ── Client Management ──
@@ -205,19 +245,46 @@ export default function Outreach() {
 
   async function sendChatMessage() {
     const text = chatInput.trim();
-    if (!text || chatLoading) return;
+    if ((!text && attachments.length === 0) || chatLoading) return;
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
 
-    const userMsg = { role: 'user', content: text };
+    // Build user message with attachments for display
+    const currentAttachments = [...attachments];
+    const userMsg = { role: 'user', content: text, attachments: currentAttachments.length > 0 ? currentAttachments : undefined };
     setChatMessages(prev => [...prev, userMsg]);
     setChatInput('');
+    setAttachments([]);
     setChatLoading(true);
 
     try {
+      // Build messages for API — include file content for Claude
+      const apiMessages = [...chatMessages, userMsg]
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => {
+          if (m.attachments?.length > 0) {
+            // Build multipart content with images and text
+            const content = [];
+            m.attachments.forEach(att => {
+              if (att.isImage) {
+                content.push({ type: 'image', source: { type: 'base64', media_type: att.type, data: att.base64 } });
+              } else {
+                // For non-image files, include as text context
+                try {
+                  const textContent = atob(att.base64);
+                  content.push({ type: 'text', text: `[Attached file: ${att.name}]\n${textContent.substring(0, 5000)}` });
+                } catch (e) {
+                  content.push({ type: 'text', text: `[Attached file: ${att.name} (binary, cannot read)]` });
+                }
+              }
+            });
+            content.push({ type: 'text', text: m.content });
+            return { role: m.role, content };
+          }
+          return { role: m.role, content: m.content };
+        });
+
       const { reply, action } = await outreachChat({
-        messages: [...chatMessages, userMsg]
-          .filter(m => m.role === 'user' || m.role === 'assistant')
-          .map(m => ({ role: m.role, content: m.content })),
+        messages: apiMessages,
         client,
       });
 
@@ -789,6 +856,24 @@ export default function Outreach() {
                       color: msg.role === 'system' ? '#8e8ea0' : '#1a1a2e',
                       fontStyle: msg.role === 'system' ? 'italic' : 'normal',
                     }}>
+                      {msg.attachments?.length > 0 && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                          {msg.attachments.map((att, ai) => (
+                            <div key={ai} style={{
+                              borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7ef',
+                              background: '#f8f9fc',
+                            }}>
+                              {att.isImage ? (
+                                <img src={att.preview} alt={att.name} style={{ maxWidth: 180, maxHeight: 120, display: 'block', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8e8ea0' }}>
+                                  <FileIcon size={14} /> {att.name}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {msg.content}
                     </div>
                   </div>
@@ -809,8 +894,56 @@ export default function Outreach() {
                 <div ref={chatEndRef} />
               </div>
 
+              {/* Attachment Preview */}
+              {attachments.length > 0 && (
+                <div style={{ borderTop: '1px solid #e5e7ef', padding: '10px 20px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {attachments.map((att, i) => (
+                    <div key={i} style={{
+                      position: 'relative', borderRadius: 10, overflow: 'hidden',
+                      border: '1px solid #e5e7ef', background: '#f8f9fc',
+                    }}>
+                      {att.isImage ? (
+                        <img src={att.preview} alt={att.name} style={{ height: 60, maxWidth: 100, display: 'block', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#8e8ea0' }}>
+                          <FileIcon size={12} /> {att.name.length > 20 ? att.name.slice(0, 18) + '...' : att.name}
+                        </div>
+                      )}
+                      <button onClick={() => removeAttachment(i)} style={{
+                        position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', fontSize: 10,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Input Area */}
               <div style={{ borderTop: '1px solid #e5e7ef', padding: '14px 20px', display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.txt,.csv,.doc,.docx"
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7ef',
+                    background: attachments.length > 0 ? 'rgba(74,108,247,0.08)' : '#f8f9fc',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: attachments.length > 0 ? '#4a6cf7' : '#8e8ea0',
+                    flexShrink: 0, transition: 'all 0.2s',
+                  }}
+                  title="Attach files"
+                >
+                  <Paperclip size={16} />
+                </button>
                 <textarea
                   ref={inputRef}
                   value={chatInput}
@@ -830,20 +963,21 @@ export default function Outreach() {
                     width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7ef',
                     background: isListening ? 'rgba(255,60,60,0.1)' : '#f8f9fc',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: isListening ? '#ef4444' : '#8e8ea0',
+                    color: isListening ? '#ef4444' : '#8e8ea0', flexShrink: 0,
                   }}
                 >
                   <Mic size={16} />
                 </button>
                 <button
                   onClick={sendChatMessage}
-                  disabled={chatLoading || !chatInput.trim()}
+                  disabled={chatLoading || (!chatInput.trim() && attachments.length === 0)}
                   style={{
                     width: 36, height: 36, borderRadius: 10, border: 'none',
                     background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
                     cursor: chatLoading ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: chatLoading || !chatInput.trim() ? 0.4 : 1,
+                    opacity: chatLoading || (!chatInput.trim() && attachments.length === 0) ? 0.4 : 1,
+                    flexShrink: 0,
                   }}
                 >
                   <Send size={15} style={{ color: '#fff' }} />
