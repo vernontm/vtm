@@ -322,6 +322,36 @@ export default function Outreach() {
         }
       }
 
+      if (action?.type === 'remove_lead' && client && action.name) {
+        const match = leads.find(l => l.name.toLowerCase().includes(action.name.toLowerCase()));
+        if (match) {
+          try {
+            await deleteClientLead(match.id);
+            await loadClientData(client.id);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Removed lead: ${match.name}` }]);
+          } catch (err) {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed: ${err.message}` }]);
+          }
+        } else {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Couldn't find a lead matching "${action.name}".` }]);
+        }
+      }
+
+      if (action?.type === 'remove_email' && client && action.name) {
+        const match = queue.find(q => q.to_name?.toLowerCase().includes(action.name.toLowerCase()));
+        if (match) {
+          try {
+            await deleteOutreachItem(match.id);
+            await loadClientData(client.id);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Removed email to: ${match.to_name}` }]);
+          } catch (err) {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: `Failed: ${err.message}` }]);
+          }
+        } else {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: `Couldn't find a queued email for "${action.name}".` }]);
+        }
+      }
+
       if (action?.type === 'clear_all' && client) {
         try {
           await clearOutreachQueue(client.id);

@@ -48,6 +48,8 @@ You can understand and respond to commands like:
 - "Clear the email queue" / "Remove all emails from the queue" — clears all queued emails
 - "Clear all leads" / "Remove all leads" — clears the lead list
 - "Clear everything" — clears both leads and queue
+- "Remove lead [name]" / "Delete the lead named [name]" — removes a specific lead by name
+- "Remove the email to [name]" / "Delete email for [name]" — removes a specific queued email by recipient name
 
 When Ray gives a research command, respond with:
 1. A brief confirmation of what you're about to search for
@@ -72,6 +74,14 @@ When Ray asks to clear/remove leads, respond with:
 When Ray asks to clear everything (both leads and queue), respond with:
 1. A brief confirmation
 2. Include the tag [ACTION:CLEAR_ALL]
+
+When Ray asks to remove a specific lead by name, respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:REMOVE_LEAD] followed by the exact name on the same line
+
+When Ray asks to remove a specific email from the queue by recipient name, respond with:
+1. A brief confirmation
+2. Include the tag [ACTION:REMOVE_EMAIL] followed by the exact name on the same line
 
 For general questions or unclear commands, just respond conversationally and ask for clarification.
 
@@ -104,6 +114,12 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       action = { type: 'clear_queue' };
     } else if (reply.includes('[ACTION:CLEAR_LEADS]')) {
       action = { type: 'clear_leads' };
+    } else if (reply.includes('[ACTION:REMOVE_LEAD]')) {
+      const name = reply.split('[ACTION:REMOVE_LEAD]')[1]?.trim().split('\n')[0] || '';
+      action = { type: 'remove_lead', name };
+    } else if (reply.includes('[ACTION:REMOVE_EMAIL]')) {
+      const name = reply.split('[ACTION:REMOVE_EMAIL]')[1]?.trim().split('\n')[0] || '';
+      action = { type: 'remove_email', name };
     }
 
     // Clean the reply text (remove action tags)
@@ -114,6 +130,8 @@ Keep responses short (1-3 sentences). Match Ray's direct, no-fluff communication
       .replace(/\[ACTION:CLEAR_ALL\]/g, '')
       .replace(/\[ACTION:CLEAR_QUEUE\]/g, '')
       .replace(/\[ACTION:CLEAR_LEADS\]/g, '')
+      .replace(/\[ACTION:REMOVE_LEAD\].*$/m, '')
+      .replace(/\[ACTION:REMOVE_EMAIL\].*$/m, '')
       .trim();
 
     return res.json({ reply: cleanReply, action });
