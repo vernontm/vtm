@@ -17,7 +17,14 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const prompt = `You are an outreach email specialist for Vernon Tech & Media. Generate personalized outreach emails for each lead.
+    // Build links section
+    const websites = client.websites ? (Array.isArray(client.websites) ? client.websites : [client.websites]) : [];
+    const socials = client.social_media ? (Array.isArray(client.social_media) ? client.social_media : (typeof client.social_media === 'object' ? Object.entries(client.social_media).map(([k,v]) => `${k}: ${v}`) : [client.social_media])) : [];
+    const websiteLink = websites[0] || client.website || '';
+    const instagramLink = client.instagram || socials.find(s => typeof s === 'string' && s.toLowerCase().includes('instagram')) || '';
+    const tiktokLink = client.tiktok || socials.find(s => typeof s === 'string' && s.toLowerCase().includes('tiktok')) || '';
+
+    const prompt = `You are writing outreach emails on behalf of Ray, the brand outreach manager for ${client.business_name}. Generate personalized outreach emails for each lead.
 
 CLIENT PROFILE:
 - Business: ${client.business_name}
@@ -28,6 +35,9 @@ CLIENT PROFILE:
 - Campaign Goals: ${client.campaign_goals}
 - Preferred Tone: ${client.outreach_tone || 'friendly'}
 - Location: ${client.location_city}, ${client.location_state}
+- Website: ${websiteLink}
+- Instagram: ${instagramLink}
+- TikTok: ${tiktokLink}
 
 LEADS TO EMAIL (generate one email per lead, using EXACTLY the name shown for each):
 ${leads.map((l, i) => `--- LEAD ${i} ---
@@ -39,7 +49,7 @@ CONTENT STYLE: ${l.content_style || 'unknown'}
 NOTES: ${l.notes || 'none'}`).join('\n')}
 
 RULES:
-1. Write from the client's perspective (as ${client.business_name})
+1. ALWAYS start the email with an introduction like "I'm Ray, the brand outreach manager for ${client.business_name}" or a similar natural variation. Ray is introducing himself on behalf of the client.
 2. CRITICAL: The greeting and body MUST use the EXACT name from the NAME field for that lead. Do NOT mix up names between leads.
 3. Reference the lead's specific content/niche
 4. Clearly state the collaboration opportunity
@@ -47,6 +57,9 @@ RULES:
 6. Match the tone: ${client.outreach_tone || 'friendly'}
 7. Include a clear call to action
 8. Each email must feel personal, not templated
+9. NEVER use em dashes (—). Use commas, periods, or "or" instead.
+10. ALWAYS include the company website link (${websiteLink}) in the email body so they can check it out.
+11. ALWAYS include at least one social link (Instagram: ${instagramLink} or TikTok: ${tiktokLink}) in the email so they can see the brand's presence.
 
 Return a JSON array where lead_index matches the LEAD number above:
 [

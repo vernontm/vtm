@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
   const auth = await requireAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { current_subject, current_body, to_name, instructions, client_name } = req.body;
+  const { current_subject, current_body, to_name, instructions, client_name, client } = req.body;
 
   if (!current_body || !instructions) {
     return res.status(400).json({ error: 'current_body and instructions required' });
@@ -39,6 +39,11 @@ RECIPIENT: ${to_name}
 SENT FROM: ${client_name || 'our team'}
 
 EDIT INSTRUCTIONS: ${instructions}
+
+MANDATORY RULES (always enforce even if not in edit instructions):
+- NEVER use em dashes (—). Use commas, periods, or "or" instead.
+- The email must start with Ray introducing himself as the brand outreach manager for ${client_name || 'the company'}.
+- The email must include the company website link and at least one social media link (Instagram or TikTok) if they were in the original.
 
 Return a JSON object with the updated email:
 {"subject": "updated subject line", "body": "updated full email body"}
