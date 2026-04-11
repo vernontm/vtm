@@ -667,30 +667,6 @@ export default function ContentScheduler() {
             </div>
           ))}
 
-          {/* Section links */}
-          <div style={{ padding: '14px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5, borderTop: '1px solid #f0f0f5', marginTop: 8 }}>
-            Sections
-          </div>
-          {SIDEBAR_SECTIONS.map(({ key, label, Icon }) => (
-            <div
-              key={key}
-              onClick={() => setActiveSection(key)}
-              style={{
-                padding: '8px 16px',
-                fontSize: 13,
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 8,
-                color: activeSection === key ? '#4a6cf7' : '#1a1a2e',
-                background: activeSection === key ? 'rgba(74,108,247,0.06)' : 'transparent',
-                borderLeft: activeSection === key ? '3px solid #4a6cf7' : '3px solid transparent',
-                fontWeight: activeSection === key ? 600 : 400,
-                transition: 'all 0.15s',
-              }}
-            >
-              <Icon size={14} />
-              {label}
-            </div>
-          ))}
         </div>
 
         {/* Sidebar bottom buttons */}
@@ -709,6 +685,29 @@ export default function ContentScheduler() {
           )}
         </div>
       </div>
+
+      {/* ══════ SECTIONS SIDEBAR ══════ */}
+      {client && (
+        <div className="cs-sections" style={{
+          width: 56, background: '#fafbfd', borderRight: '1px solid #e5e7ef',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0,
+          paddingTop: 16, gap: 4,
+        }}>
+          {SIDEBAR_SECTIONS.map(({ key, label, Icon }) => (
+            <button key={key} onClick={() => setActiveSection(key)} title={label}
+              style={{
+                width: 42, height: 42, borderRadius: 10, border: 'none', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+                background: activeSection === key ? 'rgba(74,108,247,0.12)' : 'transparent',
+                color: activeSection === key ? '#4a6cf7' : '#8e8ea0',
+                fontFamily: 'inherit', transition: 'all 0.15s',
+              }}>
+              <Icon size={18} />
+              <span style={{ fontSize: 9, fontWeight: 600 }}>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ══════ RIGHT MAIN AREA ══════ */}
       <div className="cs-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
