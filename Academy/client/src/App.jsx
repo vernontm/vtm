@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 
 // Pages
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -51,12 +52,34 @@ function PublicRoute() {
   return <Outlet />;
 }
 
+function LandingRoute() {
+  const { session, loading } = useAuth();
+  if (loading) {
+    return (
+      <div style={{
+        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#0D0600',
+      }}>
+        <div style={{
+          width: 36, height: 36, border: '3px solid #2a2a2a',
+          borderTopColor: '#E8650A', borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+        }} />
+      </div>
+    );
+  }
+  if (session) return <Navigate to="/dashboard" replace />;
+  return <Landing />;
+}
+
 export default function App() {
   return (
     <BrowserRouter basename="/academy">
       <AuthProvider>
         <Routes>
-          {/* Public routes */}
+          {/* Landing page — shown when not logged in */}
+          <Route path="/" element={<LandingRoute />} />
+
+          {/* Public routes (login, signup, etc.) */}
           <Route element={<PublicRoute />}>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -75,8 +98,8 @@ export default function App() {
             <Route path="/account" element={<Account />} />
           </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Fallback — unauthenticated go to landing, authenticated go to dashboard */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

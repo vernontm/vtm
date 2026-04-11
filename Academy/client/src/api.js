@@ -22,6 +22,18 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// ── Public (no auth) ──
+export async function getPublicCourses() {
+  const res = await fetch(`${BASE}/courses?public=true`);
+  if (!res.ok) throw new Error('Failed to load courses');
+  return res.json();
+}
+export async function getPublicCourse(slug) {
+  const res = await fetch(`${BASE}/courses?slug=${slug}&public=true`);
+  if (!res.ok) throw new Error('Course not found');
+  return res.json();
+}
+
 // ── Courses ──
 export const getCourses = () => request('/courses');
 export const getCourse = (slug) => request(`/courses?slug=${slug}`);
