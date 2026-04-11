@@ -703,7 +703,7 @@ export default function ContentScheduler() {
                 padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
                 background: viewMode === 'calendar' ? '#4a6cf7' : '#fff',
                 color: viewMode === 'calendar' ? '#fff' : '#8e8ea0',
-              }}><Calendar size={11} style={{ marginRight: 4 }} />Calendar</button>
+              }}>Calendar</button>
             </div>
           </div>
         </div>
