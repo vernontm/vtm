@@ -791,7 +791,7 @@ export default function Outreach() {
   // ── Render ──
 
   return (
-    <div style={pageStyle}>
+    <div className="outreach-page" style={pageStyle}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
@@ -804,7 +804,7 @@ export default function Outreach() {
       </div>
 
       {/* Client Selector */}
-      <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
+      <div className="client-selector" style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
         <Building2 size={18} style={{ color: '#8e8ea0' }} />
         <select
           value={selectedContactId}
@@ -843,7 +843,7 @@ export default function Outreach() {
         <>
           {/* Client Profile (collapsible) */}
           <div style={cardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowProfile(!showProfile)}>
+            <div className="profile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowProfile(!showProfile)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {client.logo_url ? (
                   <img src={client.logo_url} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
@@ -859,7 +859,7 @@ export default function Outreach() {
                   </span>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="profile-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button
                   style={{ ...btnGhost, background: scanning ? '#f0f0ff' : undefined }}
                   onClick={(e) => { e.stopPropagation(); handleScanBrand(); }}
@@ -883,7 +883,7 @@ export default function Outreach() {
                 {/* Web & Social Section */}
                 <div style={{ marginBottom: 16, padding: '14px 16px', background: '#f8f9fc', borderRadius: 10 }}>
                   <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Websites & Social Media</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, marginTop: 10 }}>
+                  <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, marginTop: 10 }}>
                     {[
                       { label: 'Website', value: client.website_url, icon: '🌐', link: true },
                       { label: 'Instagram', value: client.instagram, icon: '📸', prefix: 'https://instagram.com/' },
@@ -924,7 +924,7 @@ export default function Outreach() {
                 )}
 
                 {/* Details Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
                   <ProfileField label="Owner" value={client.owner_name} />
                   <ProfileField label="Type" value={client.business_type} />
                   <ProfileField label="Location" value={[client.location_address, client.location_city, client.location_state].filter(Boolean).join(', ')} />
@@ -954,7 +954,7 @@ export default function Outreach() {
 
             {showProfile && editingClient && (
               <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
                     ['business_name', 'Business Name'], ['owner_name', 'Owner Name'],
                     ['business_type', 'Business Type'], ['industry', 'Industry'],
@@ -968,7 +968,7 @@ export default function Outreach() {
                       onChange={e => setClientDraft(p => ({ ...p, [key]: e.target.value }))} />
                   ))}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
                   {[
                     ['target_audience', 'Target Audience'], ['services', 'Services'],
                     ['unique_selling_points', 'Unique Selling Points'], ['campaign_goals', 'Campaign Goals'],
@@ -1000,7 +1000,7 @@ export default function Outreach() {
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e5e7ef', marginBottom: 16 }}>
+          <div className="tabs-row" style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e5e7ef', marginBottom: 16 }}>
             <button style={tabStyle(activeTab === 'chat')} onClick={() => setActiveTab('chat')}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Zap size={14} /> Command Center
@@ -1218,7 +1218,7 @@ export default function Outreach() {
           {activeTab === 'leads' && (
             <div style={cardStyle}>
               {/* Toolbar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div className="leads-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <label style={{ fontSize: 12, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                     <input type="checkbox" checked={leads.length > 0 && selectedLeads.size === leads.length}
@@ -1247,7 +1247,7 @@ export default function Outreach() {
               {/* Add Lead Form */}
               {showAddLead && (
                 <div style={{ background: '#f8f9fc', border: '1px solid #e5e7ef', borderRadius: 12, padding: 16, marginBottom: 14 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <div className="add-lead-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                     <input style={inputStyle} placeholder="Name *" value={newLead.name}
                       onChange={e => setNewLead({ ...newLead, name: e.target.value })} />
                     <input style={inputStyle} placeholder="Email" value={newLead.email}
@@ -1282,7 +1282,7 @@ export default function Outreach() {
                   No leads yet. Use the Command Center to research leads or add them manually.
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
+                <div className="leads-table-wrap" style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #e5e7ef' }}>
@@ -1369,9 +1369,9 @@ export default function Outreach() {
               ) : (
                 queue.map(item => (
                   <div key={item.id} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div className="queue-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div className="queue-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>{item.to_name}</span>
                           <span style={{ fontSize: 12, color: '#4a6cf7' }}>{item.to_email}</span>
                           <StatusPill status={item.status} />
@@ -1441,6 +1441,59 @@ export default function Outreach() {
         }
         .spin { animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+          /* Page container */
+          .outreach-page { padding: 12px 10px !important; }
+
+          /* Header */
+          .outreach-page h1 { font-size: 18px !important; }
+
+          /* Client selector row */
+          .outreach-page .client-selector { flex-wrap: wrap; gap: 8px !important; padding: 10px 14px !important; }
+
+          /* Profile header buttons */
+          .outreach-page .profile-header { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
+          .outreach-page .profile-actions { flex-wrap: wrap; gap: 6px !important; }
+          .outreach-page .profile-actions button { font-size: 11px !important; padding: 6px 10px !important; }
+
+          /* Profile grids */
+          .outreach-page .profile-grid { grid-template-columns: 1fr !important; }
+
+          /* Edit client form grids */
+          .outreach-page .edit-grid { grid-template-columns: 1fr !important; }
+
+          /* Tabs */
+          .outreach-page .tabs-row { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .outreach-page .tabs-row button { padding: 8px 12px !important; font-size: 12px !important; white-space: nowrap; }
+
+          /* Leads toolbar */
+          .outreach-page .leads-toolbar { flex-direction: column; gap: 8px !important; align-items: flex-start !important; }
+          .outreach-page .leads-toolbar > div { width: 100%; justify-content: space-between; }
+
+          /* Add lead form grid */
+          .outreach-page .add-lead-grid { grid-template-columns: 1fr !important; }
+
+          /* Leads table */
+          .outreach-page .leads-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .outreach-page .leads-table-wrap table { min-width: 600px; }
+
+          /* Queue cards */
+          .outreach-page .queue-header { flex-direction: column !important; align-items: flex-start !important; gap: 6px !important; }
+          .outreach-page .queue-header .queue-meta { flex-wrap: wrap; gap: 4px !important; }
+          .outreach-page .queue-actions { flex-wrap: wrap; }
+
+          /* Chat input area */
+          .outreach-page .chat-input-row { padding: 10px 12px !important; }
+          .outreach-page .chat-messages { padding: 14px 12px !important; }
+
+          /* Quick reply chips */
+          .outreach-page .quick-replies { flex-direction: column; }
+          .outreach-page .quick-replies button { font-size: 11px !important; }
+
+          /* Buttons */
+          .outreach-page .btn-primary { padding: 8px 14px !important; font-size: 12px !important; }
+        }
       `}</style>
     </div>
   );

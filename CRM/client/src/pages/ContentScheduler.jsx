@@ -522,11 +522,11 @@ export default function ContentScheduler() {
 
   // ── Render ──
   return (
-    <div style={pageStyle}>
+    <div className="cs-page" style={pageStyle}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="cs-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Content Scheduler</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="cs-header-btns" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button style={btnPrimary} onClick={openAddClient}><Plus size={14} /> Add Client</button>
           {client && (
             <>
@@ -648,8 +648,8 @@ export default function ContentScheduler() {
 
       {/* Toolbar */}
       {client && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="cs-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div className="cs-toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 14px' }} onClick={async () => {
               try {
                 await createContentScript([{ client_id: client.id, title: 'New Script', full_script: '', status: 'draft', sort_order: scripts.length + 1 }]);
@@ -674,7 +674,7 @@ export default function ContentScheduler() {
               </>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="cs-toolbar-right" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
               setActionLoading('captions');
               const ids = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
@@ -1088,7 +1088,7 @@ export default function ContentScheduler() {
       {/* ── Schedule Config Modal ── */}
       {showScheduleModal && (
         <div style={modalOverlay} onClick={() => setShowScheduleModal(false)}>
-          <div style={modalBox} onClick={e => e.stopPropagation()}>
+          <div className="cs-modal" style={modalBox} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>Auto-Schedule Settings</h3>
 
             <label style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600 }}>Timezone</label>
@@ -1142,14 +1142,14 @@ export default function ContentScheduler() {
       {/* ── Client Add/Edit Modal ── */}
       {showClientModal && (
         <div style={modalOverlay} onClick={() => setShowClientModal(false)}>
-          <div style={{ ...modalBox, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+          <div className="cs-modal" style={{ ...modalBox, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>
               {editingClient ? `Edit ${editingClient.business_name}` : 'Add Content Client'}
             </h3>
 
             {/* Basic Info */}
             <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Basic Info</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div className="cs-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               <input style={inputStyle} placeholder="Business Name *" value={clientForm.business_name}
                 onChange={e => setClientForm({ ...clientForm, business_name: e.target.value })} />
               <input style={inputStyle} placeholder="Owner Name" value={clientForm.owner_name}
@@ -1172,7 +1172,7 @@ export default function ContentScheduler() {
 
             {/* Social Handles */}
             <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Social Handles</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div className="cs-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               <input style={inputStyle} placeholder="Instagram @handle" value={clientForm.instagram_handle}
                 onChange={e => setClientForm({ ...clientForm, instagram_handle: e.target.value })} />
               <input style={inputStyle} placeholder="TikTok @handle" value={clientForm.tiktok_handle}
@@ -1189,7 +1189,7 @@ export default function ContentScheduler() {
 
             {/* SocialPilot Account IDs */}
             <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>SocialPilot Account IDs</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div className="cs-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               <input style={inputStyle} placeholder="Instagram ID" value={clientForm.instagram_id}
                 onChange={e => setClientForm({ ...clientForm, instagram_id: e.target.value })} />
               <input style={inputStyle} placeholder="TikTok ID" value={clientForm.tiktok_id}
@@ -1259,6 +1259,40 @@ export default function ContentScheduler() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; }
+
+        @media (max-width: 768px) {
+          .cs-page { padding: 12px 10px !important; }
+          .cs-page h1 { font-size: 18px !important; }
+
+          /* Header */
+          .cs-header { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
+          .cs-header-btns { width: 100%; flex-wrap: wrap; }
+          .cs-header-btns button { font-size: 11px !important; padding: 6px 10px !important; }
+
+          /* Client selector */
+          .cs-page select { font-size: 13px !important; }
+
+          /* Toolbar */
+          .cs-toolbar { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
+          .cs-toolbar-left { flex-wrap: wrap; }
+          .cs-toolbar-right { width: 100%; flex-wrap: wrap; justify-content: flex-start !important; }
+          .cs-toolbar-right button { font-size: 11px !important; padding: 5px 8px !important; }
+
+          /* Content table horizontal scroll */
+          .cs-page table { min-width: 800px; }
+
+          /* Calendar grid smaller cells */
+          .cs-page .cal-grid > div { min-height: 80px !important; }
+
+          /* Modal full width on mobile */
+          .cs-page .cs-modal { width: 95vw !important; max-width: 95vw !important; margin: 20px auto !important; max-height: 85vh; overflow-y: auto; }
+
+          /* Form grids stack on mobile */
+          .cs-form-grid { grid-template-columns: 1fr !important; }
+
+          /* Command bar */
+          .cs-page .cs-cmd-bar { padding: 10px 12px !important; }
+        }
       `}</style>
     </div>
   );
