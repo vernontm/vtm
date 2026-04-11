@@ -285,6 +285,9 @@ export default function ContentScheduler() {
     } else if (cmd.includes('auto schedule') || cmd.includes('schedule all')) {
       setActionLoading('schedule');
       try {
+        if (!scheduleConfig) {
+          await saveScheduleConfig({ client_id: client.id, time_slots: schedTimeslots, timezone: schedTimezone });
+        }
         const result = await autoScheduleContent({ client_id: client.id });
         await loadClientData(client.id);
         alert(`Scheduled ${result.scheduled} scripts`);
@@ -652,8 +655,14 @@ export default function ContentScheduler() {
             </button>}
             {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
               setActionLoading('schedule');
-              await autoScheduleContent({ client_id: client.id });
-              await loadClientData(client.id);
+              try {
+                // Auto-save default config if none exists
+                if (!scheduleConfig) {
+                  await saveScheduleConfig({ client_id: client.id, time_slots: schedTimeslots, timezone: schedTimezone });
+                }
+                await autoScheduleContent({ client_id: client.id });
+                await loadClientData(client.id);
+              } catch (e) { alert('Schedule failed: ' + e.message); }
               setActionLoading('');
             }}>
               <Calendar size={13} /> Auto Schedule
