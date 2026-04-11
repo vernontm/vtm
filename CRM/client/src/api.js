@@ -380,29 +380,36 @@ export const generateAcademyContent = (data) => academyRequest('/ai-generate', {
 // Single lesson (with content items)
 export const getAcademyLesson = (id) => academyRequest(`/admin-lessons?id=${id}`);
 
-// Upload file to storage
+// Upload file to storage (uses signed URL — uploads directly to Supabase)
 export async function uploadAcademyFile(bucket, path, file, contentType) {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
-  const reader = new FileReader();
-  const base64 = await new Promise((resolve, reject) => {
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  const res = await fetch(`${ACADEMY}/upload`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ bucket, path, file: base64, content_type: contentType }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Upload failed');
+
+  // Step 1: Get a signed upload URL from our API
+  const signRes = await fetch(
+    `${ACADEMY}/upload?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`,
+    {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    }
+  );
+  if (!signRes.ok) {
+    const err = await signRes.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to get upload URL');
   }
-  return res.json();
+  const { uploadUrl, publicUrl } = await signRes.json();
+
+  // Step 2: Upload the file directly to Supabase Storage (no size limit from serverless)
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType || file.type || 'application/octet-stream' },
+    body: file,
+  });
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text();
+    throw new Error(`Upload failed: ${errText}`);
+  }
+
+  return { url: publicUrl, bucket, path };
 }
 
 // Lesson content items (media)

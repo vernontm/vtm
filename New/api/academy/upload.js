@@ -7,6 +7,39 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
+    // ── GET: Create a signed upload URL (client uploads directly to Supabase) ──
+    if (req.method === 'GET') {
+      const { bucket, path } = req.query;
+      if (!bucket || !path) {
+        return res.status(400).json({ error: 'bucket and path query params required' });
+      }
+
+      // Create signed URL for upload (valid 10 minutes)
+      const signRes = await fetch(
+        `${SUPABASE_URL}/storage/v1/object/upload/sign/${bucket}/${path}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ upsert: true }),
+        }
+      );
+
+      if (!signRes.ok) {
+        const errText = await signRes.text();
+        throw new Error(`Failed to create signed URL: ${errText}`);
+      }
+
+      const signData = await signRes.json();
+      const uploadUrl = `${SUPABASE_URL}/storage/v1${signData.url}`;
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+
+      return res.json({ uploadUrl, publicUrl, token: signData.token });
+    }
+
+    // ── POST: Fallback for small files (< 4MB base64) ──
     if (req.method === 'POST') {
       const { bucket, path, file, content_type } = req.body;
       if (!bucket || !path || !file) {
