@@ -613,14 +613,22 @@ export default function ContentScheduler() {
       )}
 
       {/* Toolbar */}
-      {client && scripts.length > 0 && (
+      {client && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <label style={{ fontSize: 12, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-              <input type="checkbox" checked={scripts.length > 0 && selectedScripts.size === scripts.length}
-                onChange={selectAll} style={{ accentColor: '#4a6cf7' }} />
-              Select All ({scripts.length})
-            </label>
+            <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 14px' }} onClick={async () => {
+              await createContentScript({ client_id: client.id, title: '', full_script: '', status: 'draft', sort_order: scripts.length + 1 });
+              loadClientData(client.id);
+            }}>
+              <Plus size={13} /> Add Row
+            </button>
+            {scripts.length > 0 && (
+              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={scripts.length > 0 && selectedScripts.size === scripts.length}
+                  onChange={selectAll} style={{ accentColor: '#4a6cf7' }} />
+                Select All ({scripts.length})
+              </label>
+            )}
             {selectedScripts.size > 0 && (
               <>
                 <span style={{ fontSize: 12, color: '#4a6cf7', fontWeight: 600 }}>{selectedScripts.size} selected</span>
@@ -631,7 +639,7 @@ export default function ContentScheduler() {
             )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button style={btnGhost} onClick={async () => {
+            {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
               setActionLoading('captions');
               const ids = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
               await generateCaptions({ client_id: client.id, script_ids: ids });
@@ -639,19 +647,19 @@ export default function ContentScheduler() {
               setActionLoading('');
             }}>
               <Sparkles size={13} /> Generate Captions
-            </button>
-            <button style={btnGhost} onClick={async () => {
+            </button>}
+            {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
               setActionLoading('schedule');
               await autoScheduleContent({ client_id: client.id });
               await loadClientData(client.id);
               setActionLoading('');
             }}>
               <Calendar size={13} /> Auto Schedule
-            </button>
-            <button style={{ ...btnPrimary, opacity: selectedScripts.size > 0 ? 1 : 0.4 }}
+            </button>}
+            {scripts.length > 0 && <button style={{ ...btnPrimary, opacity: selectedScripts.size > 0 ? 1 : 0.4 }}
               onClick={exportCSV} disabled={selectedScripts.size === 0}>
               <Download size={14} /> Export CSV
-            </button>
+            </button>}
             <button style={btnGhost} onClick={() => loadClientData(client.id)}>
               <RefreshCw size={12} />
             </button>
@@ -668,7 +676,7 @@ export default function ContentScheduler() {
             </div>
           ) : scripts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '50px 20px', color: '#8e8ea0', fontSize: 13 }}>
-              No content yet. Upload scripts or add content manually.
+              No content yet. Click "Add Row" above, upload scripts, or type a command.
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
