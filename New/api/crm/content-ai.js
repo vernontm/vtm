@@ -13,12 +13,12 @@ module.exports = async function handler(req, res) {
 
   // ── parse-scripts ─────────────────────────────────────────────────
   if (action === 'parse-scripts' && req.method === 'POST') {
-    const { client_id, text } = req.body;
-    if (!client_id || !text) {
-      return res.status(400).json({ error: 'client_id and text required' });
+    const { client_id, text, file_base64, media_type, file_name } = req.body;
+    if (!client_id || (!text && !file_base64)) {
+      return res.status(400).json({ error: 'client_id and text or file_base64 required' });
     }
 
-    const systemPrompt = `You are a content script parser. Given raw document text that contains multiple video scripts, parse them into individual scripts.
+    const systemPrompt = `You are a content script parser. Given a document that contains video scripts, parse them into individual scripts.
 
 Return a JSON array where each object has:
 - "series_name": the series or category name if identifiable (otherwise null)
@@ -27,6 +27,28 @@ Return a JSON array where each object has:
 - "full_script": the complete script text
 
 Return ONLY valid JSON, no markdown formatting or code blocks.`;
+
+    // Build message content
+    let messageContent;
+    if (file_base64 && media_type === 'application/pdf') {
+      messageContent = [
+        {
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: file_base64 },
+        },
+        { type: 'text', text: `Parse this document (${file_name || 'uploaded PDF'}) into individual video scripts.` },
+      ];
+    } else if (file_base64 && (media_type || '').startsWith('image/')) {
+      messageContent = [
+        {
+          type: 'image',
+          source: { type: 'base64', media_type: media_type, data: file_base64 },
+        },
+        { type: 'text', text: `Parse this image (${file_name || 'uploaded image'}) into individual video scripts.` },
+      ];
+    } else {
+      messageContent = `Parse the following document into individual video scripts:\n\n${text}`;
+    }
 
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -37,8 +59,8 @@ Return ONLY valid JSON, no markdown formatting or code blocks.`;
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: `Parse the following document into individual video scripts:\n\n${text}` }],
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: messageContent }],
         system: systemPrompt,
       }),
     });

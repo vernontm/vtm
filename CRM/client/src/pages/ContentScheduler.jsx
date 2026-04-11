@@ -307,16 +307,38 @@ export default function ContentScheduler() {
     e.target.value = '';
 
     setActionLoading('parsing');
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const result = await parseScripts({ client_id: client.id, text: ev.target.result });
+    try {
+      const isPdf = file.type === 'application/pdf';
+      const isImage = file.type.startsWith('image/');
+
+      if (isPdf || isImage) {
+        // Send as base64 for Claude native processing
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target.result.split(',')[1]);
+          reader.readAsDataURL(file);
+        });
+        const result = await parseScripts({
+          client_id: client.id,
+          file_base64: base64,
+          media_type: file.type,
+          file_name: file.name,
+        });
         await loadClientData(client.id);
         alert(`Parsed ${Array.isArray(result) ? result.length : 0} scripts`);
-      } catch (err) { alert('Parse failed: ' + err.message); }
-      setActionLoading('');
-    };
-    reader.readAsText(file);
+      } else {
+        // Text files
+        const text = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target.result);
+          reader.readAsText(file);
+        });
+        const result = await parseScripts({ client_id: client.id, text });
+        await loadClientData(client.id);
+        alert(`Parsed ${Array.isArray(result) ? result.length : 0} scripts`);
+      }
+    } catch (err) { alert('Parse failed: ' + err.message); }
+    setActionLoading('');
   }
 
   // ── Delete selected ──
