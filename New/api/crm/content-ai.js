@@ -259,7 +259,9 @@ Return ONLY valid JSON, no markdown.`;
         const year = currentDate.getFullYear();
         const month = String(currentDate.getMonth() + 1).padStart(2, '0');
         const day = String(currentDate.getDate()).padStart(2, '0');
-        const scheduledDatetime = `${year}-${month}-${day}T${slot}:00`;
+        // slot is "HH:MM" — append seconds only if not already present
+      const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
+      const scheduledDatetime = `${year}-${month}-${day}T${timeStr}`;
 
         await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
           method: 'PATCH',
