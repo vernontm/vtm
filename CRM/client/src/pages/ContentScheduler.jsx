@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  getClients, getClient, updateClient,
+  getContentClients, getContentClient, createContentClient, updateContentClient, deleteContentClient,
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
-  getSocialAccounts, createSocialAccount, deleteSocialAccount,
   getScheduleConfig, saveScheduleConfig,
   parseScripts, generateCaptions, autoScheduleContent,
 } from '../api';
@@ -42,7 +41,6 @@ export default function ContentScheduler() {
   // Content state
   const [scripts, setScripts] = useState([]);
   const [selectedScripts, setSelectedScripts] = useState(new Set());
-  const [socialAccounts, setSocialAccounts] = useState([]);
   const [scheduleConfig, setScheduleConfig] = useState(null);
 
   // UI state
@@ -51,21 +49,29 @@ export default function ContentScheduler() {
   const [editingCell, setEditingCell] = useState(null); // { id, field }
   const [editValue, setEditValue] = useState('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [showSocialModal, setShowSocialModal] = useState(false);
+  const [showClientModal, setShowClientModal] = useState(false); // add/edit client
+  const [editingClient, setEditingClient] = useState(null); // null = add new, object = edit
   const [showMediaModal, setShowMediaModal] = useState(null); // script object
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({}); // { scriptId: percent }
   const [chatInput, setChatInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [dragOverId, setDragOverId] = useState(null);
+  const [savingClient, setSavingClient] = useState(false);
 
   // Schedule modal state
   const [schedTimeslots, setSchedTimeslots] = useState(['10:00', '14:00', '18:00', '22:00']);
   const [schedTimezone, setSchedTimezone] = useState('America/Chicago');
   const [newSlot, setNewSlot] = useState('');
 
-  // Social modal state
-  const [newSocial, setNewSocial] = useState({ platform: 'instagram', account_id: '', account_name: '' });
+  // Client form state
+  const emptyClientForm = {
+    business_name: '', owner_name: '', industry: '', website_url: '',
+    instagram_handle: '', tiktok_handle: '', facebook_handle: '', threads_handle: '', youtube_handle: '', linkedin_handle: '',
+    instagram_id: '', tiktok_id: '', facebook_id: '', threads_id: '', youtube_id: '', linkedin_id: '',
+    brand_bible: '', target_audience: '', preferred_tone: 'friendly', notes: '',
+  };
+  const [clientForm, setClientForm] = useState(emptyClientForm);
 
   const fileInputRef = useRef(null);
   const scriptUploadRef = useRef(null);
@@ -79,7 +85,7 @@ export default function ContentScheduler() {
 
   async function loadClients() {
     try {
-      const data = await getClients();
+      const data = await getContentClients();
       setClients(data || []);
     } catch (e) { console.error(e); }
   }
@@ -93,15 +99,13 @@ export default function ContentScheduler() {
   async function loadClientData(clientId) {
     setLoading(true);
     try {
-      const [c, s, sa, sc] = await Promise.all([
-        getClient(clientId),
+      const [c, s, sc] = await Promise.all([
+        getContentClient(clientId),
         getContentScripts(clientId),
-        getSocialAccounts(clientId),
         getScheduleConfig(clientId),
       ]);
-      setClient(Array.isArray(c) ? c[0] : c);
+      setClient(c);
       setScripts(s || []);
-      setSocialAccounts(sa || []);
       setScheduleConfig(sc);
       if (sc) {
         setSchedTimeslots(sc.time_slots || ['10:00', '14:00', '18:00', '22:00']);
@@ -226,7 +230,8 @@ export default function ContentScheduler() {
     const selected = scripts.filter(s => selectedScripts.has(s.id));
     if (!selected.length) return;
 
-    const accountIds = socialAccounts.filter(a => a.is_active).map(a => a.account_id).join(',');
+    const platformIds = [client.instagram_id, client.tiktok_id, client.facebook_id, client.threads_id, client.youtube_id, client.linkedin_id].filter(Boolean);
+    const accountIds = platformIds.join(',');
 
     const rows = selected.map(script => {
       const description = [script.caption, script.hashtags].filter(Boolean).join(' ');
@@ -329,12 +334,54 @@ export default function ContentScheduler() {
     } catch (e) { alert('Failed: ' + e.message); }
   }
 
-  // ── Add social account ──
-  async function handleAddSocial() {
-    if (!newSocial.account_id.trim()) return;
-    await createSocialAccount({ client_id: client.id, ...newSocial });
-    setNewSocial({ platform: 'instagram', account_id: '', account_name: '' });
-    loadClientData(client.id);
+  // ── Client add/edit ──
+  function openAddClient() {
+    setEditingClient(null);
+    setClientForm(emptyClientForm);
+    setShowClientModal(true);
+  }
+  function openEditClient() {
+    if (!client) return;
+    setEditingClient(client);
+    setClientForm({
+      business_name: client.business_name || '',
+      owner_name: client.owner_name || '',
+      industry: client.industry || '',
+      website_url: client.website_url || '',
+      instagram_handle: client.instagram_handle || '',
+      tiktok_handle: client.tiktok_handle || '',
+      facebook_handle: client.facebook_handle || '',
+      threads_handle: client.threads_handle || '',
+      youtube_handle: client.youtube_handle || '',
+      linkedin_handle: client.linkedin_handle || '',
+      instagram_id: client.instagram_id || '',
+      tiktok_id: client.tiktok_id || '',
+      facebook_id: client.facebook_id || '',
+      threads_id: client.threads_id || '',
+      youtube_id: client.youtube_id || '',
+      linkedin_id: client.linkedin_id || '',
+      brand_bible: client.brand_bible || '',
+      target_audience: client.target_audience || '',
+      preferred_tone: client.preferred_tone || 'friendly',
+      notes: client.notes || '',
+    });
+    setShowClientModal(true);
+  }
+  async function handleSaveClient() {
+    if (!clientForm.business_name.trim()) return;
+    setSavingClient(true);
+    try {
+      if (editingClient) {
+        await updateContentClient(editingClient.id, clientForm);
+      } else {
+        const created = await createContentClient(clientForm);
+        if (created?.id) setSelectedClientId(created.id);
+      }
+      await loadClients();
+      if (editingClient) await loadClientData(editingClient.id);
+      setShowClientModal(false);
+    } catch (e) { alert('Failed: ' + e.message); }
+    setSavingClient(false);
   }
 
   // ── Styles ──
@@ -373,10 +420,11 @@ export default function ContentScheduler() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Content Scheduler</h1>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button style={btnPrimary} onClick={openAddClient}><Plus size={14} /> Add Client</button>
           {client && (
             <>
+              <button style={btnGhost} onClick={openEditClient}><Edit3 size={14} /> Edit Client</button>
               <button style={btnGhost} onClick={() => setShowScheduleModal(true)}><Clock size={14} /> Schedule Settings</button>
-              <button style={btnGhost} onClick={() => setShowSocialModal(true)}><Settings size={14} /> Social Accounts</button>
             </>
           )}
         </div>
@@ -407,29 +455,38 @@ export default function ContentScheduler() {
         {/* Client profile summary */}
         {client && showProfile && (
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f0f0f5' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13, marginBottom: 10 }}>
               <div><span style={{ color: '#8e8ea0' }}>Industry:</span> {client.industry || '-'}</div>
-              <div><span style={{ color: '#8e8ea0' }}>Tone:</span> {client.outreach_tone || '-'}</div>
-              <div><span style={{ color: '#8e8ea0' }}>Location:</span> {client.location_city}, {client.location_state}</div>
+              <div><span style={{ color: '#8e8ea0' }}>Tone:</span> {client.preferred_tone || '-'}</div>
               <div><span style={{ color: '#8e8ea0' }}>Website:</span> {client.website_url || '-'}</div>
-              <div><span style={{ color: '#8e8ea0' }}>IG:</span> {client.instagram || '-'}</div>
-              <div><span style={{ color: '#8e8ea0' }}>TT:</span> {client.tiktok || '-'}</div>
             </div>
-            {/* Social account chips */}
-            {socialAccounts.length > 0 && (
-              <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {socialAccounts.filter(a => a.is_active).map(a => (
-                  <span key={a.id} style={{
-                    padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-                    background: '#e0f2fe', color: '#0ea5e9',
-                  }}>
-                    {a.platform}: {a.account_name || a.account_id}
-                  </span>
-                ))}
-              </div>
-            )}
+
+            {/* Platform handles & IDs */}
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Social Accounts</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+              {[
+                { label: 'IG', handle: client.instagram_handle, id: client.instagram_id, color: '#E1306C' },
+                { label: 'TT', handle: client.tiktok_handle, id: client.tiktok_id, color: '#000' },
+                { label: 'FB', handle: client.facebook_handle, id: client.facebook_id, color: '#1877F2' },
+                { label: 'Threads', handle: client.threads_handle, id: client.threads_id, color: '#000' },
+                { label: 'YT', handle: client.youtube_handle, id: client.youtube_id, color: '#FF0000' },
+                { label: 'LI', handle: client.linkedin_handle, id: client.linkedin_id, color: '#0A66C2' },
+              ].filter(p => p.handle || p.id).map((p, i) => (
+                <span key={i} style={{
+                  padding: '4px 10px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                  background: '#f0f0f5', color: p.color, display: 'flex', alignItems: 'center', gap: 4,
+                }}>
+                  {p.label}: {p.handle || '-'}
+                  {p.id && <span style={{ color: '#8e8ea0', fontWeight: 400 }}>(ID: {p.id})</span>}
+                </span>
+              ))}
+              {![client.instagram_handle, client.tiktok_handle, client.facebook_handle, client.threads_handle].some(Boolean) && (
+                <span style={{ fontSize: 12, color: '#ccc' }}>No accounts added yet</span>
+              )}
+            </div>
+
             {client.brand_bible && (
-              <div style={{ marginTop: 10, padding: 12, background: '#f8f9fc', borderRadius: 10, fontSize: 12, color: '#555', maxHeight: 100, overflow: 'auto' }}>
+              <div style={{ padding: 12, background: '#f8f9fc', borderRadius: 10, fontSize: 12, color: '#555', maxHeight: 100, overflow: 'auto' }}>
                 <strong style={{ color: '#1a1a2e' }}>Brand Bible:</strong> {client.brand_bible.slice(0, 300)}{client.brand_bible.length > 300 ? '...' : ''}
               </div>
             )}
@@ -834,50 +891,107 @@ export default function ContentScheduler() {
         </div>
       )}
 
-      {/* ── Social Accounts Modal ── */}
-      {showSocialModal && (
-        <div style={modalOverlay} onClick={() => setShowSocialModal(false)}>
-          <div style={modalBox} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>SocialPilot Accounts</h3>
+      {/* ── Client Add/Edit Modal ── */}
+      {showClientModal && (
+        <div style={modalOverlay} onClick={() => setShowClientModal(false)}>
+          <div style={{ ...modalBox, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>
+              {editingClient ? `Edit ${editingClient.business_name}` : 'Add Content Client'}
+            </h3>
 
-            {socialAccounts.map(a => (
-              <div key={a.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 14px', borderRadius: 10, border: '1px solid #e5e7ef', marginBottom: 8,
-              }}>
-                <div>
-                  <span style={{ fontWeight: 600, fontSize: 13, textTransform: 'capitalize' }}>{a.platform}</span>
-                  <span style={{ color: '#8e8ea0', fontSize: 12, marginLeft: 8 }}>ID: {a.account_id}</span>
-                  {a.account_name && <span style={{ color: '#8e8ea0', fontSize: 12, marginLeft: 8 }}>({a.account_name})</span>}
-                </div>
-                <button onClick={async () => { await deleteSocialAccount(a.id); loadClientData(client.id); }}
-                  style={{ ...btnGhost, padding: '4px 8px', color: '#ef4444' }}><Trash2 size={12} /></button>
-              </div>
-            ))}
-
-            <div style={{ marginTop: 16, padding: 16, background: '#f8f9fc', borderRadius: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                <select value={newSocial.platform} onChange={e => setNewSocial({ ...newSocial, platform: e.target.value })}
-                  style={inputStyle}>
-                  <option value="instagram">Instagram</option>
-                  <option value="tiktok">TikTok</option>
-                  <option value="facebook">Facebook</option>
-                  <option value="youtube">YouTube</option>
-                  <option value="linkedin">LinkedIn</option>
-                </select>
-                <input style={inputStyle} placeholder="Account Name" value={newSocial.account_name}
-                  onChange={e => setNewSocial({ ...newSocial, account_name: e.target.value })} />
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input style={{ ...inputStyle, flex: 1 }} placeholder="SocialPilot Account ID"
-                  value={newSocial.account_id}
-                  onChange={e => setNewSocial({ ...newSocial, account_id: e.target.value })} />
-                <button style={btnPrimary} onClick={handleAddSocial}><Plus size={14} /> Add</button>
-              </div>
+            {/* Basic Info */}
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Basic Info</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <input style={inputStyle} placeholder="Business Name *" value={clientForm.business_name}
+                onChange={e => setClientForm({ ...clientForm, business_name: e.target.value })} />
+              <input style={inputStyle} placeholder="Owner Name" value={clientForm.owner_name}
+                onChange={e => setClientForm({ ...clientForm, owner_name: e.target.value })} />
+              <input style={inputStyle} placeholder="Industry" value={clientForm.industry}
+                onChange={e => setClientForm({ ...clientForm, industry: e.target.value })} />
+              <input style={inputStyle} placeholder="Website URL" value={clientForm.website_url}
+                onChange={e => setClientForm({ ...clientForm, website_url: e.target.value })} />
+              <input style={inputStyle} placeholder="Target Audience" value={clientForm.target_audience}
+                onChange={e => setClientForm({ ...clientForm, target_audience: e.target.value })} />
+              <select style={inputStyle} value={clientForm.preferred_tone}
+                onChange={e => setClientForm({ ...clientForm, preferred_tone: e.target.value })}>
+                <option value="friendly">Friendly</option>
+                <option value="casual">Casual</option>
+                <option value="formal">Formal</option>
+                <option value="hype">Hype</option>
+                <option value="educational">Educational</option>
+              </select>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button style={btnGhost} onClick={() => setShowSocialModal(false)}>Close</button>
+            {/* Social Handles */}
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Social Handles</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <input style={inputStyle} placeholder="Instagram @handle" value={clientForm.instagram_handle}
+                onChange={e => setClientForm({ ...clientForm, instagram_handle: e.target.value })} />
+              <input style={inputStyle} placeholder="TikTok @handle" value={clientForm.tiktok_handle}
+                onChange={e => setClientForm({ ...clientForm, tiktok_handle: e.target.value })} />
+              <input style={inputStyle} placeholder="Facebook handle" value={clientForm.facebook_handle}
+                onChange={e => setClientForm({ ...clientForm, facebook_handle: e.target.value })} />
+              <input style={inputStyle} placeholder="Threads @handle" value={clientForm.threads_handle}
+                onChange={e => setClientForm({ ...clientForm, threads_handle: e.target.value })} />
+              <input style={inputStyle} placeholder="YouTube channel" value={clientForm.youtube_handle}
+                onChange={e => setClientForm({ ...clientForm, youtube_handle: e.target.value })} />
+              <input style={inputStyle} placeholder="LinkedIn handle" value={clientForm.linkedin_handle}
+                onChange={e => setClientForm({ ...clientForm, linkedin_handle: e.target.value })} />
+            </div>
+
+            {/* SocialPilot Account IDs */}
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>SocialPilot Account IDs</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <input style={inputStyle} placeholder="Instagram ID" value={clientForm.instagram_id}
+                onChange={e => setClientForm({ ...clientForm, instagram_id: e.target.value })} />
+              <input style={inputStyle} placeholder="TikTok ID" value={clientForm.tiktok_id}
+                onChange={e => setClientForm({ ...clientForm, tiktok_id: e.target.value })} />
+              <input style={inputStyle} placeholder="Facebook ID" value={clientForm.facebook_id}
+                onChange={e => setClientForm({ ...clientForm, facebook_id: e.target.value })} />
+              <input style={inputStyle} placeholder="Threads ID" value={clientForm.threads_id}
+                onChange={e => setClientForm({ ...clientForm, threads_id: e.target.value })} />
+              <input style={inputStyle} placeholder="YouTube ID" value={clientForm.youtube_id}
+                onChange={e => setClientForm({ ...clientForm, youtube_id: e.target.value })} />
+              <input style={inputStyle} placeholder="LinkedIn ID" value={clientForm.linkedin_id}
+                onChange={e => setClientForm({ ...clientForm, linkedin_id: e.target.value })} />
+            </div>
+
+            {/* Brand Bible */}
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Brand Bible</div>
+            <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical', marginBottom: 16 }}
+              placeholder="Brand voice, core hashtags, posting guidelines..."
+              value={clientForm.brand_bible}
+              onChange={e => setClientForm({ ...clientForm, brand_bible: e.target.value })} />
+
+            {/* Notes */}
+            <input style={{ ...inputStyle, marginBottom: 16 }} placeholder="Notes"
+              value={clientForm.notes}
+              onChange={e => setClientForm({ ...clientForm, notes: e.target.value })} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                {editingClient && (
+                  <button style={{ ...btnGhost, color: '#ef4444' }} onClick={async () => {
+                    if (confirm(`Delete ${editingClient.business_name}? This will also delete all their content.`)) {
+                      await deleteContentClient(editingClient.id);
+                      setShowClientModal(false);
+                      setSelectedClientId('');
+                      setClient(null);
+                      loadClients();
+                    }
+                  }}>
+                    <Trash2 size={13} /> Delete Client
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button style={btnGhost} onClick={() => setShowClientModal(false)}>Cancel</button>
+                <button style={{ ...btnPrimary, opacity: !clientForm.business_name.trim() || savingClient ? 0.5 : 1 }}
+                  onClick={handleSaveClient} disabled={!clientForm.business_name.trim() || savingClient}>
+                  {savingClient ? <Loader size={14} className="spin" /> : <Check size={14} />}
+                  {editingClient ? 'Save Changes' : 'Add Client'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

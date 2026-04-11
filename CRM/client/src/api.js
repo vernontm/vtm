@@ -280,6 +280,13 @@ export const generateOutreach = (data) => request('/generate-outreach', { method
 export const outreachChat = (data) => request('/outreach-chat', { method: 'POST', body: JSON.stringify(data) });
 export const rewriteEmail = (data) => request('/rewrite-email', { method: 'POST', body: JSON.stringify(data) });
 
+// Content Clients
+export const getContentClients = () => request('/content-clients');
+export const getContentClient = (id) => request(`/content-clients?id=${id}`);
+export const createContentClient = (data) => request('/content-clients', { method: 'POST', body: JSON.stringify(data) });
+export const updateContentClient = (id, data) => request(`/content-clients?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteContentClient = (id) => request(`/content-clients?id=${id}`, { method: 'DELETE' });
+
 // Content Scheduler
 export const getContentScripts = (clientId) => request(`/content-scripts?client_id=${clientId}`);
 export const createContentScript = (data) => request('/content-scripts', { method: 'POST', body: JSON.stringify(data) });
