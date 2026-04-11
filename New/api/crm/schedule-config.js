@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
 
     if (existing && existing.length > 0) {
       // Update existing config
-      const data = { time_slots, timezone, updated_at: new Date().toISOString() };
+      const data = { time_slots, timezone };
       const rows = await supaFetch(`crm_auto_schedule_config?id=eq.${existing[0].id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
