@@ -243,12 +243,23 @@ Return ONLY valid JSON, no markdown.`;
       }
 
       const { time_slots } = config;
-      let slotIndex = 0;
 
-      // Start from tomorrow to avoid scheduling in the past
+      // Figure out current time to skip past slots for today
       const now = new Date();
+      const nowHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       let currentDate = new Date(now);
-      currentDate.setDate(currentDate.getDate() + 1);
+
+      // Find first available slot today (compare HH:MM)
+      let slotIndex = 0;
+      const slotsHHMM = time_slots.map(s => s.substring(0, 5));
+      const todayFirstSlot = slotsHHMM.findIndex(s => s > nowHHMM);
+      if (todayFirstSlot >= 0) {
+        slotIndex = todayFirstSlot;
+      } else {
+        // All today's slots have passed, start tomorrow
+        currentDate.setDate(currentDate.getDate() + 1);
+        slotIndex = 0;
+      }
 
       let scheduled = 0;
 
