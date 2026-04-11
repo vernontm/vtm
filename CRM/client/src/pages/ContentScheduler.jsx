@@ -317,7 +317,18 @@ export default function ContentScheduler() {
       if (selectedScripts.size === 0) { selectAll(); }
       setTimeout(() => exportCSV(), 100);
     } else {
-      alert('Commands: "generate captions", "auto schedule all", "upload scripts", "export"');
+      // Treat as a pasted script — create a new row with it
+      const rawText = chatInput.trim();
+      try {
+        await createContentScript([{
+          client_id: client.id,
+          title: rawText.split('\n')[0].slice(0, 80) || 'New Script',
+          full_script: rawText,
+          status: 'draft',
+          sort_order: scripts.length + 1,
+        }]);
+        await loadClientData(client.id);
+      } catch (err) { alert('Failed to add script: ' + err.message); }
     }
   }
 
@@ -598,12 +609,14 @@ export default function ContentScheduler() {
             <button onClick={() => scriptUploadRef.current?.click()} style={{ ...btnGhost, flexShrink: 0 }}>
               <Upload size={14} /> Upload Scripts
             </button>
-            <input
+            <textarea
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCommand(); }}
-              placeholder="Type a command: generate captions, auto schedule, export..."
-              style={{ ...inputStyle, border: 'none', background: 'transparent' }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommand(); } }}
+              placeholder="Paste a script to add it, or type: generate captions, auto schedule, export..."
+              rows={1}
+              style={{ ...inputStyle, border: 'none', background: 'transparent', resize: 'none', minHeight: 20, maxHeight: 120, overflow: 'auto', lineHeight: '20px' }}
+              onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
             />
             <button onClick={toggleMic} style={{
               width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7ef',
