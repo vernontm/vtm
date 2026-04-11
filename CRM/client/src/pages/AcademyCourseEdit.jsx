@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { BookOpen, Save, Image, ToggleLeft, ToggleRight, GripVertical, Plus, Trash2, Pencil, Loader2, ArrowLeft, X } from 'lucide-react';
-import { getAcademyCourses, updateAcademyCourse, getAcademyLessons, createAcademyLesson, updateAcademyLesson, deleteAcademyLesson } from '../api';
+import { BookOpen, Save, Image, ToggleLeft, ToggleRight, GripVertical, Plus, Trash2, Pencil, Loader2, ArrowLeft, X, Sparkles, Upload } from 'lucide-react';
+import { getAcademyCourses, updateAcademyCourse, getAcademyLessons, createAcademyLesson, updateAcademyLesson, deleteAcademyLesson, generateAcademyContent, uploadAcademyFile } from '../api';
 
 const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
 const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
@@ -12,6 +12,7 @@ const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' };
 const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
+const btnAI = { padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #4a6cf7)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 };
 
 function StatusBadge({ status }) {
   const isPublished = status === 'published';
@@ -33,14 +34,18 @@ export default function AcademyCourseEdit() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  const [form, setForm] = useState({ title: '', slug: '', description: '', status: 'draft', thumbnail_url: '', stripe_product_id: '', drip_enabled: false });
+  const [form, setForm] = useState({ title: '', slug: '', description: '', status: 'draft', cover_image_url: '', stripe_product_id: '', drip_enabled: false });
   const [lessons, setLessons] = useState([]);
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [lessonForm, setLessonForm] = useState({ title: '', description: '', sort_order: 0, status: 'draft' });
   const [lessonSaving, setLessonSaving] = useState(false);
+  const [generatingCover, setGeneratingCover] = useState(false);
+  const [coverPrompt, setCoverPrompt] = useState('');
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
+  const coverFileRef = useRef(null);
 
   useEffect(() => { loadData(); }, [id]);
 
@@ -63,7 +68,7 @@ export default function AcademyCourseEdit() {
         slug: course.slug || '',
         description: course.description || '',
         status: course.status || 'draft',
-        thumbnail_url: course.thumbnail_url || '',
+        cover_image_url: course.cover_image_url || '',
         stripe_product_id: course.stripe_product_id || '',
         drip_enabled: course.drip_enabled || false,
       });
@@ -141,6 +146,46 @@ export default function AcademyCourseEdit() {
 
     dragItem.current = null;
     dragOverItem.current = null;
+  }
+
+  async function handleGenerateCover() {
+    try {
+      setGeneratingCover(true);
+      setError(null);
+      const result = await generateAcademyContent({
+        action: 'generate-cover',
+        prompt: coverPrompt,
+        course_title: form.title || 'Course',
+      });
+      if (result?.url) {
+        setForm(prev => ({ ...prev, cover_image_url: result.url }));
+        setSuccess('Cover image generated successfully');
+        setTimeout(() => setSuccess(null), 3000);
+      }
+    } catch (err) {
+      setError(`Cover generation failed: ${err.message}`);
+    } finally {
+      setGeneratingCover(false);
+    }
+  }
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingCover(true);
+      setError(null);
+      const path = `covers/${id}-${Date.now()}.${file.name.split('.').pop()}`;
+      const result = await uploadAcademyFile('course-media', path, file, file.type);
+      setForm(prev => ({ ...prev, cover_image_url: result.url }));
+      setSuccess('Cover image uploaded');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(`Upload failed: ${err.message}`);
+    } finally {
+      setUploadingCover(false);
+      if (coverFileRef.current) coverFileRef.current.value = '';
+    }
   }
 
   function updateField(field, value) {
@@ -238,19 +283,87 @@ export default function AcademyCourseEdit() {
         <div>
           <div style={cardStyle}>
             <label style={labelStyle}>Cover Image</label>
-            {form.thumbnail_url ? (
-              <div style={{ marginBottom: 14 }}>
-                <img src={form.thumbnail_url} alt="Cover" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 10, marginBottom: 8 }} />
+            {form.cover_image_url ? (
+              <div style={{ marginBottom: 14, position: 'relative' }}>
+                <img src={form.cover_image_url} alt="Cover" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 10 }} />
+                <button
+                  onClick={() => updateField('cover_image_url', '')}
+                  style={{
+                    position: 'absolute', top: 6, right: 6,
+                    width: 24, height: 24, borderRadius: 6,
+                    background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <X size={14} color="#fff" />
+                </button>
               </div>
             ) : (
-              <div style={{ height: 140, background: '#f5f7fa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e5e7ef', marginBottom: 14 }}>
+              <div
+                style={{
+                  height: 140, background: '#f5f7fa', borderRadius: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '2px dashed #e5e7ef', marginBottom: 14, cursor: 'pointer',
+                }}
+                onClick={() => coverFileRef.current?.click()}
+              >
                 <div style={{ textAlign: 'center' }}>
                   <Image size={24} color="#7a7f9a" />
-                  <div style={{ fontSize: 12, color: '#7a7f9a', marginTop: 6 }}>Paste image URL below</div>
+                  <div style={{ fontSize: 12, color: '#7a7f9a', marginTop: 6 }}>Click to upload or use AI below</div>
                 </div>
               </div>
             )}
-            <input style={{ ...inputStyle, marginBottom: 14 }} placeholder="Thumbnail URL" value={form.thumbnail_url} onChange={(e) => updateField('thumbnail_url', e.target.value)} />
+
+            {/* Upload + URL input */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <input
+                style={{ ...inputStyle, flex: 1 }}
+                placeholder="Image URL or upload..."
+                value={form.cover_image_url}
+                onChange={(e) => updateField('cover_image_url', e.target.value)}
+              />
+              <button
+                onClick={() => coverFileRef.current?.click()}
+                disabled={uploadingCover}
+                style={{ ...btnOutline, padding: '8px 14px', flexShrink: 0 }}
+              >
+                <Upload size={14} /> {uploadingCover ? '...' : 'Upload'}
+              </button>
+              <input
+                ref={coverFileRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleCoverUpload}
+              />
+            </div>
+
+            {/* AI Generate Cover */}
+            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Sparkles size={14} color="#8b5cf6" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>AI Cover Generator</span>
+              </div>
+              <input
+                style={{ ...inputStyle, marginBottom: 8, fontSize: 12 }}
+                placeholder="Style prompt: e.g. futuristic, neon, minimalist..."
+                value={coverPrompt}
+                onChange={(e) => setCoverPrompt(e.target.value)}
+              />
+              <button
+                onClick={handleGenerateCover}
+                disabled={generatingCover || !form.title}
+                style={{ ...btnAI, width: '100%', justifyContent: 'center', opacity: generatingCover || !form.title ? 0.6 : 1 }}
+              >
+                <Sparkles size={14} />
+                {generatingCover ? 'Generating cover...' : 'Generate Cover with AI'}
+              </button>
+              {!form.title && (
+                <div style={{ fontSize: 11, color: '#7a7f9a', marginTop: 6, textAlign: 'center' }}>
+                  Add a course title first
+                </div>
+              )}
+            </div>
 
             <label style={labelStyle}>Stripe Product ID</label>
             <input style={inputStyle} placeholder="prod_..." value={form.stripe_product_id} onChange={(e) => updateField('stripe_product_id', e.target.value)} />

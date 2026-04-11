@@ -376,3 +376,35 @@ export const updateAcademySetting = (key, value) => academyRequest(`/admin-setti
 
 // AI Generation
 export const generateAcademyContent = (data) => academyRequest('/ai-generate', { method: 'POST', body: JSON.stringify(data) });
+
+// Single lesson (with content items)
+export const getAcademyLesson = (id) => academyRequest(`/admin-lessons?id=${id}`);
+
+// Upload file to storage
+export async function uploadAcademyFile(bucket, path, file, contentType) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const reader = new FileReader();
+  const base64 = await new Promise((resolve, reject) => {
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const res = await fetch(`${ACADEMY}/upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ bucket, path, file: base64, content_type: contentType }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Upload failed');
+  }
+  return res.json();
+}
+
+// Lesson content items (media)
+export const createLessonContent = (data) => academyRequest('/admin-lessons?action=add-content', { method: 'POST', body: JSON.stringify(data) });
+export const deleteLessonContent = (id) => academyRequest(`/admin-lessons?action=delete-content&content_id=${id}`, { method: 'DELETE' });

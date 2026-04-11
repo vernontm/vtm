@@ -6,9 +6,25 @@ export default async function handler(req, res) {
   const user = await requireAdminAuth(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { id, course_id } = req.query;
+  const { id, course_id, action, content_id } = req.query;
 
   try {
+    // ── Content item management ──
+    if (action === 'add-content' && req.method === 'POST') {
+      const data = { ...req.body, created_at: new Date().toISOString() };
+      const result = await supaFetch('academy_lesson_content', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.status(201).json(result[0] || result);
+    }
+
+    if (action === 'delete-content' && req.method === 'DELETE' && content_id) {
+      await supaFetch(`academy_lesson_content?id=eq.${content_id}`, { method: 'DELETE' });
+      return res.json({ success: true });
+    }
+
+    // ── Standard lesson CRUD ──
     if (req.method === 'GET') {
       if (id) {
         const rows = await supaFetch(`academy_lessons?id=eq.${id}&select=*,academy_lesson_content(*)`);

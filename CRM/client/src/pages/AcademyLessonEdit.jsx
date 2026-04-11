@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileText, Save, Sparkles, HelpCircle, Plus, Trash2, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
-import { getAcademyCourses, getAcademyLessons, updateAcademyLesson, generateAcademyContent } from '../api';
+import {
+  FileText, Save, Sparkles, HelpCircle, Plus, Trash2, Loader2, ArrowLeft, CheckCircle,
+  Upload, Film, FileImage, File, X, GripVertical,
+} from 'lucide-react';
+import {
+  getAcademyCourses, getAcademyLesson, getAcademyLessons, updateAcademyLesson,
+  generateAcademyContent, uploadAcademyFile, createLessonContent, deleteLessonContent,
+} from '../api';
 
 const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
 const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
 const btnPrimary = { padding: '10px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
 const btnOutline = { padding: '10px 20px', background: '#fff', color: '#4a6cf7', border: '1px solid #4a6cf7', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
 const btnAI = { padding: '10px 20px', background: 'linear-gradient(135deg, #8b5cf6, #4a6cf7)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnDanger = { padding: '6px 12px', background: '#fff', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 };
 const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' };
@@ -15,20 +22,46 @@ const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #e5
 
 const EMPTY_QUESTION = { question: '', options: ['', '', '', ''], correct_answer: 0 };
 
+const CONTENT_TYPE_ICONS = {
+  video: Film,
+  image: FileImage,
+  pdf: File,
+  audio: Film,
+};
+
+function formatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getContentTypeFromMime(mime) {
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('audio/')) return 'audio';
+  if (mime === 'application/pdf') return 'pdf';
+  return 'file';
+}
+
 export default function AcademyLessonEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [generating, setGenerating] = useState(null); // track which AI action is running
+  const [generating, setGenerating] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
   const [form, setForm] = useState({
     title: '', description: '', content: '', homework_prompt: '',
-    sort_order: 0, status: 'draft', drip_days: 0, course_id: null,
+    sort_order: 0, status: 'draft', drip_days: 0, course_id: null, is_free_preview: false,
   });
   const [quiz, setQuiz] = useState([]);
+  const [contentItems, setContentItems] = useState([]);
 
   useEffect(() => { loadLesson(); }, [id]);
 
@@ -36,25 +69,29 @@ export default function AcademyLessonEdit() {
     try {
       setLoading(true);
       setError(null);
-      // We need course_id to fetch lessons; try fetching with a broad query
-      // The admin-lessons endpoint may support fetching by lesson id directly
-      // We'll try fetching all lessons by omitting course_id, or by searching
-      // Since the API requires course_id, we'll use a workaround:
-      // Fetch all courses, then search each for our lesson
-      const courses = await getAcademyCourses();
+
+      // Try fetching lesson directly by ID (admin endpoint supports ?id=)
       let found = null;
-      for (const course of (Array.isArray(courses) ? courses : [])) {
-        try {
-          const lessons = await getAcademyLessons(course.id);
-          const match = (Array.isArray(lessons) ? lessons : []).find(l => String(l.id) === String(id));
-          if (match) { found = { ...match, course_id: course.id }; break; }
-        } catch (_) { /* skip */ }
+      try {
+        found = await getAcademyLesson(id);
+      } catch (_) {
+        // Fallback: search through courses
+        const courses = await getAcademyCourses();
+        for (const course of (Array.isArray(courses) ? courses : [])) {
+          try {
+            const lessons = await getAcademyLessons(course.id);
+            const match = (Array.isArray(lessons) ? lessons : []).find(l => String(l.id) === String(id));
+            if (match) { found = { ...match, course_id: course.id }; break; }
+          } catch (_) { /* skip */ }
+        }
       }
+
       if (!found) {
         setError('Lesson not found');
         setLoading(false);
         return;
       }
+
       setForm({
         title: found.title || '',
         description: found.description || '',
@@ -64,8 +101,10 @@ export default function AcademyLessonEdit() {
         status: found.status || 'draft',
         drip_days: found.drip_days ?? 0,
         course_id: found.course_id,
+        is_free_preview: found.is_free_preview || false,
       });
       setQuiz(Array.isArray(found.quiz) ? found.quiz : []);
+      setContentItems(Array.isArray(found.academy_lesson_content) ? found.academy_lesson_content : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -115,13 +154,65 @@ export default function AcademyLessonEdit() {
       } else if (action === 'generate-homework' && result) {
         setForm(prev => ({
           ...prev,
-          homework_prompt: result.homework_prompt || result.homework || result.content || prev.homework_prompt,
+          homework_prompt: result.homework_prompt || result.homework || result.content || result.prompt || prev.homework_prompt,
         }));
       }
     } catch (err) {
       setError(err.message);
     } finally {
       setGenerating(null);
+    }
+  }
+
+  async function handleFileUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress(`Uploading ${file.name} (${i + 1}/${files.length})...`);
+
+        const contentType = getContentTypeFromMime(file.type);
+        const ext = file.name.split('.').pop();
+        const path = `lessons/${id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+        // Upload to storage
+        const uploadResult = await uploadAcademyFile('course-media', path, file, file.type);
+
+        // Create lesson content record
+        const contentRecord = await createLessonContent({
+          lesson_id: id,
+          content_type: contentType,
+          storage_url: uploadResult.url,
+          file_name: file.name,
+          file_size_bytes: file.size,
+          sort_order: contentItems.length + i,
+        });
+
+        setContentItems(prev => [...prev, contentRecord]);
+      }
+      setSuccess(`${files.length} file${files.length > 1 ? 's' : ''} uploaded successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(`Upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+      setUploadProgress('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  async function handleDeleteContent(contentId) {
+    if (!window.confirm('Remove this media file from the lesson?')) return;
+    try {
+      await deleteLessonContent(contentId);
+      setContentItems(prev => prev.filter(c => c.id !== contentId));
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -180,7 +271,7 @@ export default function AcademyLessonEdit() {
           <Save size={15} /> {saving ? 'Saving...' : 'Save All'}
         </button>
       </div>
-      <p style={subStyle}>Edit lesson content, configure quizzes, and use AI tools.</p>
+      <p style={subStyle}>Edit lesson content, upload media, configure quizzes, and use AI tools.</p>
 
       {error && (
         <div style={{ ...cardStyle, color: '#ef4444', fontSize: 13, padding: '12px 16px', marginBottom: 16 }}>
@@ -206,6 +297,158 @@ export default function AcademyLessonEdit() {
 
             <label style={labelStyle}>Lesson Content</label>
             <textarea style={{ ...inputStyle, minHeight: 200, resize: 'vertical', fontFamily: 'inherit' }} placeholder="Write or paste your lesson content here..." value={form.content} onChange={(e) => updateField('content', e.target.value)} />
+          </div>
+
+          {/* ── Media Upload ── */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Upload size={16} color="#4a6cf7" />
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>
+                  Lesson Media ({contentItems.length})
+                </span>
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{ ...btnOutline, opacity: uploading ? 0.6 : 1 }}
+              >
+                <Plus size={14} /> {uploading ? uploadProgress : 'Upload Files'}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="video/*,audio/*,image/*,.pdf"
+                style={{ display: 'none' }}
+                onChange={handleFileUpload}
+              />
+            </div>
+
+            {contentItems.length === 0 ? (
+              <div
+                style={{
+                  padding: 32, textAlign: 'center', color: '#7a7f9a', fontSize: 13,
+                  background: '#f5f7fa', borderRadius: 10, border: '2px dashed #e5e7ef',
+                  cursor: 'pointer', transition: 'border-color 0.2s',
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#4a6cf7'; }}
+                onDragLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7ef'; }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.style.borderColor = '#e5e7ef';
+                  const dt = e.dataTransfer;
+                  if (dt.files.length > 0) {
+                    const input = fileInputRef.current;
+                    // Create synthetic event
+                    handleFileUpload({ target: { files: dt.files } });
+                  }
+                }}
+              >
+                <Upload size={28} color="#7a7f9a" style={{ marginBottom: 8 }} />
+                <div>Drop files here or click to upload</div>
+                <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+                  Videos, images, PDFs, audio files
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {contentItems
+                  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                  .map((item) => {
+                    const Icon = CONTENT_TYPE_ICONS[item.content_type] || File;
+                    const isVideo = item.content_type === 'video';
+                    const isImage = item.content_type === 'image';
+
+                    return (
+                      <div key={item.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '10px 14px', background: '#f5f7fa', borderRadius: 10,
+                      }}>
+                        {/* Thumbnail / icon */}
+                        {isImage && item.storage_url ? (
+                          <img src={item.storage_url} alt="" style={{
+                            width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0,
+                          }} />
+                        ) : isVideo && item.storage_url ? (
+                          <div style={{
+                            width: 48, height: 48, borderRadius: 8, background: '#1a1a2e',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          }}>
+                            <Film size={20} color="#4a6cf7" />
+                          </div>
+                        ) : (
+                          <div style={{
+                            width: 48, height: 48, borderRadius: 8, background: '#e5e7ef',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          }}>
+                            <Icon size={20} color="#7a7f9a" />
+                          </div>
+                        )}
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: 13, fontWeight: 500, color: '#1a1a2e',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {item.file_name || 'Unnamed file'}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#7a7f9a', display: 'flex', gap: 12, marginTop: 2 }}>
+                            <span style={{
+                              padding: '1px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                              background: '#4a6cf718', color: '#4a6cf7', textTransform: 'uppercase',
+                            }}>
+                              {item.content_type}
+                            </span>
+                            {item.file_size_bytes && (
+                              <span>{formatFileSize(item.file_size_bytes)}</span>
+                            )}
+                            {item.duration_seconds && (
+                              <span>{Math.floor(item.duration_seconds / 60)}:{String(item.duration_seconds % 60).padStart(2, '0')}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Preview link */}
+                        {item.storage_url && (
+                          <a
+                            href={item.storage_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: 12, color: '#4a6cf7', textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Preview
+                          </a>
+                        )}
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => handleDeleteContent(item.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }}
+                        >
+                          <Trash2 size={14} color="#ef4444" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                {/* Upload more button at bottom */}
+                <div
+                  style={{
+                    padding: 14, textAlign: 'center', color: '#7a7f9a', fontSize: 12,
+                    background: '#f5f7fa', borderRadius: 10, border: '2px dashed #e5e7ef',
+                    cursor: 'pointer', transition: 'border-color 0.2s',
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Plus size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                  Add more files
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Homework */}
@@ -260,10 +503,26 @@ export default function AcademyLessonEdit() {
               </div>
             </div>
             <label style={labelStyle}>Status</label>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.status} onChange={(e) => updateField('status', e.target.value)}>
+            <select style={{ ...inputStyle, cursor: 'pointer', marginBottom: 14 }} value={form.status} onChange={(e) => updateField('status', e.target.value)}>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
             </select>
+
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 14px', background: '#f5f7fa', borderRadius: 10,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e' }}>Free Preview</span>
+              <button
+                onClick={() => updateField('is_free_preview', !form.is_free_preview)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 20 }}
+              >
+                {form.is_free_preview
+                  ? <span style={{ color: '#22c55e', fontWeight: 700 }}>ON</span>
+                  : <span style={{ color: '#7a7f9a' }}>OFF</span>
+                }
+              </button>
+            </div>
           </div>
 
           {/* Quiz Builder */}
