@@ -30,6 +30,30 @@ async function requireAuth(req) {
   return res.ok;
 }
 
+async function requireStudentAuth(req) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return null;
+  const token = auth.slice(7);
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      'apikey': ANON_KEY || SERVICE_KEY,
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) return null;
+  const user = await res.json();
+  // Fetch academy profile for role
+  const profiles = await supaFetch(`academy_profiles?user_id=eq.${user.id}&select=role`);
+  const role = profiles?.[0]?.role || 'student';
+  return { id: user.id, email: user.email, role };
+}
+
+async function requireAdminAuth(req) {
+  const user = await requireStudentAuth(req);
+  if (!user || user.role !== 'admin') return null;
+  return user;
+}
+
 async function supaFetch(path, options = {}) {
   const url = `${SUPABASE_URL}/rest/v1/${path}`;
   const mergedHeaders = { ...headers, ...(options.headers || {}) };
@@ -42,4 +66,4 @@ async function supaFetch(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-module.exports = { SUPABASE_URL, SERVICE_KEY, headers, setCors, requireAuth, supaFetch };
+module.exports = { SUPABASE_URL, SERVICE_KEY, ANON_KEY, headers, setCors, requireAuth, requireStudentAuth, requireAdminAuth, supaFetch };

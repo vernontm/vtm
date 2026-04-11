@@ -4,6 +4,7 @@ import {
   Users, Briefcase, Star, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
   Eye, EyeOff, FileText, CreditCard, FolderOpen, Zap, Film,
+  GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -32,6 +33,17 @@ const navTools = [
   { to: '/quick-notes',    icon: StickyNote,  label: 'Quick Notes' },
   { to: '/notifications',  icon: Bell,        label: 'Notifications' },
   { to: '/settings',       icon: Settings,    label: 'Settings' },
+];
+
+const navAcademy = [
+  { to: '/academy',              icon: GraduationCap,  label: 'Academy' },
+  { to: '/academy/courses',      icon: BookOpen,       label: 'Courses' },
+  { to: '/academy/students',     icon: Users,          label: 'Students' },
+  { to: '/academy/homework',     icon: FileCheck,      label: 'Homework' },
+  { to: '/academy/messages',     icon: MessageSquare,  label: 'Messages' },
+  { to: '/academy/community',    icon: Users,          label: 'Community' },
+  { to: '/academy/recommendations', icon: Link2,       label: 'Recommendations' },
+  { to: '/academy/settings',     icon: Settings2,      label: 'Academy Settings' },
 ];
 
 export default function Sidebar() {
@@ -155,6 +167,21 @@ export default function Sidebar() {
                   {notifCount}
                 </span>
               )}
+            </NavLink>
+          ))}
+
+          <div style={{ padding: '12px 16px 8px', fontSize: 10, fontWeight: 600, color: '#505068', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>
+            Academy
+          </div>
+          {navAcademy.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/academy'}
+              className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}
+            >
+              <Icon size={15} />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>

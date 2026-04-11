@@ -307,3 +307,72 @@ export const generateCaptions = (data) => request('/content-ai?action=generate-c
 export const autoScheduleContent = (data) => request('/content-ai?action=auto-schedule', { method: 'POST', body: JSON.stringify(data) });
 export const processBrandBible = (data) => request('/process-brand-bible', { method: 'POST', body: JSON.stringify(data) });
 export const generateContent = (data) => request('/content-ai?action=generate-content', { method: 'POST', body: JSON.stringify(data) });
+
+// ══════════════════════════════════════════════════════════════
+// ══ ACADEMY ADMIN API ══
+// ══════════════════════════════════════════════════════════════
+
+const ACADEMY = '/api/academy';
+
+async function academyRequest(path, options = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const res = await fetch(`${ACADEMY}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || err.detail || `${res.status}: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+// Dashboard
+export const getAcademyStats = () => academyRequest('/admin-dashboard');
+
+// Courses
+export const getAcademyCourses = () => academyRequest('/admin-courses');
+export const createAcademyCourse = (data) => academyRequest('/admin-courses', { method: 'POST', body: JSON.stringify(data) });
+export const updateAcademyCourse = (id, data) => academyRequest(`/admin-courses?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteAcademyCourse = (id) => academyRequest(`/admin-courses?id=${id}`, { method: 'DELETE' });
+
+// Lessons
+export const getAcademyLessons = (courseId) => academyRequest(`/admin-lessons?course_id=${courseId}`);
+export const createAcademyLesson = (data) => academyRequest('/admin-lessons', { method: 'POST', body: JSON.stringify(data) });
+export const updateAcademyLesson = (id, data) => academyRequest(`/admin-lessons?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteAcademyLesson = (id) => academyRequest(`/admin-lessons?id=${id}`, { method: 'DELETE' });
+
+// Students
+export const getAcademyStudents = () => academyRequest('/admin-students');
+export const getAcademyStudent = (id) => academyRequest(`/admin-students?id=${id}`);
+
+// Homework
+export const getAcademyHomework = (status) => academyRequest(`/admin-homework${status ? '?status=' + status : ''}`);
+export const updateAcademyHomework = (id, data) => academyRequest(`/admin-homework?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+
+// Messages
+export const getAcademyThreads = () => academyRequest('/admin-messages');
+export const getAcademyThread = (userId) => academyRequest(`/admin-messages?user_id=${userId}`);
+export const sendAcademyMessage = (data) => academyRequest('/admin-messages', { method: 'POST', body: JSON.stringify(data) });
+
+// Community
+export const getAcademyCommunityPosts = () => academyRequest('/admin-community');
+export const deleteAcademyPost = (id) => academyRequest(`/admin-community?id=${id}`, { method: 'DELETE' });
+export const pinAcademyPost = (id) => academyRequest(`/admin-community?id=${id}&action=pin`, { method: 'PUT' });
+
+// Recommendations
+export const getAcademyRecommendations = () => academyRequest('/admin-recommendations');
+export const createAcademyRecommendation = (data) => academyRequest('/admin-recommendations', { method: 'POST', body: JSON.stringify(data) });
+export const updateAcademyRecommendation = (id, data) => academyRequest(`/admin-recommendations?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteAcademyRecommendation = (id) => academyRequest(`/admin-recommendations?id=${id}`, { method: 'DELETE' });
+
+// Settings
+export const getAcademySettings = () => academyRequest('/admin-settings');
+export const updateAcademySetting = (key, value) => academyRequest(`/admin-settings?key=${key}`, { method: 'PUT', body: JSON.stringify({ value }) });
+
+// AI Generation
+export const generateAcademyContent = (data) => academyRequest('/ai-generate', { method: 'POST', body: JSON.stringify(data) });

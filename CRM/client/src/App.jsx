@@ -24,6 +24,18 @@ import Portfolio from './pages/Portfolio';
 import Outreach from './pages/Outreach';
 import ContentScheduler from './pages/ContentScheduler';
 
+// Academy Admin Pages
+import AcademyDashboard from './pages/AcademyDashboard';
+import AcademyCourses from './pages/AcademyCourses';
+import AcademyCourseEdit from './pages/AcademyCourseEdit';
+import AcademyLessonEdit from './pages/AcademyLessonEdit';
+import AcademyStudents from './pages/AcademyStudents';
+import AcademyHomework from './pages/AcademyHomework';
+import AcademyMessages from './pages/AcademyMessages';
+import AcademyCommunity from './pages/AcademyCommunity';
+import AcademyRecommendations from './pages/AcademyRecommendations';
+import AcademySettings from './pages/AcademySettings';
+
 export const MobileContext = createContext({ sidebarOpen: false, setSidebarOpen: () => {} });
 export const useMobile = () => useContext(MobileContext);
 
@@ -68,6 +80,17 @@ function AppLayout() {
             <Route path="/outreach" element={<Outreach />} />
             <Route path="/content-scheduler" element={<ContentScheduler />} />
             <Route path="/settings" element={<Settings />} />
+            {/* Academy Admin */}
+            <Route path="/academy" element={<AcademyDashboard />} />
+            <Route path="/academy/courses" element={<AcademyCourses />} />
+            <Route path="/academy/courses/:id/edit" element={<AcademyCourseEdit />} />
+            <Route path="/academy/lessons/:id/edit" element={<AcademyLessonEdit />} />
+            <Route path="/academy/students" element={<AcademyStudents />} />
+            <Route path="/academy/homework" element={<AcademyHomework />} />
+            <Route path="/academy/messages" element={<AcademyMessages />} />
+            <Route path="/academy/community" element={<AcademyCommunity />} />
+            <Route path="/academy/recommendations" element={<AcademyRecommendations />} />
+            <Route path="/academy/settings" element={<AcademySettings />} />
           </Routes>
         </main>
       </div>

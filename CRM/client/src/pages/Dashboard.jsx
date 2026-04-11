@@ -7,7 +7,7 @@ import {
 import { Link } from 'react-router-dom';
 import {
   getDashboardStats, getUpcomingMeetings, getEmailQueue,
-  getTodos, getLeads, getProjects,
+  getTodos, getLeads, getProjects, getAcademyStats,
 } from '../api';
 
 function timeAgo(iso) {
@@ -84,17 +84,19 @@ export default function Dashboard() {
   const [todos, setTodos] = useState([]);
   const [recentLeads, setRecentLeads] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [academyStats, setAcademyStats] = useState(null);
 
   async function load() {
     setLoading(true);
     try {
-      const [statsData, meetingsData, emailData, todoData, leadsData, projectsData] = await Promise.allSettled([
+      const [statsData, meetingsData, emailData, todoData, leadsData, projectsData, academyData] = await Promise.allSettled([
         getDashboardStats(),
         getUpcomingMeetings(),
         getEmailQueue(),
         getTodos(),
         getLeads(),
         getProjects(),
+        getAcademyStats(),
       ]);
       setStats(statsData.status === 'fulfilled' ? statsData.value : null);
       setMeetings(meetingsData.status === 'fulfilled' ? (meetingsData.value || []).slice(0, 5) : []);
@@ -106,6 +108,7 @@ export default function Dashboard() {
       setRecentLeads(allLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6));
       const allProjects = projectsData.status === 'fulfilled' ? (projectsData.value || []) : [];
       setProjects(allProjects.filter(p => p.status === 'Active' || p.status === 'In Progress').slice(0, 5));
+      setAcademyStats(academyData.status === 'fulfilled' ? academyData.value : null);
     } catch (e) {
       console.error('Dashboard load error:', e);
     } finally {
@@ -422,6 +425,31 @@ export default function Dashboard() {
           </div>
         )}
       </Card>
+
+      {/* ── Academy Overview ── */}
+      {academyStats && (
+        <Card style={{ marginTop: 14 }}>
+          <CardHeader icon={Users} title="Academy" color="#E8650A" linkTo="/academy" linkLabel="Manage" />
+          <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Students</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e' }}>{academyStats.total_students || 0}</div>
+            </div>
+            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Subscribers</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#22c55e' }}>{academyStats.active_subscribers || 0}</div>
+            </div>
+            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>MRR</div>
+              <div className="private-value" style={{ fontSize: 20, fontWeight: 800, color: '#E8650A' }}>${(academyStats.mrr || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            </div>
+            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pending HW</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: academyStats.pending_homework > 0 ? '#ef4444' : '#1a1a2e' }}>{academyStats.pending_homework || 0}</div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>

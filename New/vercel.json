@@ -1,13 +1,19 @@
 {
   "functions": {
     "api/crm/content-ai.js": { "maxDuration": 60 },
-    "api/crm/process-brand-bible.js": { "maxDuration": 60 }
+    "api/crm/process-brand-bible.js": { "maxDuration": 60 },
+    "api/academy/ai-generate.js": { "maxDuration": 60 },
+    "api/academy/billing.js": { "maxDuration": 30 },
+    "api/academy/stripe-webhook.js": { "maxDuration": 30 }
   },
   "redirects": [
     { "source": "/book-call", "destination": "https://calendar.app.google/LayD3nk48Jy3uH95A", "permanent": false }
   ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/academy/assets/:path*", "destination": "/academy/assets/:path*" },
+    { "source": "/academy/:path*", "destination": "/academy/index.html" },
+    { "source": "/academy", "destination": "/academy/index.html" },
     { "source": "/admin/assets/:path*", "destination": "/admin/assets/:path*" },
     { "source": "/admin/:path*", "destination": "/admin/index.html" },
     { "source": "/admin", "destination": "/admin/index.html" },
