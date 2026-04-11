@@ -4,7 +4,7 @@ import {
   getContentClients, getContentClient, createContentClient, updateContentClient, deleteContentClient,
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
-  parseScripts, generateCaptions, autoScheduleContent, processBrandBible,
+  parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -40,6 +40,12 @@ function StatusPill({ status, onClick }) {
   );
 }
 
+const SIDEBAR_SECTIONS = [
+  { key: 'content', label: 'Content', Icon: Film },
+  { key: 'generator', label: 'Generator', Icon: Sparkles },
+  { key: 'exported', label: 'Exported', Icon: Download },
+];
+
 export default function ContentScheduler() {
   // Client state
   const [clients, setClients] = useState([]);
@@ -70,6 +76,15 @@ export default function ContentScheduler() {
   const [processingBible, setProcessingBible] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'calendar'
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [activeSection, setActiveSection] = useState('content');
+
+  // Generator state
+  const [genMessages, setGenMessages] = useState([]);
+  const [genInput, setGenInput] = useState('');
+  const [genLoading, setGenLoading] = useState(false);
+  const [genResults, setGenResults] = useState([]);
+  const genEndRef = useRef(null);
+  const genChatRef = useRef(null);
   const brandBibleUploadRef = useRef(null);
 
   // Schedule modal state
@@ -285,6 +300,43 @@ export default function ContentScheduler() {
     setTimeout(() => loadClientData(client.id), 500);
   }
 
+  // ── Export approved generated content to CSV ──
+  function exportApprovedCSV() {
+    const approved = genResults.filter(r => r.approved && !r.rejected);
+    if (!approved.length) { alert('No approved posts to export'); return; }
+    if (!client) return;
+
+    const platformIds = [
+      client.instagram_id, client.tiktok_id, client.facebook_id,
+      client.threads_id, client.youtube_id, client.linkedin_id,
+    ].filter(Boolean);
+
+    const rows = [];
+    for (const post of approved) {
+      const description = [post.caption, post.hashtags].filter(Boolean).join(' ');
+      const firstComment = post.first_comment || '';
+
+      for (const accountId of platformIds) {
+        rows.push([description, '', '', accountId, firstComment, '']
+          .map(field => {
+            const s = String(field);
+            if (s.includes(',') || s.includes('"') || s.includes('\n'))
+              return `"${s.replace(/"/g, '""')}"`;
+            return s;
+          }).join(','));
+      }
+    }
+
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${client.business_name}_generated_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // ── Chat/Command handler ──
   async function handleCommand() {
     const cmd = chatInput.trim().toLowerCase();
@@ -317,7 +369,7 @@ export default function ContentScheduler() {
       if (selectedScripts.size === 0) { selectAll(); }
       setTimeout(() => exportCSV(), 100);
     } else {
-      // Treat as a pasted script — create a new row with it
+      // Treat as a pasted script -- create a new row with it
       const rawText = chatInput.trim();
       try {
         await createContentScript([{
@@ -330,6 +382,51 @@ export default function ContentScheduler() {
         await loadClientData(client.id);
       } catch (err) { alert('Failed to add script: ' + err.message); }
     }
+  }
+
+  // ── Content Generator handler ──
+  async function handleGenerate() {
+    if (!genInput.trim() || !client) return;
+    const userMsg = genInput.trim();
+    setGenInput('');
+    setGenMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setGenLoading(true);
+    try {
+      const result = await generateContent({ client_id: client.id, prompt: userMsg });
+      const posts = result.posts || [];
+      setGenMessages(prev => [...prev, { role: 'assistant', content: `Generated ${posts.length} post${posts.length !== 1 ? 's' : ''}` }]);
+      setGenResults(prev => [...prev, ...posts.map(p => ({ ...p, approved: false, rejected: false }))]);
+    } catch (e) {
+      setGenMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message }]);
+    }
+    setGenLoading(false);
+  }
+
+  // ── Approve generated post (save to content scripts) ──
+  async function approveGenPost(index) {
+    const post = genResults[index];
+    if (!post || !client) return;
+    try {
+      await createContentScript([{
+        client_id: client.id,
+        title: post.title || 'Generated Post',
+        caption: post.caption || '',
+        hashtags: post.hashtags || '',
+        first_comment: post.first_comment || '',
+        full_script: post.full_script || post.caption || '',
+        status: 'caption_ready',
+        sort_order: scripts.length + 1,
+      }]);
+      setGenResults(prev => prev.map((r, i) => i === index ? { ...r, approved: true, rejected: false } : r));
+      await loadClientData(client.id);
+    } catch (e) {
+      alert('Failed to save post: ' + e.message);
+    }
+  }
+
+  // ── Reject generated post ──
+  function rejectGenPost(index) {
+    setGenResults(prev => prev.map((r, i) => i === index ? { ...r, rejected: true, approved: false } : r));
   }
 
   // ── Script file upload ──
@@ -491,9 +588,17 @@ export default function ContentScheduler() {
     setSavingClient(false);
   }
 
+  // ── Scroll gen chat to bottom ──
+  useEffect(() => {
+    if (genChatRef.current) {
+      genChatRef.current.scrollTop = genChatRef.current.scrollHeight;
+    }
+  }, [genMessages, genLoading]);
+
+  // ── Derived data ──
+  const exportedScripts = scripts.filter(s => s.status === 'exported');
+
   // ── Styles ──
-  const pageStyle = { padding: '24px 28px', maxWidth: 1400, margin: '0 auto' };
-  const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
   const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 10,
     border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 14,
@@ -518,521 +623,871 @@ export default function ContentScheduler() {
     background: '#fff', borderRadius: 16, padding: 28, width: '90%', maxWidth: 520,
     maxHeight: '85vh', overflow: 'auto',
   };
+  const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
   const thStyle = { padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' };
 
   // ── Render ──
   return (
-    <div className="cs-page" style={pageStyle}>
-      {/* Header */}
-      <div className="cs-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Content Scheduler</h1>
-        <div className="cs-header-btns" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button style={btnPrimary} onClick={openAddClient}><Plus size={14} /> Add Client</button>
+    <div className="cs-page" style={{ height: '100%', display: 'flex' }}>
+      {/* ══════ LEFT SIDEBAR ══════ */}
+      <div className="cs-sidebar" style={{
+        width: 200, background: '#fff', borderRight: '1px solid #e5e7ef',
+        display: 'flex', flexDirection: 'column', flexShrink: 0,
+      }}>
+        {/* Sidebar header */}
+        <div style={{ padding: '18px 16px 10px', fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>
+          Content Scheduler
+        </div>
+
+        {/* Client list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px' }}>
+          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Clients
+          </div>
+          {clients.length === 0 && (
+            <div style={{ padding: '8px 16px', fontSize: 12, color: '#ccc' }}>No clients yet</div>
+          )}
+          {clients.map(c => (
+            <div
+              key={c.id}
+              onClick={() => setSelectedClientId(c.id)}
+              style={{
+                padding: '8px 16px',
+                fontSize: 13,
+                cursor: 'pointer',
+                color: selectedClientId === c.id ? '#4a6cf7' : '#1a1a2e',
+                background: selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent',
+                borderLeft: selectedClientId === c.id ? '3px solid #4a6cf7' : '3px solid transparent',
+                fontWeight: selectedClientId === c.id ? 600 : 400,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                transition: 'all 0.15s',
+              }}
+            >
+              {c.business_name}
+            </div>
+          ))}
+
+          {/* Section links */}
+          <div style={{ padding: '14px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5, borderTop: '1px solid #f0f0f5', marginTop: 8 }}>
+            Sections
+          </div>
+          {SIDEBAR_SECTIONS.map(({ key, label, Icon }) => (
+            <div
+              key={key}
+              onClick={() => setActiveSection(key)}
+              style={{
+                padding: '8px 16px',
+                fontSize: 13,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8,
+                color: activeSection === key ? '#4a6cf7' : '#1a1a2e',
+                background: activeSection === key ? 'rgba(74,108,247,0.06)' : 'transparent',
+                borderLeft: activeSection === key ? '3px solid #4a6cf7' : '3px solid transparent',
+                fontWeight: activeSection === key ? 600 : 400,
+                transition: 'all 0.15s',
+              }}
+            >
+              <Icon size={14} />
+              {label}
+            </div>
+          ))}
+        </div>
+
+        {/* Sidebar bottom buttons */}
+        <div style={{ padding: '8px 12px 14px', borderTop: '1px solid #f0f0f5', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button onClick={openAddClient} style={{
+            ...btnGhost, width: '100%', justifyContent: 'center', fontSize: 12, padding: '7px 10px',
+          }}>
+            <Plus size={13} /> Add Client
+          </button>
           {client && (
-            <>
-              <button style={btnGhost} onClick={openEditClient}><Edit3 size={14} /> Edit Client</button>
-              <button style={btnGhost} onClick={() => setShowScheduleModal(true)}><Clock size={14} /> Schedule Settings</button>
-            </>
+            <button onClick={() => setShowScheduleModal(true)} style={{
+              ...btnGhost, width: '100%', justifyContent: 'center', fontSize: 12, padding: '7px 10px',
+            }}>
+              <Settings size={13} /> Schedule Settings
+            </button>
           )}
         </div>
       </div>
 
-      {/* Client Selector */}
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Building2 size={18} style={{ color: '#4a6cf7' }} />
-          <select
-            value={selectedClientId}
-            onChange={e => setSelectedClientId(e.target.value)}
-            style={{ ...inputStyle, width: 300, cursor: 'pointer' }}
-          >
-            <option value="">Select a client...</option>
-            {clients.map(c => (
-              <option key={c.id} value={c.id}>{c.business_name}</option>
-            ))}
-          </select>
-          {client && (
-            <button style={btnGhost} onClick={() => setShowProfile(!showProfile)}>
-              {showProfile ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              {showProfile ? 'Hide' : 'Profile'}
-            </button>
-          )}
-        </div>
-
-        {/* Client profile summary */}
-        {client && showProfile && (
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f0f0f5' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13, marginBottom: 10 }}>
-              <div><span style={{ color: '#8e8ea0' }}>Industry:</span> {client.industry || '-'}</div>
-              <div><span style={{ color: '#8e8ea0' }}>Tone:</span> {client.preferred_tone || '-'}</div>
-              <div><span style={{ color: '#8e8ea0' }}>Website:</span> {client.website_url || '-'}</div>
-            </div>
-
-            {/* Platform handles & IDs */}
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Social Accounts</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-              {[
-                { label: 'IG', handle: client.instagram_handle, id: client.instagram_id, color: '#E1306C' },
-                { label: 'TT', handle: client.tiktok_handle, id: client.tiktok_id, color: '#000' },
-                { label: 'FB', handle: client.facebook_handle, id: client.facebook_id, color: '#1877F2' },
-                { label: 'Threads', handle: client.threads_handle, id: client.threads_id, color: '#000' },
-                { label: 'YT', handle: client.youtube_handle, id: client.youtube_id, color: '#FF0000' },
-                { label: 'LI', handle: client.linkedin_handle, id: client.linkedin_id, color: '#0A66C2' },
-              ].filter(p => p.handle || p.id).map((p, i) => (
-                <span key={i} style={{
-                  padding: '4px 10px', borderRadius: 10, fontSize: 11, fontWeight: 600,
-                  background: '#f0f0f5', color: p.color, display: 'flex', alignItems: 'center', gap: 4,
-                }}>
-                  {p.label}: {p.handle || '-'}
-                  {p.id && <span style={{ color: '#8e8ea0', fontWeight: 400 }}>(ID: {p.id})</span>}
-                </span>
-              ))}
-              {![client.instagram_handle, client.tiktok_handle, client.facebook_handle, client.threads_handle].some(Boolean) && (
-                <span style={{ fontSize: 12, color: '#ccc' }}>No accounts added yet</span>
-              )}
-            </div>
-
-            {client.brand_bible && (
-              <div style={{ padding: 12, background: '#f8f9fc', borderRadius: 10, fontSize: 12, color: '#555', maxHeight: 100, overflow: 'auto' }}>
-                <strong style={{ color: '#1a1a2e' }}>Brand Bible:</strong> {client.brand_bible.slice(0, 300)}{client.brand_bible.length > 300 ? '...' : ''}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Command Input */}
-      {client && (
-        <div style={{ ...cardStyle, padding: 0 }}>
-          <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input type="file" ref={scriptUploadRef} accept=".txt,.pdf,.docx" onChange={handleScriptUpload} style={{ display: 'none' }} />
-            <button onClick={() => scriptUploadRef.current?.click()} style={{ ...btnGhost, flexShrink: 0 }}>
-              <Upload size={14} /> Upload Scripts
-            </button>
-            <textarea
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommand(); } }}
-              placeholder="Paste a script to add it, or type: generate captions, auto schedule, export..."
-              rows={1}
-              style={{ ...inputStyle, border: 'none', background: 'transparent', resize: 'none', minHeight: 20, maxHeight: 120, overflow: 'auto', lineHeight: '20px' }}
-              onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
-            />
-            <button onClick={toggleMic} style={{
-              width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7ef',
-              background: isListening ? 'rgba(255,60,60,0.1)' : '#f8f9fc',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: isListening ? '#ef4444' : '#8e8ea0', flexShrink: 0,
-            }}>
-              <Mic size={16} />
-            </button>
-            <button onClick={handleCommand} disabled={!chatInput.trim()} style={{
-              width: 36, height: 36, borderRadius: 10, border: 'none',
-              background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: chatInput.trim() ? 1 : 0.4, flexShrink: 0,
-            }}>
-              <Send size={15} style={{ color: '#fff' }} />
-            </button>
-          </div>
-          {actionLoading && (
-            <div style={{ padding: '8px 20px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#4a6cf7' }}>
-              <Loader size={14} className="spin" />
-              {actionLoading === 'parsing' && 'Parsing scripts...'}
-              {actionLoading === 'captions' && 'Generating captions...'}
-              {actionLoading === 'schedule' && 'Auto-scheduling...'}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Toolbar */}
-      {client && (
-        <div className="cs-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div className="cs-toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 14px' }} onClick={async () => {
-              try {
-                await createContentScript([{ client_id: client.id, title: 'New Script', full_script: '', status: 'draft', sort_order: scripts.length + 1 }]);
-                await loadClientData(client.id);
-              } catch (err) { console.error('Add row failed:', err); alert('Failed to add row: ' + err.message); }
-            }}>
-              <Plus size={13} /> Add Row
-            </button>
-            {scripts.length > 0 && (
-              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                <input type="checkbox" checked={scripts.length > 0 && selectedScripts.size === scripts.length}
-                  onChange={selectAll} style={{ accentColor: '#4a6cf7' }} />
-                Select All ({scripts.length})
-              </label>
-            )}
-            {selectedScripts.size > 0 && (
+      {/* ══════ RIGHT MAIN AREA ══════ */}
+      <div className="cs-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Top bar */}
+        <div className="cs-topbar" style={{
+          padding: '12px 20px', borderBottom: '1px solid #e5e7ef', background: '#fff',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
+          flexWrap: 'wrap', gap: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a1a2e' }}>
+              {client ? client.business_name : 'Select a Client'}
+            </h2>
+            {client && (
               <>
-                <span style={{ fontSize: 12, color: '#4a6cf7', fontWeight: 600 }}>{selectedScripts.size} selected</span>
-                <button style={{ ...btnGhost, fontSize: 11, color: '#ef4444' }} onClick={deleteSelected}>
-                  <Trash2 size={12} /> Delete
+                <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }} onClick={openEditClient}>
+                  <Edit3 size={12} /> Edit
+                </button>
+                <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }} onClick={() => setShowProfile(!showProfile)}>
+                  {showProfile ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {showProfile ? 'Hide' : 'Profile'}
                 </button>
               </>
             )}
           </div>
-          <div className="cs-toolbar-right" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
-              setActionLoading('captions');
-              const ids = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
-              await generateCaptions({ client_id: client.id, script_ids: ids });
-              await loadClientData(client.id);
-              setActionLoading('');
-            }}>
-              <Sparkles size={13} /> Generate Captions
-            </button>}
-            {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
-              setActionLoading('schedule');
-              try {
-                // Auto-save default config if none exists
-                if (!scheduleConfig) {
-                  await saveScheduleConfig({ client_id: client.id, time_slots: schedTimeslots, timezone: schedTimezone });
-                }
-                await autoScheduleContent({ client_id: client.id });
-                await loadClientData(client.id);
-              } catch (e) { alert('Schedule failed: ' + e.message); }
-              setActionLoading('');
-            }}>
-              <Calendar size={13} /> Auto Schedule
-            </button>}
-            {scripts.length > 0 && <button style={{ ...btnPrimary, opacity: selectedScripts.size > 0 ? 1 : 0.4 }}
-              onClick={exportCSV} disabled={selectedScripts.size === 0}>
-              <Download size={14} /> Export CSV
-            </button>}
-            <button style={btnGhost} onClick={() => loadClientData(client.id)}>
-              <RefreshCw size={12} />
-            </button>
-            {/* View toggle */}
-            <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
-              <button onClick={() => setViewMode('table')} style={{
-                padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: viewMode === 'table' ? '#4a6cf7' : '#fff',
-                color: viewMode === 'table' ? '#fff' : '#8e8ea0',
-              }}>Table</button>
-              <button onClick={() => setViewMode('calendar')} style={{
-                padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: viewMode === 'calendar' ? '#4a6cf7' : '#fff',
-                color: viewMode === 'calendar' ? '#fff' : '#8e8ea0',
-              }}>Calendar</button>
-            </div>
+          <div className="cs-topbar-right" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {client && activeSection === 'content' && (
+              <>
+                {/* View toggle */}
+                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
+                  <button onClick={() => setViewMode('table')} style={{
+                    padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                    background: viewMode === 'table' ? '#4a6cf7' : '#fff',
+                    color: viewMode === 'table' ? '#fff' : '#8e8ea0',
+                  }}>Table</button>
+                  <button onClick={() => setViewMode('calendar')} style={{
+                    padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                    background: viewMode === 'calendar' ? '#4a6cf7' : '#fff',
+                    color: viewMode === 'calendar' ? '#fff' : '#8e8ea0',
+                  }}>Calendar</button>
+                </div>
+                <button style={btnGhost} onClick={() => loadClientData(client.id)}>
+                  <RefreshCw size={12} />
+                </button>
+              </>
+            )}
+            {client && activeSection === 'exported' && (
+              <button style={btnGhost} onClick={() => loadClientData(client.id)}>
+                <RefreshCw size={12} />
+              </button>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Calendar View */}
-      {client && viewMode === 'calendar' && (() => {
-        const year = calendarMonth.getFullYear();
-        const month = calendarMonth.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-        const tz = schedTimezone || 'America/Chicago';
+        {/* Scrollable content area */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+          {/* Client profile (collapsible, starts minimized) */}
+          {client && showProfile && (
+            <div style={{ ...cardStyle }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13, marginBottom: 10 }} className="cs-profile-grid">
+                <div><span style={{ color: '#8e8ea0' }}>Industry:</span> {client.industry || '-'}</div>
+                <div><span style={{ color: '#8e8ea0' }}>Tone:</span> {client.preferred_tone || '-'}</div>
+                <div><span style={{ color: '#8e8ea0' }}>Website:</span> {client.website_url || '-'}</div>
+              </div>
 
-        // Group scripts by date (in client timezone)
-        const byDate = {};
-        scripts.forEach(s => {
-          if (!s.scheduled_datetime) return;
-          const d = new Date(s.scheduled_datetime);
-          const localDate = d.toLocaleDateString('en-CA', { timeZone: tz });
-          if (!byDate[localDate]) byDate[localDate] = [];
-          byDate[localDate].push(s);
-        });
+              {/* Platform handles & IDs */}
+              <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Social Accounts</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                {[
+                  { label: 'IG', handle: client.instagram_handle, id: client.instagram_id, color: '#E1306C' },
+                  { label: 'TT', handle: client.tiktok_handle, id: client.tiktok_id, color: '#000' },
+                  { label: 'FB', handle: client.facebook_handle, id: client.facebook_id, color: '#1877F2' },
+                  { label: 'Threads', handle: client.threads_handle, id: client.threads_id, color: '#000' },
+                  { label: 'YT', handle: client.youtube_handle, id: client.youtube_id, color: '#FF0000' },
+                  { label: 'LI', handle: client.linkedin_handle, id: client.linkedin_id, color: '#0A66C2' },
+                ].filter(p => p.handle || p.id).map((p, i) => (
+                  <span key={i} style={{
+                    padding: '4px 10px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                    background: '#f0f0f5', color: p.color, display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    {p.label}: {p.handle || '-'}
+                    {p.id && <span style={{ color: '#8e8ea0', fontWeight: 400 }}>(ID: {p.id})</span>}
+                  </span>
+                ))}
+                {![client.instagram_handle, client.tiktok_handle, client.facebook_handle, client.threads_handle].some(Boolean) && (
+                  <span style={{ fontSize: 12, color: '#ccc' }}>No accounts added yet</span>
+                )}
+              </div>
 
-        // Build calendar grid cells
-        const cells = [];
-        for (let i = 0; i < firstDay; i++) cells.push(null);
-        for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-        while (cells.length % 7 !== 0) cells.push(null);
-
-        const monthName = new Date(year, month).toLocaleString('en-US', { month: 'long', year: 'numeric' });
-
-        return (
-          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
-            {/* Calendar header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
-              <button onClick={() => setCalendarMonth(new Date(year, month - 1))} style={btnGhost}><ChevronLeft size={16} /></button>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{monthName}</h3>
-              <button onClick={() => setCalendarMonth(new Date(year, month + 1))} style={btnGhost}><ChevronRight size={16} /></button>
+              {client.brand_bible && (
+                <div style={{ padding: 12, background: '#f8f9fc', borderRadius: 10, fontSize: 12, color: '#555', maxHeight: 100, overflow: 'auto' }}>
+                  <strong style={{ color: '#1a1a2e' }}>Brand Bible:</strong> {client.brand_bible.slice(0, 300)}{client.brand_bible.length > 300 ? '...' : ''}
+                </div>
+              )}
             </div>
+          )}
 
-            {/* Day headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e5e7ef' }}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                <div key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase' }}>{d}</div>
-              ))}
+          {/* ── No client selected ── */}
+          {!client && (
+            <div style={{ ...cardStyle, textAlign: 'center', padding: '60px 20px', color: '#8e8ea0' }}>
+              Select a client from the sidebar to manage their content schedule.
             </div>
+          )}
 
-            {/* Calendar grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
-              {cells.map((day, i) => {
-                if (day === null) return <div key={`empty-${i}`} style={{ minHeight: 110, background: '#fafafa', borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none', borderBottom: '1px solid #f0f0f5' }} />;
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ CONTENT SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {client && activeSection === 'content' && (
+            <>
+              {/* Command Input */}
+              <div style={{ ...cardStyle, padding: 0 }}>
+                <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="file" ref={scriptUploadRef} accept=".txt,.pdf,.docx" onChange={handleScriptUpload} style={{ display: 'none' }} />
+                  <button onClick={() => scriptUploadRef.current?.click()} style={{ ...btnGhost, flexShrink: 0 }}>
+                    <Upload size={14} /> Upload Scripts
+                  </button>
+                  <textarea
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommand(); } }}
+                    placeholder="Paste a script to add it, or type: generate captions, auto schedule, export..."
+                    rows={1}
+                    style={{ ...inputStyle, border: 'none', background: 'transparent', resize: 'none', minHeight: 20, maxHeight: 120, overflow: 'auto', lineHeight: '20px' }}
+                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
+                  />
+                  <button onClick={toggleMic} style={{
+                    width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7ef',
+                    background: isListening ? 'rgba(255,60,60,0.1)' : '#f8f9fc',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: isListening ? '#ef4444' : '#8e8ea0', flexShrink: 0,
+                  }}>
+                    <Mic size={16} />
+                  </button>
+                  <button onClick={handleCommand} disabled={!chatInput.trim()} style={{
+                    width: 36, height: 36, borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: chatInput.trim() ? 1 : 0.4, flexShrink: 0,
+                  }}>
+                    <Send size={15} style={{ color: '#fff' }} />
+                  </button>
+                </div>
+                {actionLoading && (
+                  <div style={{ padding: '8px 20px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#4a6cf7' }}>
+                    <Loader size={14} className="spin" />
+                    {actionLoading === 'parsing' && 'Parsing scripts...'}
+                    {actionLoading === 'captions' && 'Generating captions...'}
+                    {actionLoading === 'schedule' && 'Auto-scheduling...'}
+                  </div>
+                )}
+              </div>
 
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                const dayScripts = byDate[dateStr] || [];
-                const isToday = dateStr === todayStr;
+              {/* Toolbar */}
+              <div className="cs-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div className="cs-toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 14px' }} onClick={async () => {
+                    try {
+                      await createContentScript([{ client_id: client.id, title: 'New Script', full_script: '', status: 'draft', sort_order: scripts.length + 1 }]);
+                      await loadClientData(client.id);
+                    } catch (err) { console.error('Add row failed:', err); alert('Failed to add row: ' + err.message); }
+                  }}>
+                    <Plus size={13} /> Add Row
+                  </button>
+                  {scripts.length > 0 && (
+                    <label style={{ fontSize: 12, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={scripts.length > 0 && selectedScripts.size === scripts.length}
+                        onChange={selectAll} style={{ accentColor: '#4a6cf7' }} />
+                      Select All ({scripts.length})
+                    </label>
+                  )}
+                  {selectedScripts.size > 0 && (
+                    <>
+                      <span style={{ fontSize: 12, color: '#4a6cf7', fontWeight: 600 }}>{selectedScripts.size} selected</span>
+                      <button style={{ ...btnGhost, fontSize: 11, color: '#ef4444' }} onClick={deleteSelected}>
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="cs-toolbar-right" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
+                    setActionLoading('captions');
+                    const ids = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
+                    await generateCaptions({ client_id: client.id, script_ids: ids });
+                    await loadClientData(client.id);
+                    setActionLoading('');
+                  }}>
+                    <Sparkles size={13} /> Generate Captions
+                  </button>}
+                  {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
+                    setActionLoading('schedule');
+                    try {
+                      // Auto-save default config if none exists
+                      if (!scheduleConfig) {
+                        await saveScheduleConfig({ client_id: client.id, time_slots: schedTimeslots, timezone: schedTimezone });
+                      }
+                      await autoScheduleContent({ client_id: client.id });
+                      await loadClientData(client.id);
+                    } catch (e) { alert('Schedule failed: ' + e.message); }
+                    setActionLoading('');
+                  }}>
+                    <Calendar size={13} /> Auto Schedule
+                  </button>}
+                  {scripts.length > 0 && <button style={{ ...btnPrimary, opacity: selectedScripts.size > 0 ? 1 : 0.4 }}
+                    onClick={exportCSV} disabled={selectedScripts.size === 0}>
+                    <Download size={14} /> Export CSV
+                  </button>}
+                </div>
+              </div>
+
+              {/* Calendar View */}
+              {viewMode === 'calendar' && (() => {
+                const year = calendarMonth.getFullYear();
+                const month = calendarMonth.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+                const tz = schedTimezone || 'America/Chicago';
+
+                // Group scripts by date (in client timezone)
+                const byDate = {};
+                scripts.forEach(s => {
+                  if (!s.scheduled_datetime) return;
+                  const d = new Date(s.scheduled_datetime);
+                  const localDate = d.toLocaleDateString('en-CA', { timeZone: tz });
+                  if (!byDate[localDate]) byDate[localDate] = [];
+                  byDate[localDate].push(s);
+                });
+
+                // Build calendar grid cells
+                const cells = [];
+                for (let i = 0; i < firstDay; i++) cells.push(null);
+                for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+                while (cells.length % 7 !== 0) cells.push(null);
+
+                const monthName = new Date(year, month).toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
                 return (
-                  <div key={day} style={{
-                    minHeight: 110, padding: 6,
-                    borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none',
-                    borderBottom: '1px solid #f0f0f5',
-                    background: isToday ? 'rgba(74,108,247,0.04)' : '#fff',
-                  }}>
-                    <div style={{
-                      fontSize: 12, fontWeight: isToday ? 700 : 500, marginBottom: 4,
-                      color: isToday ? '#4a6cf7' : '#8e8ea0',
-                      display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                    }}>
-                      {isToday ? (
-                        <span style={{ background: '#4a6cf7', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>{day}</span>
-                      ) : day}
+                  <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                    {/* Calendar header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
+                      <button onClick={() => setCalendarMonth(new Date(year, month - 1))} style={btnGhost}><ChevronLeft size={16} /></button>
+                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{monthName}</h3>
+                      <button onClick={() => setCalendarMonth(new Date(year, month + 1))} style={btnGhost}><ChevronRight size={16} /></button>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      {dayScripts.slice(0, 3).map(s => {
-                        const time = new Date(s.scheduled_datetime).toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true });
-                        const sc = STATUS_COLORS[s.status] || STATUS_COLORS.draft;
+
+                    {/* Day headers */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e5e7ef' }}>
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                        <div key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase' }}>{d}</div>
+                      ))}
+                    </div>
+
+                    {/* Calendar grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+                      {cells.map((day, i) => {
+                        if (day === null) return <div key={`empty-${i}`} style={{ minHeight: 110, background: '#fafafa', borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none', borderBottom: '1px solid #f0f0f5' }} />;
+
+                        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                        const dayScripts = byDate[dateStr] || [];
+                        const isToday = dateStr === todayStr;
+
                         return (
-                          <div key={s.id} title={`${s.title}\n${time}\n${s.caption || ''}`} style={{
-                            padding: '3px 6px', borderRadius: 6, fontSize: 10, lineHeight: 1.3,
-                            background: sc.bg, color: sc.text, cursor: 'pointer',
-                            overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                          <div key={day} style={{
+                            minHeight: 110, padding: 6,
+                            borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none',
+                            borderBottom: '1px solid #f0f0f5',
+                            background: isToday ? 'rgba(74,108,247,0.04)' : '#fff',
                           }}>
-                            {s.media_urls?.length > 0 && <Film size={9} style={{ marginRight: 3, verticalAlign: 'middle' }} />}
-                            <span style={{ fontWeight: 600 }}>{time}</span>{' '}
-                            <span style={{ opacity: 0.85 }}>{s.title || 'Untitled'}</span>
+                            <div style={{
+                              fontSize: 12, fontWeight: isToday ? 700 : 500, marginBottom: 4,
+                              color: isToday ? '#4a6cf7' : '#8e8ea0',
+                              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                            }}>
+                              {isToday ? (
+                                <span style={{ background: '#4a6cf7', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>{day}</span>
+                              ) : day}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                              {dayScripts.slice(0, 3).map(s => {
+                                const time = new Date(s.scheduled_datetime).toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true });
+                                const sc = STATUS_COLORS[s.status] || STATUS_COLORS.draft;
+                                return (
+                                  <div key={s.id} title={`${s.title}\n${time}\n${s.caption || ''}`} style={{
+                                    padding: '3px 6px', borderRadius: 6, fontSize: 10, lineHeight: 1.3,
+                                    background: sc.bg, color: sc.text, cursor: 'pointer',
+                                    overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                                  }}>
+                                    {s.media_urls?.length > 0 && <Film size={9} style={{ marginRight: 3, verticalAlign: 'middle' }} />}
+                                    <span style={{ fontWeight: 600 }}>{time}</span>{' '}
+                                    <span style={{ opacity: 0.85 }}>{s.title || 'Untitled'}</span>
+                                  </div>
+                                );
+                              })}
+                              {dayScripts.length > 3 && (
+                                <div style={{ fontSize: 10, color: '#4a6cf7', fontWeight: 600, cursor: 'pointer', paddingLeft: 4 }}>
+                                  +{dayScripts.length - 3} more
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
-                      {dayScripts.length > 3 && (
-                        <div style={{ fontSize: 10, color: '#4a6cf7', fontWeight: 600, cursor: 'pointer', paddingLeft: 4 }}>
-                          +{dayScripts.length - 3} more
-                        </div>
-                      )}
                     </div>
+
+                    {/* Unscheduled count */}
+                    {scripts.filter(s => !s.scheduled_datetime).length > 0 && (
+                      <div style={{ padding: '10px 20px', borderTop: '1px solid #e5e7ef', fontSize: 12, color: '#8e8ea0' }}>
+                        <Clock size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                        {scripts.filter(s => !s.scheduled_datetime).length} unscheduled scripts
+                      </div>
+                    )}
                   </div>
                 );
-              })}
-            </div>
+              })()}
 
-            {/* Unscheduled count */}
-            {scripts.filter(s => !s.scheduled_datetime).length > 0 && (
-              <div style={{ padding: '10px 20px', borderTop: '1px solid #e5e7ef', fontSize: 12, color: '#8e8ea0' }}>
-                <Clock size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                {scripts.filter(s => !s.scheduled_datetime).length} unscheduled scripts
-              </div>
-            )}
-          </div>
-        );
-      })()}
+              {/* Content Table */}
+              {viewMode === 'table' && (
+                <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                  {loading ? (
+                    <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+                      <Loader size={20} className="spin" />
+                    </div>
+                  ) : scripts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '50px 20px', color: '#8e8ea0', fontSize: 13 }}>
+                      No content yet. Click "Add Row" above, upload scripts, or type a command.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid #e5e7ef' }}>
+                            <th style={{ ...thStyle, width: 30 }}></th>
+                            <th style={{ ...thStyle, width: 80 }}>Media</th>
+                            <th style={{ ...thStyle, minWidth: 140 }}>Title</th>
+                            <th style={{ ...thStyle, minWidth: 160 }}>Script</th>
+                            <th style={{ ...thStyle, minWidth: 180 }}>Caption</th>
+                            <th style={{ ...thStyle, minWidth: 120 }}>Hashtags</th>
+                            <th style={{ ...thStyle, minWidth: 120 }}>1st Comment</th>
+                            <th style={{ ...thStyle, width: 150 }}>Scheduled</th>
+                            <th style={{ ...thStyle, width: 90 }}>Status</th>
+                            <th style={{ ...thStyle, width: 60 }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {scripts.map(script => (
+                            <tr key={script.id} style={{ borderBottom: '1px solid #f5f5f8', verticalAlign: 'top' }}>
+                              {/* Checkbox */}
+                              <td style={{ padding: 10 }}>
+                                <input type="checkbox" checked={selectedScripts.has(script.id)}
+                                  onChange={() => toggleSelect(script.id)} style={{ accentColor: '#4a6cf7' }} />
+                              </td>
 
-      {/* Content Table */}
-      {client && viewMode === 'table' && (
-        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
-              <Loader size={20} className="spin" />
-            </div>
-          ) : scripts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '50px 20px', color: '#8e8ea0', fontSize: 13 }}>
-              No content yet. Click "Add Row" above, upload scripts, or type a command.
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e5e7ef' }}>
-                    <th style={{ ...thStyle, width: 30 }}></th>
-                    <th style={{ ...thStyle, width: 80 }}>Media</th>
-                    <th style={{ ...thStyle, minWidth: 140 }}>Title</th>
-                    <th style={{ ...thStyle, minWidth: 160 }}>Script</th>
-                    <th style={{ ...thStyle, minWidth: 180 }}>Caption</th>
-                    <th style={{ ...thStyle, minWidth: 120 }}>Hashtags</th>
-                    <th style={{ ...thStyle, minWidth: 120 }}>1st Comment</th>
-                    <th style={{ ...thStyle, width: 150 }}>Scheduled</th>
-                    <th style={{ ...thStyle, width: 90 }}>Status</th>
-                    <th style={{ ...thStyle, width: 60 }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scripts.map(script => (
-                    <tr key={script.id} style={{ borderBottom: '1px solid #f5f5f8', verticalAlign: 'top' }}>
-                      {/* Checkbox */}
-                      <td style={{ padding: 10 }}>
-                        <input type="checkbox" checked={selectedScripts.has(script.id)}
-                          onChange={() => toggleSelect(script.id)} style={{ accentColor: '#4a6cf7' }} />
-                      </td>
+                              {/* Media */}
+                              <td style={{ padding: 10 }}>
+                                <div
+                                  onDragOver={e => { e.preventDefault(); setDragOverId(script.id); }}
+                                  onDragLeave={() => setDragOverId(null)}
+                                  onDrop={e => handleMediaDrop(e, script)}
+                                  style={{
+                                    width: 64, height: 64, borderRadius: 8,
+                                    border: dragOverId === script.id ? '2px dashed #4a6cf7' : '2px dashed #e5e7ef',
+                                    background: dragOverId === script.id ? 'rgba(74,108,247,0.05)' : '#f8f9fc',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                                  }}
+                                  onClick={() => {
+                                    if (script.media_urls?.length) {
+                                      setShowMediaModal(script);
+                                      setCarouselIndex(0);
+                                    } else {
+                                      const inp = document.createElement('input');
+                                      inp.type = 'file';
+                                      inp.multiple = true;
+                                      inp.accept = 'image/*,video/*';
+                                      inp.onchange = (e) => uploadMedia(Array.from(e.target.files), script);
+                                      inp.click();
+                                    }
+                                  }}
+                                >
+                                  {uploadProgress[script.id] !== undefined ? (
+                                    <div style={{ textAlign: 'center', fontSize: 10, color: '#4a6cf7', fontWeight: 600 }}>
+                                      {Math.round(uploadProgress[script.id])}%
+                                    </div>
+                                  ) : script.media_urls?.length ? (
+                                    <>
+                                      {script.media_type === 'video' ? (
+                                        <video src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      ) : (
+                                        <img src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      )}
+                                      {script.media_urls.length > 1 && (
+                                        <span style={{
+                                          position: 'absolute', top: 2, right: 2,
+                                          background: 'rgba(0,0,0,0.6)', color: '#fff',
+                                          fontSize: 9, padding: '1px 5px', borderRadius: 8,
+                                        }}>
+                                          1/{script.media_urls.length}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <Upload size={16} style={{ color: '#ccc' }} />
+                                  )}
+                                </div>
+                              </td>
 
-                      {/* Media */}
-                      <td style={{ padding: 10 }}>
-                        <div
-                          onDragOver={e => { e.preventDefault(); setDragOverId(script.id); }}
-                          onDragLeave={() => setDragOverId(null)}
-                          onDrop={e => handleMediaDrop(e, script)}
-                          style={{
-                            width: 64, height: 64, borderRadius: 8,
-                            border: dragOverId === script.id ? '2px dashed #4a6cf7' : '2px dashed #e5e7ef',
-                            background: dragOverId === script.id ? 'rgba(74,108,247,0.05)' : '#f8f9fc',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                          }}
-                          onClick={() => {
-                            if (script.media_urls?.length) {
-                              setShowMediaModal(script);
-                              setCarouselIndex(0);
-                            } else {
-                              const inp = document.createElement('input');
-                              inp.type = 'file';
-                              inp.multiple = true;
-                              inp.accept = 'image/*,video/*';
-                              inp.onchange = (e) => uploadMedia(Array.from(e.target.files), script);
-                              inp.click();
-                            }
-                          }}
-                        >
-                          {uploadProgress[script.id] !== undefined ? (
-                            <div style={{ textAlign: 'center', fontSize: 10, color: '#4a6cf7', fontWeight: 600 }}>
-                              {Math.round(uploadProgress[script.id])}%
-                            </div>
-                          ) : script.media_urls?.length ? (
-                            <>
-                              {script.media_type === 'video' ? (
-                                <video src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <img src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              )}
-                              {script.media_urls.length > 1 && (
-                                <span style={{
-                                  position: 'absolute', top: 2, right: 2,
-                                  background: 'rgba(0,0,0,0.6)', color: '#fff',
-                                  fontSize: 9, padding: '1px 5px', borderRadius: 8,
-                                }}>
-                                  1/{script.media_urls.length}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <Upload size={16} style={{ color: '#ccc' }} />
-                          )}
-                        </div>
-                      </td>
+                              {/* Editable cells */}
+                              {['title', 'full_script', 'caption', 'hashtags', 'first_comment'].map(field => (
+                                <td key={field} style={{ padding: 10, maxWidth: 200 }}>
+                                  {editingCell?.id === script.id && editingCell?.field === field ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      <textarea value={editValue} onChange={e => setEditValue(e.target.value)}
+                                        style={{ ...inputStyle, fontSize: 12, minHeight: 50, resize: 'vertical' }}
+                                        autoFocus />
+                                      <div style={{ display: 'flex', gap: 4 }}>
+                                        <button onClick={saveEdit} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#22c55e' }}>
+                                          <Check size={10} />
+                                        </button>
+                                        <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#ef4444' }}>
+                                          <X size={10} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      onClick={() => startEdit(script.id, field, script[field])}
+                                      style={{
+                                        cursor: 'pointer', fontSize: 12, color: script[field] ? '#1a1a2e' : '#ccc',
+                                        maxHeight: 60, overflow: 'hidden', lineHeight: 1.4,
+                                      }}
+                                      title={script[field] || 'Click to edit'}
+                                    >
+                                      {script[field] ? (script[field].length > 80 ? script[field].slice(0, 80) + '...' : script[field]) : '...'}
+                                    </div>
+                                  )}
+                                </td>
+                              ))}
 
-                      {/* Editable cells */}
-                      {['title', 'full_script', 'caption', 'hashtags', 'first_comment'].map(field => (
-                        <td key={field} style={{ padding: 10, maxWidth: 200 }}>
-                          {editingCell?.id === script.id && editingCell?.field === field ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <textarea value={editValue} onChange={e => setEditValue(e.target.value)}
-                                style={{ ...inputStyle, fontSize: 12, minHeight: 50, resize: 'vertical' }}
-                                autoFocus />
-                              <div style={{ display: 'flex', gap: 4 }}>
-                                <button onClick={saveEdit} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#22c55e' }}>
-                                  <Check size={10} />
-                                </button>
-                                <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#ef4444' }}>
-                                  <X size={10} />
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              onClick={() => startEdit(script.id, field, script[field])}
-                              style={{
-                                cursor: 'pointer', fontSize: 12, color: script[field] ? '#1a1a2e' : '#ccc',
-                                maxHeight: 60, overflow: 'hidden', lineHeight: 1.4,
-                              }}
-                              title={script[field] || 'Click to edit'}
-                            >
-                              {script[field] ? (script[field].length > 80 ? script[field].slice(0, 80) + '...' : script[field]) : '...'}
-                            </div>
-                          )}
-                        </td>
-                      ))}
+                              {/* Scheduled datetime */}
+                              <td style={{ padding: 10 }}>
+                                {editingCell?.id === script.id && editingCell?.field === 'scheduled_datetime' ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    <input type="datetime-local" value={editValue}
+                                      onChange={e => setEditValue(e.target.value)}
+                                      style={{ ...inputStyle, fontSize: 11, padding: '6px 8px' }} autoFocus />
+                                    <div style={{ display: 'flex', gap: 4 }}>
+                                      <button onClick={async () => {
+                                        await updateContentScript(editingCell.id, {
+                                          scheduled_datetime: new Date(editValue).toISOString(),
+                                          status: 'scheduled',
+                                        });
+                                        setEditingCell(null);
+                                        loadClientData(client.id);
+                                      }} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#22c55e' }}>
+                                        <Check size={10} />
+                                      </button>
+                                      <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#ef4444' }}>
+                                        <X size={10} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div
+                                    onClick={() => startEdit(script.id, 'scheduled_datetime',
+                                      script.scheduled_datetime ? new Date(script.scheduled_datetime).toISOString().slice(0, 16) : ''
+                                    )}
+                                    style={{ cursor: 'pointer', fontSize: 12, color: script.scheduled_datetime ? '#1a1a2e' : '#ccc' }}
+                                  >
+                                    {script.scheduled_datetime
+                                      ? new Date(script.scheduled_datetime).toLocaleString('en-US', {
+                                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                                        })
+                                      : 'Not set'}
+                                  </div>
+                                )}
+                              </td>
 
-                      {/* Scheduled datetime */}
-                      <td style={{ padding: 10 }}>
-                        {editingCell?.id === script.id && editingCell?.field === 'scheduled_datetime' ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <input type="datetime-local" value={editValue}
-                              onChange={e => setEditValue(e.target.value)}
-                              style={{ ...inputStyle, fontSize: 11, padding: '6px 8px' }} autoFocus />
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button onClick={async () => {
-                                await updateContentScript(editingCell.id, {
-                                  scheduled_datetime: new Date(editValue).toISOString(),
-                                  status: 'scheduled',
-                                });
-                                setEditingCell(null);
+                              {/* Status */}
+                              <td style={{ padding: 10 }}><StatusPill status={script.status} onClick={async () => {
+                                await updateContentScript(script.id, { status: script.scheduled_datetime ? 'scheduled' : 'caption_ready' });
                                 loadClientData(client.id);
-                              }} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#22c55e' }}>
-                                <Check size={10} />
-                              </button>
-                              <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#ef4444' }}>
-                                <X size={10} />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            onClick={() => startEdit(script.id, 'scheduled_datetime',
-                              script.scheduled_datetime ? new Date(script.scheduled_datetime).toISOString().slice(0, 16) : ''
+                              }} /></td>
+
+                              {/* Actions */}
+                              <td style={{ padding: 10 }}>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button onClick={async () => {
+                                    setActionLoading('captions');
+                                    await generateCaptions({ client_id: client.id, script_ids: [script.id] });
+                                    await loadClientData(client.id);
+                                    setActionLoading('');
+                                  }} style={{ ...btnGhost, padding: '4px 6px' }} title="Regenerate caption">
+                                    <Sparkles size={12} />
+                                  </button>
+                                  <button onClick={async () => {
+                                    if (confirm('Delete this script?')) {
+                                      await deleteContentScript(script.id);
+                                      loadClientData(client.id);
+                                    }
+                                  }} style={{ ...btnGhost, padding: '4px 6px', color: '#ef4444' }} title="Delete">
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ GENERATOR SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {client && activeSection === 'generator' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Chat area */}
+              <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
+                  Content Generator
+                </div>
+                {/* Messages */}
+                <div ref={genChatRef} style={{
+                  flex: 1, minHeight: 200, maxHeight: 340, overflowY: 'auto', padding: '16px 20px',
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                }}>
+                  {genMessages.length === 0 && !genLoading && (
+                    <div style={{ textAlign: 'center', padding: '40px 10px', color: '#8e8ea0', fontSize: 13 }}>
+                      Describe what content you want to generate.<br />
+                      <span style={{ fontSize: 12, color: '#bbb' }}>
+                        e.g. "Create 10 Threads posts about AI tools" or "Generate 5 TikTok scripts about dating red flags"
+                      </span>
+                    </div>
+                  )}
+                  {genMessages.map((msg, i) => (
+                    <div key={i} style={{
+                      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '80%',
+                      padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.5,
+                      background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #3b5de7)' : '#f0f0f5',
+                      color: msg.role === 'user' ? '#fff' : '#1a1a2e',
+                    }}>
+                      {msg.content}
+                    </div>
+                  ))}
+                  {genLoading && (
+                    <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, background: '#f0f0f5', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#8e8ea0' }}>
+                      <Loader size={14} className="spin" /> Generating...
+                    </div>
+                  )}
+                </div>
+
+                {/* Input area */}
+                <div style={{ borderTop: '1px solid #e5e7ef', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                  <textarea
+                    value={genInput}
+                    onChange={e => setGenInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+                    placeholder="Describe content to generate..."
+                    rows={1}
+                    style={{ ...inputStyle, border: 'none', background: '#f8f9fc', resize: 'none', minHeight: 20, maxHeight: 100, overflow: 'auto', lineHeight: '20px', flex: 1 }}
+                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
+                  />
+                  <button onClick={handleGenerate} disabled={!genInput.trim() || genLoading} style={{
+                    width: 36, height: 36, borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: genInput.trim() && !genLoading ? 1 : 0.4, flexShrink: 0,
+                  }}>
+                    <Send size={15} style={{ color: '#fff' }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Generated results list */}
+              {genResults.length > 0 && (
+                <div style={{ ...cardStyle, padding: 0 }}>
+                  <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
+                      Generated Posts ({genResults.length})
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {genResults.some(r => r.approved && !r.rejected) && (
+                        <button style={btnPrimary} onClick={exportApprovedCSV}>
+                          <Download size={14} /> Export Approved
+                        </button>
+                      )}
+                      <button style={btnGhost} onClick={() => setGenResults([])}>
+                        <Trash2 size={12} /> Clear All
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+                    {genResults.map((post, idx) => (
+                      <div key={idx} style={{
+                        padding: '14px 20px', borderBottom: '1px solid #f0f0f5',
+                        opacity: post.rejected ? 0.4 : 1,
+                        background: post.approved ? 'rgba(34,197,94,0.04)' : post.rejected ? '#fafafa' : '#fff',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {post.title && (
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>
+                                {post.title}
+                              </div>
                             )}
-                            style={{ cursor: 'pointer', fontSize: 12, color: script.scheduled_datetime ? '#1a1a2e' : '#ccc' }}
-                          >
+                            <div style={{ fontSize: 13, color: '#333', lineHeight: 1.5, marginBottom: 6, whiteSpace: 'pre-wrap' }}>
+                              {post.caption || post.content || ''}
+                            </div>
+                            {post.hashtags && (
+                              <div style={{ fontSize: 12, color: '#4a6cf7', marginBottom: 4 }}>
+                                {post.hashtags}
+                              </div>
+                            )}
+                            {post.first_comment && (
+                              <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>
+                                1st comment: {post.first_comment}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                            {!post.approved && !post.rejected && (
+                              <>
+                                <button
+                                  onClick={() => approveGenPost(idx)}
+                                  title="Approve and save"
+                                  style={{
+                                    width: 32, height: 32, borderRadius: 8, border: '1px solid #d1fae5',
+                                    background: '#ecfdf5', cursor: 'pointer', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', color: '#22c55e',
+                                  }}
+                                >
+                                  <Check size={14} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const newCaption = prompt('Edit caption:', post.caption || post.content || '');
+                                    if (newCaption !== null) {
+                                      setGenResults(prev => prev.map((r, i) => i === idx ? { ...r, caption: newCaption, content: newCaption } : r));
+                                    }
+                                  }}
+                                  title="Edit"
+                                  style={{
+                                    width: 32, height: 32, borderRadius: 8, border: '1px solid #fef3c7',
+                                    background: '#fffbeb', cursor: 'pointer', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', color: '#f59e0b',
+                                  }}
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                                <button
+                                  onClick={() => rejectGenPost(idx)}
+                                  title="Reject"
+                                  style={{
+                                    width: 32, height: 32, borderRadius: 8, border: '1px solid #fee2e2',
+                                    background: '#fef2f2', cursor: 'pointer', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', color: '#ef4444',
+                                  }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </>
+                            )}
+                            {post.approved && (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#22c55e', padding: '6px 10px', background: '#ecfdf5', borderRadius: 8 }}>
+                                Approved
+                              </span>
+                            )}
+                            {post.rejected && (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', padding: '6px 10px', background: '#fef2f2', borderRadius: 8 }}>
+                                Rejected
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ EXPORTED SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {client && activeSection === 'exported' && (
+            <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
+                  Exported Scripts ({exportedScripts.length})
+                </div>
+              </div>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+                  <Loader size={20} className="spin" />
+                </div>
+              ) : exportedScripts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 20px', color: '#8e8ea0', fontSize: 13 }}>
+                  No exported content yet. Export scripts from the Content tab.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e5e7ef' }}>
+                        <th style={{ ...thStyle, width: 80 }}>Media</th>
+                        <th style={{ ...thStyle, minWidth: 140 }}>Title</th>
+                        <th style={{ ...thStyle, minWidth: 180 }}>Caption</th>
+                        <th style={{ ...thStyle, minWidth: 120 }}>Hashtags</th>
+                        <th style={{ ...thStyle, minWidth: 120 }}>1st Comment</th>
+                        <th style={{ ...thStyle, width: 150 }}>Scheduled</th>
+                        <th style={{ ...thStyle, width: 90 }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {exportedScripts.map(script => (
+                        <tr key={script.id} style={{ borderBottom: '1px solid #f5f5f8', verticalAlign: 'top' }}>
+                          <td style={{ padding: 10 }}>
+                            <div style={{
+                              width: 64, height: 64, borderRadius: 8,
+                              border: '2px dashed #e5e7ef', background: '#f8f9fc',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              overflow: 'hidden',
+                            }}>
+                              {script.media_urls?.length ? (
+                                script.media_type === 'video' ? (
+                                  <video src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <img src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                )
+                              ) : (
+                                <Film size={16} style={{ color: '#ccc' }} />
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: 10, fontSize: 12, color: '#1a1a2e' }}>
+                            {script.title || '-'}
+                          </td>
+                          <td style={{ padding: 10, fontSize: 12, color: '#1a1a2e', maxWidth: 200 }}>
+                            <div style={{ maxHeight: 60, overflow: 'hidden', lineHeight: 1.4 }}>
+                              {script.caption ? (script.caption.length > 100 ? script.caption.slice(0, 100) + '...' : script.caption) : '-'}
+                            </div>
+                          </td>
+                          <td style={{ padding: 10, fontSize: 12, color: '#4a6cf7' }}>
+                            {script.hashtags || '-'}
+                          </td>
+                          <td style={{ padding: 10, fontSize: 12, color: '#555' }}>
+                            {script.first_comment || '-'}
+                          </td>
+                          <td style={{ padding: 10, fontSize: 12, color: '#1a1a2e' }}>
                             {script.scheduled_datetime
                               ? new Date(script.scheduled_datetime).toLocaleString('en-US', {
                                   month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
                                 })
                               : 'Not set'}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Status */}
-                      <td style={{ padding: 10 }}><StatusPill status={script.status} onClick={async () => {
-                        await updateContentScript(script.id, { status: script.scheduled_datetime ? 'scheduled' : 'caption_ready' });
-                        loadClientData(client.id);
-                      }} /></td>
-
-                      {/* Actions */}
-                      <td style={{ padding: 10 }}>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={async () => {
-                            setActionLoading('captions');
-                            await generateCaptions({ client_id: client.id, script_ids: [script.id] });
-                            await loadClientData(client.id);
-                            setActionLoading('');
-                          }} style={{ ...btnGhost, padding: '4px 6px' }} title="Regenerate caption">
-                            <Sparkles size={12} />
-                          </button>
-                          <button onClick={async () => {
-                            if (confirm('Delete this script?')) {
-                              await deleteContentScript(script.id);
+                          </td>
+                          <td style={{ padding: 10 }}>
+                            <StatusPill status={script.status} onClick={async () => {
+                              await updateContentScript(script.id, { status: script.scheduled_datetime ? 'scheduled' : 'caption_ready' });
                               loadClientData(client.id);
-                            }
-                          }} style={{ ...btnGhost, padding: '4px 6px', color: '#ef4444' }} title="Delete">
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            }} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
-
-      {/* Empty state */}
-      {!client && (
-        <div style={{ ...cardStyle, textAlign: 'center', padding: '60px 20px', color: '#8e8ea0' }}>
-          Select a client to manage their content schedule.
-        </div>
-      )}
+      </div>
 
       {/* ── Media Preview Modal ── */}
       {showMediaModal && (
@@ -1261,37 +1716,27 @@ export default function ContentScheduler() {
         .spin { animation: spin 1s linear infinite; }
 
         @media (max-width: 768px) {
-          .cs-page { padding: 12px 10px !important; }
-          .cs-page h1 { font-size: 18px !important; }
+          .cs-page { flex-direction: column !important; }
+          .cs-sidebar { width: 100% !important; flex-direction: row !important; border-right: none !important; border-bottom: 1px solid #e5e7ef; overflow-x: auto; max-height: none !important; }
+          .cs-sidebar > div:first-child { display: none !important; }
+          .cs-sidebar > div:nth-child(2) { display: flex !important; flex-direction: row !important; overflow-x: auto; padding: 0 !important; gap: 0 !important; }
+          .cs-sidebar > div:nth-child(2) > div { white-space: nowrap; border-left: none !important; border-bottom: 3px solid transparent; padding: 10px 14px !important; font-size: 12px !important; }
+          .cs-sidebar > div:last-child { display: none !important; }
+          .cs-main { min-width: 0 !important; }
+          .cs-topbar { flex-wrap: wrap !important; }
+          .cs-topbar h2 { font-size: 15px !important; }
+          .cs-topbar-right { width: 100%; flex-wrap: wrap; }
 
-          /* Header */
-          .cs-header { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
-          .cs-header-btns { width: 100%; flex-wrap: wrap; }
-          .cs-header-btns button { font-size: 11px !important; padding: 6px 10px !important; }
-
-          /* Client selector */
-          .cs-page select { font-size: 13px !important; }
-
-          /* Toolbar */
           .cs-toolbar { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
           .cs-toolbar-left { flex-wrap: wrap; }
           .cs-toolbar-right { width: 100%; flex-wrap: wrap; justify-content: flex-start !important; }
           .cs-toolbar-right button { font-size: 11px !important; padding: 5px 8px !important; }
 
-          /* Content table horizontal scroll */
           .cs-page table { min-width: 800px; }
 
-          /* Calendar grid smaller cells */
-          .cs-page .cal-grid > div { min-height: 80px !important; }
-
-          /* Modal full width on mobile */
-          .cs-page .cs-modal { width: 95vw !important; max-width: 95vw !important; margin: 20px auto !important; max-height: 85vh; overflow-y: auto; }
-
-          /* Form grids stack on mobile */
+          .cs-modal { width: 95vw !important; max-width: 95vw !important; margin: 20px auto !important; max-height: 85vh; overflow-y: auto; }
           .cs-form-grid { grid-template-columns: 1fr !important; }
-
-          /* Command bar */
-          .cs-page .cs-cmd-bar { padding: 10px 12px !important; }
+          .cs-profile-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>

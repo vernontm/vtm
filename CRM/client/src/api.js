@@ -306,3 +306,4 @@ export const parseScripts = (data) => request('/content-ai?action=parse-scripts'
 export const generateCaptions = (data) => request('/content-ai?action=generate-captions', { method: 'POST', body: JSON.stringify(data) });
 export const autoScheduleContent = (data) => request('/content-ai?action=auto-schedule', { method: 'POST', body: JSON.stringify(data) });
 export const processBrandBible = (data) => request('/process-brand-bible', { method: 'POST', body: JSON.stringify(data) });
+export const generateContent = (data) => request('/content-ai?action=generate-content', { method: 'POST', body: JSON.stringify(data) });

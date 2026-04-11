@@ -106,7 +106,7 @@ export default function Outreach() {
           });
         }
         setClient(clientData);
-        setShowProfile(true);
+        setShowProfile(false);
         await loadClientData(clientData.id);
       } catch (err) { console.error(err); }
       setLoadingClient(false);
@@ -756,7 +756,7 @@ export default function Outreach() {
 
   // ── Styles ──
 
-  const pageStyle = { padding: '24px 28px', maxWidth: 1400, margin: '0 auto' };
+  const pageStyle = { height: '100%', display: 'flex', fontFamily: 'Inter, sans-serif' };
 
   const cardStyle = {
     background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14,
@@ -790,96 +790,135 @@ export default function Outreach() {
 
   // ── Render ──
 
+  const sidebarItem = (key, icon, label, count) => {
+    const isActive = activeTab === key;
+    return (
+      <button key={key} onClick={() => setActiveTab(key)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+          background: isActive ? 'rgba(74,108,247,0.08)' : 'transparent', color: isActive ? '#4a6cf7' : '#5a5a6e',
+          borderLeft: isActive ? '3px solid #4a6cf7' : '3px solid transparent' }}>
+        {icon} {label}
+        {count > 0 && <span style={{ marginLeft: 'auto', background: '#4a6cf7', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{count}</span>}
+      </button>
+    );
+  };
+
   return (
     <div className="outreach-page" style={pageStyle}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', margin: 0 }}>Client Outreach</h1>
-          <p style={{ fontSize: 13, color: '#8e8ea0', margin: '4px 0 0' }}>
-            Research leads, generate emails, and manage outreach campaigns
-          </p>
+      {/* ── Left Sidebar ── */}
+      <div className="outreach-sidebar" style={{ width: 220, background: '#fff', borderRight: '1px solid #e5e7ef', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ padding: '16px 14px 8px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', margin: '0 0 12px' }}>Outreach</h2>
         </div>
-        <span style={{ fontSize: 12, color: '#8e8ea0' }}>{contacts.length} contacts</span>
+
+        {/* Client list */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '0 14px 8px' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
+              <input placeholder="Search clients..." style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 8, fontSize: 12, background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e', outline: 'none' }}
+                onChange={e => {/* future filter */}} />
+            </div>
+          </div>
+
+          {contacts.map(c => {
+            const isActive = selectedContactId === c.id;
+            return (
+              <button key={c.id} onClick={() => setSelectedContactId(c.id)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: isActive ? 600 : 400,
+                  background: isActive ? 'rgba(74,108,247,0.08)' : 'transparent', color: isActive ? '#4a6cf7' : '#5a5a6e',
+                  borderLeft: isActive ? '3px solid #4a6cf7' : '3px solid transparent', textAlign: 'left' }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: isActive ? 'rgba(74,108,247,0.15)' : '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: isActive ? '#4a6cf7' : '#8e8ea0', flexShrink: 0 }}>
+                  {(c.company || c.name || '?')[0].toUpperCase()}
+                </div>
+                <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>
+                  {c.company || c.name}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Section links */}
+        <div style={{ borderTop: '1px solid #f0f2f8', paddingTop: 4 }}>
+          <div style={{ padding: '4px 14px', fontSize: 10, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sections</div>
+          {sidebarItem('chat', <Zap size={16} />, 'Command Center')}
+          {sidebarItem('leads', <Users size={16} />, 'Leads', leads.length)}
+          {sidebarItem('queue', <Mail size={16} />, 'Queue', queue.filter(q => q.status === 'pending_review').length)}
+        </div>
       </div>
 
-      {/* Client Selector */}
-      <div className="client-selector" style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
-        <Building2 size={18} style={{ color: '#8e8ea0' }} />
-        <select
-          value={selectedContactId}
-          onChange={(e) => setSelectedContactId(e.target.value)}
-          style={{
-            ...inputStyle, flex: 1, cursor: 'pointer', fontWeight: 600,
-            background: 'transparent', border: 'none', fontSize: 15,
-          }}
-        >
-          <option value="">Select a contact...</option>
-          {contacts.map(c => (
-            <option key={c.id} value={c.id}>{c.name}{c.company ? ` — ${c.company}` : ''}</option>
-          ))}
-        </select>
-        {loadingClient && <Loader size={16} className="spin" style={{ color: '#8e8ea0' }} />}
-        {client && (
-          <span style={{
-            padding: '4px 12px', borderRadius: 12, fontSize: 11, fontWeight: 600,
-            background: client.retainer_status === 'active' ? '#e8f5e9' : '#fff3e0',
-            color: client.retainer_status === 'active' ? '#22c55e' : '#f59e0b',
-            textTransform: 'capitalize',
-          }}>
-            {client.retainer_status}
-          </span>
-        )}
-      </div>
+      {/* ── Main Content ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
+        <div style={{ padding: '20px 24px', flex: 1 }}>
 
       {!client && !loadingClient && (
         <div style={{ textAlign: 'center', padding: '80px 20px', color: '#8e8ea0' }}>
           <Building2 size={48} style={{ marginBottom: 12, opacity: 0.3 }} />
-          <p>Select or create a client to get started</p>
+          <p>Select a client to get started</p>
+        </div>
+      )}
+
+      {loadingClient && (
+        <div style={{ textAlign: 'center', padding: '80px 20px', color: '#8e8ea0' }}>
+          <Loader size={24} className="spin" />
         </div>
       )}
 
       {client && (
         <>
-          {/* Client Profile (collapsible) */}
-          <div style={cardStyle}>
-            <div className="profile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowProfile(!showProfile)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {client.logo_url ? (
-                  <img src={client.logo_url} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: '#e8ecf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a6cf7', fontWeight: 700, fontSize: 15 }}>
-                    {(client.business_name || '?')[0].toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{client.business_name}</h2>
-                  <span style={{ fontSize: 12, color: '#8e8ea0' }}>
-                    {[client.industry, client.location_city, client.location_state].filter(Boolean).join(' · ')}
-                  </span>
+          {/* Top bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {client.logo_url ? (
+                <img src={client.logo_url} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e8ecf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4a6cf7', fontWeight: 700, fontSize: 14 }}>
+                  {(client.business_name || '?')[0].toUpperCase()}
                 </div>
+              )}
+              <div>
+                <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{client.business_name}</h2>
+                <span style={{ fontSize: 12, color: '#8e8ea0' }}>
+                  {[client.industry, client.location_city, client.location_state].filter(Boolean).join(' · ')}
+                </span>
               </div>
-              <div className="profile-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  style={{ ...btnGhost, background: scanning ? '#f0f0ff' : undefined }}
-                  onClick={(e) => { e.stopPropagation(); handleScanBrand(); }}
-                  disabled={scanning}
-                >
-                  {scanning ? <Loader size={13} className="spin" /> : <Sparkles size={13} />}
-                  {scanning ? 'Scanning...' : 'Auto-Scan'}
-                </button>
-                <button style={btnGhost} onClick={(e) => { e.stopPropagation(); setEditingClient(true); setClientDraft(client); }}>
-                  <Edit3 size={13} /> Edit
-                </button>
-                <button style={{ ...btnGhost, color: '#ef4444' }} onClick={(e) => { e.stopPropagation(); handleDeleteClient(); }}>
-                  <Trash2 size={13} />
-                </button>
+              <span style={{
+                padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                background: client.retainer_status === 'active' ? '#e8f5e9' : '#fff3e0',
+                color: client.retainer_status === 'active' ? '#22c55e' : '#f59e0b',
+                textTransform: 'capitalize',
+              }}>
+                {client.retainer_status}
+              </span>
+            </div>
+            <div className="profile-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button style={{ ...btnGhost, background: scanning ? '#f0f0ff' : undefined }}
+                onClick={handleScanBrand} disabled={scanning}>
+                {scanning ? <Loader size={13} className="spin" /> : <Sparkles size={13} />}
+                {scanning ? 'Scanning...' : 'Auto-Scan'}
+              </button>
+              <button style={btnGhost} onClick={() => { setEditingClient(true); setClientDraft(client); }}>
+                <Edit3 size={13} /> Edit
+              </button>
+              <button style={{ ...btnGhost, color: '#ef4444' }} onClick={handleDeleteClient}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* Client Profile (collapsible, minimized by default) */}
+          <div style={{ ...cardStyle, padding: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', cursor: 'pointer' }} onClick={() => setShowProfile(!showProfile)}>
+              <Sparkles size={14} style={{ color: '#a855f7' }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>Client Profile & Brand Bible</span>
+              <span style={{ marginLeft: 'auto', color: '#8e8ea0' }}>
                 {showProfile ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </div>
+              </span>
             </div>
 
             {showProfile && !editingClient && (
-              <div style={{ marginTop: 16 }}>
+              <div style={{ padding: '0 16px 16px' }}>
                 {/* Web & Social Section */}
                 <div style={{ marginBottom: 16, padding: '14px 16px', background: '#f8f9fc', borderRadius: 10 }}>
                   <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Websites & Social Media</span>
@@ -953,7 +992,7 @@ export default function Outreach() {
             )}
 
             {showProfile && editingClient && (
-              <div style={{ marginTop: 16 }}>
+              <div style={{ padding: '0 16px 16px' }}>
                 <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
                     ['business_name', 'Business Name'], ['owner_name', 'Owner Name'],
@@ -999,24 +1038,7 @@ export default function Outreach() {
             )}
           </div>
 
-          {/* Tabs */}
-          <div className="tabs-row" style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e5e7ef', marginBottom: 16 }}>
-            <button style={tabStyle(activeTab === 'chat')} onClick={() => setActiveTab('chat')}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Zap size={14} /> Command Center
-              </span>
-            </button>
-            <button style={tabStyle(activeTab === 'leads')} onClick={() => setActiveTab('leads')}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Users size={14} /> Leads ({leads.length})
-              </span>
-            </button>
-            <button style={tabStyle(activeTab === 'queue')} onClick={() => setActiveTab('queue')}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Mail size={14} /> Approval Queue ({queue.filter(q => q.status === 'pending_review').length})
-              </span>
-            </button>
-          </div>
+          {/* Tab content below */}
 
           {/* Chat Tab */}
           {activeTab === 'chat' && (
@@ -1434,6 +1456,9 @@ export default function Outreach() {
         </>
       )}
 
+        </div>{/* end padding wrapper */}
+      </div>{/* end main content */}
+
       <style>{`
         @keyframes blink {
           0%, 100% { opacity: 0.3; }
@@ -1443,56 +1468,19 @@ export default function Outreach() {
         @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 768px) {
-          /* Page container */
-          .outreach-page { padding: 12px 10px !important; }
-
-          /* Header */
-          .outreach-page h1 { font-size: 18px !important; }
-
-          /* Client selector row */
-          .outreach-page .client-selector { flex-wrap: wrap; gap: 8px !important; padding: 10px 14px !important; }
-
-          /* Profile header buttons */
-          .outreach-page .profile-header { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
+          .outreach-page { flex-direction: column !important; }
+          .outreach-sidebar { width: 100% !important; flex-direction: row !important; border-right: none !important; border-bottom: 1px solid #e5e7ef !important; overflow-x: auto; max-height: none !important; }
+          .outreach-sidebar > div:first-child { display: none !important; }
+          .outreach-sidebar > div:nth-child(2) { display: flex !important; flex-direction: row !important; overflow-x: auto; gap: 0; }
+          .outreach-sidebar > div:nth-child(2) button { white-space: nowrap; padding: 8px 12px !important; font-size: 12px !important; border-left: none !important; border-bottom: 3px solid transparent !important; }
           .outreach-page .profile-actions { flex-wrap: wrap; gap: 6px !important; }
           .outreach-page .profile-actions button { font-size: 11px !important; padding: 6px 10px !important; }
-
-          /* Profile grids */
           .outreach-page .profile-grid { grid-template-columns: 1fr !important; }
-
-          /* Edit client form grids */
           .outreach-page .edit-grid { grid-template-columns: 1fr !important; }
-
-          /* Tabs */
-          .outreach-page .tabs-row { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-          .outreach-page .tabs-row button { padding: 8px 12px !important; font-size: 12px !important; white-space: nowrap; }
-
-          /* Leads toolbar */
           .outreach-page .leads-toolbar { flex-direction: column; gap: 8px !important; align-items: flex-start !important; }
-          .outreach-page .leads-toolbar > div { width: 100%; justify-content: space-between; }
-
-          /* Add lead form grid */
           .outreach-page .add-lead-grid { grid-template-columns: 1fr !important; }
-
-          /* Leads table */
-          .outreach-page .leads-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
           .outreach-page .leads-table-wrap table { min-width: 600px; }
-
-          /* Queue cards */
-          .outreach-page .queue-header { flex-direction: column !important; align-items: flex-start !important; gap: 6px !important; }
-          .outreach-page .queue-header .queue-meta { flex-wrap: wrap; gap: 4px !important; }
-          .outreach-page .queue-actions { flex-wrap: wrap; }
-
-          /* Chat input area */
-          .outreach-page .chat-input-row { padding: 10px 12px !important; }
-          .outreach-page .chat-messages { padding: 14px 12px !important; }
-
-          /* Quick reply chips */
-          .outreach-page .quick-replies { flex-direction: column; }
-          .outreach-page .quick-replies button { font-size: 11px !important; }
-
-          /* Buttons */
-          .outreach-page .btn-primary { padding: 8px 14px !important; font-size: 12px !important; }
+          .outreach-page .queue-meta { flex-wrap: wrap; gap: 4px !important; }
         }
       `}</style>
     </div>

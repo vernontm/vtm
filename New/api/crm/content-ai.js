@@ -304,5 +304,92 @@ Return ONLY valid JSON, no markdown.`;
     }
   }
 
+  // ── generate-content ───────────────────────────────────────────────
+  if (action === 'generate-content' && req.method === 'POST') {
+    try {
+      const { client_id, prompt } = req.body;
+      if (!client_id || !prompt) return res.status(400).json({ error: 'client_id and prompt required' });
+
+      // Fetch client info for brand context
+      const clients = await supaFetch(`crm_content_clients?id=eq.${client_id}&limit=1`);
+      const client = clients && clients[0];
+      const brandContext = client ? `
+Business: ${client.business_name || ''}
+Industry: ${client.industry || ''}
+Target Audience: ${client.target_audience || ''}
+Tone: ${client.preferred_tone || 'friendly'}
+Brand Bible: ${client.brand_bible || 'None provided'}
+Social Handles: IG @${client.instagram_handle || ''}, TT @${client.tiktok_handle || ''}, Threads @${client.threads_handle || ''}
+` : '';
+
+      const systemPrompt = `You are a social media content creator. Generate posts based on the user's request.
+
+BRAND CONTEXT:
+${brandContext}
+
+RULES:
+1. NEVER use em dashes (—) anywhere. Use commas, periods, or colons instead.
+2. Each post needs: title (short engaging title), caption (the full post text), hashtags (relevant hashtags), first_comment (engagement-driving comment/question)
+3. Match the brand voice and tone from the brand bible
+4. Include any core hashtags from the brand bible
+5. Make each post unique and engaging
+6. For Threads posts: keep captions concise and punchy (under 500 chars), conversational tone
+7. For TikTok scripts: include a hook and full script
+8. For Instagram: include caption with line breaks for readability
+
+Return a JSON object with:
+{
+  "posts": [
+    {
+      "title": "engaging title",
+      "caption": "full post text",
+      "hashtags": "#hashtag1 #hashtag2",
+      "first_comment": "engagement comment or question",
+      "platform": "threads|tiktok|instagram|general"
+    }
+  ]
+}
+
+Return ONLY valid JSON. No markdown code blocks.`;
+
+      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5-20250514',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!aiRes.ok) {
+        const err = await aiRes.text();
+        throw new Error(`Anthropic API error: ${err}`);
+      }
+
+      const aiData = await aiRes.json();
+      const raw = aiData.content[0].text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) parsed = JSON.parse(match[0]);
+        else throw new Error('Failed to parse AI response');
+      }
+
+      return res.json(parsed);
+    } catch (err) {
+      console.error('generate-content error:', err);
+      return res.status(500).json({ error: 'Content generation failed: ' + err.message });
+    }
+  }
+
   return res.status(400).json({ error: 'Invalid action or method' });
 };
