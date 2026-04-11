@@ -137,7 +137,7 @@ Return ONLY valid JSON, no markdown formatting or code blocks.`;
 TITLE: ${s.title || 'Untitled'}
 SCRIPT: ${s.full_script || s.hook || s.title || 'No script text'}`).join('\n\n');
 
-    const prompt = `You are a social media caption writer. Generate a hook, caption, hashtags, and first comment for each script below.
+    const prompt = `You are a social media caption writer. Generate a caption, hashtags, and first comment for each script below.
 
 Brand Context:
 ${brandContext}
@@ -146,16 +146,14 @@ ${scriptsList}
 
 RULES:
 1. NEVER use em dashes (—) anywhere. Use commas, periods, or colons instead.
-2. The "hook" is the attention-grabbing first 1-2 sentences of the video, written to make someone stop scrolling.
-3. The "caption" is the full social media post text that goes with the video.
-4. For hashtags: ALWAYS include any core hashtags from the brand bible first, then add 4-6 topic-specific ones.
-5. The "first_comment" should encourage engagement (questions, calls to action).
+2. The "caption" is the full social media post text that goes with the video. Punchy, engaging, matches the brand voice.
+3. For hashtags: ALWAYS include any core hashtags from the brand bible first, then add 4-6 topic-specific ones.
+4. The "first_comment" should encourage engagement (questions, calls to action).
 
 Return a JSON array with one object per script, in order:
 [
   {
     "index": 0,
-    "hook": "attention-grabbing opening line that stops the scroll",
     "caption": "engaging social media caption matching the brand voice",
     "hashtags": "#core #brand #hashtags #plus #topic #specific",
     "first_comment": "engaging first comment to boost engagement"
@@ -206,7 +204,6 @@ Return ONLY valid JSON, no markdown.`;
         status: 'caption_ready',
         updated_at: new Date().toISOString(),
       };
-      if (result.hook) updates.hook = result.hook;
 
       await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
         method: 'PATCH',

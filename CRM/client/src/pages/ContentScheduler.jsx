@@ -688,7 +688,7 @@ export default function ContentScheduler() {
                     <th style={{ ...thStyle, width: 30 }}></th>
                     <th style={{ ...thStyle, width: 80 }}>Media</th>
                     <th style={{ ...thStyle, minWidth: 140 }}>Title</th>
-                    <th style={{ ...thStyle, minWidth: 160 }}>Hook</th>
+                    <th style={{ ...thStyle, minWidth: 160 }}>Script</th>
                     <th style={{ ...thStyle, minWidth: 180 }}>Caption</th>
                     <th style={{ ...thStyle, minWidth: 120 }}>Hashtags</th>
                     <th style={{ ...thStyle, minWidth: 120 }}>1st Comment</th>
@@ -761,7 +761,7 @@ export default function ContentScheduler() {
                       </td>
 
                       {/* Editable cells */}
-                      {['title', 'hook', 'caption', 'hashtags', 'first_comment'].map(field => (
+                      {['title', 'full_script', 'caption', 'hashtags', 'first_comment'].map(field => (
                         <td key={field} style={{ padding: 10, maxWidth: 200 }}>
                           {editingCell?.id === script.id && editingCell?.field === field ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
