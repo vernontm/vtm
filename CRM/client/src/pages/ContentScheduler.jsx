@@ -617,8 +617,10 @@ export default function ContentScheduler() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 14px' }} onClick={async () => {
-              await createContentScript({ client_id: client.id, title: '', full_script: '', status: 'draft', sort_order: scripts.length + 1 });
-              loadClientData(client.id);
+              try {
+                await createContentScript([{ client_id: client.id, title: 'New Script', full_script: '', status: 'draft', sort_order: scripts.length + 1 }]);
+                await loadClientData(client.id);
+              } catch (err) { console.error('Add row failed:', err); alert('Failed to add row: ' + err.message); }
             }}>
               <Plus size={13} /> Add Row
             </button>
