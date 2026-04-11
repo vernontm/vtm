@@ -229,8 +229,8 @@ export default function ContentScheduler() {
 
   // ── CSV Export ──
   function exportCSV() {
-    const selected = scripts.filter(s => selectedScripts.has(s.id));
-    if (!selected.length) return;
+    const selected = scripts.filter(s => selectedScripts.has(s.id) && s.status !== 'exported');
+    if (!selected.length) { alert('No unexported scripts selected'); return; }
 
     // Build list of platform IDs that are filled in
     const platformIds = [
