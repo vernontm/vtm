@@ -53,7 +53,10 @@ Return ONLY valid JSON, no markdown formatting or code blocks.`;
 
     let parsed;
     try {
-      parsed = JSON.parse(rawText);
+      // Try direct parse first, then extract JSON from markdown code blocks
+      const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
     } catch {
       return res.status(500).json({ error: 'Failed to parse AI response as JSON', raw: rawText });
     }
@@ -144,7 +147,10 @@ Return ONLY valid JSON with these fields:
       const aiData = await aiRes.json();
       let generated;
       try {
-        generated = JSON.parse(aiData.content[0].text);
+        const raw = aiData.content[0].text;
+        const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        generated = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
       } catch {
         continue;
       }
