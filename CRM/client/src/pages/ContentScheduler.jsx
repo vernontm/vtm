@@ -232,10 +232,14 @@ export default function ContentScheduler() {
     const selected = scripts.filter(s => selectedScripts.has(s.id));
     if (!selected.length) return;
 
-    const platformIds = [client.instagram_id, client.tiktok_id, client.facebook_id, client.threads_id, client.youtube_id, client.linkedin_id].filter(Boolean);
-    const accountIds = platformIds.join(',');
+    // Build list of platform IDs that are filled in
+    const platformIds = [
+      client.instagram_id, client.tiktok_id, client.facebook_id,
+      client.threads_id, client.youtube_id, client.linkedin_id,
+    ].filter(Boolean);
 
-    const rows = selected.map(script => {
+    const rows = [];
+    for (const script of selected) {
       const description = [script.caption, script.hashtags].filter(Boolean).join(' ');
       const mediaUrls = script.media_urls ? script.media_urls.join('; ') : '';
       const dt = script.scheduled_datetime
@@ -244,14 +248,17 @@ export default function ContentScheduler() {
       const firstComment = script.first_comment || '';
       const tags = script.tags || '';
 
-      return [description, mediaUrls, dt, accountIds, firstComment, tags]
-        .map(field => {
-          const s = String(field);
-          if (s.includes(',') || s.includes('"') || s.includes('\n'))
-            return `"${s.replace(/"/g, '""')}"`;
-          return s;
-        }).join(',');
-    });
+      // One row per platform account
+      for (const accountId of platformIds) {
+        rows.push([description, mediaUrls, dt, accountId, firstComment, tags]
+          .map(field => {
+            const s = String(field);
+            if (s.includes(',') || s.includes('"') || s.includes('\n'))
+              return `"${s.replace(/"/g, '""')}"`;
+            return s;
+          }).join(','));
+      }
+    }
 
     const csv = rows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
