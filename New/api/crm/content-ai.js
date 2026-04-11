@@ -220,66 +220,71 @@ Return ONLY valid JSON, no markdown.`;
 
   // ── auto-schedule ─────────────────────────────────────────────────
   if (action === 'auto-schedule' && req.method === 'POST') {
-    const { client_id } = req.body;
-    if (!client_id) return res.status(400).json({ error: 'client_id required' });
+    try {
+      const { client_id } = req.body;
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
 
-    // Fetch schedule config
-    const configs = await supaFetch(
-      `crm_auto_schedule_config?client_id=eq.${client_id}&limit=1`
-    );
-    const config = configs && configs[0];
-    if (!config || !config.time_slots || !config.time_slots.length) {
-      return res.status(400).json({ error: 'No schedule config found for this client' });
-    }
-
-    // Fetch unscheduled scripts ordered by sort_order
-    const scripts = await supaFetch(
-      `crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=is.null&order=sort_order.asc`
-    );
-
-    if (!scripts || !scripts.length) {
-      return res.json({ scheduled: 0 });
-    }
-
-    const { time_slots, timezone } = config;
-    let slotIndex = 0;
-
-    // Start from tomorrow to avoid scheduling in the past
-    const now = new Date();
-    let currentDate = new Date(now);
-    currentDate.setDate(currentDate.getDate() + 1);
-
-    let scheduled = 0;
-
-    for (const script of scripts) {
-      const slot = time_slots[slotIndex];
-
-      // Build the scheduled datetime string
-      const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      const day = String(currentDate.getDate()).padStart(2, '0');
-      const scheduledDatetime = `${year}-${month}-${day}T${slot}:00`;
-
-      await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          scheduled_datetime: scheduledDatetime,
-          status: 'scheduled',
-          updated_at: new Date().toISOString(),
-        }),
-      });
-
-      scheduled++;
-      slotIndex++;
-
-      // When all slots for the day are used, advance to next day
-      if (slotIndex >= time_slots.length) {
-        slotIndex = 0;
-        currentDate.setDate(currentDate.getDate() + 1);
+      // Fetch schedule config
+      const configs = await supaFetch(
+        `crm_auto_schedule_config?client_id=eq.${client_id}&limit=1`
+      );
+      const config = configs && configs[0];
+      if (!config || !config.time_slots || !config.time_slots.length) {
+        return res.status(400).json({ error: 'No schedule config found. Open Schedule Settings first.' });
       }
-    }
 
-    return res.json({ scheduled });
+      // Fetch unscheduled scripts ordered by sort_order
+      const scripts = await supaFetch(
+        `crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=is.null&order=sort_order.asc`
+      );
+
+      if (!scripts || !scripts.length) {
+        return res.json({ scheduled: 0, message: 'No unscheduled scripts found' });
+      }
+
+      const { time_slots } = config;
+      let slotIndex = 0;
+
+      // Start from tomorrow to avoid scheduling in the past
+      const now = new Date();
+      let currentDate = new Date(now);
+      currentDate.setDate(currentDate.getDate() + 1);
+
+      let scheduled = 0;
+
+      for (const script of scripts) {
+        const slot = time_slots[slotIndex];
+
+        // Build the scheduled datetime string
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const scheduledDatetime = `${year}-${month}-${day}T${slot}:00`;
+
+        await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            scheduled_datetime: scheduledDatetime,
+            status: 'scheduled',
+            updated_at: new Date().toISOString(),
+          }),
+        });
+
+        scheduled++;
+        slotIndex++;
+
+        // When all slots for the day are used, advance to next day
+        if (slotIndex >= time_slots.length) {
+          slotIndex = 0;
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+
+      return res.json({ scheduled });
+    } catch (err) {
+      console.error('auto-schedule error:', err);
+      return res.status(500).json({ error: 'Auto-schedule failed: ' + err.message });
+    }
   }
 
   return res.status(400).json({ error: 'Invalid action or method' });
