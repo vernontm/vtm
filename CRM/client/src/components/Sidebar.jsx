@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, Briefcase, Star, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
-  Eye, EyeOff, FileText, CreditCard, FolderOpen, Zap,
+  Eye, EyeOff, FileText, CreditCard, FolderOpen, Zap, Film,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -21,6 +21,7 @@ const nav = [
   { to: '/blog',           icon: FileText,        label: 'Blog' },
   { to: '/portfolio',      icon: FolderOpen,      label: 'Portfolio' },
   { to: '/outreach',       icon: Zap,             label: 'Outreach' },
+  { to: '/content-scheduler', icon: Film,          label: 'Content' },
 ];
 
 const navTools = [

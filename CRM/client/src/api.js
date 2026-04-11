@@ -279,3 +279,22 @@ export const researchLeads = (data) => request('/research-leads', { method: 'POS
 export const generateOutreach = (data) => request('/generate-outreach', { method: 'POST', body: JSON.stringify(data) });
 export const outreachChat = (data) => request('/outreach-chat', { method: 'POST', body: JSON.stringify(data) });
 export const rewriteEmail = (data) => request('/rewrite-email', { method: 'POST', body: JSON.stringify(data) });
+
+// Content Scheduler
+export const getContentScripts = (clientId) => request(`/content-scripts?client_id=${clientId}`);
+export const createContentScript = (data) => request('/content-scripts', { method: 'POST', body: JSON.stringify(data) });
+export const updateContentScript = (id, data) => request(`/content-scripts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteContentScript = (id) => request(`/content-scripts?id=${id}`, { method: 'DELETE' });
+export const clearContentScripts = (clientId) => request(`/content-scripts?client_id=${clientId}&action=clear-all`, { method: 'DELETE' });
+
+export const getSocialAccounts = (clientId) => request(`/social-accounts?client_id=${clientId}`);
+export const createSocialAccount = (data) => request('/social-accounts', { method: 'POST', body: JSON.stringify(data) });
+export const updateSocialAccount = (id, data) => request(`/social-accounts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteSocialAccount = (id) => request(`/social-accounts?id=${id}`, { method: 'DELETE' });
+
+export const getScheduleConfig = (clientId) => request(`/schedule-config?client_id=${clientId}`);
+export const saveScheduleConfig = (data) => request('/schedule-config', { method: 'POST', body: JSON.stringify(data) });
+
+export const parseScripts = (data) => request('/content-ai?action=parse-scripts', { method: 'POST', body: JSON.stringify(data) });
+export const generateCaptions = (data) => request('/content-ai?action=generate-captions', { method: 'POST', body: JSON.stringify(data) });
+export const autoScheduleContent = (data) => request('/content-ai?action=auto-schedule', { method: 'POST', body: JSON.stringify(data) });

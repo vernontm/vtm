@@ -22,6 +22,7 @@ import EmailPage from './pages/Email';
 import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
 import Outreach from './pages/Outreach';
+import ContentScheduler from './pages/ContentScheduler';
 
 export const MobileContext = createContext({ sidebarOpen: false, setSidebarOpen: () => {} });
 export const useMobile = () => useContext(MobileContext);
@@ -65,6 +66,7 @@ function AppLayout() {
             <Route path="/subscriptions" element={<Subscriptions />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/outreach" element={<Outreach />} />
+            <Route path="/content-scheduler" element={<ContentScheduler />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
