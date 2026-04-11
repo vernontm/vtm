@@ -68,6 +68,8 @@ export default function ContentScheduler() {
   const [dragOverId, setDragOverId] = useState(null);
   const [savingClient, setSavingClient] = useState(false);
   const [processingBible, setProcessingBible] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'calendar'
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const brandBibleUploadRef = useRef(null);
 
   // Schedule modal state
@@ -690,12 +692,132 @@ export default function ContentScheduler() {
             <button style={btnGhost} onClick={() => loadClientData(client.id)}>
               <RefreshCw size={12} />
             </button>
+            {/* View toggle */}
+            <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
+              <button onClick={() => setViewMode('table')} style={{
+                padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                background: viewMode === 'table' ? '#4a6cf7' : '#fff',
+                color: viewMode === 'table' ? '#fff' : '#8e8ea0',
+              }}>Table</button>
+              <button onClick={() => setViewMode('calendar')} style={{
+                padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                background: viewMode === 'calendar' ? '#4a6cf7' : '#fff',
+                color: viewMode === 'calendar' ? '#fff' : '#8e8ea0',
+              }}><Calendar size={11} style={{ marginRight: 4 }} />Calendar</button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Calendar View */}
+      {client && viewMode === 'calendar' && (() => {
+        const year = calendarMonth.getFullYear();
+        const month = calendarMonth.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        const tz = schedTimezone || 'America/Chicago';
+
+        // Group scripts by date (in client timezone)
+        const byDate = {};
+        scripts.forEach(s => {
+          if (!s.scheduled_datetime) return;
+          const d = new Date(s.scheduled_datetime);
+          const localDate = d.toLocaleDateString('en-CA', { timeZone: tz });
+          if (!byDate[localDate]) byDate[localDate] = [];
+          byDate[localDate].push(s);
+        });
+
+        // Build calendar grid cells
+        const cells = [];
+        for (let i = 0; i < firstDay; i++) cells.push(null);
+        for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+        while (cells.length % 7 !== 0) cells.push(null);
+
+        const monthName = new Date(year, month).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+        return (
+          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+            {/* Calendar header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
+              <button onClick={() => setCalendarMonth(new Date(year, month - 1))} style={btnGhost}><ChevronLeft size={16} /></button>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{monthName}</h3>
+              <button onClick={() => setCalendarMonth(new Date(year, month + 1))} style={btnGhost}><ChevronRight size={16} /></button>
+            </div>
+
+            {/* Day headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e5e7ef' }}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <div key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase' }}>{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+              {cells.map((day, i) => {
+                if (day === null) return <div key={`empty-${i}`} style={{ minHeight: 110, background: '#fafafa', borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none', borderBottom: '1px solid #f0f0f5' }} />;
+
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const dayScripts = byDate[dateStr] || [];
+                const isToday = dateStr === todayStr;
+
+                return (
+                  <div key={day} style={{
+                    minHeight: 110, padding: 6,
+                    borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none',
+                    borderBottom: '1px solid #f0f0f5',
+                    background: isToday ? 'rgba(74,108,247,0.04)' : '#fff',
+                  }}>
+                    <div style={{
+                      fontSize: 12, fontWeight: isToday ? 700 : 500, marginBottom: 4,
+                      color: isToday ? '#4a6cf7' : '#8e8ea0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                    }}>
+                      {isToday ? (
+                        <span style={{ background: '#4a6cf7', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>{day}</span>
+                      ) : day}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {dayScripts.slice(0, 3).map(s => {
+                        const time = new Date(s.scheduled_datetime).toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true });
+                        const sc = STATUS_COLORS[s.status] || STATUS_COLORS.draft;
+                        return (
+                          <div key={s.id} title={`${s.title}\n${time}\n${s.caption || ''}`} style={{
+                            padding: '3px 6px', borderRadius: 6, fontSize: 10, lineHeight: 1.3,
+                            background: sc.bg, color: sc.text, cursor: 'pointer',
+                            overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                          }}>
+                            {s.media_urls?.length > 0 && <Film size={9} style={{ marginRight: 3, verticalAlign: 'middle' }} />}
+                            <span style={{ fontWeight: 600 }}>{time}</span>{' '}
+                            <span style={{ opacity: 0.85 }}>{s.title || 'Untitled'}</span>
+                          </div>
+                        );
+                      })}
+                      {dayScripts.length > 3 && (
+                        <div style={{ fontSize: 10, color: '#4a6cf7', fontWeight: 600, cursor: 'pointer', paddingLeft: 4 }}>
+                          +{dayScripts.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Unscheduled count */}
+            {scripts.filter(s => !s.scheduled_datetime).length > 0 && (
+              <div style={{ padding: '10px 20px', borderTop: '1px solid #e5e7ef', fontSize: 12, color: '#8e8ea0' }}>
+                <Clock size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                {scripts.filter(s => !s.scheduled_datetime).length} unscheduled scripts
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Content Table */}
-      {client && (
+      {client && viewMode === 'table' && (
         <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
