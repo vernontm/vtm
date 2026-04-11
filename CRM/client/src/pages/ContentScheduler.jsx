@@ -22,10 +22,19 @@ const STATUS_COLORS = {
   posted: { bg: '#e8f5e9', text: '#16a34a', label: 'Posted' },
 };
 
-function StatusPill({ status }) {
+function StatusPill({ status, onClick }) {
   const s = STATUS_COLORS[status] || STATUS_COLORS.draft;
+  const clickable = status === 'exported';
   return (
-    <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: s.bg, color: s.text }}>
+    <span
+      onClick={clickable ? onClick : undefined}
+      title={clickable ? 'Click to reset (allow re-export)' : ''}
+      style={{
+        padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+        background: s.bg, color: s.text,
+        cursor: clickable ? 'pointer' : 'default',
+      }}
+    >
       {s.label}
     </span>
   );
@@ -848,7 +857,10 @@ export default function ContentScheduler() {
                       </td>
 
                       {/* Status */}
-                      <td style={{ padding: 10 }}><StatusPill status={script.status} /></td>
+                      <td style={{ padding: 10 }}><StatusPill status={script.status} onClick={async () => {
+                        await updateContentScript(script.id, { status: script.scheduled_datetime ? 'scheduled' : 'caption_ready' });
+                        loadClientData(client.id);
+                      }} /></td>
 
                       {/* Actions */}
                       <td style={{ padding: 10 }}>
