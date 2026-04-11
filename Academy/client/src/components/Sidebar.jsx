@@ -194,7 +194,7 @@ export default function Sidebar() {
                           <p style={{
                             fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4,
                             fontWeight: n.read ? 400 : 500,
-                          }}>{n.message || n.content}</p>
+                          }}>{n.body || n.title}</p>
                           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
                             {new Date(n.created_at).toLocaleDateString()}
                           </p>

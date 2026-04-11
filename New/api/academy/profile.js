@@ -8,16 +8,16 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const rows = await supaFetch(`academy_profiles?user_id=eq.${user.id}`);
+      const rows = await supaFetch(`academy_profiles?id=eq.${user.id}`);
       return rows[0] ? res.json(rows[0]) : res.status(404).json({ error: 'Profile not found' });
     }
 
     if (req.method === 'PUT') {
       const { full_name, avatar_url } = req.body;
-      const updates = { updated_at: new Date().toISOString() };
+      const updates = {};
       if (full_name !== undefined) updates.full_name = full_name;
       if (avatar_url !== undefined) updates.avatar_url = avatar_url;
-      const result = await supaFetch(`academy_profiles?user_id=eq.${user.id}`, {
+      const result = await supaFetch(`academy_profiles?id=eq.${user.id}`, {
         method: 'PATCH',
         body: JSON.stringify(updates),
       });

@@ -173,8 +173,8 @@ export default function LessonPlayer() {
   }
 
   // Find video content from lesson
-  const videoContent = lesson?.academy_lesson_content_items?.find(c => c.content_type === 'video');
-  const pdfContent = lesson?.academy_lesson_content_items?.find(c => c.content_type === 'pdf');
+  const videoContent = lesson?.academy_lesson_content?.find(c => c.content_type === 'video');
+  const pdfContent = lesson?.academy_lesson_content?.find(c => c.content_type === 'pdf');
   const textContent = lesson?.content;
   const currentProgress = progressMap[lessonId];
 
@@ -606,14 +606,14 @@ function QuizResults({ result, questions, answers }) {
           {passed ? 'Great Job!' : 'Keep Studying'}
         </h3>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-          You scored <strong style={{ color: passed ? '#22c55e' : '#ef4444' }}>{result.score}%</strong> ({result.correct_answers}/{result.total_questions} correct)
+          You scored <strong style={{ color: passed ? '#22c55e' : '#ef4444' }}>{result.score}%</strong>
         </p>
       </div>
 
       {/* Show answers */}
       {questions.map((q, qi) => {
         const userAnswer = answers[q.id];
-        const isCorrect = userAnswer === q.correct_answer;
+        const isCorrect = userAnswer === q.correct_option_id;
         return (
           <div key={q.id} style={{ marginBottom: 16 }}>
             <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -622,7 +622,7 @@ function QuizResults({ result, questions, answers }) {
             </p>
             {(q.options || []).map(opt => {
               const isSelected = opt.id === userAnswer;
-              const isAnswer = opt.id === q.correct_answer;
+              const isAnswer = opt.id === q.correct_option_id;
               return (
                 <div key={opt.id} style={{
                   padding: '8px 12px', borderRadius: 6, marginBottom: 3, fontSize: 13,

@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const messages = await supaFetch(
-        `academy_messages?or=(sender_id.eq.${user.id},recipient_id.eq.${user.id})&order=created_at.asc`
+        `academy_direct_messages?or=(sender_id.eq.${user.id},recipient_id.eq.${user.id})&order=created_at.asc`
       );
       return res.json(messages);
     }
@@ -19,8 +19,8 @@ export default async function handler(req, res) {
       if (!message) return res.status(400).json({ error: 'message is required' });
 
       // Find first admin as recipient
-      const admins = await supaFetch('academy_profiles?role=eq.admin&limit=1');
-      const recipientId = admins[0]?.user_id;
+      const admins = await supaFetch('academy_profiles?role=eq.admin&select=id&limit=1');
+      const recipientId = admins[0]?.id;
       if (!recipientId) return res.status(500).json({ error: 'No admin available' });
 
       const msg = {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         message,
         created_at: new Date().toISOString(),
       };
-      const result = await supaFetch('academy_messages', {
+      const result = await supaFetch('academy_direct_messages', {
         method: 'POST',
         body: JSON.stringify(msg),
       });

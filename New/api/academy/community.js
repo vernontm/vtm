@@ -13,9 +13,9 @@ export default async function handler(req, res) {
       const pageNum = parseInt(page) || 0;
       const limit = 20;
       const offset = pageNum * limit;
-      // Get top-level posts (parent_id is null) with reply counts
+      // Get posts with reply counts
       const posts = await supaFetch(
-        `academy_community_posts?parent_id=is.null&select=*,replies:academy_community_posts(count)&order=created_at.desc&limit=${limit}&offset=${offset}`
+        `academy_community_posts?select=*,academy_community_replies(count)&order=created_at.desc&limit=${limit}&offset=${offset}`
       );
       return res.json(posts);
     }
@@ -25,12 +25,12 @@ export default async function handler(req, res) {
         const { message } = req.body;
         if (!message) return res.status(400).json({ error: 'message is required' });
         const reply = {
+          post_id,
           user_id: user.id,
-          parent_id: post_id,
           message,
           created_at: new Date().toISOString(),
         };
-        const result = await supaFetch('academy_community_posts', {
+        const result = await supaFetch('academy_community_replies', {
           method: 'POST',
           body: JSON.stringify(reply),
         });

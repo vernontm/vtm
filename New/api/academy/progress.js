@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         lesson_id,
         watch_seconds: watch_seconds || 0,
         completed: completed || false,
-        updated_at: new Date().toISOString(),
+        last_watched_at: new Date().toISOString(),
       };
       const result = await supaFetch('academy_user_progress', {
         method: 'POST',

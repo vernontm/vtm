@@ -13,12 +13,12 @@ export default async function handler(req, res) {
       // Full conversation with a specific student
       if (student_id) {
         const messages = await supaFetch(
-          `academy_direct_messages?or=(and(sender_id.eq.${student_id},receiver_id.eq.${user.id}),and(sender_id.eq.${user.id},receiver_id.eq.${student_id}))&order=created_at.asc`
+          `academy_direct_messages?or=(and(sender_id.eq.${student_id},recipient_id.eq.${user.id}),and(sender_id.eq.${user.id},recipient_id.eq.${student_id}))&order=created_at.asc`
         );
 
         // Mark unread messages from this student as read
         await supaFetch(
-          `academy_direct_messages?sender_id=eq.${student_id}&receiver_id=eq.${user.id}&read=eq.false`,
+          `academy_direct_messages?sender_id=eq.${student_id}&recipient_id=eq.${user.id}&read=eq.false`,
           {
             method: 'PATCH',
             body: JSON.stringify({ read: true }),
@@ -30,22 +30,22 @@ export default async function handler(req, res) {
 
       // List all message threads
       const allMessages = await supaFetch(
-        `academy_direct_messages?or=(sender_id.eq.${user.id},receiver_id.eq.${user.id})&order=created_at.desc`
+        `academy_direct_messages?or=(sender_id.eq.${user.id},recipient_id.eq.${user.id})&order=created_at.desc`
       );
 
       // Group by student and build thread summaries
       const threadMap = {};
       for (const msg of allMessages) {
-        const studentId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+        const studentId = msg.sender_id === user.id ? msg.recipient_id : msg.sender_id;
         if (!threadMap[studentId]) {
           threadMap[studentId] = {
             student_id: studentId,
-            latest_message: msg.content || msg.message,
+            latest_message: msg.message,
             latest_at: msg.created_at,
             unread_count: 0,
           };
         }
-        if (msg.receiver_id === user.id && !msg.read) {
+        if (msg.recipient_id === user.id && !msg.read) {
           threadMap[studentId].unread_count++;
         }
       }
@@ -54,13 +54,12 @@ export default async function handler(req, res) {
       const studentIds = Object.keys(threadMap);
       if (studentIds.length > 0) {
         const profiles = await supaFetch(
-          `academy_profiles?user_id=in.(${studentIds.join(',')})&select=user_id,full_name,email,avatar_url`
+          `academy_profiles?id=in.(${studentIds.join(',')})&select=id,full_name,avatar_url`
         );
         for (const p of profiles) {
-          if (threadMap[p.user_id]) {
-            threadMap[p.user_id].student_name = p.full_name;
-            threadMap[p.user_id].student_email = p.email;
-            threadMap[p.user_id].avatar_url = p.avatar_url;
+          if (threadMap[p.id]) {
+            threadMap[p.id].student_name = p.full_name;
+            threadMap[p.id].avatar_url = p.avatar_url;
           }
         }
       }
@@ -72,15 +71,16 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { student_id, content } = req.body;
-      if (!student_id || !content) {
-        return res.status(400).json({ error: 'student_id and content are required' });
+      const { student_id, content, message: msgText } = req.body;
+      const messageBody = msgText || content;
+      if (!student_id || !messageBody) {
+        return res.status(400).json({ error: 'student_id and message are required' });
       }
 
       const msg = {
         sender_id: user.id,
-        receiver_id: student_id,
-        content,
+        recipient_id: student_id,
+        message: messageBody,
         read: false,
         created_at: new Date().toISOString(),
       };
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
           user_id: student_id,
           type: 'new_message',
           title: 'New message from admin',
-          content: content.substring(0, 100),
+          body: messageBody.substring(0, 100),
           read: false,
           created_at: new Date().toISOString(),
         }),

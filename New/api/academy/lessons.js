@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       if (id) {
-        const rows = await supaFetch(`academy_lessons?id=eq.${id}&select=*,academy_lesson_content_items(*)&status=eq.published`);
+        const rows = await supaFetch(`academy_lessons?id=eq.${id}&select=*,academy_lesson_content(*)&status=eq.published`);
         return rows[0] ? res.json(rows[0]) : res.status(404).json({ error: 'Lesson not found' });
       }
       if (course_id) {

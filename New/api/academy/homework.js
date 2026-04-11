@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       if (!lesson_id) return res.status(400).json({ error: 'lesson_id is required' });
       const submissions = await supaFetch(
-        `academy_homework_submissions?user_id=eq.${user.id}&lesson_id=eq.${lesson_id}&order=created_at.desc`
+        `academy_homework_submissions?user_id=eq.${user.id}&lesson_id=eq.${lesson_id}&order=submitted_at.desc`
       );
       return res.json(submissions);
     }
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         submission_text: submission_text || '',
         file_urls: file_urls || [],
         status: 'submitted',
-        created_at: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
       };
       const result = await supaFetch('academy_homework_submissions', {
         method: 'POST',

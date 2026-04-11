@@ -96,7 +96,7 @@ export default function AcademyMessages() {
     const studentId = selectedThread.student_id || selectedThread.id;
     try {
       setSending(true);
-      await sendAcademyMessage({ student_id: studentId, content: messageText.trim() });
+      await sendAcademyMessage({ student_id: studentId, message: messageText.trim() });
       setMessageText('');
       await loadMessages(studentId, true);
     } catch (err) {
@@ -221,7 +221,7 @@ export default function AcademyMessages() {
                         background: isAdmin ? '#4a6cf7' : '#f5f7fa',
                         color: isAdmin ? '#fff' : '#1a1a2e',
                       }}>
-                        <div style={{ fontSize: 13, lineHeight: 1.5 }}>{m.content || m.text}</div>
+                        <div style={{ fontSize: 13, lineHeight: 1.5 }}>{m.message || m.text}</div>
                         <div style={{ fontSize: 10, marginTop: 4, opacity: 0.7 }}>{formatMessageTime(m.created_at || m.time)}</div>
                       </div>
                     </div>

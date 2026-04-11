@@ -8,20 +8,17 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const { flagged } = req.query;
-      let path = 'academy_community_posts?select=*,academy_profiles(full_name,email,avatar_url),reply_count:academy_community_replies(count)&order=created_at.desc';
-      if (flagged === 'true') path += '&flagged=eq.true';
+      let path = 'academy_community_posts?select=*,academy_profiles(full_name,avatar_url),reply_count:academy_community_replies(count)&order=created_at.desc';
       const posts = await supaFetch(path);
       return res.json(posts);
     }
 
     if (req.method === 'PUT') {
-      const { id, pinned, deleted } = req.body;
+      const { id, pinned } = req.body;
       if (!id) return res.status(400).json({ error: 'id is required' });
 
-      const data = { updated_at: new Date().toISOString() };
+      const data = {};
       if (pinned !== undefined) data.pinned = pinned;
-      if (deleted) data.deleted_at = new Date().toISOString();
 
       const result = await supaFetch(`academy_community_posts?id=eq.${id}`, {
         method: 'PATCH',

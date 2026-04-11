@@ -23,7 +23,7 @@ function CategoryBadge({ category }) {
   );
 }
 
-const emptyForm = { title: '', description: '', url: '', image_url: '', category: '', sort_order: 0 };
+const emptyForm = { title: '', description: '', affiliate_url: '', image_url: '', category: '', sort_order: 0 };
 
 export default function AcademyRecommendations() {
   const [recs, setRecs] = useState([]);
@@ -57,7 +57,7 @@ export default function AcademyRecommendations() {
 
   function openEdit(rec) {
     setEditingId(rec.id);
-    setForm({ title: rec.title || '', description: rec.description || '', url: rec.url || '', image_url: rec.image_url || '', category: rec.category || '', sort_order: rec.sort_order || 0 });
+    setForm({ title: rec.title || '', description: rec.description || '', affiliate_url: rec.affiliate_url || '', image_url: rec.image_url || '', category: rec.category || '', sort_order: rec.sort_order || 0 });
     setModalOpen(true);
   }
 
@@ -170,9 +170,9 @@ export default function AcademyRecommendations() {
                   <td style={tdStyle}><CategoryBadge category={r.category} /></td>
                   <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#7a7f9a' }}>{r.description}</td>
                   <td style={tdStyle}>
-                    {r.url && (
-                      <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ color: '#4a6cf7', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {r.url.replace(/https?:\/\//, '').split('/')[0]} <ExternalLink size={11} />
+                    {r.affiliate_url && (
+                      <a href={r.affiliate_url} target="_blank" rel="noopener noreferrer" style={{ color: '#4a6cf7', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {r.affiliate_url.replace(/https?:\/\//, '').split('/')[0]} <ExternalLink size={11} />
                       </a>
                     )}
                   </td>
@@ -210,7 +210,7 @@ export default function AcademyRecommendations() {
             />
 
             <label style={labelStyle}>URL</label>
-            <input style={inputStyle} value={form.url} onChange={e => updateField('url', e.target.value)} placeholder="https://..." />
+            <input style={inputStyle} value={form.affiliate_url} onChange={e => updateField('affiliate_url', e.target.value)} placeholder="https://..." />
 
             <label style={labelStyle}>Image URL</label>
             <input style={inputStyle} value={form.image_url} onChange={e => updateField('image_url', e.target.value)} placeholder="https://..." />

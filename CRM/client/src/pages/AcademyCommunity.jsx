@@ -147,7 +147,7 @@ export default function AcademyCommunity() {
                     </span>
                   )}
                 </div>
-                <p style={{ fontSize: 13, color: '#3a3a4e', margin: 0, lineHeight: 1.6 }}>{post.content}</p>
+                <p style={{ fontSize: 13, color: '#3a3a4e', margin: 0, lineHeight: 1.6 }}>{post.message}</p>
                 <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
                   <span style={{ fontSize: 12, color: '#7a7f9a', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <MessageCircle size={13} /> {post.reply_count || 0} replies

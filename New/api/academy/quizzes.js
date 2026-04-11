@@ -27,17 +27,17 @@ export default async function handler(req, res) {
 
       let correct = 0;
       for (const q of questions) {
-        if (answers[q.id] === q.correct_answer) correct++;
+        if (answers[q.id] === q.correct_option_id) correct++;
       }
       const score = Math.round((correct / questions.length) * 100);
 
+      const passed = score >= 70;
       const attempt = {
         user_id: user.id,
         quiz_id,
         answers,
         score,
-        total_questions: questions.length,
-        correct_answers: correct,
+        passed,
         created_at: new Date().toISOString(),
       };
       const result = await supaFetch('academy_quiz_attempts', {

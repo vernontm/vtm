@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     try {
       const insertResult = await supaFetch('academy_stripe_events', {
         method: 'POST',
-        body: JSON.stringify({ event_id: event.id, event_type: event.type, created_at: new Date().toISOString() }),
+        body: JSON.stringify({ stripe_event_id: event.id, event_type: event.type, created_at: new Date().toISOString() }),
         headers: { 'Prefer': 'return=representation,resolution=ignore-duplicates' },
       });
       if (!insertResult || (Array.isArray(insertResult) && insertResult.length === 0)) {
@@ -78,17 +78,14 @@ export default async function handler(req, res) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const customerId = obj.customer;
-        const profiles = await supaFetch(`academy_profiles?stripe_customer_id=eq.${customerId}&select=user_id`);
+        const profiles = await supaFetch(`academy_profiles?stripe_customer_id=eq.${customerId}&select=id`);
         if (profiles[0]) {
           await supaFetch(`academy_profiles?stripe_customer_id=eq.${customerId}`, {
             method: 'PATCH',
             body: JSON.stringify({
               subscription_status: obj.status,
-              stripe_subscription_id: obj.id,
-              current_period_end: obj.current_period_end
-                ? new Date(obj.current_period_end * 1000).toISOString()
-                : null,
-              updated_at: new Date().toISOString(),
+              subscription_id: obj.id,
+              subscription_product_id: obj.plan?.product || null,
             }),
           });
         }
@@ -102,10 +99,6 @@ export default async function handler(req, res) {
           method: 'PATCH',
           body: JSON.stringify({
             subscription_status: 'canceled',
-            current_period_end: obj.current_period_end
-              ? new Date(obj.current_period_end * 1000).toISOString()
-              : null,
-            updated_at: new Date().toISOString(),
           }),
         }).catch(() => {});
         console.log(`Subscription canceled for customer ${customerId}`);
@@ -114,19 +107,18 @@ export default async function handler(req, res) {
 
       case 'checkout.session.completed': {
         const customerId = obj.customer;
-        const customerEmail = obj.customer_email || obj.customer_details?.email;
-        if (customerEmail) {
-          // Try to find profile by email and update
-          await supaFetch(`academy_profiles?email=eq.${customerEmail}`, {
+        const userId = obj.client_reference_id;
+        if (userId) {
+          // Update profile using the user id set during checkout creation
+          await supaFetch(`academy_profiles?id=eq.${userId}`, {
             method: 'PATCH',
             body: JSON.stringify({
               stripe_customer_id: customerId,
               subscription_status: 'active',
-              updated_at: new Date().toISOString(),
             }),
           }).catch(() => {});
         }
-        console.log(`Checkout completed for ${customerEmail}, customer ${customerId}`);
+        console.log(`Checkout completed for user ${userId}, customer ${customerId}`);
         break;
       }
 

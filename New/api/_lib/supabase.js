@@ -43,7 +43,7 @@ async function requireStudentAuth(req) {
   if (!res.ok) return null;
   const user = await res.json();
   // Fetch academy profile for role
-  const profiles = await supaFetch(`academy_profiles?user_id=eq.${user.id}&select=role`);
+  const profiles = await supaFetch(`academy_profiles?id=eq.${user.id}&select=role`);
   const role = profiles?.[0]?.role || 'student';
   return { id: user.id, email: user.email, role };
 }

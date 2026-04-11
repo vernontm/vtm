@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const rows = await supaFetch(`academy_profiles?user_id=eq.${user.id}&select=subscription_status,subscription_plan,stripe_customer_id,subscription_expires_at`);
+      const rows = await supaFetch(`academy_profiles?id=eq.${user.id}&select=subscription_status,subscription_product_id,stripe_customer_id,subscription_id`);
       return rows[0] ? res.json(rows[0]) : res.status(404).json({ error: 'Profile not found' });
     }
 
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
         if (!price_id) return res.status(400).json({ error: 'price_id is required' });
 
         // Check if user already has a Stripe customer ID
-        const profiles = await supaFetch(`academy_profiles?user_id=eq.${user.id}&select=stripe_customer_id`);
+        const profiles = await supaFetch(`academy_profiles?id=eq.${user.id}&select=stripe_customer_id`);
         const customerId = profiles[0]?.stripe_customer_id;
 
         const params = {
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'customer-portal') {
-        const profiles = await supaFetch(`academy_profiles?user_id=eq.${user.id}&select=stripe_customer_id`);
+        const profiles = await supaFetch(`academy_profiles?id=eq.${user.id}&select=stripe_customer_id`);
         const customerId = profiles[0]?.stripe_customer_id;
         if (!customerId) return res.status(400).json({ error: 'No subscription found' });
 

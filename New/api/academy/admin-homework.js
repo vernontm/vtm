@@ -8,10 +8,9 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const { status, course_id } = req.query;
-      let path = 'academy_homework_submissions?select=*,academy_profiles(full_name,email),academy_lessons(title)&order=created_at.desc';
+      const { status } = req.query;
+      let path = 'academy_homework_submissions?select=*,academy_profiles(full_name,avatar_url),academy_lessons(title)&order=submitted_at.desc';
       if (status) path += `&status=eq.${status}`;
-      if (course_id) path += `&course_id=eq.${course_id}`;
       const submissions = await supaFetch(path);
       return res.json(submissions);
     }
@@ -24,7 +23,6 @@ export default async function handler(req, res) {
       if (status) data.status = status;
       if (admin_feedback !== undefined) data.admin_feedback = admin_feedback;
       data.reviewed_at = new Date().toISOString();
-      data.reviewed_by = user.id;
 
       const result = await supaFetch(`academy_homework_submissions?id=eq.${id}`, {
         method: 'PATCH',

@@ -13,13 +13,13 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { title, description, url, image_url, category, sort_order } = req.body;
+      const { title, description, url, affiliate_url, image_url, category, sort_order } = req.body;
       if (!title) return res.status(400).json({ error: 'title is required' });
 
       const data = {
         title,
         description,
-        url,
+        affiliate_url: affiliate_url || url,
         image_url,
         category,
         sort_order: sort_order || 0,
@@ -36,7 +36,11 @@ export default async function handler(req, res) {
       const { id, ...fields } = req.body;
       if (!id) return res.status(400).json({ error: 'id is required' });
 
-      fields.updated_at = new Date().toISOString();
+      // Remap url -> affiliate_url if provided
+      if (fields.url && !fields.affiliate_url) {
+        fields.affiliate_url = fields.url;
+        delete fields.url;
+      }
       const result = await supaFetch(`academy_recommendations?id=eq.${id}`, {
         method: 'PATCH',
         body: JSON.stringify(fields),
