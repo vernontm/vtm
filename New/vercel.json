@@ -1,4 +1,30 @@
 {
+  "headers": [
+    {
+      "source": "/academy/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/academy",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/admin/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/admin",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/academy/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/admin/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
+  ],
   "functions": {
     "api/crm/content-ai.js": { "maxDuration": 60 },
     "api/crm/process-brand-bible.js": { "maxDuration": 60 },
@@ -12,8 +38,8 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/academy/assets/:path*", "destination": "/academy/assets/:path*" },
-    { "source": "/academy/:path*", "destination": "/academy/index.html" },
-    { "source": "/academy", "destination": "/academy/index.html" },
+    { "source": "/academy/:path*", "destination": "/academy/app.html" },
+    { "source": "/academy", "destination": "/academy/app.html" },
     { "source": "/admin/assets/:path*", "destination": "/admin/assets/:path*" },
     { "source": "/admin/:path*", "destination": "/admin/index.html" },
     { "source": "/admin", "destination": "/admin/index.html" },
