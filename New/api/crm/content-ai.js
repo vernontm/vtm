@@ -244,10 +244,14 @@ Return ONLY valid JSON, no markdown.`;
 
       const { time_slots } = config;
 
-      // Figure out current time to skip past slots for today
+      // Get IANA timezone from config (e.g. "America/Chicago")
+      const tz = config.timezone || 'America/Chicago';
+
+      // Get current local time in the client's timezone
       const now = new Date();
-      const nowHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      let currentDate = new Date(now);
+      const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+      const nowHHMM = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
+      let currentDate = new Date(nowLocal);
 
       // Find first available slot today (compare HH:MM)
       let slotIndex = 0;
@@ -266,13 +270,13 @@ Return ONLY valid JSON, no markdown.`;
       for (const script of scripts) {
         const slot = time_slots[slotIndex];
 
-        // Build the scheduled datetime string
+        // Build the scheduled datetime string WITH timezone
         const year = currentDate.getFullYear();
         const month = String(currentDate.getMonth() + 1).padStart(2, '0');
         const day = String(currentDate.getDate()).padStart(2, '0');
-        // slot is "HH:MM" — append seconds only if not already present
-      const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
-      const scheduledDatetime = `${year}-${month}-${day}T${timeStr}`;
+        const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
+        // Use the IANA timezone name so Postgres resolves the correct offset
+        const scheduledDatetime = `${year}-${month}-${day} ${timeStr} ${tz}`;
 
         await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
           method: 'PATCH',
