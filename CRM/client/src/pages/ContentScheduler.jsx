@@ -4,7 +4,7 @@ import {
   getContentClients, getContentClient, createContentClient, updateContentClient, deleteContentClient,
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
-  parseScripts, generateCaptions, autoScheduleContent,
+  parseScripts, generateCaptions, autoScheduleContent, processBrandBible,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -58,6 +58,8 @@ export default function ContentScheduler() {
   const [isListening, setIsListening] = useState(false);
   const [dragOverId, setDragOverId] = useState(null);
   const [savingClient, setSavingClient] = useState(false);
+  const [processingBible, setProcessingBible] = useState(false);
+  const brandBibleUploadRef = useRef(null);
 
   // Schedule modal state
   const [schedTimeslots, setSchedTimeslots] = useState(['10:00', '14:00', '18:00', '22:00']);
@@ -367,6 +369,57 @@ export default function ContentScheduler() {
     });
     setShowClientModal(true);
   }
+  async function handleBrandBibleUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setProcessingBible(true);
+
+    try {
+      const isPdf = file.type === 'application/pdf';
+      const isImage = file.type.startsWith('image/');
+
+      if (isPdf || isImage) {
+        // Read as base64 for PDF/image - Claude handles natively
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const result = ev.target.result;
+            resolve(result.split(',')[1]); // strip data:...;base64, prefix
+          };
+          reader.readAsDataURL(file);
+        });
+
+        const { brand_bible } = await processBrandBible({
+          client_id: editingClient?.id || null,
+          file_base64: base64,
+          media_type: file.type,
+          file_name: file.name,
+          business_name: clientForm.business_name,
+        });
+        setClientForm(prev => ({ ...prev, brand_bible: brand_bible }));
+      } else {
+        // Text-based files (.txt, .md, .docx text extraction)
+        const fileText = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target.result);
+          reader.readAsText(file);
+        });
+
+        const { brand_bible } = await processBrandBible({
+          client_id: editingClient?.id || null,
+          file_text: fileText,
+          file_name: file.name,
+          business_name: clientForm.business_name,
+        });
+        setClientForm(prev => ({ ...prev, brand_bible: brand_bible }));
+      }
+    } catch (err) {
+      alert('Failed to process file: ' + err.message);
+    }
+    setProcessingBible(false);
+  }
+
   async function handleSaveClient() {
     if (!clientForm.business_name.trim()) return;
     setSavingClient(true);
@@ -957,9 +1010,20 @@ export default function ContentScheduler() {
             </div>
 
             {/* Brand Bible */}
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Brand Bible</div>
-            <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical', marginBottom: 16 }}
-              placeholder="Brand voice, core hashtags, posting guidelines..."
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600 }}>Brand Bible</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input type="file" ref={brandBibleUploadRef} accept=".pdf,.txt,.docx,.doc,.md,image/*"
+                  onChange={handleBrandBibleUpload} style={{ display: 'none' }} />
+                <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }}
+                  onClick={() => brandBibleUploadRef.current?.click()}
+                  disabled={processingBible}>
+                  {processingBible ? <><Loader size={11} className="spin" /> Processing...</> : <><Upload size={11} /> Upload File</>}
+                </button>
+              </div>
+            </div>
+            <textarea style={{ ...inputStyle, minHeight: 100, resize: 'vertical', marginBottom: 16 }}
+              placeholder="Brand voice, core hashtags, posting guidelines... or upload a PDF/document above"
               value={clientForm.brand_bible}
               onChange={e => setClientForm({ ...clientForm, brand_bible: e.target.value })} />
 
