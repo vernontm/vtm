@@ -108,7 +108,7 @@ Return ONLY valid JSON, no markdown formatting or code blocks.`;
     if (!client_id) return res.status(400).json({ error: 'client_id required' });
 
     // Fetch client profile for brand voice
-    const clients = await supaFetch(`crm_clients?id=eq.${client_id}`);
+    const clients = await supaFetch(`crm_content_clients?id=eq.${client_id}`);
     const client = clients && clients[0];
     if (!client) return res.status(404).json({ error: 'Client not found' });
 
@@ -117,7 +117,6 @@ Return ONLY valid JSON, no markdown formatting or code blocks.`;
     if (script_ids && script_ids.length) {
       scriptsQuery += `&id=in.(${script_ids.join(',')})`;
     } else {
-      // All scripts missing captions
       scriptsQuery += '&caption=is.null';
     }
     const scripts = await supaFetch(scriptsQuery);
@@ -130,59 +129,74 @@ Return ONLY valid JSON, no markdown formatting or code blocks.`;
       client.business_name ? `Business: ${client.business_name}` : '',
       client.brand_bible ? `Brand Bible: ${client.brand_bible}` : '',
       client.target_audience ? `Target Audience: ${client.target_audience}` : '',
-      client.services ? `Services: ${client.services}` : '',
-      client.outreach_tone ? `Tone: ${client.outreach_tone}` : '',
+      client.preferred_tone ? `Tone: ${client.preferred_tone}` : '',
     ].filter(Boolean).join('\n');
 
-    let updated = 0;
+    // Batch all scripts into one Claude call
+    const scriptsList = scripts.map((s, i) => `--- SCRIPT ${i} ---
+TITLE: ${s.title || 'Untitled'}
+SCRIPT: ${s.full_script || s.hook || s.title || 'No script text'}`).join('\n\n');
 
-    for (const script of scripts) {
-      const prompt = `You are a social media caption writer. Given a video script and brand context, generate a caption, hashtags, and a first comment for posting.
+    const prompt = `You are a social media caption writer. Generate captions, hashtags, and first comments for each script below.
 
 Brand Context:
 ${brandContext}
 
-Video Script Title: ${script.title}
-Script: ${script.full_script}
+${scriptsList}
 
-Return ONLY valid JSON with these fields:
-- "caption": an engaging social media caption that matches the brand voice
-- "hashtags": a string of relevant hashtags (include #)
-- "first_comment": an engaging first comment to boost engagement`;
+Return a JSON array with one object per script, in order:
+[
+  {
+    "index": 0,
+    "caption": "engaging social media caption matching the brand voice",
+    "hashtags": "#relevant #hashtags #here",
+    "first_comment": "engaging first comment to boost engagement"
+  }
+]
 
-      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
-          max_tokens: 4000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
+Return ONLY valid JSON, no markdown.`;
 
-      if (!aiRes.ok) continue;
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
 
-      const aiData = await aiRes.json();
-      let generated;
-      try {
-        const raw = aiData.content[0].text;
-        const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        generated = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
-      } catch {
-        continue;
-      }
+    if (!aiRes.ok) {
+      const err = await aiRes.text();
+      return res.status(502).json({ error: 'AI caption generation failed', detail: err });
+    }
+
+    const aiData = await aiRes.json();
+    let results;
+    try {
+      const raw = aiData.content[0].text;
+      const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      results = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+    } catch {
+      return res.status(500).json({ error: 'Failed to parse captions response' });
+    }
+
+    let updated = 0;
+    for (const result of results) {
+      const script = scripts[result.index !== undefined ? result.index : updated];
+      if (!script) continue;
 
       await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          caption: generated.caption,
-          hashtags: generated.hashtags,
-          first_comment: generated.first_comment,
+          caption: result.caption,
+          hashtags: result.hashtags,
+          first_comment: result.first_comment,
           status: 'caption_ready',
           updated_at: new Date().toISOString(),
         }),
