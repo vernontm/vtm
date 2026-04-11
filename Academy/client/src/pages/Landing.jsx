@@ -6,6 +6,17 @@ import {
   ChevronRight, Sparkles, CheckCircle, ArrowRight,
 } from 'lucide-react';
 
+const FONT_DISPLAY = "'Plus Jakarta Sans', sans-serif";
+const FONT_BODY = "'DM Sans', sans-serif";
+const ORANGE = '#ff9b26';
+const ORANGE_DARK = '#ee4c27';
+const BG = '#111112';
+const SURFACE = '#1a1a1c';
+const SURFACE_2 = '#222226';
+const BORDER = 'rgba(255,255,255,0.07)';
+const TEXT = '#f0f0f0';
+const MUTED = '#6b6b72';
+
 export default function Landing() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,223 +33,219 @@ export default function Landing() {
   const paidCourses = courses.filter(c => !!c.stripe_product_id);
 
   return (
-    <div style={{ background: '#0D0600', minHeight: '100vh', color: '#f5f5f5' }}>
+    <div style={{
+      background: BG, minHeight: '100vh', color: TEXT, fontFamily: FONT_BODY,
+      WebkitFontSmoothing: 'antialiased', position: 'relative',
+    }}>
+      {/* Ambient gradient overlay — matches portfolio */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%)',
+      }} />
 
-      {/* ── Nav Bar ── */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(13,6,0,0.85)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(232,101,10,0.1)',
-        padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg, #E8650A, #ff8c3a)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#fff',
-          }}>V</div>
-          <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 18 }}>VTM Academy</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link to="/login" style={{
-            padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            color: '#ccc', textDecoration: 'none', transition: 'color 0.15s',
-          }}>Log In</Link>
-          <Link to="/signup" style={{
-            padding: '9px 22px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-            background: 'linear-gradient(135deg, #E8650A, #ff8c3a)',
-            color: '#fff', textDecoration: 'none', transition: 'transform 0.15s',
-          }}>Get Started Free</Link>
-        </div>
-      </nav>
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
-      {/* ── Hero ── */}
-      <section style={{
-        padding: '80px 32px 60px', maxWidth: 900, margin: '0 auto', textAlign: 'center',
-      }}>
-        <div style={{
-          display: 'inline-block', padding: '5px 16px', borderRadius: 20,
-          background: 'rgba(232,101,10,0.12)', border: '1px solid rgba(232,101,10,0.2)',
-          fontSize: 12, fontWeight: 600, color: '#E8650A', marginBottom: 24,
-          letterSpacing: '0.03em',
+        {/* ── Nav Bar ── */}
+        <nav style={{
+          padding: '24px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          animation: 'fadeDown 0.6s ease both',
         }}>
-          Learn at your own pace
-        </div>
-        <h1 style={{
-          fontFamily: 'Syne', fontWeight: 800, fontSize: 'clamp(36px, 5vw, 58px)',
-          lineHeight: 1.1, marginBottom: 20, letterSpacing: '-0.02em',
-        }}>
-          Master the skills that{' '}
-          <span style={{
-            background: 'linear-gradient(135deg, #E8650A, #ff8c3a)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          }}>move the needle</span>
-        </h1>
-        <p style={{
-          fontSize: 17, color: '#999', lineHeight: 1.7, maxWidth: 560,
-          margin: '0 auto 36px',
-        }}>
-          Practical, hands-on courses built from real-world experience.
-          No fluff — just the frameworks, tools, and strategies you need to level up.
-        </p>
-        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link to="/signup" style={{
-            padding: '13px 32px', borderRadius: 12, fontSize: 15, fontWeight: 700,
-            background: 'linear-gradient(135deg, #E8650A, #ff8c3a)',
-            color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
-            boxShadow: '0 4px 24px rgba(232,101,10,0.3)',
-          }}>
-            Start Learning <ArrowRight size={16} />
-          </Link>
-          <a href="#courses" style={{
-            padding: '13px 32px', borderRadius: 12, fontSize: 15, fontWeight: 600,
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-            color: '#ccc', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
-          }}>
-            Browse Courses <ChevronRight size={16} />
+          <a href="/" style={{ display: 'block', lineHeight: 0 }}>
+            <img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" style={{ height: 46, width: 'auto', display: 'block' }} />
           </a>
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+            <Link to="/login" style={{
+              color: MUTED, textDecoration: 'none', fontSize: 14, transition: 'color 0.2s',
+            }}>Log In</Link>
+            <Link to="/signup" style={{
+              background: SURFACE_2, padding: '8px 18px', borderRadius: 8,
+              color: TEXT, fontWeight: 500, fontSize: 14, textDecoration: 'none', transition: 'color 0.2s',
+            }}>Get Started Free</Link>
+          </div>
+        </nav>
 
-        {/* Stats strip */}
-        {courses.length > 0 && (
+        {/* ── Hero ── */}
+        <section style={{
+          textAlign: 'center', padding: '60px 40px 20px', maxWidth: 800, margin: '0 auto',
+          animation: 'fadeUp 0.7s ease both',
+        }}>
+          <h1 style={{
+            fontFamily: FONT_DISPLAY, fontSize: 'clamp(32px, 5vw, 52px)',
+            fontWeight: 800, lineHeight: 1.1, marginBottom: 16,
+          }}>
+            Master the skills that{' '}
+            <em style={{ fontStyle: 'italic', color: ORANGE }}>move the needle</em>
+          </h1>
+          <p style={{
+            fontSize: 16, color: MUTED, lineHeight: 1.7, maxWidth: 600, margin: '0 auto',
+          }}>
+            Practical, hands-on courses built from real-world experience.
+            No fluff — just the frameworks, tools, and strategies you need to level up.
+          </p>
+
+          {/* CTA buttons */}
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 36 }}>
+            <Link to="/signup" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: `linear-gradient(135deg, ${ORANGE}, ${ORANGE_DARK})`,
+              color: '#fff', padding: '14px 32px', borderRadius: 10,
+              fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15,
+              textDecoration: 'none', transition: 'transform 0.2s, box-shadow 0.2s',
+              boxShadow: '0 4px 20px rgba(255,155,38,0.25)',
+            }}>
+              Start Learning <ArrowRight size={16} />
+            </Link>
+            <a href="#courses" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: SURFACE_2, border: `1px solid ${BORDER}`,
+              color: TEXT, padding: '14px 32px', borderRadius: 10,
+              fontWeight: 500, fontSize: 15, textDecoration: 'none', transition: 'border-color 0.2s',
+            }}>
+              Browse Courses <ChevronRight size={16} />
+            </a>
+          </div>
+
+          {/* Stats strip */}
+          {courses.length > 0 && (
+            <div style={{
+              display: 'flex', gap: 40, justifyContent: 'center', marginTop: 48, flexWrap: 'wrap',
+            }}>
+              {[
+                { val: courses.length, label: 'Courses' },
+                { val: totalLessons, label: 'Lessons' },
+                { val: freeCourses.length > 0 ? 'Yes' : '-', label: 'Free Content' },
+              ].map(({ val, label }) => (
+                <div key={label} style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 28, color: ORANGE,
+                  }}>{val}</div>
+                  <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Course Catalog (portfolio-style cards) ── */}
+        <section id="courses" style={{
+          padding: '60px 40px 40px', maxWidth: 1200, margin: '0 auto', width: '100%',
+          animation: 'fadeUp 0.7s ease both', animationDelay: '0.1s',
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <h2 style={{
+              fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 'clamp(24px, 4vw, 36px)',
+              marginBottom: 10,
+            }}>
+              Courses
+            </h2>
+            <p style={{ fontSize: 15, color: MUTED }}>
+              Browse what's available — create a free account to start learning
+            </p>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 80, color: MUTED, fontSize: 14 }}>
+              Loading courses...
+            </div>
+          ) : courses.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 80, color: MUTED, fontSize: 15 }}>
+              Courses are being prepared. Check back soon!
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gap: 24,
+            }}>
+              {courses.map(course => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── What's Inside ── */}
+        <section style={{
+          padding: '60px 40px', maxWidth: 1000, margin: '0 auto',
+          animation: 'fadeUp 0.7s ease both', animationDelay: '0.15s',
+        }}>
+          <h2 style={{
+            fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 'clamp(24px, 4vw, 36px)',
+            textAlign: 'center', marginBottom: 40,
+          }}>
+            Everything you need to <em style={{ fontStyle: 'italic', color: ORANGE }}>grow</em>
+          </h2>
           <div style={{
-            display: 'flex', gap: 32, justifyContent: 'center', marginTop: 48,
-            flexWrap: 'wrap',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 16,
           }}>
             {[
-              { val: courses.length, label: 'Courses' },
-              { val: totalLessons, label: 'Lessons' },
-              { val: freeCourses.length > 0 ? 'Yes' : '-', label: 'Free Content' },
-            ].map(({ val, label }) => (
-              <div key={label} style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontFamily: 'Syne', fontWeight: 800, fontSize: 28, color: '#E8650A',
-                }}>{val}</div>
-                <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── What's Inside ── */}
-      <section style={{
-        padding: '60px 32px', maxWidth: 1000, margin: '0 auto',
-      }}>
-        <h2 style={{
-          fontFamily: 'Syne', fontWeight: 800, fontSize: 28, textAlign: 'center',
-          marginBottom: 40,
-        }}>
-          Everything you need to <span style={{ color: '#E8650A' }}>grow</span>
-        </h2>
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 16,
-        }}>
-          {[
-            { icon: Play, title: 'Video Lessons', desc: 'HD video content with custom player, speed controls & progress tracking' },
-            { icon: Award, title: 'Quizzes', desc: 'Test your knowledge after each lesson with interactive quizzes' },
-            { icon: BookOpen, title: 'Homework', desc: 'Practical assignments with personal instructor feedback' },
-            { icon: MessageSquare, title: 'Direct Messaging', desc: 'Private 1-on-1 messaging with your instructor' },
-            { icon: Users, title: 'Community', desc: 'Connect with other students, share wins, and ask questions' },
-            { icon: Sparkles, title: 'Free + Premium', desc: 'Start free — upgrade to premium for full access to all courses' },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} style={{
-              padding: '24px 20px', borderRadius: 14,
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-              transition: 'border-color 0.2s',
-            }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: 10,
-                background: 'rgba(232,101,10,0.12)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+              { icon: Play, title: 'Video Lessons', desc: 'HD video content with custom player, speed controls & progress tracking' },
+              { icon: Award, title: 'Quizzes', desc: 'Test your knowledge after each lesson with interactive quizzes' },
+              { icon: BookOpen, title: 'Homework', desc: 'Practical assignments with personal instructor feedback' },
+              { icon: MessageSquare, title: 'Direct Messaging', desc: 'Private 1-on-1 messaging with your instructor' },
+              { icon: Users, title: 'Community', desc: 'Connect with other students, share wins, and ask questions' },
+              { icon: Sparkles, title: 'Free + Premium', desc: 'Start free — upgrade to premium for full access to all courses' },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} style={{
+                padding: '24px 20px', borderRadius: 16,
+                background: SURFACE, border: `1px solid ${BORDER}`,
+                transition: 'transform 0.25s, box-shadow 0.25s',
               }}>
-                <Icon size={18} style={{ color: '#E8650A' }} />
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10,
+                  background: 'rgba(255,155,38,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+                }}>
+                  <Icon size={18} style={{ color: ORANGE }} />
+                </div>
+                <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{title}</h3>
+                <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{desc}</p>
               </div>
-              <h3 style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{title}</h3>
-              <p style={{ fontSize: 13, color: '#777', lineHeight: 1.5 }}>{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Course Catalog ── */}
-      <section id="courses" style={{
-        padding: '60px 32px 80px', maxWidth: 1000, margin: '0 auto',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 28, marginBottom: 8 }}>
-            Courses
-          </h2>
-          <p style={{ fontSize: 14, color: '#777' }}>
-            Browse what's available — create a free account to start learning
-          </p>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 60 }}>
-            <div style={{
-              width: 32, height: 32, border: '3px solid #2a2a2a',
-              borderTopColor: '#E8650A', borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite', margin: '0 auto',
-            }} />
-          </div>
-        ) : courses.length === 0 ? (
-          <div style={{
-            textAlign: 'center', padding: '48px 24px', borderRadius: 16,
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-          }}>
-            <BookOpen size={36} style={{ color: '#444', marginBottom: 12 }} />
-            <p style={{ color: '#777', fontSize: 15 }}>Courses are being prepared. Check back soon!</p>
-          </div>
-        ) : (
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: 20,
-          }}>
-            {courses.map(course => (
-              <CourseCard key={course.id} course={course} />
             ))}
           </div>
-        )}
-      </section>
+        </section>
 
-      {/* ── CTA ── */}
-      <section style={{
-        padding: '60px 32px 80px', maxWidth: 700, margin: '0 auto', textAlign: 'center',
-      }}>
-        <div style={{
-          padding: '48px 32px', borderRadius: 20,
-          background: 'linear-gradient(135deg, rgba(232,101,10,0.12), rgba(232,101,10,0.04))',
-          border: '1px solid rgba(232,101,10,0.15)',
+        {/* ── CTA ── */}
+        <section style={{
+          textAlign: 'center', padding: '40px 40px 80px',
+          animation: 'fadeUp 0.7s ease both', animationDelay: '0.2s',
         }}>
-          <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 26, marginBottom: 12 }}>
+          <h2 style={{
+            fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 28, marginBottom: 16,
+          }}>
             Ready to start?
           </h2>
-          <p style={{ fontSize: 15, color: '#999', lineHeight: 1.6, marginBottom: 28 }}>
+          <p style={{ color: MUTED, fontSize: 15, marginBottom: 28 }}>
             Create your free account and begin learning today. No credit card required.
           </p>
           <Link to="/signup" style={{
-            padding: '13px 36px', borderRadius: 12, fontSize: 15, fontWeight: 700,
-            background: 'linear-gradient(135deg, #E8650A, #ff8c3a)',
-            color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8,
-            boxShadow: '0 4px 24px rgba(232,101,10,0.3)',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: ORANGE, color: '#111', padding: '14px 32px', borderRadius: 10,
+            fontWeight: 700, fontSize: 15, textDecoration: 'none',
+            transition: 'transform 0.2s, box-shadow 0.2s',
           }}>
             Create Free Account <ArrowRight size={16} />
           </Link>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Footer ── */}
-      <footer style={{
-        padding: '24px 32px', borderTop: '1px solid rgba(255,255,255,0.06)',
-        textAlign: 'center',
-      }}>
-        <p style={{ fontSize: 12, color: '#555' }}>
-          Vernon Tech & Media Academy
-        </p>
-      </footer>
+        {/* ── Footer ── */}
+        <footer style={{
+          padding: '24px 40px', borderTop: `1px solid ${BORDER}`, textAlign: 'center',
+        }}>
+          <p style={{ fontSize: 12, color: MUTED }}>
+            Vernon Tech & Media Academy
+          </p>
+        </footer>
+      </div>
+
+      {/* Keyframe animations */}
+      <style>{`
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 768px) {
+          #courses .portfolio-grid-inner { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -247,52 +254,58 @@ export default function Landing() {
 function CourseCard({ course }) {
   const isFree = !course.stripe_product_id;
   const hasCover = !!course.cover_image_url;
+  const [hovered, setHovered] = useState(false);
 
   return (
     <Link
       to="/signup"
       style={{
         display: 'block', borderRadius: 16, overflow: 'hidden',
-        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-        textDecoration: 'none', color: 'inherit', transition: 'border-color 0.2s, transform 0.2s',
+        background: SURFACE, border: `1px solid ${BORDER}`,
+        textDecoration: 'none', color: 'inherit',
+        transition: 'transform 0.25s, box-shadow 0.25s',
+        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+        boxShadow: hovered ? '0 12px 40px rgba(0,0,0,0.4)' : 'none',
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(232,101,10,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* Cover image or gradient placeholder */}
+      {/* Cover image — portfolio-style aspect ratio */}
       <div style={{
-        height: 160, position: 'relative', overflow: 'hidden',
-        background: hasCover ? `url(${course.cover_image_url}) center/cover` : 'linear-gradient(135deg, #1a1008, #0D0600)',
+        position: 'relative', width: '100%', aspectRatio: '16/10',
+        background: hasCover ? `url(${course.cover_image_url}) center/cover` : '#0d0d0f',
+        overflow: 'hidden',
       }}>
         {!hasCover && (
           <div style={{
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <BookOpen size={40} style={{ color: 'rgba(232,101,10,0.2)' }} />
+            <BookOpen size={40} style={{ color: 'rgba(255,155,38,0.15)' }} />
           </div>
         )}
-        {/* Badge */}
+        {/* Badge — portfolio cat-badge style */}
         <div style={{
-          position: 'absolute', top: 12, right: 12,
-          padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-          background: isFree ? 'rgba(34,197,94,0.9)' : 'rgba(232,101,10,0.9)',
-          color: '#fff', letterSpacing: '0.02em',
+          position: 'absolute', top: 12, left: 12,
+          background: 'rgba(17,17,18,0.85)', backdropFilter: 'blur(8px)',
+          padding: '4px 12px', borderRadius: 6,
+          fontSize: 11, fontWeight: 600, color: isFree ? '#22c55e' : ORANGE,
+          fontFamily: FONT_DISPLAY, display: 'flex', alignItems: 'center', lineHeight: 1,
         }}>
           {isFree ? 'FREE' : 'PREMIUM'}
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '18px 20px 20px' }}>
+      {/* Info — portfolio-info style */}
+      <div style={{ padding: 20 }}>
         <h3 style={{
-          fontFamily: 'Syne', fontSize: 17, fontWeight: 700, color: '#f5f5f5',
-          marginBottom: 6, lineHeight: 1.3,
+          fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: TEXT,
+          marginBottom: 6,
         }}>
           {course.title}
         </h3>
         {course.description && (
           <p style={{
-            fontSize: 13, color: '#888', lineHeight: 1.5, marginBottom: 14,
+            fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 14,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
             {course.description}
@@ -300,7 +313,7 @@ function CourseCard({ course }) {
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 12, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 12, color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
               <Play size={12} /> {course.lesson_count || 0} lessons
             </span>
             {course.free_lesson_count > 0 && (
@@ -310,7 +323,7 @@ function CourseCard({ course }) {
             )}
           </div>
           <span style={{
-            fontSize: 12, fontWeight: 600, color: '#E8650A',
+            fontSize: 12, fontWeight: 600, color: ORANGE,
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
             {isFree ? 'Start Free' : 'Enroll'} <ChevronRight size={14} />
