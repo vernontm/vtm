@@ -29,6 +29,7 @@
     "api/crm/bulk-upload.js": { "maxDuration": 300, "memory": 1024 },
     "api/crm/carousel-generator.js": { "maxDuration": 300 },
     "api/crm/bulk-agent.js": { "maxDuration": 300 },
+    "api/crm/email-agent.js": { "maxDuration": 60 },
     "api/crm/content-ai.js": { "maxDuration": 60 },
     "api/crm/process-brand-bible.js": { "maxDuration": 60 },
     "api/academy/ai-generate.js": { "maxDuration": 60 },
