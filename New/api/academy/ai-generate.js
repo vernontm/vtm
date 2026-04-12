@@ -137,7 +137,7 @@ async function callClaude(userMessage, systemMessage, maxTokens) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: userMessage }],
       system: systemMessage,
