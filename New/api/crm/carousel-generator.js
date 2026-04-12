@@ -226,6 +226,19 @@ module.exports = async function handler(req, res) {
     const hasTemplates = hasCoverTemplate || hasContentTemplate;
 
     // ── Step 1: AI generates slide text content ──
+    const TEXT_LIMITS = `
+STRICT TEXT LIMITS (these are HARD limits, do NOT exceed):
+- COVER title: MAX 10 words. Bold, punchy headline. MUST include "highlight_words" — 1-3 key words that should be in orange (#E8650A) while the rest is white. Example: "3 AI Automations That Save **15+ Hours Weekly**". In the image_prompt, specify which words should be orange.
+- CONTENT label: exactly like "01 | TOPIC" (short topic name, 1-2 words)
+- CONTENT title: MAX 4 words. Example: "Make.com"
+- CONTENT body: MAX 25 words TOTAL. 2-3 short sentences. No paragraphs. No bullet points with full sentences.
+- CONTENT bold_line: MAX 10 words. One punchy closer.
+- CTA text: MAX 8 words. Example: "Save this for later."
+
+CRITICAL: Every slide must have BREATHING ROOM. Less text = better design.
+If a point needs more words, SPLIT it across two slides instead of cramming one.
+NEVER use multiple "What it does / What we use it for / Why it matters" sections on ONE slide. One point per slide.`;
+
     const systemPrompt = hasTemplates
       ? `You are a carousel content writer. Generate text content for a ${numSlides + 2}-slide carousel (cover + ${numSlides} content slides + CTA).
 
@@ -237,18 +250,11 @@ Handle: @${handle}
 Website: vernontm.com
 
 The slides will be generated using IMAGE-TO-IMAGE from existing brand templates. You only need to provide the TEXT that will be swapped onto each template.
+${TEXT_LIMITS}
 
-For COVER slides: provide a bold headline (the main text that appears large on the cover).
-For CONTENT slides: provide the slide label (e.g. "01 | SERVICE"), title, body text, and bold closing line.
-For CTA slides: provide the CTA text.
+For each slide, provide an "image_prompt" that is a direct instruction to change the text on the template image. Format it as: "Change the writing to say: [exact text]". Include ONLY the text, nothing else. Keep it short.
 
-RULES:
-1. NEVER use em dashes. Use periods, commas, or colons.
-2. Keep text concise and impactful. Short lines that fit on a slide.
-3. Each content slide should cover one clear point.
-4. Match the brand voice.
-
-For each slide, provide an "image_prompt" that is a direct instruction to change the text on the template image. Format it as: "Change the writing to say: [exact text that should appear on the slide]". Be specific about ALL text on the slide.
+For COVER slides: in the image_prompt, specify which words should be in orange highlight color and which in white. Example: "Change the writing to say: '3 AI Automations That Save' in white and '15+ Hours Weekly' in orange highlight color."
 
 Return JSON:
 {
@@ -257,15 +263,22 @@ Return JSON:
       "type": "cover|content|cta",
       "slide_number": 0,
       "label": "COVER or 01 | TOPIC etc",
-      "title": "main headline or title",
-      "body": "body text (content slides)",
-      "bold_line": "bold emphasis line (content slides)",
-      "image_prompt": "Change the writing to say: [all text for this slide, clearly formatted]"
+      "title": "max 10 words",
+      "highlight_words": "the 1-3 words from title that should be orange (cover slides only)",
+      "body": "max 25 words total",
+      "bold_line": "max 10 words",
+      "image_prompt": "Change the writing to say: [text]. For covers, specify which words are white and which are orange."
     }
   ],
   "caption": "Instagram caption for the carousel post",
   "hashtags": "#relevant #hashtags"
 }
+
+RULES:
+1. NEVER use em dashes. Use periods, commas, or colons.
+2. NEVER exceed the word limits above. Count your words.
+3. One point per content slide. If you need more words, add more slides.
+4. Match the brand voice.
 
 Return ONLY valid JSON.`
       : `You are a carousel slide designer. Generate content for a ${numSlides + 2}-slide carousel.
@@ -279,15 +292,9 @@ Handle: @${handle}
 DESIGN:
 - Dark background (#0D0600), orange accents (#E8650A)
 - Grid overlay, neural network decorations
-- Bold white + orange headings
-- 4:5 aspect ratio for Instagram
-- Vernon Tech & Media logo top-left
-- vernontm.com on cover/CTA slides
-
-RULES:
-1. NEVER use em dashes.
-2. For each slide, generate text content AND a detailed image_prompt describing the complete visual.
-3. Include ALL visible text in the image_prompt.
+- Bold white + orange headings, 4:5 aspect ratio
+- Vernon Tech & Media logo top-left, vernontm.com on cover/CTA
+${TEXT_LIMITS}
 
 Return JSON:
 {
@@ -295,16 +302,22 @@ Return JSON:
     {
       "type": "cover|content|cta",
       "slide_number": 0,
-      "label": "COVER or 01 | TOPIC etc",
-      "title": "slide title",
-      "body": "body text",
-      "bold_line": "bold line",
-      "image_prompt": "Detailed prompt for generating this slide image from scratch"
+      "label": "COVER or 01 | TOPIC",
+      "title": "max 10 words",
+      "body": "max 25 words",
+      "bold_line": "max 10 words",
+      "image_prompt": "Detailed prompt for generating this slide image"
     }
   ],
   "caption": "Instagram caption",
   "hashtags": "#hashtags"
 }
+
+RULES:
+1. NEVER use em dashes.
+2. NEVER exceed word limits. Count your words.
+3. One point per slide.
+4. Include ALL visible text in image_prompt.
 
 Return ONLY valid JSON.`;
 
