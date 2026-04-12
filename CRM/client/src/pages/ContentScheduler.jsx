@@ -44,6 +44,7 @@ const SIDEBAR_SECTIONS = [
   { key: 'content', label: 'Content', Icon: Film },
   { key: 'generator', label: 'Generator', Icon: Sparkles },
   { key: 'exported', label: 'Exported', Icon: Download },
+  { key: 'docs', label: 'Docs', Icon: FileText },
 ];
 
 export default function ContentScheduler() {
@@ -1483,6 +1484,126 @@ export default function ContentScheduler() {
                   </table>
                 </div>
               )}
+
+              {/* Quick Command */}
+              <div style={{ borderTop: '1px solid #e5e7ef', padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, background: '#f8f9fc', borderRadius: 12, padding: '10px 14px', border: '1px solid #e5e7ef' }}>
+                  <textarea
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommand(); } }}
+                    placeholder="Type a command: generate captions, auto schedule, export..."
+                    rows={1}
+                    style={{
+                      flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                      color: '#1a1a2e', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.5,
+                      resize: 'none', minHeight: 20, maxHeight: 80,
+                    }}
+                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px'; }}
+                  />
+                  <button onClick={handleCommand} disabled={!chatInput.trim()} style={{
+                    width: 32, height: 32, borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: chatInput.trim() ? 1 : 0.4, flexShrink: 0,
+                  }}>
+                    <Send size={14} style={{ color: '#fff' }} />
+                  </button>
+                </div>
+                {actionLoading && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#4a6cf7' }}>
+                    <Loader size={12} className="spin" /> {actionLoading === 'captions' ? 'Generating captions...' : actionLoading === 'schedule' ? 'Scheduling...' : 'Processing...'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ DOCS SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {client && activeSection === 'docs' && (
+            <div style={{ ...cardStyle }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: '0 0 16px' }}>Content Agent Commands</h3>
+              <p style={{ fontSize: 13, color: '#8e8ea0', marginBottom: 20, lineHeight: 1.6 }}>
+                Use the command bar in any section. Paste scripts to create rows, or type commands to manage content.
+              </p>
+
+              {[
+                {
+                  category: 'Script Management',
+                  commands: [
+                    { cmd: 'Paste any text', desc: 'Creates a new script row from pasted text' },
+                    { cmd: 'Upload scripts', desc: 'Opens file picker for .txt, .pdf, .docx' },
+                    { cmd: 'Import scripts', desc: 'Same as upload' },
+                  ],
+                },
+                {
+                  category: 'Caption Generation',
+                  commands: [
+                    { cmd: 'Generate captions', desc: 'AI generates titles, captions, hashtags for all scripts' },
+                    { cmd: 'Create captions', desc: 'Same as generate captions' },
+                    { cmd: 'Select rows + generate captions', desc: 'Only generates for selected scripts' },
+                  ],
+                },
+                {
+                  category: 'Scheduling',
+                  commands: [
+                    { cmd: 'Auto schedule', desc: 'Assigns time slots to all unscheduled scripts' },
+                    { cmd: 'Schedule all', desc: 'Same as auto schedule' },
+                    { cmd: 'Settings icon (gear)', desc: 'Open schedule settings to change time slots and timezone' },
+                  ],
+                },
+                {
+                  category: 'Export',
+                  commands: [
+                    { cmd: 'Export', desc: 'Exports selected scripts as CSV for SocialPilot' },
+                    { cmd: 'Select rows + Export CSV', desc: 'Creates one row per platform per script' },
+                  ],
+                },
+                {
+                  category: 'Content Generator',
+                  commands: [
+                    { cmd: 'Create 10 Threads posts about [topic]', desc: 'AI generates posts in Generator tab' },
+                    { cmd: 'Generate 5 TikTok scripts about [topic]', desc: 'Creates platform-specific content' },
+                    { cmd: 'Write Instagram captions for [topic]', desc: 'Generates IG-optimized posts' },
+                    { cmd: 'Approve / Reject / Edit', desc: 'Review generated posts before saving' },
+                    { cmd: 'Export Approved', desc: 'Download approved generated posts as CSV' },
+                  ],
+                },
+                {
+                  category: 'Status Workflow',
+                  commands: [
+                    { cmd: 'Draft → Caption Ready → Scheduled → Exported → Posted', desc: 'Content lifecycle' },
+                    { cmd: 'Click "Exported" pill', desc: 'Resets status to allow re-export' },
+                  ],
+                },
+              ].map(({ category, commands }) => (
+                <div key={category} style={{ marginBottom: 20 }}>
+                  <div style={{
+                    fontSize: 12, fontWeight: 700, color: '#4a6cf7', textTransform: 'uppercase',
+                    letterSpacing: '0.05em', marginBottom: 8, paddingBottom: 6,
+                    borderBottom: '1px solid #f0f0f5',
+                  }}>
+                    {category}
+                  </div>
+                  {commands.map(({ cmd, desc }) => (
+                    <div key={cmd} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                      padding: '8px 0', borderBottom: '1px solid #fafafa', gap: 12,
+                    }}>
+                      <code style={{
+                        fontSize: 12, color: '#1a1a2e', background: '#f8f9fc',
+                        padding: '3px 8px', borderRadius: 6, fontFamily: 'monospace',
+                        flexShrink: 0,
+                      }}>
+                        {cmd}
+                      </code>
+                      <span style={{ fontSize: 12, color: '#8e8ea0', textAlign: 'right' }}>{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </div>

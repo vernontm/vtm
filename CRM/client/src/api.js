@@ -356,7 +356,7 @@ export const updateAcademyHomework = (id, data) => academyRequest(`/admin-homewo
 
 // Messages
 export const getAcademyThreads = () => academyRequest('/admin-messages');
-export const getAcademyThread = (userId) => academyRequest(`/admin-messages?user_id=${userId}`);
+export const getAcademyThread = (userId) => academyRequest(`/admin-messages?student_id=${userId}`);
 export const sendAcademyMessage = (data) => academyRequest('/admin-messages', { method: 'POST', body: JSON.stringify(data) });
 
 // Community

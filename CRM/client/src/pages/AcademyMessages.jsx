@@ -178,11 +178,11 @@ export default function AcademyMessages() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{t.student_name || t.full_name}</span>
-                    <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatTime(t.last_message_at || t.updated_at)}</span>
+                    <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatTime(t.latest_at || t.last_message_at || t.updated_at)}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {(t.unread_count > 0) && <Circle size={7} fill="#4a6cf7" color="#4a6cf7" />}
-                    <span style={{ fontSize: 12, color: '#7a7f9a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.last_message || t.preview || ''}</span>
+                    <span style={{ fontSize: 12, color: '#7a7f9a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.latest_message || t.last_message || t.preview || ''}</span>
                     {(t.unread_count > 0) && (
                       <span style={{ marginLeft: 'auto', background: '#4a6cf7', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{t.unread_count}</span>
                     )}
@@ -213,7 +213,8 @@ export default function AcademyMessages() {
                 ) : messages.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#7a7f9a', fontSize: 13, padding: 40 }}>No messages yet</div>
                 ) : messages.map((m, i) => {
-                  const isAdmin = m.from === 'admin' || m.sender === 'admin' || m.is_admin;
+                  const studentId = selectedThread.student_id || selectedThread.id;
+                  const isAdmin = m.sender_id ? m.sender_id !== studentId : (m.from === 'admin' || m.sender === 'admin' || m.is_admin);
                   return (
                     <div key={m.id || i} style={{ display: 'flex', justifyContent: isAdmin ? 'flex-end' : 'flex-start' }}>
                       <div style={{

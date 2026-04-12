@@ -10,7 +10,7 @@ import {
   Search, Plus, Building2, Globe, Instagram, MapPin, Palette,
   Users, Target, Mic, Send, ChevronDown, ChevronUp, Edit3,
   Trash2, Check, X, Mail, Eye, RefreshCw, Loader, CheckCircle,
-  Clock, AlertCircle, ArrowRight, Sparkles, Zap, Paperclip, FileIcon, Image
+  Clock, AlertCircle, ArrowRight, Sparkles, Zap, Paperclip, FileIcon, Image, FileText
 } from 'lucide-react';
 
 const RETAINER_STATUSES = ['active', 'paused', 'completed'];
@@ -826,6 +826,7 @@ export default function Outreach() {
             { key: 'chat', icon: <Zap size={18} />, label: 'Chat', count: 0 },
             { key: 'leads', icon: <Users size={18} />, label: 'Leads', count: leads.length },
             { key: 'queue', icon: <Mail size={18} />, label: 'Queue', count: queue.filter(q => q.status === 'pending_review').length },
+            { key: 'docs', icon: <FileText size={18} />, label: 'Docs', count: 0 },
           ].map(({ key, icon, label, count }) => (
             <button key={key} onClick={() => setActiveTab(key)} title={label}
               style={{
@@ -1369,6 +1370,44 @@ export default function Outreach() {
                           </table>
                         </div>
                       )}
+
+                      {/* Quick Command */}
+                      <div style={{ marginTop: 16, borderTop: '1px solid #e5e7ef', paddingTop: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, background: '#f8f9fc', borderRadius: 12, padding: '10px 14px', border: '1px solid #e5e7ef' }}>
+                          <textarea
+                            value={chatInput}
+                            onChange={e => setChatInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                            placeholder="Ask agent: find leads, add lead, clear leads..."
+                            rows={1}
+                            style={{
+                              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                              color: '#1a1a2e', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.5,
+                              resize: 'none', minHeight: 20, maxHeight: 80,
+                            }}
+                            onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px'; }}
+                          />
+                          <button
+                            onClick={sendChatMessage}
+                            disabled={chatLoading || !chatInput.trim()}
+                            style={{
+                              width: 32, height: 32, borderRadius: 8, border: 'none',
+                              background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                              cursor: chatLoading ? 'not-allowed' : 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              opacity: chatLoading || !chatInput.trim() ? 0.4 : 1,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Send size={14} style={{ color: '#fff' }} />
+                          </button>
+                        </div>
+                        {chatLoading && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#4a6cf7' }}>
+                            <Loader size={12} className="spin" /> Processing...
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1462,6 +1501,131 @@ export default function Outreach() {
                           </div>
                         ))
                       )}
+
+                      {/* Quick Command */}
+                      <div style={{ marginTop: 16, borderTop: '1px solid #e5e7ef', paddingTop: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, background: '#f8f9fc', borderRadius: 12, padding: '10px 14px', border: '1px solid #e5e7ef' }}>
+                          <textarea
+                            value={chatInput}
+                            onChange={e => setChatInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                            placeholder="Ask agent: generate emails, approve all, send approved..."
+                            rows={1}
+                            style={{
+                              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                              color: '#1a1a2e', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.5,
+                              resize: 'none', minHeight: 20, maxHeight: 80,
+                            }}
+                            onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px'; }}
+                          />
+                          <button
+                            onClick={sendChatMessage}
+                            disabled={chatLoading || !chatInput.trim()}
+                            style={{
+                              width: 32, height: 32, borderRadius: 8, border: 'none',
+                              background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                              cursor: chatLoading ? 'not-allowed' : 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              opacity: chatLoading || !chatInput.trim() ? 0.4 : 1,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Send size={14} style={{ color: '#fff' }} />
+                          </button>
+                        </div>
+                        {chatLoading && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#4a6cf7' }}>
+                            <Loader size={12} className="spin" /> Processing...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'docs' && (
+                    <div style={cardStyle}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: '0 0 16px' }}>Agent Commands</h3>
+                      <p style={{ fontSize: 13, color: '#8e8ea0', marginBottom: 20, lineHeight: 1.6 }}>
+                        Use the chat in any tab to give commands. The agent can manage leads, emails, and outreach automatically.
+                      </p>
+
+                      {[
+                        {
+                          category: 'Lead Research',
+                          commands: [
+                            { cmd: 'Find [city] [niche] for [client]', desc: 'Search for leads matching criteria' },
+                            { cmd: 'Research more leads', desc: 'Find additional leads for current client' },
+                            { cmd: 'Find Houston food reviewers', desc: 'Search by location and niche' },
+                          ],
+                        },
+                        {
+                          category: 'Lead Management',
+                          commands: [
+                            { cmd: 'Add a lead named [name] with email [email]', desc: 'Manually add a lead' },
+                            { cmd: 'Add lead [name], instagram @[handle], niche: [niche]', desc: 'Add lead with social info' },
+                            { cmd: 'Remove lead [name]', desc: 'Delete a specific lead' },
+                            { cmd: 'Clear all leads', desc: 'Remove all leads for this client' },
+                          ],
+                        },
+                        {
+                          category: 'Email Generation',
+                          commands: [
+                            { cmd: 'Generate outreach emails', desc: 'Create emails for leads with email addresses' },
+                            { cmd: 'Generate outreach emails for selected leads', desc: 'Only for checked leads' },
+                          ],
+                        },
+                        {
+                          category: 'Email Editing',
+                          commands: [
+                            { cmd: 'Make all emails more casual', desc: 'Rewrite all queued emails with new tone' },
+                            { cmd: 'Update all emails to include [link]', desc: 'Add info to all emails' },
+                            { cmd: 'Change the email to [name] to mention [topic]', desc: 'Edit a specific email' },
+                            { cmd: 'Edit the subject for [name]\'s email', desc: 'Modify specific email subject' },
+                          ],
+                        },
+                        {
+                          category: 'Email Approval & Sending',
+                          commands: [
+                            { cmd: 'Approve all emails', desc: 'Approve all pending/draft emails' },
+                            { cmd: 'Approve the email to [name]', desc: 'Approve a specific email' },
+                            { cmd: 'Send approved emails', desc: 'Send all approved emails' },
+                            { cmd: 'Approve all and send', desc: 'Approve then send everything' },
+                          ],
+                        },
+                        {
+                          category: 'Cleanup',
+                          commands: [
+                            { cmd: 'Clear the email queue', desc: 'Remove all queued emails' },
+                            { cmd: 'Remove the email to [name]', desc: 'Delete a specific queued email' },
+                            { cmd: 'Clear everything', desc: 'Remove all leads and emails' },
+                          ],
+                        },
+                      ].map(({ category, commands }) => (
+                        <div key={category} style={{ marginBottom: 20 }}>
+                          <div style={{
+                            fontSize: 12, fontWeight: 700, color: '#4a6cf7', textTransform: 'uppercase',
+                            letterSpacing: '0.05em', marginBottom: 8, paddingBottom: 6,
+                            borderBottom: '1px solid #f0f0f5',
+                          }}>
+                            {category}
+                          </div>
+                          {commands.map(({ cmd, desc }) => (
+                            <div key={cmd} style={{
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                              padding: '8px 0', borderBottom: '1px solid #fafafa', gap: 12,
+                            }}>
+                              <code style={{
+                                fontSize: 12, color: '#1a1a2e', background: '#f8f9fc',
+                                padding: '3px 8px', borderRadius: 6, fontFamily: 'monospace',
+                                whiteSpace: 'nowrap', flexShrink: 0,
+                              }}>
+                                {cmd}
+                              </code>
+                              <span style={{ fontSize: 12, color: '#8e8ea0', textAlign: 'right' }}>{desc}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
