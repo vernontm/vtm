@@ -1,8 +1,7 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -13,9 +12,9 @@ module.exports = async function handler(req, res) {
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const { client_id, script_id, storage_url, file_name } = req.body;
-    if (!client_id || !script_id || !storage_url) {
-      return res.status(400).json({ error: 'client_id, script_id, and storage_url are required' });
+    const { client_id, script_id, storage_path, file_name } = req.body;
+    if (!client_id || !script_id || !storage_path) {
+      return res.status(400).json({ error: 'client_id, script_id, and storage_path are required' });
     }
 
     // Fetch client for brand context
@@ -27,9 +26,18 @@ module.exports = async function handler(req, res) {
     let transcript = '';
 
     if (ELEVENLABS_API_KEY) {
-      // Download file from Supabase storage
-      const fileRes = await fetch(storage_url);
-      if (!fileRes.ok) throw new Error('Failed to download video from storage');
+      // Download file from Supabase storage using service key (bucket may be private)
+      const downloadUrl = `${SUPABASE_URL}/storage/v1/object/content-media/${storage_path}`;
+      const fileRes = await fetch(downloadUrl, {
+        headers: {
+          'apikey': SERVICE_KEY,
+          'Authorization': `Bearer ${SERVICE_KEY}`,
+        },
+      });
+      if (!fileRes.ok) {
+        const errText = await fileRes.text();
+        throw new Error(`Failed to download video from storage: ${fileRes.status} ${errText}`);
+      }
       const fileBuffer = Buffer.from(await fileRes.arrayBuffer());
 
       const name = file_name || 'video.mp4';

@@ -510,6 +510,7 @@ export default function ContentScheduler() {
 
         if (storageError) throw new Error('Storage upload failed: ' + storageError.message);
 
+        // Get public URL for display, keep filePath for server-side download
         const { data: urlData } = supabase.storage
           .from('content-media')
           .getPublicUrl(filePath);
@@ -533,11 +534,11 @@ export default function ContentScheduler() {
 
         setBulkUploads(prev => prev.map(u => u.id === upload.id ? { ...u, status: 'transcribing', progress: 50 } : u));
 
-        // Step 3: Transcribe + AI generate via API
+        // Step 3: Transcribe + AI generate via API (pass storage_path for server-side download with service key)
         const result = await processBulkUpload({
           client_id: client.id,
           script_id: scriptId,
-          storage_url: publicUrl,
+          storage_path: filePath,
           file_name: upload.file.name,
         });
 
