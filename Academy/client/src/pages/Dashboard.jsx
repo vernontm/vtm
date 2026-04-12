@@ -10,7 +10,7 @@ const card = {
 };
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const [courses, setCourses] = useState([]);
   const [progressMap, setProgressMap] = useState({});
   const [lessonMap, setLessonMap] = useState({});
@@ -50,7 +50,8 @@ export default function Dashboard() {
     load();
   }, []);
 
-  const firstName = profile?.full_name?.split(' ')[0] || 'there';
+  const fullName = profile?.full_name || session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || '';
+  const firstName = fullName.split(' ')[0] || 'there';
   const isPremium = billing?.subscription_status === 'active';
 
   if (loading) {
@@ -154,7 +155,7 @@ export default function Dashboard() {
       </p>
 
       {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--primary-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

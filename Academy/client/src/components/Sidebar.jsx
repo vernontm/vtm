@@ -79,7 +79,7 @@ export default function Sidebar() {
     <>
       {/* Logo */}
       <div style={{ padding: '20px 16px 24px', borderBottom: '1px solid var(--border)' }}>
-        <img src="/Logo /VTM_logo.svg" alt="VTM" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+        <img src="/Logo /VTM_logo.svg" alt="VTM" style={{ height: 46, width: 'auto', objectFit: 'contain' }} />
       </div>
 
       {/* Nav links */}

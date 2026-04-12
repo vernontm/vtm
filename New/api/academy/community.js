@@ -13,11 +13,61 @@ export default async function handler(req, res) {
       const pageNum = parseInt(page) || 0;
       const limit = 20;
       const offset = pageNum * limit;
-      // Get posts with reply counts
+
       const posts = await supaFetch(
-        `academy_community_posts?select=*,academy_community_replies(count)&order=created_at.desc&limit=${limit}&offset=${offset}`
+        `academy_community_posts?order=created_at.desc&limit=${limit}&offset=${offset}`
       );
-      return res.json(posts);
+
+      // Fetch author names
+      const userIds = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
+      let profileMap = {};
+      if (userIds.length > 0) {
+        const profiles = await supaFetch(
+          `academy_profiles?id=in.(${userIds.join(',')})&select=id,full_name,avatar_url`
+        );
+        for (const p of profiles) profileMap[p.id] = p;
+      }
+
+      // Fetch replies for these posts
+      const postIds = posts.map(p => p.id);
+      let repliesMap = {};
+      if (postIds.length > 0) {
+        const replies = await supaFetch(
+          `academy_community_replies?post_id=in.(${postIds.join(',')})&order=created_at.asc`
+        );
+        // Get reply author names
+        const replyUserIds = [...new Set(replies.map(r => r.user_id).filter(Boolean))];
+        for (const uid of replyUserIds) {
+          if (!profileMap[uid]) {
+            // will be fetched below
+          }
+        }
+        const missingIds = replyUserIds.filter(id => !profileMap[id]);
+        if (missingIds.length > 0) {
+          const moreProfiles = await supaFetch(
+            `academy_profiles?id=in.(${missingIds.join(',')})&select=id,full_name,avatar_url`
+          );
+          for (const p of moreProfiles) profileMap[p.id] = p;
+        }
+
+        for (const r of replies) {
+          if (!repliesMap[r.post_id]) repliesMap[r.post_id] = [];
+          repliesMap[r.post_id].push({
+            ...r,
+            author_name: profileMap[r.user_id]?.full_name || 'Student',
+          });
+        }
+      }
+
+      const result = posts.map(p => ({
+        ...p,
+        author_name: profileMap[p.user_id]?.full_name || 'Student',
+        avatar_url: profileMap[p.user_id]?.avatar_url || null,
+        replies: repliesMap[p.id] || [],
+        reply_count: (repliesMap[p.id] || []).length,
+      }));
+
+      return res.json(result);
     }
 
     if (req.method === 'POST') {
