@@ -505,11 +505,15 @@ export default function ContentScheduler() {
 
         const safeName = upload.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const filePath = `${client.id}/bulk/${Date.now()}_${safeName}`;
+        console.log('Uploading to storage:', filePath, 'size:', upload.file.size, 'type:', upload.file.type);
         const { data: storageData, error: storageError } = await supabase.storage
           .from('content-media')
-          .upload(filePath, upload.file);
+          .upload(filePath, upload.file, { cacheControl: '3600', upsert: false });
 
-        if (storageError) throw new Error('Storage upload failed: ' + storageError.message);
+        if (storageError) {
+          console.error('Storage error details:', JSON.stringify(storageError));
+          throw new Error('Storage upload failed: ' + (storageError.message || storageError.error || JSON.stringify(storageError)));
+        }
 
         // Get public URL for display, keep filePath for server-side download
         const { data: urlData } = supabase.storage
