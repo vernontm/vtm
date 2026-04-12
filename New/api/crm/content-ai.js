@@ -247,11 +247,22 @@ Return ONLY valid JSON, no markdown.`;
       // Get IANA timezone from config (e.g. "America/Chicago")
       const tz = config.timezone || 'America/Chicago';
 
-      // Get current local time in the client's timezone
+      // Get current local time in the client's timezone using reliable Intl formatting
       const now = new Date();
-      const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-      const nowHHMM = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
-      let currentDate = new Date(nowLocal);
+      const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      });
+      const parts = {};
+      for (const p of fmt.formatToParts(now)) parts[p.type] = p.value;
+      const nowHHMM = `${parts.hour}:${parts.minute}`;
+      // Build a proper local date object for date arithmetic
+      let currentDate = new Date(
+        parseInt(parts.year), parseInt(parts.month) - 1, parseInt(parts.day)
+      );
+
+      console.log('Auto-schedule: tz =', tz, '| local time =', nowHHMM, '| local date =', currentDate.toISOString().slice(0, 10), '| slots =', time_slots);
 
       // Find first available slot today (compare HH:MM)
       let slotIndex = 0;

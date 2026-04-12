@@ -1359,7 +1359,7 @@ export default function ContentScheduler() {
                                   >
                                     {script.scheduled_datetime
                                       ? new Date(script.scheduled_datetime).toLocaleString('en-US', {
-                                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                                          timeZone: schedTimezone || 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
                                         })
                                       : 'Not set'}
                                   </div>
