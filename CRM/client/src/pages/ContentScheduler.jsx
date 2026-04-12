@@ -503,7 +503,8 @@ export default function ContentScheduler() {
         // Step 1: Upload to Supabase Storage
         setBulkUploads(prev => prev.map(u => u.id === upload.id ? { ...u, status: 'uploading', progress: 10 } : u));
 
-        const filePath = `${client.id}/bulk/${Date.now()}_${upload.file.name}`;
+        const safeName = upload.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `${client.id}/bulk/${Date.now()}_${safeName}`;
         const { data: storageData, error: storageError } = await supabase.storage
           .from('content-media')
           .upload(filePath, upload.file);
