@@ -7,6 +7,7 @@ import {
 import {
   getAcademyCourses, getAcademyLesson, getAcademyLessons, updateAcademyLesson,
   generateAcademyContent, uploadAcademyFile, createLessonContent, deleteLessonContent,
+  transcribeLessonMedia,
 } from '../api';
 
 const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
@@ -53,6 +54,7 @@ export default function AcademyLessonEdit() {
   const [generating, setGenerating] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [transcribing, setTranscribing] = useState(null); // content_id being transcribed
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -170,13 +172,13 @@ export default function AcademyLessonEdit() {
     setUploading(true);
     setError(null);
 
+    const newItems = [];
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadProgress(`Uploading ${file.name} (${i + 1}/${files.length})...`);
 
         const contentType = getContentTypeFromMime(file.type);
-        const ext = file.name.split('.').pop();
         const path = `lessons/${id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
         // Upload to storage
@@ -192,10 +194,19 @@ export default function AcademyLessonEdit() {
           sort_order: contentItems.length + i,
         });
 
+        newItems.push(contentRecord);
         setContentItems(prev => [...prev, contentRecord]);
       }
       setSuccess(`${files.length} file${files.length > 1 ? 's' : ''} uploaded successfully`);
       setTimeout(() => setSuccess(null), 3000);
+
+      // Auto-transcribe video/audio files
+      for (const item of newItems) {
+        if (item.content_type === 'video' || item.content_type === 'audio') {
+          handleTranscribe(item.id);
+          break; // transcribe the first one
+        }
+      }
     } catch (err) {
       setError(`Upload failed: ${err.message}`);
     } finally {
@@ -212,6 +223,45 @@ export default function AcademyLessonEdit() {
       setContentItems(prev => prev.filter(c => c.id !== contentId));
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function handleTranscribe(contentId) {
+    try {
+      setTranscribing(contentId);
+      setSuccess('Transcribing media — this may take a moment...');
+
+      // Update local state to show processing
+      setContentItems(prev => prev.map(c =>
+        c.id === contentId ? { ...c, transcription_status: 'processing' } : c
+      ));
+
+      const result = await transcribeLessonMedia(contentId, id);
+
+      // Update local content item with transcript
+      setContentItems(prev => prev.map(c =>
+        c.id === contentId ? { ...c, transcript: result.transcript, transcription_status: 'completed' } : c
+      ));
+
+      // Update form if AI generated title/description
+      if (result.generated) {
+        setForm(prev => ({
+          ...prev,
+          title: result.generated.title && (!prev.title || prev.title === 'Untitled Lesson' || prev.title === '') ? result.generated.title : prev.title,
+          description: result.generated.description && !prev.description ? result.generated.description : prev.description,
+        }));
+        setSuccess('Transcription complete — title and description auto-generated!');
+      } else {
+        setSuccess('Transcription complete!');
+      }
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err) {
+      setError(`Transcription failed: ${err.message}`);
+      setContentItems(prev => prev.map(c =>
+        c.id === contentId ? { ...c, transcription_status: 'failed' } : c
+      ));
+    } finally {
+      setTranscribing(null);
     }
   }
 
@@ -406,6 +456,29 @@ export default function AcademyLessonEdit() {
                             )}
                           </div>
                         </div>
+
+                        {/* Transcription status */}
+                        {(item.content_type === 'video' || item.content_type === 'audio') && (
+                          item.transcription_status === 'processing' || transcribing === item.id ? (
+                            <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 500, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Transcribing...
+                            </span>
+                          ) : item.transcription_status === 'completed' ? (
+                            <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 500, flexShrink: 0 }}>Transcribed</span>
+                          ) : (
+                            <button
+                              onClick={() => handleTranscribe(item.id)}
+                              disabled={!!transcribing}
+                              style={{
+                                fontSize: 11, color: '#8b5cf6', background: '#8b5cf618', border: 'none',
+                                borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600, flexShrink: 0,
+                              }}
+                            >
+                              <Sparkles size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+                              Transcribe
+                            </button>
+                          )
+                        )}
 
                         {/* Preview link */}
                         {item.storage_url && (

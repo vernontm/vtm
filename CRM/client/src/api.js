@@ -415,3 +415,6 @@ export async function uploadAcademyFile(bucket, path, file, contentType) {
 // Lesson content items (media)
 export const createLessonContent = (data) => academyRequest('/admin-lessons?action=add-content', { method: 'POST', body: JSON.stringify(data) });
 export const deleteLessonContent = (id) => academyRequest(`/admin-lessons?action=delete-content&content_id=${id}`, { method: 'DELETE' });
+
+// Transcribe video/audio and auto-generate description
+export const transcribeLessonMedia = (contentId, lessonId) => academyRequest('/transcribe', { method: 'POST', body: JSON.stringify({ content_id: contentId, lesson_id: lessonId }) });
