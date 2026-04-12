@@ -2011,27 +2011,19 @@ export default function ContentScheduler() {
                     ? 'Templates active. AI will generate text and use image-to-image to swap it onto your templates, keeping your exact design and logo.'
                     : 'Describe your carousel topic. AI will generate slide content and images from scratch.'}
                 </p>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Topic / Prompt</label>
-                    <textarea value={carouselPrompt} onChange={e => setCarouselPrompt(e.target.value)}
-                      placeholder="e.g. 6 AI tools every small business owner should know about"
-                      rows={3} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
-                  </div>
-                  <div style={{ width: 100 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Slides</label>
-                    <select value={carouselSlideCount} onChange={e => setCarouselSlideCount(Number(e.target.value))} style={{ ...inputStyle, width: '100%', fontSize: 12 }}>
-                      {[3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} slides</option>)}
-                    </select>
-                  </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Topic / Prompt</label>
+                  <textarea value={carouselPrompt} onChange={e => setCarouselPrompt(e.target.value)}
+                    placeholder="e.g. 6 AI tools every small business owner should know about"
+                    rows={3} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
                   {[
-                    { label: 'Service Breakdown', prompt: `Create a carousel showcasing our ${carouselSlideCount} core services with benefits for each` },
-                    { label: 'Tips & Tricks', prompt: `Create a carousel with ${carouselSlideCount} practical tips about AI and automation for small businesses` },
-                    { label: 'How It Works', prompt: `Create a step-by-step carousel explaining how our process works from inquiry to delivery` },
-                    { label: 'Tool Stack', prompt: `Create a carousel breaking down ${carouselSlideCount} AI tools we use and what each one does` },
-                    { label: 'Before/After', prompt: `Create a carousel showing ${carouselSlideCount} before and after scenarios of businesses using AI automation` },
+                    { label: 'Service Breakdown', prompt: 'Create a 5-slide carousel showcasing our core services with benefits for each' },
+                    { label: 'Tips & Tricks', prompt: 'Create a 5-slide carousel with practical tips about AI and automation for small businesses' },
+                    { label: 'How It Works', prompt: 'Create a step-by-step carousel explaining how our process works from inquiry to delivery' },
+                    { label: 'Tool Stack', prompt: 'Create a carousel breaking down 5 AI tools we use and what each one does' },
+                    { label: 'Before/After', prompt: 'Create a 5-slide carousel showing before and after scenarios of businesses using AI automation' },
                   ].map(q => (
                     <button key={q.label} onClick={() => setCarouselPrompt(q.prompt)}
                       style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 11, color: '#1a1a2e', cursor: 'pointer', fontWeight: 500 }}>
@@ -2044,7 +2036,7 @@ export default function ContentScheduler() {
                   setCarouselLoading(true);
                   setCarouselResult(null);
                   try {
-                    const result = await generateCarousel({ client_id: client.id, prompt: carouselPrompt, slide_count: carouselSlideCount });
+                    const result = await generateCarousel({ client_id: client.id, prompt: carouselPrompt });
                     setCarouselResult(result);
                     await loadClientData(client.id);
                   } catch (e) {

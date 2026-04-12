@@ -53,7 +53,7 @@ async function generateImage(prompt) {
 }
 
 // ── NanoBanana: Poll for task completion ──
-async function waitForImage(taskId, maxWait = 120000) {
+async function waitForImage(taskId, maxWait = 240000) {
   const start = Date.now();
   while (Date.now() - start < maxWait) {
     await new Promise(r => setTimeout(r, 3000));
