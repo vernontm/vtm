@@ -312,6 +312,7 @@ export const generateCarousel = (data) => request('/carousel-generator', { metho
 export const regenerateSlide = (data) => request('/carousel-generator?action=regenerate', { method: 'POST', body: JSON.stringify(data) });
 export const editSlide = (data) => request('/carousel-generator?action=edit', { method: 'POST', body: JSON.stringify(data) });
 export const runBulkAgent = (data) => request('/bulk-agent', { method: 'POST', body: JSON.stringify(data) });
+export const approveAndSchedule = (data) => request('/content-ai?action=approve-and-schedule', { method: 'POST', body: JSON.stringify(data) });
 
 // ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══

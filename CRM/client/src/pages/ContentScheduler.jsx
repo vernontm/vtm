@@ -5,7 +5,7 @@ import {
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
   parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
-  processBulkUpload, generateCarousel, regenerateSlide, editSlide, runBulkAgent,
+  processBulkUpload, generateCarousel, regenerateSlide, editSlide, runBulkAgent, approveAndSchedule,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -45,7 +45,6 @@ const SIDEBAR_SECTIONS = [
   { key: 'content', label: 'Content', Icon: Film },
   { key: 'generator', label: 'Generator', Icon: Sparkles },
   { key: 'carousel', label: 'Carousel', Icon: Image },
-  { key: 'agent', label: 'Agent', Icon: Mic },
   { key: 'exported', label: 'Exported', Icon: Download },
   { key: 'docs', label: 'Docs', Icon: FileText },
 ];
@@ -529,25 +528,57 @@ export default function ContentScheduler() {
     setAgentLoading(false);
   }
 
-  // ── Approve generated post (save to content scripts) ──
+  // ── Approve generated post → create script + generate captions + auto-schedule ──
   async function approveGenPost(index) {
     const post = genResults[index];
     if (!post || !client) return;
+    setGenResults(prev => prev.map((r, i) => i === index ? { ...r, approving: true } : r));
     try {
-      await createContentScript([{
+      const result = await approveAndSchedule({
         client_id: client.id,
-        title: post.title || 'Generated Post',
-        caption: post.caption || '',
-        hashtags: post.hashtags || '',
-        first_comment: post.first_comment || '',
-        full_script: post.full_script || post.caption || '',
-        status: 'caption_ready',
-        sort_order: scripts.length + 1,
-      }]);
-      setGenResults(prev => prev.map((r, i) => i === index ? { ...r, approved: true, rejected: false } : r));
+        post: {
+          title: post.title || 'Generated Post',
+          caption: post.caption || '',
+          hashtags: post.hashtags || '',
+          first_comment: post.first_comment || '',
+          full_script: post.full_script || post.caption || '',
+        },
+      });
+      setGenResults(prev => prev.map((r, i) => i === index ? {
+        ...r,
+        approved: true,
+        rejected: false,
+        approving: false,
+        scheduledAt: result.scheduled_datetime,
+      } : r));
       await loadClientData(client.id);
     } catch (e) {
-      alert('Failed to save post: ' + e.message);
+      setGenResults(prev => prev.map((r, i) => i === index ? { ...r, approving: false } : r));
+      alert('Failed to approve: ' + e.message);
+    }
+  }
+
+  // ── Approve carousel → generate captions from images + auto-schedule ──
+  async function approveCarousel(scriptId, imageUrls) {
+    if (!client || !scriptId) return;
+    setCarouselResult(prev => prev ? { ...prev, approving: true } : prev);
+    try {
+      const result = await approveAndSchedule({
+        client_id: client.id,
+        script_id: scriptId,
+        image_urls: imageUrls,
+      });
+      setCarouselResult(prev => prev ? {
+        ...prev,
+        approving: false,
+        approved: true,
+        scheduledAt: result.scheduled_datetime,
+        usedVision: result.used_vision,
+      } : prev);
+      await loadClientData(client.id);
+    } catch (e) {
+      setCarouselResult(prev => prev ? { ...prev, approving: false } : prev);
+      alert('Failed to approve carousel: ' + e.message);
     }
   }
 
@@ -893,6 +924,29 @@ export default function ContentScheduler() {
             </div>
           ))}
 
+        </div>
+
+        {/* Agent section */}
+        <div style={{ padding: '4px 0', borderTop: '1px solid #f0f0f5' }}>
+          <div style={{ padding: '8px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Agent
+          </div>
+          <div
+            onClick={() => setActiveSection('agent')}
+            style={{
+              padding: '8px 16px',
+              fontSize: 13,
+              cursor: 'pointer',
+              color: activeSection === 'agent' ? '#4a6cf7' : '#1a1a2e',
+              background: activeSection === 'agent' ? 'rgba(74,108,247,0.06)' : 'transparent',
+              borderLeft: activeSection === 'agent' ? '3px solid #4a6cf7' : '3px solid transparent',
+              fontWeight: activeSection === 'agent' ? 600 : 400,
+              display: 'flex', alignItems: 'center', gap: 8,
+              transition: 'all 0.15s',
+            }}
+          >
+            <Mic size={14} /> Bulk Agent
+          </div>
         </div>
 
         {/* Sidebar bottom buttons */}
@@ -1749,18 +1803,18 @@ export default function ContentScheduler() {
                             )}
                           </div>
                           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                            {!post.approved && !post.rejected && (
+                            {!post.approved && !post.rejected && !post.approving && (
                               <>
                                 <button
                                   onClick={() => approveGenPost(idx)}
-                                  title="Approve and save"
+                                  title="Approve, generate captions & schedule"
                                   style={{
-                                    width: 32, height: 32, borderRadius: 8, border: '1px solid #d1fae5',
-                                    background: '#ecfdf5', cursor: 'pointer', display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center', color: '#22c55e',
+                                    height: 32, borderRadius: 8, border: '1px solid #d1fae5',
+                                    background: '#ecfdf5', cursor: 'pointer', display: 'flex', padding: '0 10px',
+                                    alignItems: 'center', justifyContent: 'center', color: '#22c55e', gap: 4, fontSize: 11, fontWeight: 600,
                                   }}
                                 >
-                                  <Check size={14} />
+                                  <Check size={14} /> Approve & Schedule
                                 </button>
                                 <button
                                   onClick={() => {
@@ -1791,10 +1845,22 @@ export default function ContentScheduler() {
                                 </button>
                               </>
                             )}
-                            {post.approved && (
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#22c55e', padding: '6px 10px', background: '#ecfdf5', borderRadius: 8 }}>
-                                Approved
+                            {post.approving && (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#3b82f6', padding: '6px 10px', background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <Loader size={12} className="spin" /> Scheduling...
                               </span>
+                            )}
+                            {post.approved && (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#22c55e', padding: '6px 10px', background: '#ecfdf5', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <Check size={12} /> Scheduled
+                                </span>
+                                {post.scheduledAt && (
+                                  <span style={{ fontSize: 10, color: '#8e8ea0' }}>
+                                    {new Date(post.scheduledAt).toLocaleString('en-US', { timeZone: schedTimezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' })}
+                                  </span>
+                                )}
+                              </div>
                             )}
                             {post.rejected && (
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', padding: '6px 10px', background: '#fef2f2', borderRadius: 8 }}>
@@ -1893,8 +1959,35 @@ export default function ContentScheduler() {
                           <strong>Caption:</strong> {carouselResult.content.caption}
                         </div>
                       )}
-                      <div style={{ marginTop: 10, fontSize: 11, color: '#22c55e' }}>
-                        <Check size={12} style={{ verticalAlign: 'middle' }} /> Added to content scheduler
+                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {!carouselResult.approved && !carouselResult.approving && carouselResult.script?.id && (
+                          <button onClick={() => approveCarousel(carouselResult.script.id, carouselResult.image_urls)}
+                            style={{ ...btnPrimary, fontSize: 12, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Sparkles size={13} /> Generate Captions from Images & Schedule
+                          </button>
+                        )}
+                        {carouselResult.approving && (
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#eff6ff', borderRadius: 8 }}>
+                            <Loader size={13} className="spin" /> Analyzing images & scheduling...
+                          </span>
+                        )}
+                        {carouselResult.approved && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Check size={13} /> {carouselResult.usedVision ? 'Captions generated from images' : 'Captions generated'} & Scheduled
+                            </span>
+                            {carouselResult.scheduledAt && (
+                              <span style={{ fontSize: 11, color: '#8e8ea0' }}>
+                                {new Date(carouselResult.scheduledAt).toLocaleString('en-US', { timeZone: schedTimezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' })}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {!carouselResult.approved && !carouselResult.approving && (
+                          <span style={{ fontSize: 11, color: '#8e8ea0' }}>
+                            <Check size={11} style={{ verticalAlign: 'middle' }} /> Added to scheduler (draft)
+                          </span>
+                        )}
                       </div>
                     </>
                   )}

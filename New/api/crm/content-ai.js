@@ -458,5 +458,250 @@ Return ONLY valid JSON. No markdown code blocks.`;
     }
   }
 
+  // ── approve-and-schedule ───────────────────────────────────────────
+  // Creates a content script row (or uses existing), generates captions/hashtags
+  // (using vision for images), and auto-schedules to next available slot
+  if (action === 'approve-and-schedule' && req.method === 'POST') {
+    try {
+      const { client_id, script_id, post, image_urls } = req.body;
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+
+      // Fetch client for brand context
+      const clients = await supaFetch(`crm_content_clients?id=eq.${client_id}&limit=1`);
+      const client = clients?.[0];
+      if (!client) return res.status(404).json({ error: 'Client not found' });
+
+      let targetScriptId = script_id;
+
+      // If no existing script_id, create one from post data
+      if (!targetScriptId && post) {
+        const scriptData = {
+          client_id,
+          title: post.title || 'Generated Post',
+          caption: post.caption || '',
+          hashtags: post.hashtags || '',
+          first_comment: post.first_comment || '',
+          full_script: post.full_script || post.caption || '',
+          media_urls: image_urls || post.media_urls || null,
+          media_type: image_urls?.length > 1 ? 'carousel' : (image_urls?.length === 1 ? 'image' : null),
+          status: 'draft',
+        };
+        const created = await supaFetch('crm_content_scripts', {
+          method: 'POST',
+          body: JSON.stringify([scriptData]),
+        });
+        targetScriptId = created?.[0]?.id;
+        if (!targetScriptId) throw new Error('Failed to create script');
+      }
+
+      if (!targetScriptId) return res.status(400).json({ error: 'script_id or post data required' });
+
+      // Fetch the script
+      const scriptRows = await supaFetch(`crm_content_scripts?id=eq.${targetScriptId}`);
+      const script = scriptRows?.[0];
+      if (!script) return res.status(404).json({ error: 'Script not found' });
+
+      // ── Generate/enhance captions using AI ──
+      const brandContext = [
+        client.business_name ? `Business: ${client.business_name}` : '',
+        client.brand_bible ? `Brand Bible: ${client.brand_bible}` : '',
+        client.target_audience ? `Target Audience: ${client.target_audience}` : '',
+        client.preferred_tone ? `Tone: ${client.preferred_tone}` : '',
+        client.threads_handle ? `Threads: @${client.threads_handle}` : '',
+        client.instagram_handle ? `Instagram: @${client.instagram_handle}` : '',
+      ].filter(Boolean).join('\n');
+
+      const threadsStyle = client.threads_style || {};
+      let styleCtx = '';
+      if (threadsStyle.voice) {
+        styleCtx = `\nContent Style:\nVoice: ${threadsStyle.voice}\nWriting: ${threadsStyle.writing_style || ''}\nCTA: ${threadsStyle.cta_style || ''}\nHashtags: ${threadsStyle.hashtag_rules || ''}\nCore Topics: ${(threadsStyle.core_topics || []).join(', ')}`;
+      }
+
+      // Build message content - use vision if images are available
+      const mediaUrls = script.media_urls || image_urls || [];
+      const hasImages = mediaUrls.length > 0;
+
+      let messageContent;
+      if (hasImages) {
+        // Use Claude Vision to analyze the images and generate captions
+        const imageBlocks = [];
+        for (const url of mediaUrls.slice(0, 8)) { // max 8 images
+          imageBlocks.push({ type: 'image', source: { type: 'url', url } });
+        }
+        messageContent = [
+          ...imageBlocks,
+          {
+            type: 'text',
+            text: `Look at these ${mediaUrls.length} image(s). Read any text visible on the images.
+
+Based on the visual content and any text on the images, generate:
+1. An engaging title for this post
+2. A compelling social media caption that matches the brand voice
+3. Relevant hashtags
+4. A first comment to drive engagement
+
+Existing title: ${script.title || 'None'}
+Existing caption: ${script.caption || 'None'}
+
+If the existing caption is already good, enhance it. If there's no caption, create one from scratch based on what you see in the images.`
+          }
+        ];
+      } else {
+        messageContent = `Generate an engaging social media caption, hashtags, and first comment for this content:
+
+Title: ${script.title || 'Untitled'}
+Script/Content: ${script.full_script || script.caption || 'No content'}
+
+If there's already a caption, enhance it. Generate missing fields.`;
+      }
+
+      const captionPrompt = `You are a social media caption expert. Generate or enhance the caption, hashtags, and first comment for this post.
+
+BRAND CONTEXT:
+${brandContext}${styleCtx}
+
+RULES:
+1. NEVER use em dashes
+2. Caption should be engaging and match brand voice
+3. Include relevant hashtags (core brand tags first, then topic tags)
+4. First comment should drive engagement
+5. Title should be short and click-worthy
+
+Return JSON:
+{
+  "title": "engaging title",
+  "caption": "full caption text",
+  "hashtags": "#relevant #hashtags",
+  "first_comment": "engagement-driving comment"
+}
+
+Return ONLY valid JSON.`;
+
+      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 2048,
+          system: captionPrompt,
+          messages: [{ role: 'user', content: messageContent }],
+        }),
+      });
+
+      let captionData = {};
+      if (aiRes.ok) {
+        const aiBody = await aiRes.json();
+        const raw = aiBody.content[0].text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        try {
+          captionData = JSON.parse(raw);
+        } catch {
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) captionData = JSON.parse(match[0]);
+        }
+      }
+
+      // ── Auto-schedule to next available slot ──
+      let scheduledDatetime = null;
+      const configs = await supaFetch(`crm_auto_schedule_config?client_id=eq.${client_id}&limit=1`);
+      const config = configs?.[0];
+      if (config?.time_slots?.length) {
+        const tz = config.timezone || 'America/Chicago';
+        const slots = config.time_slots;
+
+        // Get all already-scheduled datetimes for this client
+        const allScheduled = await supaFetch(`crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=not.is.null&select=scheduled_datetime`);
+        const takenSlots = new Set((allScheduled || []).map(s => s.scheduled_datetime));
+
+        const now = new Date();
+        const fmt = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+        });
+        const parts = {};
+        for (const p of fmt.formatToParts(now)) parts[p.type] = p.value;
+        const nowHHMM = `${parts.hour}:${parts.minute}`;
+
+        let currentDate = new Date(parseInt(parts.year), parseInt(parts.month) - 1, parseInt(parts.day));
+        const slotsHHMM = slots.map(s => s.substring(0, 5));
+        const todayFirstSlot = slotsHHMM.findIndex(s => s > nowHHMM);
+
+        let slotIndex = todayFirstSlot >= 0 ? todayFirstSlot : 0;
+        if (todayFirstSlot < 0) currentDate.setDate(currentDate.getDate() + 1);
+
+        // Find the next open slot (not already taken)
+        let attempts = 0;
+        const maxAttempts = slots.length * 60; // check up to 60 days out
+        while (attempts < maxAttempts) {
+          const slot = slots[slotIndex];
+          const year = currentDate.getFullYear();
+          const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+          const day = String(currentDate.getDate()).padStart(2, '0');
+          const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
+          const candidate = `${year}-${month}-${day} ${timeStr} ${tz}`;
+
+          // Check if this slot is already taken (compare as date strings)
+          const candidateCheck = `${year}-${month}-${day}T${timeStr}`;
+          const isTaken = (allScheduled || []).some(s => {
+            if (!s.scheduled_datetime) return false;
+            const sFmt = new Intl.DateTimeFormat('en-US', {
+              timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+            });
+            const sParts = {};
+            for (const p of sFmt.formatToParts(new Date(s.scheduled_datetime))) sParts[p.type] = p.value;
+            return `${sParts.year}-${sParts.month}-${sParts.day}T${sParts.hour}:${sParts.minute}:${sParts.second}` === candidateCheck;
+          });
+
+          if (!isTaken) {
+            scheduledDatetime = candidate;
+            break;
+          }
+
+          slotIndex++;
+          if (slotIndex >= slots.length) {
+            slotIndex = 0;
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+          attempts++;
+        }
+      }
+
+      // ── Update the script with captions + schedule ──
+      const updates = {
+        updated_at: new Date().toISOString(),
+        status: scheduledDatetime ? 'scheduled' : 'caption_ready',
+      };
+      if (captionData.title) updates.title = captionData.title;
+      if (captionData.caption) updates.caption = captionData.caption;
+      if (captionData.hashtags) updates.hashtags = captionData.hashtags;
+      if (captionData.first_comment) updates.first_comment = captionData.first_comment;
+      if (scheduledDatetime) updates.scheduled_datetime = scheduledDatetime;
+
+      await supaFetch(`crm_content_scripts?id=eq.${targetScriptId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
+
+      // Fetch updated script
+      const updatedRows = await supaFetch(`crm_content_scripts?id=eq.${targetScriptId}`);
+
+      return res.json({
+        script: updatedRows?.[0],
+        captions_generated: !!(captionData.caption),
+        scheduled: !!scheduledDatetime,
+        scheduled_datetime: scheduledDatetime,
+        used_vision: hasImages,
+      });
+    } catch (err) {
+      console.error('approve-and-schedule error:', err);
+      return res.status(500).json({ error: 'Approve and schedule failed: ' + err.message });
+    }
+  }
+
   return res.status(400).json({ error: 'Invalid action or method' });
 };
