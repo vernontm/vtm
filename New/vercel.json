@@ -39,8 +39,8 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/academy/assets/:path*", "destination": "/academy/assets/:path*" },
-    { "source": "/academy/:path*", "destination": "/academy/app.html" },
-    { "source": "/academy", "destination": "/academy/app.html" },
+    { "source": "/academy/:path*", "destination": "/academy/index.html" },
+    { "source": "/academy", "destination": "/academy/index.html" },
     { "source": "/admin/assets/:path*", "destination": "/admin/assets/:path*" },
     { "source": "/admin/:path*", "destination": "/admin/index.html" },
     { "source": "/admin", "destination": "/admin/index.html" },

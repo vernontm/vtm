@@ -30,8 +30,8 @@ export default async function handler(req, res) {
           'mode': 'subscription',
           'line_items[0][price]': price_id,
           'line_items[0][quantity]': '1',
-          'success_url': success_url || `${req.headers.origin || 'https://vernontech.media'}/academy/billing?success=true`,
-          'cancel_url': cancel_url || `${req.headers.origin || 'https://vernontech.media'}/academy/billing?canceled=true`,
+          'success_url': success_url || `${req.headers.origin || 'https://vernontm.com'}/academy/account?success=true`,
+          'cancel_url': cancel_url || `${req.headers.origin || 'https://vernontm.com'}/academy/account?canceled=true`,
           'client_reference_id': user.id,
           'customer_email': customerId ? undefined : user.email,
         };
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
           },
           body: new URLSearchParams({
             'customer': customerId,
-            'return_url': `${req.headers.origin || 'https://vernontech.media'}/academy/billing`,
+            'return_url': `${req.headers.origin || 'https://vernontm.com'}/academy/account`,
           }).toString(),
         });
         const session = await stripeRes.json();

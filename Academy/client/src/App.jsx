@@ -38,7 +38,7 @@ function AuthGate() {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar />
-      <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)' }}>
+      <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', padding: '24px 28px' }}>
         <Outlet />
       </main>
     </div>

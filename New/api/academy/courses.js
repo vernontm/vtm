@@ -33,9 +33,16 @@ export default async function handler(req, res) {
 
       if (slug) {
         const rows = await supaFetch(`academy_courses?slug=eq.${encodeURIComponent(slug)}&status=eq.published`);
-        return rows[0] ? res.json(rows[0]) : res.status(404).json({ error: 'Course not found' });
+        if (!rows[0]) return res.status(404).json({ error: 'Course not found' });
+        const lessons = await supaFetch(`academy_lessons?course_id=eq.${rows[0].id}&status=eq.published&select=id,is_free_preview`);
+        rows[0].lesson_count = lessons?.length || 0;
+        return res.json(rows[0]);
       }
       const courses = await supaFetch('academy_courses?status=eq.published&order=sort_order.asc');
+      for (const c of courses) {
+        const lessons = await supaFetch(`academy_lessons?course_id=eq.${c.id}&status=eq.published&select=id`);
+        c.lesson_count = lessons?.length || 0;
+      }
       return res.json(courses);
     }
 

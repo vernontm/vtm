@@ -57,10 +57,10 @@ export default function CourseDetail() {
   const pct = progress?.percent_complete ?? 0;
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+    <div>
       {/* Course Header */}
-      {course.cover_url && (
-        <img src={course.cover_url} alt="" style={{
+      {course.cover_image_url && (
+        <img src={course.cover_image_url} alt="" style={{
           width: '100%', height: 240, objectFit: 'cover', borderRadius: 14, marginBottom: 24,
         }} />
       )}

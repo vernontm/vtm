@@ -29,7 +29,7 @@ export default function Courses() {
   }
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto' }}>
+    <div>
       <h1 style={{ fontFamily: 'Syne', fontSize: 28, color: 'var(--text-primary)', marginBottom: 4 }}>Course Catalog</h1>
       <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 32 }}>
         Browse all available courses and start learning.
@@ -51,8 +51,8 @@ export default function Courses() {
         }}>
           {courses.map(c => (
             <Link to={`/courses/${c.slug}`} key={c.id} style={cardStyle}>
-              {c.cover_url ? (
-                <img src={c.cover_url} alt="" style={{ width: '100%', height: 160, objectFit: 'cover' }} />
+              {c.cover_image_url ? (
+                <img src={c.cover_image_url} alt="" style={{ width: '100%', height: 160, objectFit: 'cover' }} />
               ) : (
                 <div style={{
                   width: '100%', height: 160, background: 'var(--bg-primary)',

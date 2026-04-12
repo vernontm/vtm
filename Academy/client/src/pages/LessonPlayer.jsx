@@ -201,7 +201,7 @@ export default function LessonPlayer() {
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px 40px' }}>
+    <div style={{ paddingBottom: 40 }}>
       {/* Back link */}
       <Link to={lesson.course_slug ? `/courses/${lesson.course_slug}` : '/courses'} style={{
         color: 'var(--text-muted)', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4,

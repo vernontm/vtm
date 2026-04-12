@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getMessages, sendMessage } from '../api';
-import { Loader, Send } from 'lucide-react';
+import { Loader, Send, MessageSquare } from 'lucide-react';
 
 export default function Messages() {
   const { session } = useAuth();
@@ -49,8 +49,7 @@ export default function Messages() {
 
   function formatTime(ts) {
     if (!ts) return '';
-    const d = new Date(ts);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   function formatDate(ts) {
@@ -79,17 +78,24 @@ export default function Messages() {
   }
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-      <h1 style={{ fontFamily: 'Syne', fontSize: 28, color: 'var(--text-primary)', marginBottom: 4 }}>Messages</h1>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 20 }}>
-        Chat with your instructor.
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)', margin: '-24px -28px', padding: 0 }}>
+      {/* Header */}
+      <div style={{ padding: '20px 28px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--primary-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MessageSquare size={18} color="#E8650A" />
+          </div>
+          <div>
+            <h1 style={{ fontFamily: 'Inter', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Messages</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Chat with your instructor</p>
+          </div>
+        </div>
+      </div>
 
       {/* Message area */}
       <div style={{
-        flex: 1, overflowY: 'auto', background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 14, padding: 20, display: 'flex', flexDirection: 'column', gap: 8,
-        minHeight: 300,
+        flex: 1, overflowY: 'auto', padding: '20px 28px',
+        display: 'flex', flexDirection: 'column', gap: 8,
       }}>
         {messages.length === 0 && (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -102,7 +108,7 @@ export default function Messages() {
             return (
               <div key={`d-${idx}`} style={{ textAlign: 'center', margin: '12px 0' }}>
                 <span style={{
-                  fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-primary)',
+                  fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-surface)',
                   padding: '4px 12px', borderRadius: 10,
                 }}>{item.label}</span>
               </div>
@@ -118,11 +124,12 @@ export default function Messages() {
                 maxWidth: '70%', padding: '10px 16px', borderRadius: 14,
                 background: isMe
                   ? 'linear-gradient(135deg, #E8650A, #ff8c3a)'
-                  : 'var(--bg-primary)',
+                  : 'var(--bg-card)',
                 color: isMe ? '#fff' : 'var(--text-primary)',
                 fontSize: 14, lineHeight: 1.5,
                 borderBottomRightRadius: isMe ? 4 : 14,
                 borderBottomLeftRadius: isMe ? 14 : 4,
+                border: isMe ? 'none' : '1px solid var(--border)',
               }}>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</p>
                 <p style={{
@@ -137,9 +144,11 @@ export default function Messages() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Compose */}
+      {/* Compose — stuck to bottom */}
       <div style={{
-        display: 'flex', gap: 10, marginTop: 12, alignItems: 'flex-end',
+        display: 'flex', gap: 10, padding: '12px 28px 16px',
+        borderTop: '1px solid var(--border)', background: 'var(--bg-surface)',
+        alignItems: 'flex-end',
       }}>
         <input
           value={text}

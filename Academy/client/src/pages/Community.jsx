@@ -92,7 +92,7 @@ export default function Community() {
   }
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+    <div>
       <h1 style={{ fontFamily: 'Syne', fontSize: 28, color: 'var(--text-primary)', marginBottom: 4 }}>Community</h1>
       <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>
         Connect with fellow students and share your journey.

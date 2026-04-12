@@ -80,14 +80,9 @@ export default function Sidebar() {
       {/* Logo */}
       <div style={{ padding: '20px 16px 24px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #E8650A, #ff8c3a)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#fff',
-          }}>V</div>
+          <img src="/Logo /VTM_logo.svg" alt="VTM" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain' }} />
           <div>
-            <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16, color: '#f5f5f5' }}>VTM Academy</div>
+            <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: 15, color: '#f5f5f5', letterSpacing: '-0.01em' }}>VTM Academy</div>
             <div style={{ fontSize: 11, color: '#666' }}>
               {profile?.full_name || 'Student'}
             </div>

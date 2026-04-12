@@ -44,7 +44,7 @@ export default function Recommendations() {
   }
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto' }}>
+    <div>
       <h1 style={{ fontFamily: 'Syne', fontSize: 28, color: 'var(--text-primary)', marginBottom: 4 }}>Recommendations</h1>
       <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>
         Tools and resources we recommend.
