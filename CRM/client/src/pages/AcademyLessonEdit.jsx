@@ -104,7 +104,10 @@ export default function AcademyLessonEdit() {
         course_id: found.course_id,
         is_free_preview: found.is_free_preview || false,
       });
-      setQuiz(Array.isArray(found.quiz) ? found.quiz : []);
+      setQuiz(Array.isArray(found.quiz) ? found.quiz.map(q => ({
+        ...q,
+        options: (q.options || []).map(o => typeof o === 'string' ? o : (o && o.text ? o.text : String(o))),
+      })) : []);
       setContentItems(Array.isArray(found.academy_lesson_content) ? found.academy_lesson_content : []);
     } catch (err) {
       setError(err.message);
@@ -128,36 +131,60 @@ export default function AcademyLessonEdit() {
     }
   }
 
-  async function handleGenerate(action) {
+  function normalizeOptions(opts) {
+    if (!Array.isArray(opts)) return ['', '', '', ''];
+    return opts.map(o => typeof o === 'string' ? o : (o && o.text ? o.text : String(o)));
+  }
+
+  async function handleGenerateAll() {
     try {
-      setGenerating(action);
+      setGenerating('all');
       setError(null);
-      const result = await generateAcademyContent({
-        action,
-        content: form.description || form.title,
-        lesson_id: id,
-      });
-      if (action === 'generate-title' && result) {
+
+      // Get transcript content if available
+      const transcript = contentItems.find(c => c.transcript)?.transcript || '';
+      const inputText = transcript || form.description || form.title;
+
+      // Run all three in parallel
+      const [titleResult, quizResult, hwResult] = await Promise.all([
+        generateAcademyContent({ action: 'generate-title', content: inputText, lesson_id: id }).catch(() => null),
+        generateAcademyContent({ action: 'generate-quiz', content: inputText, lesson_id: id }).catch(() => null),
+        generateAcademyContent({ action: 'generate-homework', content: inputText, lesson_id: id }).catch(() => null),
+      ]);
+
+      // Apply title + description
+      if (titleResult) {
         setForm(prev => ({
           ...prev,
-          title: result.title || prev.title,
-          description: result.description || prev.description,
-        }));
-      } else if (action === 'generate-quiz' && result) {
-        const questions = Array.isArray(result.questions) ? result.questions : Array.isArray(result.quiz) ? result.quiz : [];
-        if (questions.length > 0) {
-          setQuiz(questions.map(q => ({
-            question: q.question || q.q || '',
-            options: q.options || [q.a, q.b, q.c, q.d].filter(Boolean) || ['', '', '', ''],
-            correct_answer: typeof q.correct_answer === 'number' ? q.correct_answer : (q.correct || 0),
-          })));
-        }
-      } else if (action === 'generate-homework' && result) {
-        setForm(prev => ({
-          ...prev,
-          homework_prompt: result.homework_prompt || result.homework || result.content || result.prompt || prev.homework_prompt,
+          title: titleResult.title || prev.title,
+          description: titleResult.description || prev.description,
         }));
       }
+
+      // Apply quiz
+      if (quizResult) {
+        const questions = Array.isArray(quizResult.questions) ? quizResult.questions : Array.isArray(quizResult.quiz) ? quizResult.quiz : [];
+        if (questions.length > 0) {
+          setQuiz(questions.map(q => ({
+            question: q.question || q.question_text || q.q || '',
+            options: normalizeOptions(q.options || [q.a, q.b, q.c, q.d].filter(Boolean)),
+            correct_answer: typeof q.correct_answer === 'number' ? q.correct_answer
+              : q.correct_option_id ? q.correct_option_id.charCodeAt(0) - 97
+              : (q.correct || 0),
+          })));
+        }
+      }
+
+      // Apply homework
+      if (hwResult) {
+        setForm(prev => ({
+          ...prev,
+          homework_prompt: hwResult.homework_prompt || hwResult.homework || hwResult.prompt || hwResult.content || prev.homework_prompt,
+        }));
+      }
+
+      setSuccess('Title, description, quiz, and homework generated!');
+      setTimeout(() => setSuccess(null), 4000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -528,33 +555,22 @@ export default function AcademyLessonEdit() {
 
           {/* AI Tools */}
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Sparkles size={16} color="#8b5cf6" />
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>AI Tools</span>
-            </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={16} color="#8b5cf6" />
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>AI Tools</span>
+              </div>
               <button
                 style={{ ...btnAI, opacity: generating ? 0.6 : 1 }}
                 disabled={!!generating}
-                onClick={() => handleGenerate('generate-title')}
+                onClick={handleGenerateAll}
               >
-                <Sparkles size={14} /> {generating === 'generate-title' ? 'Generating...' : 'Generate Title & Description'}
-              </button>
-              <button
-                style={{ ...btnAI, opacity: generating ? 0.6 : 1 }}
-                disabled={!!generating}
-                onClick={() => handleGenerate('generate-quiz')}
-              >
-                <Sparkles size={14} /> {generating === 'generate-quiz' ? 'Generating...' : 'Generate Quiz'}
-              </button>
-              <button
-                style={{ ...btnAI, opacity: generating ? 0.6 : 1 }}
-                disabled={!!generating}
-                onClick={() => handleGenerate('generate-homework')}
-              >
-                <Sparkles size={14} /> {generating === 'generate-homework' ? 'Generating...' : 'Generate Homework'}
+                <Sparkles size={14} /> {generating ? 'Generating...' : 'Generate All'}
               </button>
             </div>
+            <p style={{ fontSize: 12, color: '#7a7f9a', marginTop: 8, marginBottom: 0 }}>
+              Generates title, description, quiz, and homework from {contentItems.some(c => c.transcript) ? 'the video transcript' : 'the lesson description'}.
+            </p>
           </div>
         </div>
 

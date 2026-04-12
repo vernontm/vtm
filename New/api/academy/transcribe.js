@@ -35,9 +35,10 @@ export default async function handler(req, res) {
 
     // Determine filename and mime
     const fileName = content.file_name || 'media.mp4';
-    const mimeType = content.content_type === 'video' ? 'video/mp4'
-      : content.content_type === 'audio' ? 'audio/mpeg'
-      : 'application/octet-stream';
+    const mimeType = fileName.endsWith('.mp3') ? 'audio/mpeg'
+      : fileName.endsWith('.wav') ? 'audio/wav'
+      : fileName.endsWith('.m4a') ? 'audio/mp4'
+      : 'video/mp4';
 
     // Build multipart form data for ElevenLabs
     const boundary = '----FormBoundary' + Date.now();
@@ -90,7 +91,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({ transcript, transcription_status: 'complete' }),
     });
 
-    // Auto-generate lesson description from transcript using Claude
+    // Auto-generate lesson title + description from transcript using Claude
     let generatedDescription = null;
     const targetLessonId = lesson_id || content.lesson_id;
 
@@ -141,7 +142,6 @@ export default async function handler(req, res) {
         }
       } catch (aiErr) {
         console.error('AI description generation failed:', aiErr);
-        // Non-fatal — transcript was still saved
       }
     }
 
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
       transcript,
       generated: generatedDescription,
       content_id,
-      status: 'completed',
+      status: 'complete',
     });
 
   } catch (err) {
