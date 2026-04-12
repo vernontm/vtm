@@ -40,9 +40,9 @@ function formatFileSize(bytes) {
 function getContentTypeFromMime(mime) {
   if (mime.startsWith('video/')) return 'video';
   if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('audio/')) return 'audio';
+  if (mime.startsWith('audio/')) return 'video'; // DB constraint only allows video/pdf/image/text
   if (mime === 'application/pdf') return 'pdf';
-  return 'file';
+  return 'text';
 }
 
 export default function AcademyLessonEdit() {
@@ -240,7 +240,7 @@ export default function AcademyLessonEdit() {
 
       // Update local content item with transcript
       setContentItems(prev => prev.map(c =>
-        c.id === contentId ? { ...c, transcript: result.transcript, transcription_status: 'completed' } : c
+        c.id === contentId ? { ...c, transcript: result.transcript, transcription_status: 'complete' } : c
       ));
 
       // Update form if AI generated title/description
@@ -463,7 +463,7 @@ export default function AcademyLessonEdit() {
                             <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 500, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
                               <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Transcribing...
                             </span>
-                          ) : item.transcription_status === 'completed' ? (
+                          ) : item.transcription_status === 'complete' ? (
                             <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 500, flexShrink: 0 }}>Transcribed</span>
                           ) : (
                             <button

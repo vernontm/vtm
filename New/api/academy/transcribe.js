@@ -87,7 +87,7 @@ export default async function handler(req, res) {
     // Save transcript
     await supaFetch(`academy_lesson_content?id=eq.${content_id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ transcript, transcription_status: 'completed' }),
+      body: JSON.stringify({ transcript, transcription_status: 'complete' }),
     });
 
     // Auto-generate lesson description from transcript using Claude
