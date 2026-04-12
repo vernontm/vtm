@@ -15,6 +15,7 @@ async function imageToImage(templateUrl, textPrompt) {
       prompt: textPrompt,
       imageUrls: [templateUrl],
       type: 'IMAGETOIAMGE', // NanoBanana's spelling
+      resolution: '4K',
       imageSize: '4:5',
       numImages: 1,
     }),
