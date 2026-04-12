@@ -314,7 +314,7 @@ export default function LessonPlayer() {
                       {quiz.academy_quiz_questions.map((q, qi) => (
                         <div key={q.id} style={{ marginBottom: 24 }}>
                           <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, marginBottom: 10 }}>
-                            {qi + 1}. {q.question}
+                            {qi + 1}. {q.question_text || q.question}
                           </p>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {(q.options || []).map((opt) => {
@@ -618,7 +618,7 @@ function QuizResults({ result, questions, answers }) {
           <div key={q.id} style={{ marginBottom: 16 }}>
             <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
               {isCorrect ? <Check size={14} style={{ color: '#22c55e' }} /> : <X size={14} style={{ color: '#ef4444' }} />}
-              {qi + 1}. {q.question}
+              {qi + 1}. {q.question_text || q.question}
             </p>
             {(q.options || []).map(opt => {
               const isSelected = opt.id === userAnswer;
