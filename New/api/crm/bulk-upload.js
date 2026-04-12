@@ -1,0 +1,168 @@
+const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+
+module.exports = async function handler(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const auth = await requireAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const { client_id, script_id, storage_url, file_name } = req.body;
+    if (!client_id || !script_id || !storage_url) {
+      return res.status(400).json({ error: 'client_id, script_id, and storage_url are required' });
+    }
+
+    // Fetch client for brand context
+    const clients = await supaFetch(`crm_content_clients?id=eq.${client_id}`);
+    const client = clients?.[0];
+    if (!client) return res.status(404).json({ error: 'Client not found' });
+
+    // ── Step 1: Transcribe via ElevenLabs ──
+    let transcript = '';
+
+    if (ELEVENLABS_API_KEY) {
+      // Download file from Supabase storage
+      const fileRes = await fetch(storage_url);
+      if (!fileRes.ok) throw new Error('Failed to download video from storage');
+      const fileBuffer = Buffer.from(await fileRes.arrayBuffer());
+
+      const name = file_name || 'video.mp4';
+      const mimeType = name.endsWith('.mp3') ? 'audio/mpeg'
+        : name.endsWith('.wav') ? 'audio/wav'
+        : name.endsWith('.m4a') ? 'audio/mp4'
+        : name.endsWith('.mov') ? 'video/quicktime'
+        : 'video/mp4';
+
+      // Build multipart form data
+      const boundary = '----FormBoundary' + Date.now();
+      const parts = [];
+      parts.push(
+        `--${boundary}\r\nContent-Disposition: form-data; name="model_id"\r\n\r\nscribe_v1\r\n`
+      );
+      parts.push(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${name}"\r\nContent-Type: ${mimeType}\r\n\r\n`
+      );
+
+      const preFileBuffer = Buffer.from(parts.join(''));
+      const postFileBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);
+      const body = Buffer.concat([preFileBuffer, fileBuffer, postFileBuffer]);
+
+      const sttRes = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+        method: 'POST',
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body,
+      });
+
+      if (sttRes.ok) {
+        const sttData = await sttRes.json();
+        transcript = sttData.text || '';
+      } else {
+        const errText = await sttRes.text();
+        console.error('ElevenLabs STT failed:', errText);
+      }
+    }
+
+    // ── Step 2: AI Generate content using transcript + brand bible ──
+    let generated = {};
+
+    if (ANTHROPIC_API_KEY && transcript.length > 20) {
+      const brandContext = [
+        client.business_name ? `Business: ${client.business_name}` : '',
+        client.industry ? `Industry: ${client.industry}` : '',
+        client.brand_bible ? `Brand Bible:\n${client.brand_bible}` : '',
+        client.target_audience ? `Target Audience: ${client.target_audience}` : '',
+        client.preferred_tone ? `Tone: ${client.preferred_tone}` : '',
+        client.instagram_handle ? `Instagram: @${client.instagram_handle}` : '',
+        client.tiktok_handle ? `TikTok: @${client.tiktok_handle}` : '',
+        client.threads_handle ? `Threads: @${client.threads_handle}` : '',
+      ].filter(Boolean).join('\n');
+
+      const prompt = `You are a social media content creator. Based on this video transcript and the brand context below, generate content for posting this video on social media.
+
+BRAND CONTEXT:
+${brandContext}
+
+VIDEO TRANSCRIPT:
+${transcript.slice(0, 8000)}
+
+Generate the following:
+1. "title" - A short, click-worthy, engaging title for this video (max 12 words)
+2. "hook" - The opening 1-2 sentences that hook viewers
+3. "full_script" - A cleaned up version of the transcript as a readable script
+4. "caption" - An engaging social media caption to post with this video. Match the brand voice.
+5. "hashtags" - Include any core brand hashtags from the brand bible first, then 4-6 topic-specific ones.
+6. "first_comment" - An engagement-driving first comment (question or call to action)
+
+RULES:
+- NEVER use em dashes (—). Use commas, periods, or colons instead.
+- Match the brand voice and tone from the brand bible
+- Make the caption punchy and engaging
+- The title should be curiosity-driven, not generic
+
+Return ONLY valid JSON:
+{"title": "...", "hook": "...", "full_script": "...", "caption": "...", "hashtags": "...", "first_comment": "..."}`;
+
+      try {
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-5',
+            max_tokens: 4000,
+            messages: [{ role: 'user', content: prompt }],
+            system: 'You are an expert social media content creator. Return ONLY valid JSON, no markdown.',
+          }),
+        });
+
+        if (aiRes.ok) {
+          const aiData = await aiRes.json();
+          const raw = aiData.content[0].text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+          generated = JSON.parse(raw);
+        }
+      } catch (aiErr) {
+        console.error('AI generation failed:', aiErr);
+      }
+    }
+
+    // ── Step 3: Update the script row with all generated content ──
+    const updates = {
+      title: generated.title || file_name?.replace(/\.[^.]+$/, '') || 'Untitled',
+      hook: generated.hook || '',
+      full_script: generated.full_script || transcript || '',
+      caption: generated.caption || '',
+      hashtags: generated.hashtags || '',
+      first_comment: generated.first_comment || '',
+      status: generated.caption ? 'caption_ready' : (transcript ? 'media_uploaded' : 'draft'),
+      updated_at: new Date().toISOString(),
+    };
+
+    await supaFetch(`crm_content_scripts?id=eq.${script_id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+
+    return res.json({
+      script_id,
+      transcript_length: transcript.length,
+      generated: !!generated.title,
+      ...updates,
+    });
+
+  } catch (err) {
+    console.error('Bulk upload processing error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};

@@ -5,6 +5,7 @@ import {
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
   parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
+  processBulkUpload,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -104,8 +105,13 @@ export default function ContentScheduler() {
 
   const fileInputRef = useRef(null);
   const scriptUploadRef = useRef(null);
+  const bulkUploadRef = useRef(null);
   const recognitionRef = useRef(null);
   const listeningRef = useRef(false);
+
+  // Bulk upload state
+  const [bulkUploads, setBulkUploads] = useState([]); // [{ id, name, status, progress, error }]
+  const [bulkDragOver, setBulkDragOver] = useState(false);
 
   // ── Load clients on mount ──
   useEffect(() => {
@@ -469,6 +475,92 @@ export default function ContentScheduler() {
       }
     } catch (err) { alert('Parse failed: ' + err.message); }
     setActionLoading('');
+  }
+
+  // ── Bulk video upload ──
+  async function handleBulkUpload(e) {
+    e.preventDefault();
+    setBulkDragOver(false);
+    const files = Array.from(e.dataTransfer?.files || e.target?.files || []);
+    const videoFiles = files.filter(f => f.type.startsWith('video/') || f.type.startsWith('audio/') || /\.(mp4|mov|avi|mkv|webm|mp3|m4a|wav)$/i.test(f.name));
+    if (!videoFiles.length || !client) return;
+    if (e.target?.value) e.target.value = '';
+
+    // Initialize tracking
+    const uploads = videoFiles.map((f, i) => ({
+      id: `bulk-${Date.now()}-${i}`,
+      name: f.name,
+      file: f,
+      status: 'queued', // queued → uploading → transcribing → generating → done → error
+      progress: 0,
+      error: null,
+    }));
+    setBulkUploads(prev => [...prev, ...uploads]);
+
+    // Process each file sequentially
+    for (const upload of uploads) {
+      try {
+        // Step 1: Upload to Supabase Storage
+        setBulkUploads(prev => prev.map(u => u.id === upload.id ? { ...u, status: 'uploading', progress: 10 } : u));
+
+        const filePath = `${client.id}/bulk/${Date.now()}_${upload.file.name}`;
+        const { data: storageData, error: storageError } = await supabase.storage
+          .from('content-media')
+          .upload(filePath, upload.file);
+
+        if (storageError) throw new Error('Storage upload failed: ' + storageError.message);
+
+        const { data: urlData } = supabase.storage
+          .from('content-media')
+          .getPublicUrl(filePath);
+        const publicUrl = urlData.publicUrl;
+
+        setBulkUploads(prev => prev.map(u => u.id === upload.id ? { ...u, progress: 30 } : u));
+
+        // Step 2: Create script row
+        const scriptData = {
+          client_id: client.id,
+          title: upload.file.name.replace(/\.[^.]+$/, ''),
+          media_urls: [publicUrl],
+          media_type: 'video',
+          status: 'draft',
+          sort_order: (scripts.length || 0) + uploads.indexOf(upload) + 1,
+        };
+        const created = await createContentScript(scriptData);
+        const scriptId = Array.isArray(created) ? created[0]?.id : created?.id;
+
+        if (!scriptId) throw new Error('Failed to create script row');
+
+        setBulkUploads(prev => prev.map(u => u.id === upload.id ? { ...u, status: 'transcribing', progress: 50 } : u));
+
+        // Step 3: Transcribe + AI generate via API
+        const result = await processBulkUpload({
+          client_id: client.id,
+          script_id: scriptId,
+          storage_url: publicUrl,
+          file_name: upload.file.name,
+        });
+
+        setBulkUploads(prev => prev.map(u => u.id === upload.id ? {
+          ...u,
+          status: 'done',
+          progress: 100,
+          result,
+        } : u));
+
+      } catch (err) {
+        console.error('Bulk upload error for', upload.name, err);
+        setBulkUploads(prev => prev.map(u => u.id === upload.id ? {
+          ...u,
+          status: 'error',
+          progress: 0,
+          error: err.message,
+        } : u));
+      }
+    }
+
+    // Refresh the scripts list
+    await loadClientData(client.id);
   }
 
   // ── Delete selected ──
@@ -860,6 +952,79 @@ export default function ContentScheduler() {
                   </div>
                 )}
               </div>
+
+              {/* Bulk Video Upload */}
+              <div
+                onDragOver={e => { e.preventDefault(); setBulkDragOver(true); }}
+                onDragLeave={() => setBulkDragOver(false)}
+                onDrop={handleBulkUpload}
+                onClick={() => bulkUploadRef.current?.click()}
+                style={{
+                  ...cardStyle, padding: '20px 24px', cursor: 'pointer',
+                  border: bulkDragOver ? '2px dashed #4a6cf7' : '2px dashed #e5e7ef',
+                  background: bulkDragOver ? '#4a6cf708' : '#fafbfe',
+                  display: 'flex', alignItems: 'center', gap: 16,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <input type="file" ref={bulkUploadRef} accept="video/*,audio/*,.mp4,.mov,.avi,.mkv,.webm,.mp3,.m4a,.wav" multiple onChange={handleBulkUpload} style={{ display: 'none' }} />
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Film size={18} color="#fff" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 2 }}>
+                    Bulk Video Upload
+                  </p>
+                  <p style={{ fontSize: 11, color: '#8e8ea0' }}>
+                    Drag & drop video files here. Each video will be transcribed and auto-generate title, caption, hashtags & first comment using the client's brand bible.
+                  </p>
+                </div>
+                <Upload size={18} color="#8e8ea0" />
+              </div>
+
+              {/* Bulk Upload Progress */}
+              {bulkUploads.length > 0 && (
+                <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7ef', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>
+                      Bulk Processing ({bulkUploads.filter(u => u.status === 'done').length}/{bulkUploads.length} complete)
+                    </span>
+                    {bulkUploads.every(u => u.status === 'done' || u.status === 'error') && (
+                      <button onClick={() => setBulkUploads([])} style={{ ...btnGhost, fontSize: 11 }}>
+                        <X size={12} /> Clear
+                      </button>
+                    )}
+                  </div>
+                  {bulkUploads.map(u => (
+                    <div key={u.id} style={{
+                      padding: '8px 16px', borderBottom: '1px solid #f0f0f5',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                    }}>
+                      <Film size={14} color={u.status === 'done' ? '#22c55e' : u.status === 'error' ? '#ef4444' : '#4a6cf7'} />
+                      <span style={{ fontSize: 12, color: '#1a1a2e', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {u.name}
+                      </span>
+                      <span style={{ fontSize: 11, color: '#8e8ea0', flexShrink: 0, minWidth: 80, textAlign: 'right' }}>
+                        {u.status === 'queued' && 'Queued...'}
+                        {u.status === 'uploading' && 'Uploading...'}
+                        {u.status === 'transcribing' && 'Transcribing...'}
+                        {u.status === 'generating' && 'AI Generating...'}
+                        {u.status === 'done' && <span style={{ color: '#22c55e', fontWeight: 600 }}>✓ Done</span>}
+                        {u.status === 'error' && <span style={{ color: '#ef4444' }} title={u.error}>✕ Failed</span>}
+                      </span>
+                      {u.status !== 'done' && u.status !== 'error' && (
+                        <div style={{ width: 60, height: 4, borderRadius: 2, background: '#e5e7ef', overflow: 'hidden' }}>
+                          <div style={{ width: `${u.progress}%`, height: '100%', background: '#4a6cf7', borderRadius: 2, transition: 'width 0.3s' }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Toolbar */}
               <div className="cs-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
