@@ -5,7 +5,7 @@ import {
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
   parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
-  processBulkUpload,
+  processBulkUpload, generateCarousel, regenerateSlide, editSlide, runBulkAgent,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -44,6 +44,8 @@ function StatusPill({ status, onClick }) {
 const SIDEBAR_SECTIONS = [
   { key: 'content', label: 'Content', Icon: Film },
   { key: 'generator', label: 'Generator', Icon: Sparkles },
+  { key: 'carousel', label: 'Carousel', Icon: Image },
+  { key: 'agent', label: 'Agent', Icon: Mic },
   { key: 'exported', label: 'Exported', Icon: Download },
   { key: 'docs', label: 'Docs', Icon: FileText },
 ];
@@ -70,6 +72,9 @@ export default function ContentScheduler() {
   const [editingClient, setEditingClient] = useState(null); // null = add new, object = edit
   const [showMediaModal, setShowMediaModal] = useState(null); // script object
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [slideRegenLoading, setSlideRegenLoading] = useState(null); // slide index being regenerated
+  const [slideEditIndex, setSlideEditIndex] = useState(null); // slide index being edited
+  const [slideEditPrompt, setSlideEditPrompt] = useState('');
   const [uploadProgress, setUploadProgress] = useState({}); // { scriptId: percent }
   const [chatInput, setChatInput] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -89,10 +94,58 @@ export default function ContentScheduler() {
   const genChatRef = useRef(null);
   const brandBibleUploadRef = useRef(null);
 
+  // Carousel state
+  const [carouselPrompt, setCarouselPrompt] = useState('');
+  const [carouselSlideCount, setCarouselSlideCount] = useState(5);
+  const [carouselLoading, setCarouselLoading] = useState(false);
+  const [carouselResult, setCarouselResult] = useState(null);
+
+  // Bulk Agent state
+  const [agentMessages, setAgentMessages] = useState([]);
+  const [agentInput, setAgentInput] = useState('');
+  const [agentLoading, setAgentLoading] = useState(false);
+
   // Schedule modal state
   const [schedTimeslots, setSchedTimeslots] = useState(['10:00', '14:00', '18:00', '22:00']);
   const [schedTimezone, setSchedTimezone] = useState('America/Chicago');
   const [newSlot, setNewSlot] = useState('');
+
+  // Threads style state
+  const [showThreadsStyle, setShowThreadsStyle] = useState(false);
+  const defaultThreadsStyle = {
+    voice: 'Direct, confident, value-first. Talk like you are explaining to a friend.',
+    writing_style: 'Clean, punchy, no fluff. Short paragraphs. Multi-page scroll-friendly format.',
+    formatting_rules: [
+      'Multi-page format: each page is a natural scroll stop',
+      'Use numbered/bulleted lists for steps and value posts',
+      'No emojis except strategic ones (one max per post)',
+      'JSON code blocks ONLY when showing an actual example prompt',
+      'Plain text for everything else',
+      'One hashtag per post at the very end',
+      'Line breaks between sections for readability',
+    ],
+    post_types: [
+      'How-to Steps: "How to use [tool] for [outcome] in 5 steps" with practical actionable steps',
+      'Value Lists: Numbered lists of tips, tools, or insights. Screenshot-worthy.',
+      'Networking: "Dear algorithm, connect me with..." format',
+      'Story/Origin: Personal story with lessons. Authentic, not polished.',
+      'Tool Stack: What tools you use and why. Specific, not generic.',
+      'Framework/System: Show your process or system with real examples',
+      'Hot Take: Bold opinion backed by experience.',
+    ],
+    tone_rules: [
+      'Talk like you are explaining to a friend, not pitching',
+      'Be direct. No corporate language.',
+      'Lead with value, CTA at the end only',
+      'Confident but not arrogant',
+      'NEVER use em dashes. Use periods, commas, or colons.',
+    ],
+    cta_style: 'Soft CTAs. "Follow for more." "DM me." "Comment [KEYWORD]." Never pushy.',
+    hashtag_rules: 'One hashtag per post. Rotate between brand and niche tags.',
+    core_topics: ['AI', 'Claude', 'automation', 'productivity', 'business building', 'prompt engineering', 'solo operator'],
+    example_posts: [],
+  };
+  const [threadsStyle, setThreadsStyle] = useState(defaultThreadsStyle);
 
   // Client form state
   const emptyClientForm = {
@@ -146,6 +199,12 @@ export default function ContentScheduler() {
         setSchedTimeslots(sc.time_slots || ['10:00', '14:00', '18:00', '22:00']);
         setSchedTimezone(sc.timezone || 'America/Chicago');
       }
+      // Load threads style
+      if (c?.threads_style && Object.keys(c.threads_style).length > 0) {
+        setThreadsStyle({ ...defaultThreadsStyle, ...c.threads_style });
+      } else {
+        setThreadsStyle(defaultThreadsStyle);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   }
@@ -191,30 +250,40 @@ export default function ContentScheduler() {
 
   async function uploadMedia(files, script) {
     const urls = [];
+    const storagePaths = [];
     let mediaType = 'image';
 
     for (const file of files) {
       if (file.type.startsWith('video')) mediaType = 'video';
-      const filePath = `${client.id}/${script.id}/${Date.now()}_${file.name}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${client.id}/${script.id}/${Date.now()}_${safeName}`;
 
       setUploadProgress(prev => ({ ...prev, [script.id]: 0 }));
 
-      const { data, error } = await supabase.storage
-        .from('content-media')
-        .upload(filePath, file);
+      // Use REST API for upload (bypasses Supabase JS client issues)
+      const { data: { session: uploadSession } } = await supabase.auth.getSession();
+      const uploadToken = uploadSession?.access_token;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/content-media/${filePath}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${uploadToken}`,
+          'x-upsert': 'false',
+        },
+        body: file,
+      });
 
-      if (error) {
-        console.error('Upload error:', error);
+      if (!uploadRes.ok) {
+        const errBody = await uploadRes.text();
+        console.error('Upload error:', errBody);
         continue;
       }
 
       setUploadProgress(prev => ({ ...prev, [script.id]: 100 }));
 
-      const { data: urlData } = supabase.storage
-        .from('content-media')
-        .getPublicUrl(filePath);
-
-      urls.push(urlData.publicUrl);
+      const publicUrl = `${supabaseUrl}/storage/v1/object/public/content-media/${filePath}`;
+      urls.push(publicUrl);
+      storagePaths.push(filePath);
     }
 
     if (urls.length === 0) return;
@@ -230,6 +299,21 @@ export default function ContentScheduler() {
     });
 
     setUploadProgress(prev => { const n = { ...prev }; delete n[script.id]; return n; });
+
+    // Auto-process: transcribe + AI generate + auto-schedule (for video/audio uploads)
+    if ((mediaType === 'video' || files[0]?.type?.startsWith('audio')) && storagePaths.length === 1) {
+      try {
+        await processBulkUpload({
+          client_id: client.id,
+          script_id: script.id,
+          storage_path: storagePaths[0],
+          file_name: files[0].name,
+        });
+      } catch (e) {
+        console.error('Auto-process failed (non-fatal):', e);
+      }
+    }
+
     loadClientData(client.id);
   }
 
@@ -392,14 +476,14 @@ export default function ContentScheduler() {
   }
 
   // ── Content Generator handler ──
-  async function handleGenerate() {
-    if (!genInput.trim() || !client) return;
-    const userMsg = genInput.trim();
-    setGenInput('');
-    setGenMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+  async function handleGenerate(overridePrompt) {
+    const msg = overridePrompt || genInput.trim();
+    if (!msg || !client) return;
+    if (!overridePrompt) setGenInput('');
+    setGenMessages(prev => [...prev, { role: 'user', content: msg }]);
     setGenLoading(true);
     try {
-      const result = await generateContent({ client_id: client.id, prompt: userMsg });
+      const result = await generateContent({ client_id: client.id, prompt: msg });
       const posts = result.posts || [];
       setGenMessages(prev => [...prev, { role: 'assistant', content: `Generated ${posts.length} post${posts.length !== 1 ? 's' : ''}` }]);
       setGenResults(prev => [...prev, ...posts.map(p => ({ ...p, approved: false, rejected: false }))]);
@@ -407,6 +491,42 @@ export default function ContentScheduler() {
       setGenMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message }]);
     }
     setGenLoading(false);
+  }
+
+  // ── Save Threads Style ──
+  async function saveThreadsStyle() {
+    if (!client) return;
+    try {
+      await updateContentClient(client.id, { threads_style: threadsStyle });
+      await loadClientData(client.id);
+    } catch (e) { alert('Failed to save: ' + e.message); }
+  }
+
+  // ── Bulk Agent handler ──
+  async function handleBulkAgent() {
+    if (!agentInput.trim()) return;
+    const userMsg = agentInput.trim();
+    setAgentInput('');
+    setAgentMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setAgentLoading(true);
+    try {
+      const result = await runBulkAgent({ prompt: userMsg });
+      let summary = `${result.interpretation}\n\n`;
+      summary += `Completed ${result.successful}/${result.total_actions} actions:\n`;
+      for (const r of result.results) {
+        const icon = r.status === 'success' ? '✅' : r.status === 'skipped' ? '⏭' : '❌';
+        const detail = r.status === 'success'
+          ? (r.count ? `${r.count} posts created` : r.scheduled ? `${r.scheduled} scripts scheduled` : 'done')
+          : (r.reason || r.error || r.status);
+        summary += `${icon} ${r.client_name}: ${detail}\n`;
+      }
+      setAgentMessages(prev => [...prev, { role: 'assistant', content: summary.trim() }]);
+      // Refresh current client data if applicable
+      if (client) await loadClientData(client.id);
+    } catch (e) {
+      setAgentMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message }]);
+    }
+    setAgentLoading(false);
   }
 
   // ── Approve generated post (save to content scripts) ──
@@ -1409,6 +1529,121 @@ export default function ContentScheduler() {
           {/* ════════════════════════════════════════════════════════════════ */}
           {client && activeSection === 'generator' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Quick Actions — Threads Post Types */}
+              <div style={{ ...cardStyle, padding: '14px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Threads Quick Generate</div>
+                  <button onClick={() => setShowThreadsStyle(!showThreadsStyle)} style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }}>
+                    <Settings size={12} /> {showThreadsStyle ? 'Hide' : 'Edit'} Style
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {[
+                    { label: 'How-To Steps', icon: '📋', prompt: 'Create 5 Threads posts in multi-page "How to use [tool/concept] in 5 steps" format. Pick practical AI, Claude, or business automation topics. Each post should teach something actionable.' },
+                    { label: 'Value Lists', icon: '📝', prompt: 'Create 5 Threads posts as value-packed numbered lists. Topics: AI tools, productivity tips, business hacks, Claude use cases. Make them screenshot-worthy and scroll-friendly.' },
+                    { label: 'Networking', icon: '🤝', prompt: 'Create 1 Threads networking post in the "Dear algorithm, please connect me with:" format. List the types of people to connect with. End with a soft CTA.' },
+                    { label: 'Story/Origin', icon: '📖', prompt: 'Create 3 Threads posts telling personal founder/builder stories. Multi-page format with lessons learned. Authentic tone, not polished or corporate.' },
+                    { label: 'Tool Stack', icon: '🛠', prompt: 'Create 3 Threads posts breaking down specific tool stacks, workflows, or AI setups. Be specific about what each tool does and why it matters.' },
+                    { label: 'Framework', icon: '⚙️', prompt: 'Create 3 Threads posts showing a framework or system with a JSON example prompt readers can copy. Multi-page format. Teach the "why" behind JSON prompting.' },
+                    { label: 'Hot Take', icon: '🔥', prompt: 'Create 5 Threads posts with bold but credible opinions about AI, business, productivity, or the creator economy. Backed by experience, not controversy for clicks.' },
+                    { label: 'Mixed Batch', icon: '🎯', prompt: 'Create 10 Threads posts: 2 how-to steps, 2 value lists, 1 networking, 2 tool/framework, 2 hot takes, 1 story. Mix of topics around AI, Claude, automation, and business building.' },
+                  ].map(action => (
+                    <button
+                      key={action.label}
+                      onClick={() => handleGenerate(action.prompt)}
+                      disabled={genLoading}
+                      style={{
+                        padding: '8px 14px', borderRadius: 10, border: '1px solid #e5e7ef',
+                        background: '#f8f9fc', cursor: genLoading ? 'not-allowed' : 'pointer',
+                        fontSize: 12, fontWeight: 600, color: '#1a1a2e',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        opacity: genLoading ? 0.5 : 1,
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => { if (!genLoading) { e.target.style.background = '#eef0ff'; e.target.style.borderColor = '#4a6cf7'; } }}
+                      onMouseLeave={e => { e.target.style.background = '#f8f9fc'; e.target.style.borderColor = '#e5e7ef'; }}
+                    >
+                      <span>{action.icon}</span> {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Threads Style Editor */}
+              {showThreadsStyle && (
+                <div style={{ ...cardStyle, padding: '16px 20px' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Threads Content Style</div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Voice / Persona</label>
+                      <textarea value={threadsStyle.voice || ''} onChange={e => setThreadsStyle(s => ({ ...s, voice: e.target.value }))}
+                        rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Writing Style</label>
+                      <textarea value={threadsStyle.writing_style || ''} onChange={e => setThreadsStyle(s => ({ ...s, writing_style: e.target.value }))}
+                        rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>CTA Style</label>
+                      <textarea value={threadsStyle.cta_style || ''} onChange={e => setThreadsStyle(s => ({ ...s, cta_style: e.target.value }))}
+                        rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Hashtag Rules</label>
+                      <textarea value={threadsStyle.hashtag_rules || ''} onChange={e => setThreadsStyle(s => ({ ...s, hashtag_rules: e.target.value }))}
+                        rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Core Topics (comma separated)</label>
+                    <input value={(threadsStyle.core_topics || []).join(', ')}
+                      onChange={e => setThreadsStyle(s => ({ ...s, core_topics: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
+                      style={{ ...inputStyle, width: '100%', fontSize: 12 }} />
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>
+                      Tone Rules (one per line)
+                    </label>
+                    <textarea value={(threadsStyle.tone_rules || []).join('\n')}
+                      onChange={e => setThreadsStyle(s => ({ ...s, tone_rules: e.target.value.split('\n').filter(Boolean) }))}
+                      rows={4} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>
+                      Formatting Rules (one per line)
+                    </label>
+                    <textarea value={(threadsStyle.formatting_rules || []).join('\n')}
+                      onChange={e => setThreadsStyle(s => ({ ...s, formatting_rules: e.target.value.split('\n').filter(Boolean) }))}
+                      rows={4} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>
+                      Example Posts (paste full posts, separate with ---)
+                    </label>
+                    <textarea value={(threadsStyle.example_posts || []).join('\n---\n')}
+                      onChange={e => setThreadsStyle(s => ({ ...s, example_posts: e.target.value.split(/\n---\n/).filter(Boolean) }))}
+                      rows={6} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }}
+                      placeholder="Paste example Threads posts here. Separate each post with --- on its own line." />
+                  </div>
+
+                  <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+                    <button onClick={saveThreadsStyle} style={btnPrimary}>
+                      <Check size={13} /> Save Style
+                    </button>
+                    <button onClick={() => { setThreadsStyle(defaultThreadsStyle); }} style={btnGhost}>
+                      Reset to Default
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Chat area */}
               <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
@@ -1421,7 +1656,7 @@ export default function ContentScheduler() {
                 }}>
                   {genMessages.length === 0 && !genLoading && (
                     <div style={{ textAlign: 'center', padding: '40px 10px', color: '#8e8ea0', fontSize: 13 }}>
-                      Describe what content you want to generate.<br />
+                      Use the quick buttons above or describe what content you want.<br />
                       <span style={{ fontSize: 12, color: '#bbb' }}>
                         e.g. "Create 10 Threads posts about AI tools" or "Generate 5 TikTok scripts about dating red flags"
                       </span>
@@ -1573,6 +1808,172 @@ export default function ContentScheduler() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ CAROUSEL GENERATOR SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {client && activeSection === 'carousel' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ ...cardStyle, padding: '16px 20px' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Carousel Generator</div>
+                <p style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14, lineHeight: 1.6 }}>
+                  Describe your carousel topic. AI will generate slide content, convert to images, save to Supabase, and create a new content row.
+                </p>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Topic / Prompt</label>
+                    <textarea value={carouselPrompt} onChange={e => setCarouselPrompt(e.target.value)}
+                      placeholder="e.g. 6 AI tools every small business owner should know about"
+                      rows={3} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
+                  </div>
+                  <div style={{ width: 100 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Slides</label>
+                    <select value={carouselSlideCount} onChange={e => setCarouselSlideCount(Number(e.target.value))} style={{ ...inputStyle, width: '100%', fontSize: 12 }}>
+                      {[3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} slides</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                  {[
+                    { label: 'Service Breakdown', prompt: `Create a carousel showcasing our ${carouselSlideCount} core services with benefits for each` },
+                    { label: 'Tips & Tricks', prompt: `Create a carousel with ${carouselSlideCount} practical tips about AI and automation for small businesses` },
+                    { label: 'How It Works', prompt: `Create a step-by-step carousel explaining how our process works from inquiry to delivery` },
+                    { label: 'Tool Stack', prompt: `Create a carousel breaking down ${carouselSlideCount} AI tools we use and what each one does` },
+                    { label: 'Before/After', prompt: `Create a carousel showing ${carouselSlideCount} before and after scenarios of businesses using AI automation` },
+                  ].map(q => (
+                    <button key={q.label} onClick={() => setCarouselPrompt(q.prompt)}
+                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 11, color: '#1a1a2e', cursor: 'pointer', fontWeight: 500 }}>
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={async () => {
+                  if (!carouselPrompt.trim() || carouselLoading) return;
+                  setCarouselLoading(true);
+                  setCarouselResult(null);
+                  try {
+                    const result = await generateCarousel({ client_id: client.id, prompt: carouselPrompt, slide_count: carouselSlideCount });
+                    setCarouselResult(result);
+                    await loadClientData(client.id);
+                  } catch (e) {
+                    setCarouselResult({ error: e.message });
+                  }
+                  setCarouselLoading(false);
+                }} disabled={!carouselPrompt.trim() || carouselLoading}
+                  style={{ ...btnPrimary, opacity: carouselPrompt.trim() && !carouselLoading ? 1 : 0.5 }}>
+                  {carouselLoading ? <><Loader size={14} className="spin" /> Generating Carousel...</> : <><Image size={14} /> Generate Carousel</>}
+                </button>
+              </div>
+
+              {carouselResult && (
+                <div style={{ ...cardStyle, padding: '16px 20px' }}>
+                  {carouselResult.error ? (
+                    <div style={{ color: '#ef4444', fontSize: 13 }}>Error: {carouselResult.error}</div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>
+                        Carousel Created ({carouselResult.slide_count || carouselResult.slides?.length || 0} slides)
+                      </div>
+                      {carouselResult.image_urls ? (
+                        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10 }}>
+                          {carouselResult.image_urls.map((url, i) => (
+                            <img key={i} src={url} alt={`Slide ${i}`}
+                              style={{ width: 160, height: 200, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7ef', flexShrink: 0 }} />
+                          ))}
+                        </div>
+                      ) : carouselResult.slides ? (
+                        <div style={{ fontSize: 12, color: '#8e8ea0' }}>
+                          HTML previews generated (HCTI API keys needed for image conversion). {carouselResult.slides.length} slides ready.
+                        </div>
+                      ) : null}
+                      {carouselResult.content?.caption && (
+                        <div style={{ marginTop: 10, fontSize: 12, color: '#555', lineHeight: 1.5 }}>
+                          <strong>Caption:</strong> {carouselResult.content.caption}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#22c55e' }}>
+                        <Check size={12} style={{ verticalAlign: 'middle' }} /> Added to content scheduler
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ BULK AGENT SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {activeSection === 'agent' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Bulk Agent</div>
+                  <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 4 }}>Run tasks across all content accounts at once</div>
+                </div>
+
+                {/* Quick actions */}
+                <div style={{ padding: '12px 20px', borderBottom: '1px solid #f0f0f5', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'Create 5 posts for all accounts', icon: '📝' },
+                    { label: 'Create and schedule 10 Threads posts for all accounts', icon: '📅' },
+                    { label: 'Generate posts about AI automation for all accounts', icon: '🤖' },
+                    { label: 'Schedule all unscheduled content for all accounts', icon: '⏰' },
+                  ].map(q => (
+                    <button key={q.label} onClick={() => setAgentInput(q.label)}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 11, color: '#1a1a2e', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>{q.icon}</span> {q.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Messages */}
+                <div style={{ flex: 1, minHeight: 250, maxHeight: 450, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {agentMessages.length === 0 && !agentLoading && (
+                    <div style={{ textAlign: 'center', padding: '40px 10px', color: '#8e8ea0', fontSize: 13 }}>
+                      Describe a task to run across all accounts.<br />
+                      <span style={{ fontSize: 12, color: '#bbb' }}>
+                        e.g. "Create 5 posts for every client about their industry"
+                      </span>
+                    </div>
+                  )}
+                  {agentMessages.map((msg, i) => (
+                    <div key={i} style={{
+                      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '85%', padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.6,
+                      background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #3b5de7)' : '#f0f0f5',
+                      color: msg.role === 'user' ? '#fff' : '#1a1a2e',
+                      whiteSpace: 'pre-wrap',
+                    }}>
+                      {msg.content}
+                    </div>
+                  ))}
+                  {agentLoading && (
+                    <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, background: '#f0f0f5', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#8e8ea0' }}>
+                      <Loader size={14} className="spin" /> Running across accounts...
+                    </div>
+                  )}
+                </div>
+
+                {/* Input */}
+                <div style={{ borderTop: '1px solid #e5e7ef', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                  <textarea value={agentInput} onChange={e => setAgentInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleBulkAgent(); } }}
+                    placeholder="Describe a bulk task..."
+                    rows={1} style={{ ...inputStyle, border: 'none', background: '#f8f9fc', resize: 'none', minHeight: 20, maxHeight: 100, overflow: 'auto', lineHeight: '20px', flex: 1 }}
+                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }} />
+                  <button onClick={handleBulkAgent} disabled={!agentInput.trim() || agentLoading} style={{
+                    width: 36, height: 36, borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: agentInput.trim() && !agentLoading ? 1 : 0.4, flexShrink: 0,
+                  }}>
+                    <Send size={15} style={{ color: '#fff' }} />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1789,51 +2190,199 @@ export default function ContentScheduler() {
 
       {/* ── Media Preview Modal ── */}
       {showMediaModal && (
-        <div style={modalOverlay} onClick={() => setShowMediaModal(null)}>
-          <div style={{ ...modalBox, maxWidth: 700 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
-                {showMediaModal.title || 'Media Preview'}
-              </h3>
-              <button onClick={() => setShowMediaModal(null)} style={{ ...btnGhost, padding: '4px 8px' }}><X size={16} /></button>
+        <div style={modalOverlay} onClick={() => { setShowMediaModal(null); setSlideEditIndex(null); setSlideEditPrompt(''); }}>
+          <div style={{ ...modalBox, maxWidth: 800, padding: 0 }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{showMediaModal.title || 'Media Preview'}</h3>
+                {showMediaModal.media_urls?.length > 1 && (
+                  <span style={{ fontSize: 12, color: '#8e8ea0' }}>Slide {carouselIndex + 1} of {showMediaModal.media_urls.length}</span>
+                )}
+              </div>
+              <button onClick={() => { setShowMediaModal(null); setSlideEditIndex(null); setSlideEditPrompt(''); }} style={{ ...btnGhost, padding: '4px 8px' }}><X size={16} /></button>
             </div>
 
-            <div style={{ position: 'relative', background: '#000', borderRadius: 12, overflow: 'hidden', minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {showMediaModal.media_type === 'video' ? (
-                <video src={showMediaModal.media_urls[carouselIndex]} controls style={{ maxWidth: '100%', maxHeight: 500 }} />
+            {/* Image viewer */}
+            <div style={{ position: 'relative', background: '#0a0a0a', minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {slideRegenLoading === carouselIndex ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: '#8e8ea0' }}>
+                  <Loader size={28} className="spin" />
+                  <span style={{ fontSize: 13 }}>Regenerating slide...</span>
+                </div>
+              ) : showMediaModal.media_type === 'video' ? (
+                <video src={showMediaModal.media_urls[carouselIndex]} controls style={{ maxWidth: '100%', maxHeight: 550 }} />
               ) : (
-                <img src={showMediaModal.media_urls[carouselIndex]} style={{ maxWidth: '100%', maxHeight: 500, objectFit: 'contain' }} />
+                <img src={showMediaModal.media_urls[carouselIndex]} style={{ maxWidth: '100%', maxHeight: 550, objectFit: 'contain' }} />
               )}
 
-              {showMediaModal.media_urls.length > 1 && (
+              {/* Left/Right arrows */}
+              {showMediaModal.media_urls?.length > 1 && (
                 <>
                   <button onClick={() => setCarouselIndex(i => Math.max(0, i - 1))}
-                    style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ChevronLeft size={18} />
+                    disabled={carouselIndex === 0}
+                    style={{
+                      position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                      background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff',
+                      borderRadius: '50%', width: 40, height: 40, cursor: carouselIndex === 0 ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: carouselIndex === 0 ? 0.3 : 1,
+                      transition: 'opacity 0.15s',
+                    }}>
+                    <ChevronLeft size={20} />
                   </button>
                   <button onClick={() => setCarouselIndex(i => Math.min(showMediaModal.media_urls.length - 1, i + 1))}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ChevronRight size={18} />
+                    disabled={carouselIndex === showMediaModal.media_urls.length - 1}
+                    style={{
+                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                      background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff',
+                      borderRadius: '50%', width: 40, height: 40, cursor: carouselIndex >= showMediaModal.media_urls.length - 1 ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: carouselIndex >= showMediaModal.media_urls.length - 1 ? 0.3 : 1,
+                      transition: 'opacity 0.15s',
+                    }}>
+                    <ChevronRight size={20} />
                   </button>
-                  <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6 }}>
-                    {showMediaModal.media_urls.map((_, i) => (
-                      <span key={i} onClick={() => setCarouselIndex(i)} style={{
-                        width: 8, height: 8, borderRadius: '50%', cursor: 'pointer',
-                        background: i === carouselIndex ? '#fff' : 'rgba(255,255,255,0.4)',
-                      }} />
-                    ))}
-                  </div>
                 </>
               )}
             </div>
 
-            {/* URL copy */}
-            <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input value={showMediaModal.media_urls[carouselIndex]} readOnly
-                style={{ ...inputStyle, fontSize: 11, flex: 1 }} />
+            {/* Slide dots */}
+            {showMediaModal.media_urls?.length > 1 && (
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'center', padding: '10px 0', background: '#0a0a0a' }}>
+                {showMediaModal.media_urls.map((_, i) => (
+                  <span key={i} onClick={() => setCarouselIndex(i)} style={{
+                    width: 10, height: 10, borderRadius: '50%', cursor: 'pointer',
+                    background: i === carouselIndex ? '#4a6cf7' : 'rgba(255,255,255,0.25)',
+                    border: i === carouselIndex ? '2px solid #4a6cf7' : '2px solid transparent',
+                    transition: 'all 0.15s',
+                  }} />
+                ))}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #e5e7ef', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Regenerate */}
+              {showMediaModal.media_type === 'carousel' && (
+                <button onClick={async () => {
+                  if (slideRegenLoading !== null) return;
+                  setSlideRegenLoading(carouselIndex);
+                  try {
+                    const result = await regenerateSlide({
+                      client_id: showMediaModal.client_id || client?.id,
+                      script_id: showMediaModal.id,
+                      slide_index: carouselIndex,
+                      image_prompt: `Regenerate this social media carousel slide (slide ${carouselIndex + 1}). Dark premium tech aesthetic with #E8650A orange accents, black background, Vernon Tech & Media branding, 4:5 aspect ratio. Title: ${showMediaModal.title || 'carousel slide'}`,
+                    });
+                    // Update the modal's media_urls
+                    const updated = { ...showMediaModal };
+                    updated.media_urls = [...updated.media_urls];
+                    updated.media_urls[carouselIndex] = result.url;
+                    setShowMediaModal(updated);
+                    await loadClientData(client?.id);
+                  } catch (e) { alert('Regenerate failed: ' + e.message); }
+                  setSlideRegenLoading(null);
+                }}
+                  disabled={slideRegenLoading !== null}
+                  style={{ ...btnGhost, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                  <RefreshCw size={13} /> Regenerate Slide
+                </button>
+              )}
+
+              {/* Edit */}
+              {showMediaModal.media_type === 'carousel' && (
+                <button onClick={() => setSlideEditIndex(slideEditIndex === carouselIndex ? null : carouselIndex)}
+                  style={{ ...btnGhost, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, background: slideEditIndex === carouselIndex ? '#eef0ff' : undefined }}>
+                  <Edit3 size={13} /> Edit Slide
+                </button>
+              )}
+
+              {/* Copy URL */}
               <button onClick={() => navigator.clipboard.writeText(showMediaModal.media_urls[carouselIndex])}
-                style={btnGhost}><Copy size={13} /> Copy URL</button>
+                style={{ ...btnGhost, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginLeft: 'auto' }}>
+                <Copy size={13} /> Copy URL
+              </button>
             </div>
+
+            {/* Edit prompt input */}
+            {slideEditIndex === carouselIndex && (
+              <div style={{ padding: '0 20px 16px', display: 'flex', gap: 8 }}>
+                <input value={slideEditPrompt} onChange={e => setSlideEditPrompt(e.target.value)}
+                  placeholder="Describe what to change... e.g. 'Make the text bigger' or 'Change headline to...'"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && slideEditPrompt.trim()) {
+                      e.preventDefault();
+                      (async () => {
+                        setSlideRegenLoading(carouselIndex);
+                        setSlideEditIndex(null);
+                        try {
+                          const result = await editSlide({
+                            client_id: showMediaModal.client_id || client?.id,
+                            script_id: showMediaModal.id,
+                            slide_index: carouselIndex,
+                            edit_prompt: slideEditPrompt,
+                            original_image_url: showMediaModal.media_urls[carouselIndex],
+                          });
+                          const updated = { ...showMediaModal };
+                          updated.media_urls = [...updated.media_urls];
+                          updated.media_urls[carouselIndex] = result.url;
+                          setShowMediaModal(updated);
+                          setSlideEditPrompt('');
+                          await loadClientData(client?.id);
+                        } catch (e) { alert('Edit failed: ' + e.message); }
+                        setSlideRegenLoading(null);
+                      })();
+                    }
+                  }}
+                  style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
+                <button onClick={async () => {
+                  if (!slideEditPrompt.trim()) return;
+                  setSlideRegenLoading(carouselIndex);
+                  setSlideEditIndex(null);
+                  try {
+                    const result = await editSlide({
+                      client_id: showMediaModal.client_id || client?.id,
+                      script_id: showMediaModal.id,
+                      slide_index: carouselIndex,
+                      edit_prompt: slideEditPrompt,
+                      original_image_url: showMediaModal.media_urls[carouselIndex],
+                    });
+                    const updated = { ...showMediaModal };
+                    updated.media_urls = [...updated.media_urls];
+                    updated.media_urls[carouselIndex] = result.url;
+                    setShowMediaModal(updated);
+                    setSlideEditPrompt('');
+                    await loadClientData(client?.id);
+                  } catch (e) { alert('Edit failed: ' + e.message); }
+                  setSlideRegenLoading(null);
+                }} disabled={!slideEditPrompt.trim() || slideRegenLoading !== null}
+                  style={{ ...btnPrimary, fontSize: 12, padding: '8px 16px' }}>
+                  Apply Edit
+                </button>
+              </div>
+            )}
+
+            {/* Thumbnail strip for quick navigation */}
+            {showMediaModal.media_urls?.length > 1 && (
+              <div style={{ padding: '0 20px 16px', display: 'flex', gap: 8, overflowX: 'auto' }}>
+                {showMediaModal.media_urls.map((url, i) => (
+                  <div key={i} onClick={() => setCarouselIndex(i)}
+                    style={{
+                      width: 64, height: 80, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
+                      border: i === carouselIndex ? '2px solid #4a6cf7' : '2px solid transparent',
+                      cursor: 'pointer', opacity: i === carouselIndex ? 1 : 0.6,
+                      transition: 'all 0.15s',
+                    }}>
+                    {showMediaModal.media_type === 'video' ? (
+                      <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

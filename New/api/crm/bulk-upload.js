@@ -157,6 +157,66 @@ Return ONLY valid JSON:
       updated_at: new Date().toISOString(),
     };
 
+    // ── Step 4: Auto-schedule this script to the next available slot ──
+    let scheduledDatetime = null;
+    try {
+      const configs = await supaFetch(`crm_auto_schedule_config?client_id=eq.${client_id}&limit=1`);
+      const config = configs?.[0];
+      if (config?.time_slots?.length) {
+        const tz = config.timezone || 'America/Chicago';
+        const now = new Date();
+        const fmt = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+        });
+        const parts = {};
+        for (const p of fmt.formatToParts(now)) parts[p.type] = p.value;
+        const nowHHMM = `${parts.hour}:${parts.minute}`;
+        let currentDate = new Date(parseInt(parts.year), parseInt(parts.month) - 1, parseInt(parts.day));
+
+        // Find all already-scheduled datetimes to avoid double-booking
+        const allScheduled = await supaFetch(`crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=not.is.null&select=scheduled_datetime`);
+        const takenSlots = new Set((allScheduled || []).map(s => s.scheduled_datetime));
+
+        const slotsHHMM = config.time_slots.map(s => s.substring(0, 5));
+        let slotIndex = slotsHHMM.findIndex(s => s > nowHHMM);
+        if (slotIndex < 0) { currentDate.setDate(currentDate.getDate() + 1); slotIndex = 0; }
+
+        // Find the next open slot (not already taken)
+        let maxAttempts = 100;
+        while (maxAttempts-- > 0) {
+          const slot = config.time_slots[slotIndex];
+          const year = currentDate.getFullYear();
+          const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+          const day = String(currentDate.getDate()).padStart(2, '0');
+          const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
+          const candidate = `${year}-${month}-${day} ${timeStr} ${tz}`;
+
+          // Check if this slot is already taken
+          const candidateCheck = `${year}-${month}-${day}T${timeStr}`;
+          const isTaken = [...takenSlots].some(t => t && t.includes(candidateCheck));
+
+          if (!isTaken) {
+            scheduledDatetime = candidate;
+            break;
+          }
+
+          slotIndex++;
+          if (slotIndex >= config.time_slots.length) {
+            slotIndex = 0;
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        }
+
+        if (scheduledDatetime) {
+          updates.scheduled_datetime = scheduledDatetime;
+          updates.status = 'scheduled';
+        }
+      }
+    } catch (schedErr) {
+      console.error('Auto-schedule failed (non-fatal):', schedErr);
+    }
+
     await supaFetch(`crm_content_scripts?id=eq.${script_id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
@@ -166,6 +226,8 @@ Return ONLY valid JSON:
       script_id,
       transcript_length: transcript.length,
       generated: !!generated.title,
+      scheduled: !!scheduledDatetime,
+      scheduled_datetime: scheduledDatetime,
       ...updates,
     });
 

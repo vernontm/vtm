@@ -318,7 +318,7 @@ Return ONLY valid JSON, no markdown.`;
   // ── generate-content ───────────────────────────────────────────────
   if (action === 'generate-content' && req.method === 'POST') {
     try {
-      const { client_id, prompt } = req.body;
+      const { client_id, prompt, post_type } = req.body;
       if (!client_id || !prompt) return res.status(400).json({ error: 'client_id and prompt required' });
 
       // Fetch client info for brand context
@@ -333,10 +333,63 @@ Brand Bible: ${client.brand_bible || 'None provided'}
 Social Handles: IG @${client.instagram_handle || ''}, TT @${client.tiktok_handle || ''}, Threads @${client.threads_handle || ''}
 ` : '';
 
+      // Threads style framework from client settings
+      const threadsStyle = client?.threads_style || {};
+      const hasThreadsStyle = threadsStyle && Object.keys(threadsStyle).length > 0;
+
+      // Build the Threads-specific system prompt section
+      let threadsInstructions = '';
+      if (hasThreadsStyle) {
+        threadsInstructions = `
+THREADS CONTENT FRAMEWORK:
+Voice/Persona: ${threadsStyle.voice || 'Direct, confident, value-first'}
+Writing Style: ${threadsStyle.writing_style || 'Clean, punchy, no fluff. Short paragraphs. Scroll-friendly.'}
+Formatting Rules:
+${(threadsStyle.formatting_rules || [
+  'Multi-page format: each page is a natural scroll stop',
+  'Use numbered/bulleted lists for steps and value posts',
+  'No emojis except strategic ones (one max per post)',
+  'JSON code blocks ONLY when showing an actual example prompt',
+  'Plain text for everything else',
+  'One hashtag per post at the very end',
+  'Line breaks between sections for readability',
+]).map(r => '- ' + r).join('\n')}
+
+Post Types to Use:
+${(threadsStyle.post_types || [
+  'How-to Steps: "How to use [tool] for [outcome] in 5 steps" with practical, actionable steps',
+  'Value Lists: Numbered lists of tips, tools, or insights. Screenshot-worthy.',
+  'Networking: "Dear algorithm, connect me with..." format',
+  'Story/Origin: Personal story with lessons. Authentic, not polished.',
+  'Tool Stack: What tools you use and why. Specific, not generic.',
+  'Framework/System: Show your process or system with real examples',
+  'Hot Take: Bold opinion backed by experience. Not controversial for clicks.',
+]).map(t => '- ' + t).join('\n')}
+
+Tone Rules:
+${(threadsStyle.tone_rules || [
+  'Talk like you are explaining to a friend, not pitching',
+  'Be direct. No corporate language.',
+  'Lead with value, CTA at the end only',
+  'Confident but not arrogant',
+  'Use "you" language, make it about the reader',
+  'NEVER use em dashes. Use periods, commas, or colons.',
+]).map(t => '- ' + t).join('\n')}
+
+CTA Style: ${threadsStyle.cta_style || 'Soft CTAs. "Follow for more." "DM me." "Comment [KEYWORD]." Never pushy.'}
+Hashtag Rules: ${threadsStyle.hashtag_rules || 'One hashtag per post. Rotate between brand and niche tags.'}
+Core Topics: ${(threadsStyle.core_topics || []).join(', ') || 'AI, automation, Claude, productivity, business building'}
+
+${threadsStyle.example_posts?.length ? `EXAMPLE POSTS FOR REFERENCE (match this energy and format):
+${threadsStyle.example_posts.map((ex, i) => `--- Example ${i + 1} ---\n${ex}`).join('\n\n')}` : ''}
+`;
+      }
+
       const systemPrompt = `You are a social media content creator. Generate posts based on the user's request.
 
 BRAND CONTEXT:
 ${brandContext}
+${threadsInstructions}
 
 RULES:
 1. NEVER use em dashes (—) anywhere. Use commas, periods, or colons instead.
@@ -344,19 +397,22 @@ RULES:
 3. Match the brand voice and tone from the brand bible
 4. Include any core hashtags from the brand bible
 5. Make each post unique and engaging
-6. For Threads posts: keep captions concise and punchy (under 500 chars), conversational tone
+6. For Threads posts: multi-page format. Each "page" separated by a blank line. Hook on page 1, value in middle, CTA at end. One hashtag only.
 7. For TikTok scripts: include a hook and full script
 8. For Instagram: include caption with line breaks for readability
+9. If a post type was specified, follow that format exactly.
+10. JSON code blocks should ONLY appear when showing an actual example prompt the reader can copy. Never use JSON for regular post content.
 
 Return a JSON object with:
 {
   "posts": [
     {
       "title": "engaging title",
-      "caption": "full post text",
-      "hashtags": "#hashtag1 #hashtag2",
+      "caption": "full post text with line breaks for multi-page format",
+      "hashtags": "#onehashtag",
       "first_comment": "engagement comment or question",
-      "platform": "threads|tiktok|instagram|general"
+      "platform": "threads|tiktok|instagram|general",
+      "post_type": "how-to|value-list|networking|story|tool-stack|framework|hot-take"
     }
   ]
 }
@@ -371,7 +427,7 @@ Return ONLY valid JSON. No markdown code blocks.`;
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5-20250514',
+          model: 'claude-sonnet-4-5',
           max_tokens: 4096,
           system: systemPrompt,
           messages: [{ role: 'user', content: prompt }],

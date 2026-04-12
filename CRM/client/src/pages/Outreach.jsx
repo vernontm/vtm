@@ -136,24 +136,42 @@ export default function Outreach() {
 
     const recognition = new SR();
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (e) => {
-      const last = e.results[e.results.length - 1];
-      if (last.isFinal) {
-        setChatInput(prev => (prev ? prev + ' ' : '') + last[0].transcript);
+      let finalTranscript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          finalTranscript += e.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        setChatInput(prev => (prev ? prev + ' ' : '') + finalTranscript);
       }
     };
 
     recognition.onend = () => {
       if (listeningRef.current) {
-        try { recognition.start(); } catch (e) { /* already started */ }
+        // Delay restart to avoid rapid cycling
+        setTimeout(() => {
+          if (listeningRef.current) {
+            try { recognition.start(); } catch (e) { /* already started */ }
+          }
+        }, 300);
       }
     };
 
     recognition.onerror = (e) => {
-      if (e.error === 'aborted' || e.error === 'not-allowed') {
+      console.log('Speech recognition error:', e.error);
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        listeningRef.current = false;
+        setIsListening(false);
+        alert('Microphone access denied. Please allow microphone permission.');
+      } else if (e.error === 'no-speech') {
+        // No speech detected, keep listening
+      } else if (e.error !== 'aborted') {
         listeningRef.current = false;
         setIsListening(false);
       }
@@ -162,13 +180,20 @@ export default function Outreach() {
     recognitionRef.current = recognition;
   }, []);
 
-  function toggleMic() {
+  async function toggleMic() {
     if (!recognitionRef.current) return;
     if (listeningRef.current) {
       listeningRef.current = false;
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
+      // Request microphone permission first
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        alert('Microphone access denied. Please allow microphone permission in your browser settings.');
+        return;
+      }
       listeningRef.current = true;
       setIsListening(true);
       try { recognitionRef.current.start(); } catch (e) { /* already started */ }

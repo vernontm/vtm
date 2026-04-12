@@ -149,7 +149,7 @@ export default async function handler(req, res) {
     ).join('\n');
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 2048,
       system: `You are a professional business follow-up email assistant for Vernon Tech & Media.
 Generate concise, friendly follow-up emails that are not pushy. Keep them short (2-4 sentences).
