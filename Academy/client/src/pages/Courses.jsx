@@ -30,7 +30,7 @@ export default function Courses() {
 
   return (
     <div>
-      <h1 style={{ fontFamily: 'Syne', fontSize: 28, color: 'var(--text-primary)', marginBottom: 4 }}>Course Catalog</h1>
+      <h1 style={{ fontSize: 28, color: 'var(--text-primary)', marginBottom: 4 }}>Course Catalog</h1>
       <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 32 }}>
         Browse all available courses and start learning.
       </p>

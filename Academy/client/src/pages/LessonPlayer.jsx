@@ -15,7 +15,7 @@ const card = {
   background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14,
 };
 const sectionTitle = {
-  fontFamily: 'Syne', fontSize: 18, color: 'var(--text-primary)', marginBottom: 12,
+  fontSize: 18, color: 'var(--text-primary)', marginBottom: 12,
 };
 
 export default function LessonPlayer() {
@@ -252,7 +252,7 @@ export default function LessonPlayer() {
           {/* Lesson Info */}
           <div style={{ marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <h1 style={{ fontFamily: 'Syne', fontSize: 24, color: 'var(--text-primary)', flex: 1 }}>
+              <h1 style={{ fontSize: 24, color: 'var(--text-primary)', flex: 1 }}>
                 {lesson.title}
               </h1>
               {currentProgress?.completed && (
@@ -295,7 +295,7 @@ export default function LessonPlayer() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Trophy size={18} style={{ color: '#E8650A' }} />
-                  <span style={{ fontFamily: 'Syne', fontSize: 16, fontWeight: 700 }}>
+                  <span style={{ fontSize: 16, fontWeight: 700 }}>
                     Lesson Quiz
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -379,7 +379,7 @@ export default function LessonPlayer() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <FileText size={18} style={{ color: '#E8650A' }} />
-                  <span style={{ fontFamily: 'Syne', fontSize: 16, fontWeight: 700 }}>Homework</span>
+                  <span style={{ fontSize: 16, fontWeight: 700 }}>Homework</span>
                 </div>
                 {showHomework ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </button>
@@ -516,7 +516,7 @@ export default function LessonPlayer() {
             padding: '14px 18px', borderBottom: '1px solid var(--border)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Syne' }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
               Course Outline
             </h3>
             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
@@ -602,7 +602,7 @@ function QuizResults({ result, questions, answers }) {
         }}>
           {passed ? <Trophy size={28} style={{ color: '#22c55e' }} /> : <AlertCircle size={28} style={{ color: '#ef4444' }} />}
         </div>
-        <h3 style={{ fontFamily: 'Syne', fontSize: 20, color: passed ? '#22c55e' : '#ef4444', marginBottom: 4 }}>
+        <h3 style={{ fontSize: 20, color: passed ? '#22c55e' : '#ef4444', marginBottom: 4 }}>
           {passed ? 'Great Job!' : 'Keep Studying'}
         </h3>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>

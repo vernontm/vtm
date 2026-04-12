@@ -42,7 +42,7 @@ export default function Login() {
             width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
             background: 'linear-gradient(135deg, #E8650A, #ff8c3a)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Syne', fontWeight: 800, fontSize: 24, color: '#fff',
+            fontWeight: 800, fontSize: 24, color: '#fff',
           }}>V</div>
           <h1 style={{ fontSize: 28, color: 'var(--text-primary)', marginBottom: 6 }}>Welcome Back</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Sign in to your VTM Academy account</p>

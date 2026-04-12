@@ -407,7 +407,7 @@ export default function VideoPlayer({
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexDirection: 'column', gap: 16, zIndex: 20,
         }}>
-          <h3 style={{ fontFamily: 'Syne', color: '#fff', fontSize: 22 }}>Still watching?</h3>
+          <h3 style={{ color: '#fff', fontSize: 22 }}>Still watching?</h3>
           <p style={{ color: '#999', fontSize: 14 }}>Video paused due to inactivity</p>
           <button
             onClick={handleStillWatchingContinue}

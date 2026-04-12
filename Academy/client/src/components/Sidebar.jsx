@@ -79,15 +79,7 @@ export default function Sidebar() {
     <>
       {/* Logo */}
       <div style={{ padding: '20px 16px 24px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/Logo /VTM_logo.svg" alt="VTM" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain' }} />
-          <div>
-            <div style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: 15, color: '#f5f5f5', letterSpacing: '-0.01em' }}>VTM Academy</div>
-            <div style={{ fontSize: 11, color: '#666' }}>
-              {profile?.full_name || 'Student'}
-            </div>
-          </div>
-        </div>
+        <img src="/Logo /VTM_logo.svg" alt="VTM" style={{ width: 40, height: 40, objectFit: 'contain' }} />
       </div>
 
       {/* Nav links */}
@@ -147,7 +139,7 @@ export default function Sidebar() {
                 padding: '10px 14px', borderBottom: '1px solid var(--border)',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
-                <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
                   Notifications
                 </span>
                 {unreadCount > 0 && (

@@ -64,7 +64,7 @@ export default function CourseDetail() {
           width: '100%', height: 240, objectFit: 'cover', borderRadius: 14, marginBottom: 24,
         }} />
       )}
-      <h1 style={{ fontFamily: 'Syne', fontSize: 28, color: 'var(--text-primary)', marginBottom: 8 }}>
+      <h1 style={{ fontSize: 28, color: 'var(--text-primary)', marginBottom: 8 }}>
         {course.title}
       </h1>
       <p style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.6, marginBottom: 20 }}>
