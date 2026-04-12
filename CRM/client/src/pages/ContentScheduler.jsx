@@ -5,7 +5,7 @@ import {
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
   parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
-  processBulkUpload, generateCarousel, regenerateSlide, editSlide, runBulkAgent, approveAndSchedule,
+  processBulkUpload, generateCarousel, regenerateSlide, editSlide, saveCarouselTemplates, runBulkAgent, approveAndSchedule,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -98,6 +98,12 @@ export default function ContentScheduler() {
   const [carouselSlideCount, setCarouselSlideCount] = useState(5);
   const [carouselLoading, setCarouselLoading] = useState(false);
   const [carouselResult, setCarouselResult] = useState(null);
+  const [carouselTemplates, setCarouselTemplates] = useState({ cover: '', content: '', cta: '' });
+  const [showTemplateSetup, setShowTemplateSetup] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const coverTemplateRef = useRef(null);
+  const contentTemplateRef = useRef(null);
+  const ctaTemplateRef = useRef(null);
 
   // Bulk Agent state
   const [agentMessages, setAgentMessages] = useState([]);
@@ -203,6 +209,12 @@ export default function ContentScheduler() {
         setThreadsStyle({ ...defaultThreadsStyle, ...c.threads_style });
       } else {
         setThreadsStyle(defaultThreadsStyle);
+      }
+      // Load carousel templates
+      if (c?.carousel_templates && Object.keys(c.carousel_templates).length > 0) {
+        setCarouselTemplates({ cover: '', content: '', cta: '', ...c.carousel_templates });
+      } else {
+        setCarouselTemplates({ cover: '', content: '', cta: '' });
       }
     } catch (e) { console.error(e); }
     setLoading(false);
@@ -499,6 +511,49 @@ export default function ContentScheduler() {
       await updateContentClient(client.id, { threads_style: threadsStyle });
       await loadClientData(client.id);
     } catch (e) { alert('Failed to save: ' + e.message); }
+  }
+
+  // ── Upload carousel template image ──
+  async function uploadTemplateImage(file, type) {
+    if (!client || !file) return;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${client.id}/templates/${type}_${Date.now()}_${safeName}`;
+
+    const { data: { session: uploadSession } } = await supabase.auth.getSession();
+    const uploadToken = uploadSession?.access_token;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/content-media/${filePath}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${uploadToken}`, 'x-upsert': 'true' },
+      body: file,
+    });
+    if (!uploadRes.ok) throw new Error('Template upload failed');
+    return `${supabaseUrl}/storage/v1/object/public/content-media/${filePath}`;
+  }
+
+  async function handleTemplateUpload(e, type) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    try {
+      const url = await uploadTemplateImage(file, type);
+      const updated = { ...carouselTemplates, [type]: url };
+      setCarouselTemplates(updated);
+      // Auto-save to server
+      await saveCarouselTemplates({ client_id: client.id, templates: updated });
+    } catch (err) {
+      alert('Template upload failed: ' + err.message);
+    }
+  }
+
+  async function saveTemplates() {
+    if (!client) return;
+    setTemplateSaving(true);
+    try {
+      await saveCarouselTemplates({ client_id: client.id, templates: carouselTemplates });
+      await loadClientData(client.id);
+    } catch (e) { alert('Failed to save: ' + e.message); }
+    setTemplateSaving(false);
   }
 
   // ── Bulk Agent handler ──
@@ -924,17 +979,12 @@ export default function ContentScheduler() {
             </div>
           ))}
 
-        </div>
-
-        {/* Agent section */}
-        <div style={{ padding: '4px 0', borderTop: '1px solid #f0f0f5' }}>
-          <div style={{ padding: '8px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Agent
-          </div>
+          {/* Agent - under last client */}
           <div
             onClick={() => setActiveSection('agent')}
             style={{
               padding: '8px 16px',
+              marginTop: 4,
               fontSize: 13,
               cursor: 'pointer',
               color: activeSection === 'agent' ? '#4a6cf7' : '#1a1a2e',
@@ -1882,10 +1932,84 @@ export default function ContentScheduler() {
           {/* ════════════════════════════════════════════════════════════════ */}
           {client && activeSection === 'carousel' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Template Setup */}
+              <div style={{ ...cardStyle, padding: '16px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showTemplateSetup ? 14 : 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Slide Templates</div>
+                    {(carouselTemplates.cover || carouselTemplates.content) && (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e', background: '#ecfdf5', padding: '2px 8px', borderRadius: 6 }}>Active</span>
+                    )}
+                  </div>
+                  <button onClick={() => setShowTemplateSetup(!showTemplateSetup)}
+                    style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }}>
+                    {showTemplateSetup ? 'Hide' : 'Setup'}
+                  </button>
+                </div>
+                {showTemplateSetup && (
+                  <div>
+                    <p style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 12, lineHeight: 1.6 }}>
+                      Upload template images for each slide type. The generator will use image-to-image to swap text while keeping your exact design, logo, and layout.
+                    </p>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      {[
+                        { key: 'cover', label: 'Cover Slide', ref: coverTemplateRef },
+                        { key: 'content', label: 'Content Slide', ref: contentTemplateRef },
+                        { key: 'cta', label: 'CTA Slide', ref: ctaTemplateRef },
+                      ].map(t => (
+                        <div key={t.key} style={{ flex: 1, textAlign: 'center' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#1a1a2e', marginBottom: 6 }}>{t.label}</div>
+                          {carouselTemplates[t.key] ? (
+                            <div style={{ position: 'relative' }}>
+                              <img src={carouselTemplates[t.key]} alt={t.label}
+                                style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover', borderRadius: 8, border: '2px solid #22c55e' }} />
+                              <button onClick={() => {
+                                const updated = { ...carouselTemplates, [t.key]: '' };
+                                setCarouselTemplates(updated);
+                                saveCarouselTemplates({ client_id: client.id, templates: updated });
+                              }}
+                                style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <div onClick={() => t.ref.current?.click()}
+                              style={{ width: '100%', aspectRatio: '4/5', borderRadius: 8, border: '2px dashed #e5e7ef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#f8f9fc', gap: 4 }}>
+                              <Upload size={16} color="#8e8ea0" />
+                              <span style={{ fontSize: 10, color: '#8e8ea0' }}>Upload</span>
+                            </div>
+                          )}
+                          <input ref={t.ref} type="file" accept="image/*" style={{ display: 'none' }}
+                            onChange={(e) => handleTemplateUpload(e, t.key)} />
+                        </div>
+                      ))}
+                    </div>
+                    {/* Or paste URL directly */}
+                    <div style={{ marginTop: 12 }}>
+                      {['cover', 'content', 'cta'].map(key => (
+                        <div key={key} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: '#8e8ea0', width: 55 }}>{key.charAt(0).toUpperCase() + key.slice(1)} URL</label>
+                          <input value={carouselTemplates[key]} onChange={e => setCarouselTemplates(prev => ({ ...prev, [key]: e.target.value }))}
+                            placeholder="Paste image URL or upload above"
+                            style={{ ...inputStyle, flex: 1, fontSize: 11, padding: '5px 8px' }} />
+                        </div>
+                      ))}
+                      <button onClick={saveTemplates} disabled={templateSaving}
+                        style={{ ...btnGhost, fontSize: 11, padding: '5px 12px', marginTop: 4 }}>
+                        {templateSaving ? 'Saving...' : 'Save URLs'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Generator */}
               <div style={{ ...cardStyle, padding: '16px 20px' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Carousel Generator</div>
                 <p style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14, lineHeight: 1.6 }}>
-                  Describe your carousel topic. AI will generate slide content, convert to images, save to Supabase, and create a new content row.
+                  {(carouselTemplates.cover || carouselTemplates.content)
+                    ? 'Templates active. AI will generate text and use image-to-image to swap it onto your templates, keeping your exact design and logo.'
+                    : 'Describe your carousel topic. AI will generate slide content and images from scratch.'}
                 </p>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                   <div style={{ flex: 1 }}>
