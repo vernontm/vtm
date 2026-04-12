@@ -28,7 +28,23 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       if (id) {
         const rows = await supaFetch(`academy_lessons?id=eq.${id}&select=*,academy_lesson_content(*)`);
-        return rows[0] ? res.json(rows[0]) : res.status(404).json({ error: 'Lesson not found' });
+        if (!rows[0]) return res.status(404).json({ error: 'Lesson not found' });
+
+        // Attach quiz questions
+        const lesson = rows[0];
+        const quizzes = await supaFetch(`academy_quizzes?lesson_id=eq.${id}`);
+        if (quizzes.length > 0) {
+          const questions = await supaFetch(`academy_quiz_questions?quiz_id=eq.${quizzes[0].id}&order=sort_order.asc`);
+          lesson.quiz = questions.map(q => ({
+            question: q.question_text,
+            options: Array.isArray(q.options) ? q.options.map(o => typeof o === 'string' ? o : (o.text || '')) : [],
+            correct_answer: q.correct_option_id ? q.correct_option_id.charCodeAt(0) - 97 : 0,
+          }));
+        } else {
+          lesson.quiz = [];
+        }
+
+        return res.json(lesson);
       }
       if (course_id) {
         const lessons = await supaFetch(`academy_lessons?course_id=eq.${course_id}&order=sort_order.asc`);
@@ -47,12 +63,51 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT' && id) {
-      const { id: _, ...data } = req.body;
+      const { id: _, quiz, content, academy_lesson_content, ...data } = req.body;
       data.updated_at = new Date().toISOString();
+
+      // Save lesson fields
       const result = await supaFetch(`academy_lessons?id=eq.${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
+
+      // Save quiz if provided
+      if (Array.isArray(quiz)) {
+        // Get or create quiz for this lesson
+        let quizzes = await supaFetch(`academy_quizzes?lesson_id=eq.${id}`);
+        let quizId;
+        if (quizzes.length === 0) {
+          const created = await supaFetch('academy_quizzes', {
+            method: 'POST',
+            body: JSON.stringify({ lesson_id: id, title: 'Lesson Quiz', created_at: new Date().toISOString() }),
+          });
+          quizId = (created[0] || created).id;
+        } else {
+          quizId = quizzes[0].id;
+        }
+
+        // Delete existing questions and re-insert
+        await supaFetch(`academy_quiz_questions?quiz_id=eq.${quizId}`, { method: 'DELETE' });
+        if (quiz.length > 0) {
+          const questions = quiz.map((q, i) => ({
+            quiz_id: quizId,
+            question_text: q.question || q.question_text || '',
+            options: Array.isArray(q.options) ? q.options.map((opt, oi) => (
+              typeof opt === 'string' ? { id: String.fromCharCode(97 + oi), text: opt } : opt
+            )) : [],
+            correct_option_id: typeof q.correct_answer === 'number'
+              ? String.fromCharCode(97 + q.correct_answer)
+              : (q.correct_option_id || 'a'),
+            sort_order: i,
+          }));
+          await supaFetch('academy_quiz_questions', {
+            method: 'POST',
+            body: JSON.stringify(questions),
+          });
+        }
+      }
+
       return res.json(result[0] || result);
     }
 

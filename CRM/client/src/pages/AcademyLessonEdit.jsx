@@ -57,7 +57,7 @@ export default function AcademyLessonEdit() {
   const [success, setSuccess] = useState(null);
 
   const [form, setForm] = useState({
-    title: '', description: '', content: '', homework_prompt: '',
+    title: '', description: '', homework_prompt: '',
     sort_order: 0, status: 'draft', drip_days: 0, course_id: null, is_free_preview: false,
   });
   const [quiz, setQuiz] = useState([]);
@@ -95,7 +95,6 @@ export default function AcademyLessonEdit() {
       setForm({
         title: found.title || '',
         description: found.description || '',
-        content: found.content || '',
         homework_prompt: found.homework_prompt || '',
         sort_order: found.sort_order ?? 0,
         status: found.status || 'draft',
@@ -133,7 +132,7 @@ export default function AcademyLessonEdit() {
       setError(null);
       const result = await generateAcademyContent({
         action,
-        content: form.content || form.description || form.title,
+        content: form.description || form.title,
         lesson_id: id,
       });
       if (action === 'generate-title' && result) {
@@ -293,10 +292,7 @@ export default function AcademyLessonEdit() {
             <input style={{ ...inputStyle, marginBottom: 14 }} placeholder="e.g. Introduction to Forex" value={form.title} onChange={(e) => updateField('title', e.target.value)} />
 
             <label style={labelStyle}>Description</label>
-            <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical', marginBottom: 14 }} placeholder="Brief lesson description..." value={form.description} onChange={(e) => updateField('description', e.target.value)} />
-
-            <label style={labelStyle}>Lesson Content</label>
-            <textarea style={{ ...inputStyle, minHeight: 200, resize: 'vertical', fontFamily: 'inherit' }} placeholder="Write or paste your lesson content here..." value={form.content} onChange={(e) => updateField('content', e.target.value)} />
+            <textarea style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }} placeholder="Lesson description — what students will learn..." value={form.description} onChange={(e) => updateField('description', e.target.value)} />
           </div>
 
           {/* ── Media Upload ── */}
