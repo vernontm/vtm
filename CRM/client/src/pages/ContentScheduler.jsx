@@ -506,20 +506,27 @@ export default function ContentScheduler() {
         const safeName = upload.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const filePath = `${client.id}/bulk/${Date.now()}_${safeName}`;
         console.log('Uploading to storage:', filePath, 'size:', upload.file.size, 'type:', upload.file.type);
-        const { data: storageData, error: storageError } = await supabase.storage
-          .from('content-media')
-          .upload(filePath, upload.file, { cacheControl: '3600', upsert: false });
 
-        if (storageError) {
-          console.error('Storage error details:', JSON.stringify(storageError));
-          throw new Error('Storage upload failed: ' + (storageError.message || storageError.error || JSON.stringify(storageError)));
+        // Upload via REST API directly (bypasses JS client issues)
+        const { data: { session: uploadSession } } = await supabase.auth.getSession();
+        const uploadToken = uploadSession?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/content-media/${filePath}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${uploadToken}`,
+            'x-upsert': 'false',
+          },
+          body: upload.file,
+        });
+
+        if (!uploadRes.ok) {
+          const errBody = await uploadRes.text();
+          console.error('Storage upload error:', uploadRes.status, errBody);
+          throw new Error('Storage upload failed: ' + errBody);
         }
 
-        // Get public URL for display, keep filePath for server-side download
-        const { data: urlData } = supabase.storage
-          .from('content-media')
-          .getPublicUrl(filePath);
-        const publicUrl = urlData.publicUrl;
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/content-media/${filePath}`;
 
         setBulkUploads(prev => prev.map(u => u.id === upload.id ? { ...u, progress: 30 } : u));
 
