@@ -3,14 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Mail, Send, FileText, Inbox, Search, RefreshCw, Trash2,
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
-  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap, Loader, MessageSquare,
+  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap, Loader,
 } from 'lucide-react';
 import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
   addEmailLabel, removeEmailLabel, getGmailContacts, getGmailThread,
   getLabelDefs, createLabelDef, deleteLabelDef, getAIFollowups, trashGmailMessage,
-  emailAgent,
 } from '../api';
 
 const TABS = [
@@ -373,15 +372,6 @@ export default function EmailPage() {
   const [showFollowups, setShowFollowups]   = useState(false);
   const [followupsLoading, setFollowupsLoading] = useState(false);
 
-  // Agent state
-  const [showAgent, setShowAgent] = useState(false);
-  const [agentInput, setAgentInput] = useState('');
-  const [agentMessages, setAgentMessages] = useState([]);
-  const [agentLoading, setAgentLoading] = useState(false);
-  const [agentDraft, setAgentDraft] = useState(null); // { to_name, to_email, subject, body, reasoning }
-  const [agentSending, setAgentSending] = useState(false);
-  const agentEndRef = useRef(null);
-
   // Compose popup
   const [composeOpen, setComposeOpen]       = useState(false); // true = new, or an email obj for reply
   const [sending, setSending]               = useState(false);
@@ -482,74 +472,6 @@ export default function EmailPage() {
     try { const data = await getAIFollowups(); setFollowups(data?.suggestions||[]); setShowFollowups(true); }
     catch (e) { console.error('Follow-up error:', e); }
     finally { setFollowupsLoading(false); }
-  };
-
-  /* ── email agent ─────────────────────────────────────────────────────── */
-  const handleAgentSend = async () => {
-    const msg = agentInput.trim();
-    if (!msg || agentLoading) return;
-    setAgentInput('');
-    setAgentMessages(prev => [...prev, { role: 'user', content: msg }]);
-    setAgentLoading(true);
-    setAgentDraft(null);
-    try {
-      // Build conversation history for context
-      const convo = agentMessages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({
-        role: m.role,
-        content: m.content,
-      }));
-      const result = await emailAgent({ prompt: msg, conversation: convo });
-
-      if (result.action === 'ask' || result.needs_info) {
-        setAgentMessages(prev => [...prev, { role: 'assistant', content: result.question || 'Could you provide more details?' }]);
-      } else if (result.action === 'draft_email') {
-        setAgentDraft(result);
-        setAgentMessages(prev => [...prev, {
-          role: 'assistant',
-          content: `Email ready for ${result.to_name || result.to_email}${result.reasoning ? `\n\n${result.reasoning}` : ''}`,
-          isDraft: true,
-        }]);
-      }
-    } catch (e) {
-      setAgentMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message }]);
-    }
-    setAgentLoading(false);
-    setTimeout(() => agentEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-  };
-
-  const handleAgentApprove = async () => {
-    if (!agentDraft) return;
-    setAgentSending(true);
-    try {
-      const queueItem = await createQueueItem({
-        lead_email: agentDraft.to_email,
-        lead_name: agentDraft.to_name || '',
-        subject_lines: JSON.stringify([agentDraft.subject]),
-        body: agentDraft.body,
-        status: 'draft',
-        email_type: 'agent_generated',
-        auto_generated: true,
-        generated_at: new Date().toISOString(),
-      });
-      // Send immediately
-      await sendQueueItem(queueItem.id);
-      setAgentMessages(prev => [...prev, { role: 'system', content: `✅ Email sent to ${agentDraft.to_email}` }]);
-      setAgentDraft(null);
-      await load(true);
-    } catch (e) {
-      setAgentMessages(prev => [...prev, { role: 'system', content: '❌ Failed to send: ' + e.message }]);
-    }
-    setAgentSending(false);
-  };
-
-  const handleAgentEdit = () => {
-    if (!agentDraft) return;
-    setComposeOpen({
-      to_email: agentDraft.to_email,
-      subject: agentDraft.subject,
-      prefillBody: agentDraft.body,
-    });
-    setAgentDraft(null);
   };
 
   /* ── label actions ───────────────────────────────────────────────────── */
@@ -736,10 +658,6 @@ export default function EmailPage() {
 
         {/* ── AI Follow-ups & Refresh ── */}
         <div className="email-sidebar-actions" style={{ padding:'8px 14px 12px', borderTop:'1px solid #f0f2f8', display:'flex', flexDirection:'column', gap:6 }}>
-          <button onClick={() => setShowAgent(true)}
-            style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid #e5e7ef', borderRadius:8, background: showAgent ? 'linear-gradient(135deg,#4a6cf7,#6e8efb)' : 'linear-gradient(135deg,rgba(74,108,247,0.05),rgba(110,142,251,0.05))', color: showAgent ? '#fff' : '#4a6cf7', fontSize:12, cursor:'pointer', fontWeight:500 }}>
-            <MessageSquare size={12} /> Email Agent
-          </button>
           <button onClick={loadFollowups} disabled={followupsLoading}
             style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid #e5e7ef', borderRadius:8, background:followupsLoading?'#f5f7fa':'linear-gradient(135deg,rgba(74,108,247,0.05),rgba(110,142,251,0.05))', color:followupsLoading?'#b0b0c0':'#4a6cf7', fontSize:12, cursor:followupsLoading?'wait':'pointer', fontWeight:500 }}>
             <Zap size={12} /> {followupsLoading ? 'Analyzing...' : 'AI Follow-ups'}
@@ -982,119 +900,6 @@ export default function EmailPage() {
           onClose={() => setComposeOpen(false)}
           sending={sending}
         />
-      )}
-
-      {/* ── Email Agent Panel ── */}
-      {showAgent && (
-        <div style={{
-          position:'fixed', bottom:16, right:16, zIndex:7000,
-          background:'#fff', borderRadius:14, boxShadow:'0 8px 40px rgba(0,0,0,0.18)', border:'1px solid #e5e7ef',
-          width:420, maxWidth:'calc(100vw - 32px)', height:520, maxHeight:'calc(100vh - 80px)',
-          display:'flex', flexDirection:'column',
-        }}>
-          {/* Header */}
-          <div style={{ display:'flex', alignItems:'center', padding:'14px 18px', borderBottom:'1px solid #f0f2f8', flexShrink:0 }}>
-            <MessageSquare size={16} color="#4a6cf7" />
-            <span style={{ fontSize:14, fontWeight:700, color:'#1a1a2e', marginLeft:8, flex:1 }}>Email Agent</span>
-            <button onClick={() => { setShowAgent(false); }} style={{ background:'none', border:'none', cursor:'pointer', color:'#8e8ea0', display:'flex' }}><X size={16} /></button>
-          </div>
-
-          {/* Messages */}
-          <div style={{ flex:1, overflow:'auto', padding:'12px 18px', display:'flex', flexDirection:'column', gap:10 }}>
-            {agentMessages.length === 0 && !agentLoading && (
-              <div style={{ textAlign:'center', padding:'30px 10px', color:'#8e8ea0', fontSize:13, lineHeight:1.6 }}>
-                Tell me what email to write.<br />
-                <span style={{ fontSize:11 }}>e.g. "Write a follow-up to John at Acme about our AI services"</span>
-              </div>
-            )}
-            {/* Quick prompts */}
-            {agentMessages.length === 0 && (
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6, justifyContent:'center' }}>
-                {[
-                  'Write a cold outreach email to a new lead',
-                  'Follow up with a client about their project',
-                  'Send a check-in email to see how things are going',
-                  'Write a proposal email for AI automation services',
-                ].map(q => (
-                  <button key={q} onClick={() => { setAgentInput(q); }}
-                    style={{ padding:'5px 10px', borderRadius:8, border:'1px solid #e5e7ef', background:'#f8f9fc', fontSize:10, color:'#5a5a6e', cursor:'pointer', fontWeight:500 }}>
-                    {q}
-                  </button>
-                ))}
-              </div>
-            )}
-            {agentMessages.map((msg, i) => (
-              <div key={i} style={{
-                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '85%',
-              }}>
-                <div style={{
-                  padding:'8px 14px', borderRadius:12, fontSize:13, lineHeight:1.5, whiteSpace:'pre-wrap',
-                  background: msg.role === 'user' ? 'linear-gradient(135deg,#4a6cf7,#6e8efb)' : msg.role === 'system' ? '#f0f2f8' : '#f8f9fc',
-                  color: msg.role === 'user' ? '#fff' : '#1a1a2e',
-                  border: msg.role === 'user' ? 'none' : '1px solid #e5e7ef',
-                }}>
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-
-            {/* Draft preview */}
-            {agentDraft && (
-              <div style={{ background:'#f8f9fc', border:'1px solid #e5e7ef', borderRadius:12, padding:14, marginTop:4 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#8e8ea0', marginBottom:8 }}>DRAFT PREVIEW</div>
-                <div style={{ fontSize:11, color:'#5a5a6e', marginBottom:4 }}>
-                  <strong>To:</strong> {agentDraft.to_name} &lt;{agentDraft.to_email}&gt;
-                </div>
-                <div style={{ fontSize:11, color:'#5a5a6e', marginBottom:8 }}>
-                  <strong>Subject:</strong> {agentDraft.subject}
-                </div>
-                <div style={{ fontSize:12, color:'#1a1a2e', background:'#fff', border:'1px solid #e5e7ef', borderRadius:8, padding:'10px 12px', lineHeight:1.6, whiteSpace:'pre-wrap', maxHeight:160, overflow:'auto' }}>
-                  {agentDraft.body}
-                </div>
-                <div style={{ display:'flex', gap:8, marginTop:12 }}>
-                  <button onClick={handleAgentApprove} disabled={agentSending}
-                    style={{ flex:1, padding:'8px 0', borderRadius:8, border:'none', cursor: agentSending ? 'wait' : 'pointer',
-                      background:'linear-gradient(135deg,#22c55e,#16a34a)', color:'#fff', fontSize:12, fontWeight:600,
-                      display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                    {agentSending ? <><Loader size={12} className="spin" /> Sending...</> : <><Check size={13} /> Approve & Send</>}
-                  </button>
-                  <button onClick={handleAgentEdit}
-                    style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #e5e7ef', background:'#fff', cursor:'pointer',
-                      color:'#4a6cf7', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
-                    <Edit3 size={12} /> Edit
-                  </button>
-                  <button onClick={() => { setAgentDraft(null); setAgentMessages(prev => [...prev, { role:'system', content:'Draft discarded.' }]); }}
-                    style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #fee2e2', background:'#fef2f2', cursor:'pointer',
-                      color:'#ef4444', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
-                    <X size={12} /> Deny
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {agentLoading && (
-              <div style={{ alignSelf:'flex-start', padding:'8px 14px', borderRadius:12, background:'#f8f9fc', border:'1px solid #e5e7ef', fontSize:12, color:'#8e8ea0', display:'flex', alignItems:'center', gap:6 }}>
-                <Loader size={12} className="spin" /> Generating email...
-              </div>
-            )}
-            <div ref={agentEndRef} />
-          </div>
-
-          {/* Input */}
-          <div style={{ padding:'12px 18px', borderTop:'1px solid #f0f2f8', display:'flex', gap:8, flexShrink:0 }}>
-            <input value={agentInput} onChange={e => setAgentInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAgentSend(); } }}
-              placeholder="Describe the email you want to create..."
-              style={{ flex:1, padding:'9px 14px', borderRadius:10, border:'1px solid #e5e7ef', fontSize:12, outline:'none', fontFamily:'inherit' }} />
-            <button onClick={handleAgentSend} disabled={!agentInput.trim() || agentLoading}
-              style={{ padding:'9px 14px', borderRadius:10, border:'none', cursor: agentInput.trim() && !agentLoading ? 'pointer' : 'default',
-                background: agentInput.trim() && !agentLoading ? 'linear-gradient(135deg,#4a6cf7,#6e8efb)' : '#e5e7ef',
-                color: agentInput.trim() && !agentLoading ? '#fff' : '#b0b0c0', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
-              <Send size={12} />
-            </button>
-          </div>
-        </div>
       )}
 
       {/* ── AI Follow-up Suggestions Popup ── */}

@@ -5,7 +5,7 @@ import {
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
   parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
-  processBulkUpload, generateCarousel, regenerateSlide, editSlide, saveCarouselTemplates, runBulkAgent, approveAndSchedule,
+  processBulkUpload, generateCarousel, regenerateSlide, editSlide, saveCarouselTemplates, approveAndSchedule,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -104,11 +104,6 @@ export default function ContentScheduler() {
   const coverTemplateRef = useRef(null);
   const contentTemplateRef = useRef(null);
   const ctaTemplateRef = useRef(null);
-
-  // Bulk Agent state
-  const [agentMessages, setAgentMessages] = useState([]);
-  const [agentInput, setAgentInput] = useState('');
-  const [agentLoading, setAgentLoading] = useState(false);
 
   // Schedule modal state
   const [schedTimeslots, setSchedTimeslots] = useState(['10:00', '14:00', '18:00', '22:00']);
@@ -562,33 +557,6 @@ export default function ContentScheduler() {
     setTemplateSaving(false);
   }
 
-  // ── Bulk Agent handler ──
-  async function handleBulkAgent() {
-    if (!agentInput.trim()) return;
-    const userMsg = agentInput.trim();
-    setAgentInput('');
-    setAgentMessages(prev => [...prev, { role: 'user', content: userMsg }]);
-    setAgentLoading(true);
-    try {
-      const result = await runBulkAgent({ prompt: userMsg });
-      let summary = `${result.interpretation}\n\n`;
-      summary += `Completed ${result.successful}/${result.total_actions} actions:\n`;
-      for (const r of result.results) {
-        const icon = r.status === 'success' ? '✅' : r.status === 'skipped' ? '⏭' : '❌';
-        const detail = r.status === 'success'
-          ? (r.count ? `${r.count} posts created` : r.scheduled ? `${r.scheduled} scripts scheduled` : 'done')
-          : (r.reason || r.error || r.status);
-        summary += `${icon} ${r.client_name}: ${detail}\n`;
-      }
-      setAgentMessages(prev => [...prev, { role: 'assistant', content: summary.trim() }]);
-      // Refresh current client data if applicable
-      if (client) await loadClientData(client.id);
-    } catch (e) {
-      setAgentMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message }]);
-    }
-    setAgentLoading(false);
-  }
-
   // ── Approve generated post → create script + generate captions + auto-schedule ──
   async function approveGenPost(index) {
     const post = genResults[index];
@@ -985,24 +953,6 @@ export default function ContentScheduler() {
             </div>
           ))}
 
-          {/* Agent - under last client */}
-          <div
-            onClick={() => setActiveSection('agent')}
-            style={{
-              padding: '8px 16px',
-              marginTop: 4,
-              fontSize: 13,
-              cursor: 'pointer',
-              color: activeSection === 'agent' ? '#4a6cf7' : '#1a1a2e',
-              background: activeSection === 'agent' ? 'rgba(74,108,247,0.06)' : 'transparent',
-              borderLeft: activeSection === 'agent' ? '3px solid #4a6cf7' : '3px solid transparent',
-              fontWeight: activeSection === 'agent' ? 600 : 400,
-              display: 'flex', alignItems: 'center', gap: 8,
-              transition: 'all 0.15s',
-            }}
-          >
-            <Mic size={14} /> Bulk Agent
-          </div>
         </div>
 
         {/* Sidebar bottom buttons */}
@@ -2115,80 +2065,6 @@ export default function ContentScheduler() {
                   )}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ════════════════════════════════════════════════════════════════ */}
-          {/* ══ BULK AGENT SECTION ══ */}
-          {/* ════════════════════════════════════════════════════════════════ */}
-          {activeSection === 'agent' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Bulk Agent</div>
-                  <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 4 }}>Run tasks across all content accounts at once</div>
-                </div>
-
-                {/* Quick actions */}
-                <div style={{ padding: '12px 20px', borderBottom: '1px solid #f0f0f5', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {[
-                    { label: 'Create 5 posts for all accounts', icon: '📝' },
-                    { label: 'Create and schedule 10 Threads posts for all accounts', icon: '📅' },
-                    { label: 'Generate posts about AI automation for all accounts', icon: '🤖' },
-                    { label: 'Schedule all unscheduled content for all accounts', icon: '⏰' },
-                  ].map(q => (
-                    <button key={q.label} onClick={() => setAgentInput(q.label)}
-                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 11, color: '#1a1a2e', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span>{q.icon}</span> {q.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Messages */}
-                <div style={{ flex: 1, minHeight: 250, maxHeight: 450, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {agentMessages.length === 0 && !agentLoading && (
-                    <div style={{ textAlign: 'center', padding: '40px 10px', color: '#8e8ea0', fontSize: 13 }}>
-                      Describe a task to run across all accounts.<br />
-                      <span style={{ fontSize: 12, color: '#bbb' }}>
-                        e.g. "Create 5 posts for every client about their industry"
-                      </span>
-                    </div>
-                  )}
-                  {agentMessages.map((msg, i) => (
-                    <div key={i} style={{
-                      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                      maxWidth: '85%', padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.6,
-                      background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #3b5de7)' : '#f0f0f5',
-                      color: msg.role === 'user' ? '#fff' : '#1a1a2e',
-                      whiteSpace: 'pre-wrap',
-                    }}>
-                      {msg.content}
-                    </div>
-                  ))}
-                  {agentLoading && (
-                    <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, background: '#f0f0f5', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#8e8ea0' }}>
-                      <Loader size={14} className="spin" /> Running across accounts...
-                    </div>
-                  )}
-                </div>
-
-                {/* Input */}
-                <div style={{ borderTop: '1px solid #e5e7ef', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-                  <textarea value={agentInput} onChange={e => setAgentInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleBulkAgent(); } }}
-                    placeholder="Describe a bulk task..."
-                    rows={1} style={{ ...inputStyle, border: 'none', background: '#f8f9fc', resize: 'none', minHeight: 20, maxHeight: 100, overflow: 'auto', lineHeight: '20px', flex: 1 }}
-                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }} />
-                  <button onClick={handleBulkAgent} disabled={!agentInput.trim() || agentLoading} style={{
-                    width: 36, height: 36, borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: agentInput.trim() && !agentLoading ? 1 : 0.4, flexShrink: 0,
-                  }}>
-                    <Send size={15} style={{ color: '#fff' }} />
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 

@@ -23,6 +23,7 @@ import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
 import Outreach from './pages/Outreach';
 import ContentScheduler from './pages/ContentScheduler';
+import GlobalAgent from './components/GlobalAgent';
 
 // Academy Admin Pages
 import AcademyDashboard from './pages/AcademyDashboard';
@@ -93,6 +94,7 @@ function AppLayout() {
             <Route path="/academy/settings" element={<AcademySettings />} />
           </Routes>
         </main>
+        <GlobalAgent />
       </div>
     </MobileContext.Provider>
   );
