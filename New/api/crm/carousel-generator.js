@@ -3,8 +3,35 @@ const { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const KIE_API_KEY = process.env.KIE_API_KEY;
 
-// ── Kie.ai: Image-to-Image edit (nano-banana-edit via kie.ai) ──
-async function imageToImage(templateUrl, textPrompt) {
+const MODELS = {
+  'nano-banana': {
+    id: 'google/nano-banana-edit',
+    buildInput: (prompt, imageUrls) => ({
+      prompt,
+      image_urls: imageUrls,
+      output_format: 'png',
+      image_size: '4:5',
+    }),
+  },
+  'seedream': {
+    id: 'seedream/4.5-edit',
+    buildInput: (prompt, imageUrls) => ({
+      prompt,
+      image_urls: imageUrls,
+      aspect_ratio: '4:5',
+      quality: 'basic',
+      nsfw_checker: true,
+    }),
+  },
+};
+
+function getModel(modelKey) {
+  return MODELS[modelKey] || MODELS['nano-banana'];
+}
+
+// ── Kie.ai: Image-to-Image edit ──
+async function imageToImage(templateUrl, textPrompt, modelKey) {
+  const model = getModel(modelKey);
   const res = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
     method: 'POST',
     headers: {
@@ -12,13 +39,8 @@ async function imageToImage(templateUrl, textPrompt) {
       'Authorization': `Bearer ${KIE_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'google/nano-banana-edit',
-      input: {
-        prompt: textPrompt,
-        image_urls: [templateUrl],
-        output_format: 'png',
-        image_size: '4:5',
-      },
+      model: model.id,
+      input: model.buildInput(textPrompt, [templateUrl]),
     }),
   });
   if (!res.ok) {
@@ -31,7 +53,8 @@ async function imageToImage(templateUrl, textPrompt) {
 }
 
 // ── Kie.ai: Text-to-Image (fallback when no template) ──
-async function generateImage(prompt) {
+async function generateImage(prompt, modelKey) {
+  const model = getModel(modelKey);
   const res = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
     method: 'POST',
     headers: {
@@ -39,13 +62,8 @@ async function generateImage(prompt) {
       'Authorization': `Bearer ${KIE_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'google/nano-banana-edit',
-      input: {
-        prompt,
-        image_urls: [],
-        output_format: 'png',
-        image_size: '4:5',
-      },
+      model: model.id,
+      input: model.buildInput(prompt, []),
     }),
   });
   if (!res.ok) {
@@ -63,25 +81,31 @@ async function waitForImage(taskId, maxWait = 240000) {
   while (Date.now() - start < maxWait) {
     await new Promise(r => setTimeout(r, 3000));
 
-    const res = await fetch(`https://api.kie.ai/api/v1/jobs/${taskId}`, {
+    const res = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, {
       headers: { 'Authorization': `Bearer ${KIE_API_KEY}` },
     });
     if (!res.ok) continue;
     const data = await res.json();
 
-    const status = data.data?.status || data.status;
-    if (status === 'completed' || status === 'succeeded' || status === 'COMPLETED') {
-      // Try multiple response shapes
-      const output = data.data?.output || data.data?.result || data.data;
-      const url = output?.image_url || output?.image_urls?.[0] || output?.url || output?.resultImageUrl || output?.originImageUrl;
-      if (url) return url;
-      // If output is a string URL
-      if (typeof output === 'string' && output.startsWith('http')) return output;
-      throw new Error('Kie.ai completed but no image URL found in response: ' + JSON.stringify(data).slice(0, 500));
-    } else if (status === 'failed' || status === 'FAILED' || status === 'error') {
-      throw new Error(`Kie.ai generation failed: ${data.data?.error || data.data?.message || 'unknown error'}`);
+    const state = data.data?.state;
+    if (state === 'success') {
+      // resultJson is a JSON string containing { resultUrls: [...] }
+      const resultJson = data.data?.resultJson;
+      if (resultJson) {
+        try {
+          const parsed = typeof resultJson === 'string' ? JSON.parse(resultJson) : resultJson;
+          const url = parsed.resultUrls?.[0] || parsed.resultUrl;
+          if (url) return url;
+        } catch (e) {
+          // resultJson might be a direct URL string
+          if (typeof resultJson === 'string' && resultJson.startsWith('http')) return resultJson;
+        }
+      }
+      throw new Error('Kie.ai completed but no image URL in resultJson: ' + JSON.stringify(data.data).slice(0, 500));
+    } else if (state === 'fail') {
+      throw new Error(`Kie.ai generation failed: ${data.data?.failMsg || data.data?.failCode || 'unknown error'}`);
     }
-    // Still processing, continue polling
+    // waiting, queuing, generating - keep polling
   }
   throw new Error('Kie.ai image generation timed out');
 }
@@ -143,7 +167,7 @@ module.exports = async function handler(req, res) {
   // ── Regenerate a single slide ──
   if (action === 'regenerate') {
     try {
-      const { client_id, script_id, slide_index, image_prompt, template_url } = req.body;
+      const { client_id, script_id, slide_index, image_prompt, template_url, model } = req.body;
       if (!client_id || !script_id || slide_index === undefined || !image_prompt) {
         return res.status(400).json({ error: 'client_id, script_id, slide_index, and image_prompt required' });
       }
@@ -151,9 +175,9 @@ module.exports = async function handler(req, res) {
 
       let taskId;
       if (template_url) {
-        taskId = await imageToImage(template_url, image_prompt);
+        taskId = await imageToImage(template_url, image_prompt, model);
       } else {
-        taskId = await generateImage(image_prompt);
+        taskId = await generateImage(image_prompt, model);
       }
 
       const imgUrl = await waitForImage(taskId);
@@ -181,7 +205,7 @@ module.exports = async function handler(req, res) {
   // ── Edit a slide ──
   if (action === 'edit') {
     try {
-      const { client_id, script_id, slide_index, edit_prompt, original_image_url } = req.body;
+      const { client_id, script_id, slide_index, edit_prompt, original_image_url, model } = req.body;
       if (!client_id || !script_id || slide_index === undefined || !edit_prompt) {
         return res.status(400).json({ error: 'client_id, script_id, slide_index, and edit_prompt required' });
       }
@@ -189,9 +213,9 @@ module.exports = async function handler(req, res) {
 
       let taskId;
       if (original_image_url) {
-        taskId = await imageToImage(original_image_url, edit_prompt);
+        taskId = await imageToImage(original_image_url, edit_prompt, model);
       } else {
-        taskId = await generateImage(edit_prompt);
+        taskId = await generateImage(edit_prompt, model);
       }
 
       const imgUrl = await waitForImage(taskId);
@@ -220,7 +244,7 @@ module.exports = async function handler(req, res) {
   // ══ Generate full carousel ══
   // ══════════════════════════════════════════════════════════════
   try {
-    const { client_id, prompt, slide_count } = req.body;
+    const { client_id, prompt, slide_count, model: modelKey } = req.body;
     if (!client_id || !prompt) return res.status(400).json({ error: 'client_id and prompt required' });
 
     const clients = await supaFetch(`crm_content_clients?id=eq.${client_id}&limit=1`);
@@ -386,11 +410,11 @@ Return ONLY valid JSON.`;
 
       let taskId;
       if (templateUrl) {
-        console.log(`Slide ${slide.slide_number}: image-to-image from template`);
-        taskId = await imageToImage(templateUrl, slide.image_prompt);
+        console.log(`Slide ${slide.slide_number}: image-to-image from template (${modelKey || 'nano-banana'})`);
+        taskId = await imageToImage(templateUrl, slide.image_prompt, modelKey);
       } else {
-        console.log(`Slide ${slide.slide_number}: text-to-image (no template)`);
-        taskId = await generateImage(slide.image_prompt);
+        console.log(`Slide ${slide.slide_number}: text-to-image (${modelKey || 'nano-banana'})`);
+        taskId = await generateImage(slide.image_prompt, modelKey);
       }
       taskIds.push(taskId);
     }

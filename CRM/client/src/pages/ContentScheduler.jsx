@@ -99,6 +99,7 @@ export default function ContentScheduler() {
   const [carouselLoading, setCarouselLoading] = useState(false);
   const [carouselResult, setCarouselResult] = useState(null);
   const [carouselTemplates, setCarouselTemplates] = useState({ cover: '', content: '', cta: '' });
+  const [carouselModel, setCarouselModel] = useState('nano-banana');
   const [showTemplateSetup, setShowTemplateSetup] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
   const coverTemplateRef = useRef(null);
@@ -1973,6 +1974,27 @@ export default function ContentScheduler() {
                     placeholder="e.g. 6 AI tools every small business owner should know about"
                     rows={3} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
                 </div>
+                {/* Model selector */}
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Image Model</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[
+                      { key: 'nano-banana', label: 'Nano Banana', desc: 'Fast, creative edits' },
+                      { key: 'seedream', label: 'Seedream 4.5', desc: 'High quality, realistic' },
+                    ].map(m => (
+                      <button key={m.key} onClick={() => setCarouselModel(m.key)}
+                        style={{
+                          flex: 1, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                          border: carouselModel === m.key ? '2px solid #4a6cf7' : '1px solid #e5e7ef',
+                          background: carouselModel === m.key ? 'rgba(74,108,247,0.06)' : '#fff',
+                          textAlign: 'left',
+                        }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: carouselModel === m.key ? '#4a6cf7' : '#1a1a2e' }}>{m.label}</div>
+                        <div style={{ fontSize: 10, color: '#8e8ea0', marginTop: 2 }}>{m.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
                   {[
                     { label: 'Service Breakdown', prompt: 'Create a 5-slide carousel showcasing our core services with benefits for each' },
@@ -1992,7 +2014,7 @@ export default function ContentScheduler() {
                   setCarouselLoading(true);
                   setCarouselResult(null);
                   try {
-                    const result = await generateCarousel({ client_id: client.id, prompt: carouselPrompt });
+                    const result = await generateCarousel({ client_id: client.id, prompt: carouselPrompt, model: carouselModel });
                     setCarouselResult(result);
                     await loadClientData(client.id);
                   } catch (e) {
