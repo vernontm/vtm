@@ -371,7 +371,7 @@ export default function ContentScheduler() {
     const rows = [];
     for (const script of selected) {
       const description = [script.caption, script.hashtags].filter(Boolean).join(' ');
-      const mediaUrls = script.media_urls ? script.media_urls.join('; ') : '';
+      const mediaUrls = script.media_urls ? script.media_urls.join(';') : '';
       const dt = script.scheduled_datetime
         ? new Date(script.scheduled_datetime).toLocaleString('sv-SE', { timeZone: schedTimezone || 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace('T', ' ')
         : '';
