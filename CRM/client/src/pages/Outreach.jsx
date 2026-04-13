@@ -169,8 +169,15 @@ export default function Outreach() {
         listeningRef.current = false;
         setIsListening(false);
         alert('Microphone access denied. Please allow microphone permission.');
-      } else if (e.error === 'no-speech') {
-        // No speech detected, keep listening
+      } else if (e.error === 'no-speech' || e.error === 'network' || e.error === 'audio-capture') {
+        // Network/audio glitch — auto-retry after a short delay
+        if (listeningRef.current) {
+          setTimeout(() => {
+            if (listeningRef.current) {
+              try { recognition.start(); } catch (err) { /* already running */ }
+            }
+          }, 1000);
+        }
       } else if (e.error !== 'aborted') {
         listeningRef.current = false;
         setIsListening(false);

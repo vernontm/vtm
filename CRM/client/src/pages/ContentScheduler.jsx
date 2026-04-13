@@ -234,7 +234,13 @@ export default function ContentScheduler() {
     };
     r.onend = () => { if (listeningRef.current) { try { r.start(); } catch (e) {} } };
     r.onerror = (e) => {
-      if (e.error === 'aborted' || e.error === 'not-allowed') { listeningRef.current = false; setIsListening(false); }
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        listeningRef.current = false; setIsListening(false);
+      } else if (e.error === 'network' || e.error === 'audio-capture' || e.error === 'no-speech') {
+        if (listeningRef.current) { setTimeout(() => { if (listeningRef.current) { try { r.start(); } catch (err) {} } }, 1000); }
+      } else if (e.error !== 'aborted') {
+        listeningRef.current = false; setIsListening(false);
+      }
     };
     recognitionRef.current = r;
   }, []);
