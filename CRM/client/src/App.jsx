@@ -61,40 +61,42 @@ function AppLayout() {
         <div className={`sidebar-overlay${sidebarOpen ? ' sidebar-open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
         <Sidebar />
-        <main key={refreshKey} className="app-main" style={{ flex: 1, overflow: 'auto' }}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/leads" element={<Leads />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/projects" element={<Deals />} />
-            <Route path="/meetings/:eventId" element={<MeetingDetail />} />
-            <Route path="/meetings" element={<Meetings />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/quick-notes" element={<QuickNotes />} />
-            <Route path="/todos" element={<Todos />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/email" element={<EmailPage />} />
-            <Route path="/subscriptions" element={<Subscriptions />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/outreach" element={<Outreach />} />
-            <Route path="/content-scheduler" element={<ContentScheduler />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* Academy Admin */}
-            <Route path="/academy" element={<AcademyDashboard />} />
-            <Route path="/academy/courses" element={<AcademyCourses />} />
-            <Route path="/academy/courses/:id/edit" element={<AcademyCourseEdit />} />
-            <Route path="/academy/lessons/:id/edit" element={<AcademyLessonEdit />} />
-            <Route path="/academy/students" element={<AcademyStudents />} />
-            <Route path="/academy/homework" element={<AcademyHomework />} />
-            <Route path="/academy/messages" element={<AcademyMessages />} />
-            <Route path="/academy/community" element={<AcademyCommunity />} />
-            <Route path="/academy/recommendations" element={<AcademyRecommendations />} />
-            <Route path="/academy/settings" element={<AcademySettings />} />
-          </Routes>
-        </main>
-        <GlobalAgent />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <main key={refreshKey} className="app-main" style={{ flex: 1, overflow: 'auto' }}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/leads" element={<Leads />} />
+              <Route path="/contacts" element={<Contacts />} />
+              <Route path="/projects" element={<Deals />} />
+              <Route path="/meetings/:eventId" element={<MeetingDetail />} />
+              <Route path="/meetings" element={<Meetings />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/invoices" element={<Invoices />} />
+              <Route path="/quick-notes" element={<QuickNotes />} />
+              <Route path="/todos" element={<Todos />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/email" element={<EmailPage />} />
+              <Route path="/subscriptions" element={<Subscriptions />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/outreach" element={<Outreach />} />
+              <Route path="/content-scheduler" element={<ContentScheduler />} />
+              <Route path="/settings" element={<Settings />} />
+              {/* Academy Admin */}
+              <Route path="/academy" element={<AcademyDashboard />} />
+              <Route path="/academy/courses" element={<AcademyCourses />} />
+              <Route path="/academy/courses/:id/edit" element={<AcademyCourseEdit />} />
+              <Route path="/academy/lessons/:id/edit" element={<AcademyLessonEdit />} />
+              <Route path="/academy/students" element={<AcademyStudents />} />
+              <Route path="/academy/homework" element={<AcademyHomework />} />
+              <Route path="/academy/messages" element={<AcademyMessages />} />
+              <Route path="/academy/community" element={<AcademyCommunity />} />
+              <Route path="/academy/recommendations" element={<AcademyRecommendations />} />
+              <Route path="/academy/settings" element={<AcademySettings />} />
+            </Routes>
+          </main>
+          <GlobalAgent />
+        </div>
       </div>
     </MobileContext.Provider>
   );
