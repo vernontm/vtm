@@ -1,82 +1,95 @@
 const { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const NANOBANANA_API_KEY = process.env.NANOBANANA_API_KEY;
+const KIE_API_KEY = process.env.KIE_API_KEY;
 
-// ── NanoBanana: Image-to-Image (change text on template) ──
+// ── Kie.ai: Image-to-Image edit (nano-banana-edit via kie.ai) ──
 async function imageToImage(templateUrl, textPrompt) {
-  const res = await fetch('https://api.nanobananaapi.ai/api/v1/nanobanana/generate-pro', {
+  const res = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${NANOBANANA_API_KEY}`,
+      'Authorization': `Bearer ${KIE_API_KEY}`,
     },
     body: JSON.stringify({
-      prompt: textPrompt,
-      imageUrls: [templateUrl],
-      type: 'IMAGETOIAMGE', // NanoBanana's spelling
-      resolution: '4K',
-      imageSize: '4:5',
-      numImages: 1,
+      model: 'google/nano-banana-edit',
+      input: {
+        prompt: textPrompt,
+        image_urls: [templateUrl],
+        output_format: 'png',
+        image_size: '4:5',
+      },
     }),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`NanoBanana image-to-image error: ${res.status} ${err}`);
+    throw new Error(`Kie.ai image-to-image error: ${res.status} ${err}`);
   }
   const data = await res.json();
-  if (data.code !== 200) throw new Error(`NanoBanana error: ${data.message || JSON.stringify(data)}`);
-  return data.data.taskId;
+  if (data.code && data.code !== 200) throw new Error(`Kie.ai error: ${data.msg || JSON.stringify(data)}`);
+  return data.data?.taskId || data.taskId || data.data?.id;
 }
 
-// ── NanoBanana: Text-to-Image (fallback when no template) ──
+// ── Kie.ai: Text-to-Image (fallback when no template) ──
 async function generateImage(prompt) {
-  const res = await fetch('https://api.nanobananaapi.ai/api/v1/nanobanana/generate-pro', {
+  const res = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${NANOBANANA_API_KEY}`,
+      'Authorization': `Bearer ${KIE_API_KEY}`,
     },
     body: JSON.stringify({
-      prompt,
-      resolution: '4K',
-      aspectRatio: '4:5',
+      model: 'google/nano-banana-edit',
+      input: {
+        prompt,
+        image_urls: [],
+        output_format: 'png',
+        image_size: '4:5',
+      },
     }),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`NanoBanana generate error: ${res.status} ${err}`);
+    throw new Error(`Kie.ai generate error: ${res.status} ${err}`);
   }
   const data = await res.json();
-  if (data.code !== 200) throw new Error(`NanoBanana error: ${data.message || JSON.stringify(data)}`);
-  return data.data.taskId;
+  if (data.code && data.code !== 200) throw new Error(`Kie.ai error: ${data.msg || JSON.stringify(data)}`);
+  return data.data?.taskId || data.taskId || data.data?.id;
 }
 
-// ── NanoBanana: Poll for task completion ──
+// ── Kie.ai: Poll for task completion ──
 async function waitForImage(taskId, maxWait = 240000) {
   const start = Date.now();
   while (Date.now() - start < maxWait) {
     await new Promise(r => setTimeout(r, 3000));
 
-    const res = await fetch(`https://api.nanobananaapi.ai/api/v1/nanobanana/record-info?taskId=${taskId}`, {
-      headers: { 'Authorization': `Bearer ${NANOBANANA_API_KEY}` },
+    const res = await fetch(`https://api.kie.ai/api/v1/jobs/${taskId}`, {
+      headers: { 'Authorization': `Bearer ${KIE_API_KEY}` },
     });
     if (!res.ok) continue;
     const data = await res.json();
 
-    if (data.data?.successFlag === 1) {
-      return data.data.response?.resultImageUrl || data.data.response?.originImageUrl;
-    } else if (data.data?.successFlag >= 2) {
-      throw new Error(`NanoBanana generation failed: ${data.data.errorMessage || 'unknown error'}`);
+    const status = data.data?.status || data.status;
+    if (status === 'completed' || status === 'succeeded' || status === 'COMPLETED') {
+      // Try multiple response shapes
+      const output = data.data?.output || data.data?.result || data.data;
+      const url = output?.image_url || output?.image_urls?.[0] || output?.url || output?.resultImageUrl || output?.originImageUrl;
+      if (url) return url;
+      // If output is a string URL
+      if (typeof output === 'string' && output.startsWith('http')) return output;
+      throw new Error('Kie.ai completed but no image URL found in response: ' + JSON.stringify(data).slice(0, 500));
+    } else if (status === 'failed' || status === 'FAILED' || status === 'error') {
+      throw new Error(`Kie.ai generation failed: ${data.data?.error || data.data?.message || 'unknown error'}`);
     }
+    // Still processing, continue polling
   }
-  throw new Error('NanoBanana image generation timed out');
+  throw new Error('Kie.ai image generation timed out');
 }
 
 // ── Download and upload to Supabase Storage ──
 async function saveImageToStorage(imageUrl, clientId, carouselId, slideIndex) {
   const imgRes = await fetch(imageUrl);
-  if (!imgRes.ok) throw new Error('Failed to download image from NanoBanana');
+  if (!imgRes.ok) throw new Error('Failed to download image from Kie.ai');
   const buffer = Buffer.from(await imgRes.arrayBuffer());
 
   const filePath = `${clientId}/carousels/${carouselId}/slide-${String(slideIndex).padStart(2, '0')}.png`;
@@ -127,14 +140,14 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ── Regenerate a single slide (image-to-image if template available) ──
+  // ── Regenerate a single slide ──
   if (action === 'regenerate') {
     try {
       const { client_id, script_id, slide_index, image_prompt, template_url } = req.body;
       if (!client_id || !script_id || slide_index === undefined || !image_prompt) {
         return res.status(400).json({ error: 'client_id, script_id, slide_index, and image_prompt required' });
       }
-      if (!NANOBANANA_API_KEY) return res.status(400).json({ error: 'NANOBANANA_API_KEY not configured' });
+      if (!KIE_API_KEY) return res.status(400).json({ error: 'KIE_API_KEY not configured' });
 
       let taskId;
       if (template_url) {
@@ -143,9 +156,9 @@ module.exports = async function handler(req, res) {
         taskId = await generateImage(image_prompt);
       }
 
-      const nanoUrl = await waitForImage(taskId);
+      const imgUrl = await waitForImage(taskId);
       const carouselId = Date.now().toString(36);
-      const storageUrl = await saveImageToStorage(nanoUrl, client_id, carouselId, slide_index);
+      const storageUrl = await saveImageToStorage(imgUrl, client_id, carouselId, slide_index);
 
       const scripts = await supaFetch(`crm_content_scripts?id=eq.${script_id}`);
       const script = scripts?.[0];
@@ -165,16 +178,15 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ── Edit a slide (image-to-image with the current slide as reference) ──
+  // ── Edit a slide ──
   if (action === 'edit') {
     try {
       const { client_id, script_id, slide_index, edit_prompt, original_image_url } = req.body;
       if (!client_id || !script_id || slide_index === undefined || !edit_prompt) {
         return res.status(400).json({ error: 'client_id, script_id, slide_index, and edit_prompt required' });
       }
-      if (!NANOBANANA_API_KEY) return res.status(400).json({ error: 'NANOBANANA_API_KEY not configured' });
+      if (!KIE_API_KEY) return res.status(400).json({ error: 'KIE_API_KEY not configured' });
 
-      // Use the current slide image as the reference for image-to-image edit
       let taskId;
       if (original_image_url) {
         taskId = await imageToImage(original_image_url, edit_prompt);
@@ -182,9 +194,9 @@ module.exports = async function handler(req, res) {
         taskId = await generateImage(edit_prompt);
       }
 
-      const nanoUrl = await waitForImage(taskId);
+      const imgUrl = await waitForImage(taskId);
       const carouselId = Date.now().toString(36);
-      const storageUrl = await saveImageToStorage(nanoUrl, client_id, carouselId, slide_index);
+      const storageUrl = await saveImageToStorage(imgUrl, client_id, carouselId, slide_index);
 
       const scripts = await supaFetch(`crm_content_scripts?id=eq.${script_id}`);
       const script = scripts?.[0];
@@ -205,7 +217,7 @@ module.exports = async function handler(req, res) {
   }
 
   // ══════════════════════════════════════════════════════════════
-  // ══ Generate full carousel (image-to-image from templates) ══
+  // ══ Generate full carousel ══
   // ══════════════════════════════════════════════════════════════
   try {
     const { client_id, prompt, slide_count } = req.body;
@@ -228,7 +240,7 @@ module.exports = async function handler(req, res) {
     // ── Step 1: AI generates slide text content ──
     const TEXT_LIMITS = `
 STRICT TEXT LIMITS (these are HARD limits, do NOT exceed):
-- COVER title: MAX 10 words. Bold, punchy headline. MUST include "highlight_words" — 1-3 key words that should be in orange (#E8650A) while the rest is white. Example: "3 AI Automations That Save **15+ Hours Weekly**". In the image_prompt, specify which words should be orange.
+- COVER title: MAX 10 words. Bold, punchy headline. MUST include "highlight_words" - 1-3 key words that should be in orange (#E8650A) while the rest is white. Example: "3 AI Automations That Save **15+ Hours Weekly**". In the image_prompt, specify which words should be orange.
 - CONTENT label: exactly like "01 | TOPIC" (short topic name, 1-2 words)
 - CONTENT title: MAX 4 words. Example: "Make.com"
 - CONTENT body: MAX 25 words TOTAL. 2-3 short sentences. No paragraphs. No bullet points with full sentences.
@@ -348,38 +360,35 @@ Return ONLY valid JSON.`;
       else throw new Error('Failed to parse AI response');
     }
 
-    if (!NANOBANANA_API_KEY) {
+    if (!KIE_API_KEY) {
       return res.json({
         slides: content.slides,
         content,
         images: false,
-        message: 'NANOBANANA_API_KEY not configured. Returning content only.',
+        message: 'KIE_API_KEY not configured. Returning content only.',
       });
     }
 
-    // ── Step 2: Generate images ──
+    // ── Step 2: Generate images via Kie.ai ──
     const carouselId = Date.now().toString(36);
     console.log(`Generating ${content.slides.length} slides (templates: ${hasTemplates ? 'yes' : 'no'})...`);
 
     const taskIds = [];
     for (const slide of content.slides) {
-      // Pick the right template for this slide type
       let templateUrl = null;
       if (slide.type === 'cover' && templates.cover) {
         templateUrl = templates.cover;
       } else if (slide.type === 'cta' && templates.cta) {
-        templateUrl = templates.cta || templates.cover; // fallback to cover template for CTA
+        templateUrl = templates.cta || templates.cover;
       } else if (templates.content) {
         templateUrl = templates.content;
       }
 
       let taskId;
       if (templateUrl) {
-        // Image-to-image: swap text on template
         console.log(`Slide ${slide.slide_number}: image-to-image from template`);
         taskId = await imageToImage(templateUrl, slide.image_prompt);
       } else {
-        // Fallback: text-to-image from scratch
         console.log(`Slide ${slide.slide_number}: text-to-image (no template)`);
         taskId = await generateImage(slide.image_prompt);
       }
@@ -387,11 +396,11 @@ Return ONLY valid JSON.`;
     }
 
     // Wait for all images
-    console.log('Waiting for NanoBanana...');
+    console.log('Waiting for Kie.ai...');
     const imageUrls = [];
     for (let i = 0; i < taskIds.length; i++) {
-      const nanoUrl = await waitForImage(taskIds[i]);
-      const storageUrl = await saveImageToStorage(nanoUrl, client_id, carouselId, i);
+      const imgUrl = await waitForImage(taskIds[i]);
+      const storageUrl = await saveImageToStorage(imgUrl, client_id, carouselId, i);
       imageUrls.push(storageUrl);
       console.log(`Slide ${i} saved: ${storageUrl}`);
     }
