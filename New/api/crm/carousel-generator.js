@@ -18,7 +18,7 @@ const MODELS = {
     buildInput: (prompt, imageUrls) => ({
       prompt,
       image_urls: imageUrls,
-      aspect_ratio: '4:5',
+      aspect_ratio: '3:4',
       quality: 'basic',
       nsfw_checker: true,
     }),
