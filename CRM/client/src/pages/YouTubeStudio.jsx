@@ -1295,18 +1295,17 @@ export default function YouTubeStudio() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
             {thumbnails.map(t => (
               <div key={t.id} style={{ border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#fafbfe' }}>
-                {t.image_url && (
-                  <img src={t.image_url} alt={t.title || 'thumbnail'} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
+                {t.result_url && (
+                  <img src={t.result_url} alt={t.video_title || 'thumbnail'} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
                 )}
                 <div style={{ padding: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>{t.title || 'Untitled'}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>{t.video_title || 'Untitled'}</div>
                   <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 8 }}>
-                    {t.model && <span>{t.model}</span>}
-                    {t.created_at && <span> &middot; {new Date(t.created_at).toLocaleDateString()}</span>}
+                    {t.created_at && <span>{new Date(t.created_at).toLocaleDateString()}</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {t.image_url && (
-                      <a href={t.image_url} target="_blank" rel="noreferrer" style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, textDecoration: 'none' }}>
+                    {t.result_url && (
+                      <a href={t.result_url} target="_blank" rel="noreferrer" style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, textDecoration: 'none' }}>
                         <ExternalLink size={11} /> Open
                       </a>
                     )}
@@ -1352,9 +1351,9 @@ export default function YouTubeStudio() {
                 <div key={pkg.id} style={{ border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
                   <div style={{ display: 'flex', gap: 16, padding: 20, flexWrap: 'wrap' }}>
                     {/* Thumbnail preview */}
-                    {matchingThumb?.image_url && (
+                    {matchingThumb?.result_url && (
                       <img
-                        src={matchingThumb.image_url}
+                        src={matchingThumb.result_url}
                         alt="thumb"
                         style={{ width: 200, aspectRatio: '16/9', objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
                       />
