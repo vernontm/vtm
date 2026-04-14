@@ -219,14 +219,24 @@ module.exports = async function handler(req, res) {
     }
 
     // ── 3. Process birthday campaigns ──
+    // Fire at 8:00 AM America/Chicago (CST/CDT handled automatically).
+    // Cron runs every 15 min; we only proceed when Chicago time is within the 08:00 hour.
+    // Dedup via crm_email_birthday_sends prevents the 4 ticks in that hour from double-sending.
     results.birthdaySent = 0;
     results.birthdayFailed = 0;
-    const nowDate = new Date();
-    const curMonth = nowDate.getUTCMonth() + 1;
-    const curDay = nowDate.getUTCDate();
-    const curYear = nowDate.getUTCFullYear();
+    const chicagoParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false,
+    }).formatToParts(new Date()).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+    const curMonth = parseInt(chicagoParts.month, 10);
+    const curDay = parseInt(chicagoParts.day, 10);
+    const curYear = parseInt(chicagoParts.year, 10);
+    const curHourCT = parseInt(chicagoParts.hour, 10);
+    const birthdayWindowOpen = curHourCT === 8;
+    results.birthdayWindow = birthdayWindowOpen ? 'open' : `closed (Chicago hour=${curHourCT})`;
 
     try {
+      if (!birthdayWindowOpen) throw new Error('__skip_birthdays__');
       const birthdayCampaigns = await supaFetch(
         `crm_email_campaigns?trigger_type=eq.birthday&auto_trigger_enabled=eq.true`
       );
@@ -307,7 +317,9 @@ module.exports = async function handler(req, res) {
         }
       }
     } catch (e) {
-      results.errors.push(`Birthday processing: ${e.message}`);
+      if (e.message !== '__skip_birthdays__') {
+        results.errors.push(`Birthday processing: ${e.message}`);
+      }
     }
 
     return res.json({ ok: true, processed_at: now, ...results });
