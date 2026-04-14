@@ -162,11 +162,32 @@ export default function YouTubeStudio() {
   // RESEARCH TAB HANDLERS
   // ══════════════════════════════════════════════════════════════
 
+  // Auto-process: add → transcribe → analyze in one go
+  async function autoProcess(videoId) {
+    try {
+      setTranscribingId(videoId);
+      await transcribeVideo({ video_id: videoId });
+      const v1 = await getCompetitorVideos(selectedClientId);
+      setVideos(v1 || []);
+      setTranscribingId(null);
+
+      setAnalyzingId(videoId);
+      await analyzeVideo({ video_id: videoId });
+      const v2 = await getCompetitorVideos(selectedClientId);
+      setVideos(v2 || []);
+      setAnalyzingId(null);
+    } catch (e) {
+      setError(e.message || 'Auto-process failed');
+      setTranscribingId(null);
+      setAnalyzingId(null);
+    }
+  }
+
   async function handleAddVideo() {
     if (!videoUrl.trim() || !selectedClientId) return;
     setAddingVideo(true); setError('');
     try {
-      await addCompetitorVideo({
+      const added = await addCompetitorVideo({
         client_id: selectedClientId,
         video_url: videoUrl.trim(),
         video_title: videoTitle.trim() || undefined,
@@ -175,8 +196,12 @@ export default function YouTubeStudio() {
       setVideoUrl(''); setVideoTitle(''); setVideoChannel('');
       const v = await getCompetitorVideos(selectedClientId);
       setVideos(v || []);
-    } catch (e) { setError(e.message || 'Failed to add video'); }
-    setAddingVideo(false);
+      setAddingVideo(false);
+
+      // Auto-transcribe and analyze in background
+      const newId = added?.id || (v || []).find(x => x.video_url === videoUrl.trim())?.id;
+      if (newId) autoProcess(newId);
+    } catch (e) { setError(e.message || 'Failed to add video'); setAddingVideo(false); }
   }
 
   async function handleBatchAdd() {
@@ -188,8 +213,14 @@ export default function YouTubeStudio() {
       setBatchUrls('');
       const v = await getCompetitorVideos(selectedClientId);
       setVideos(v || []);
-    } catch (e) { setError(e.message || 'Failed to batch add'); }
-    setBatchAdding(false);
+      setBatchAdding(false);
+
+      // Auto-process each new video sequentially
+      const pending = (v || []).filter(x => x.transcription_status === 'pending');
+      for (const vid of pending) {
+        await autoProcess(vid.id);
+      }
+    } catch (e) { setError(e.message || 'Failed to batch add'); setBatchAdding(false); }
   }
 
   async function handleTranscribe(videoId) {
