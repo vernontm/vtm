@@ -3,6 +3,6 @@
   "private": true,
   "dependencies": {
     "sharp": "^0.33.2",
-    "youtube-transcript": "^1.3.0"
+    "youtubei.js": "^17.0.1"
   }
 }

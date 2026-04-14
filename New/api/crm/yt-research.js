@@ -52,22 +52,60 @@ module.exports = async function handler(req, res) {
       const video = videos?.[0];
       if (!video?.video_url) throw new Error('Video URL not found');
 
-      // Extract YouTube captions/subtitles directly (no audio download needed)
-      const { YoutubeTranscript } = require('youtube-transcript');
-      let transcript = '';
+      // Extract video ID from URL
+      const vidMatch = video.video_url.match(/(?:v=|youtu\.be\/|shorts\/)([\w-]{11})/);
+      if (!vidMatch) throw new Error('Invalid YouTube URL');
+      const ytVideoId = vidMatch[1];
 
-      try {
-        console.log('Fetching YouTube captions for:', video.video_url);
-        const segments = await YoutubeTranscript.fetchTranscript(video.video_url);
-        transcript = segments.map(s => s.text).join(' ');
-        console.log(`Got ${segments.length} caption segments, ${transcript.length} chars`);
-      } catch (captionErr) {
-        console.log('No captions available:', captionErr.message);
-        throw new Error('No captions/subtitles available for this video. YouTube auto-captions may be disabled.');
+      // Use youtubei.js to get video info and caption tracks
+      const { Innertube } = require('youtubei.js');
+      const yt = await Innertube.create();
+      const info = await yt.getInfo(ytVideoId);
+
+      // Auto-fill title and channel if missing
+      const autoTitle = info.basic_info?.title || '';
+      const autoChannel = info.basic_info?.author || '';
+      if (autoTitle || autoChannel) {
+        const updates = {};
+        if (!video.video_title && autoTitle) updates.video_title = autoTitle;
+        if (!video.channel_name && autoChannel) updates.channel_name = autoChannel;
+        if (Object.keys(updates).length) {
+          await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updates),
+          });
+        }
+      }
+
+      // Get caption tracks
+      const tracks = info.captions?.caption_tracks || [];
+      if (!tracks.length) throw new Error('No captions/subtitles available for this video.');
+
+      // Prefer English manual, then English auto, then first track
+      const track = tracks.find(t => t.language_code === 'en' && t.kind !== 'asr')
+        || tracks.find(t => t.language_code === 'en')
+        || tracks[0];
+
+      console.log(`Found caption track: ${track.language_code} (${track.kind || 'manual'})`);
+
+      // Fetch captions XML (the server's real IP makes the signed URL work)
+      const capRes = await fetch(track.base_url);
+      const xml = await capRes.text();
+
+      let transcript = '';
+      if (xml && xml.length > 0) {
+        // Parse XML: <text start="0" dur="5.1">caption text here</text>
+        const segments = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)]
+          .map(m => m[1]
+            .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+            .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\n/g, ' ')
+          );
+        transcript = segments.join(' ').replace(/  +/g, ' ').trim();
+        console.log(`Parsed ${segments.length} caption segments, ${transcript.length} chars`);
       }
 
       if (!transcript || transcript.length < 20) {
-        throw new Error('Transcript too short or empty. This video may not have captions.');
+        throw new Error('Could not extract transcript. Captions may be empty or restricted.');
       }
 
       // Save transcript to the video record
