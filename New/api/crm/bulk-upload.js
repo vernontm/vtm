@@ -86,12 +86,14 @@ module.exports = async function handler(req, res) {
       const brandContext = [
         client.business_name ? `Business: ${client.business_name}` : '',
         client.industry ? `Industry: ${client.industry}` : '',
+        client.location ? `Location: ${client.location}` : '',
         client.brand_bible ? `Brand Bible:\n${client.brand_bible}` : '',
         client.target_audience ? `Target Audience: ${client.target_audience}` : '',
         client.preferred_tone ? `Tone: ${client.preferred_tone}` : '',
         client.instagram_handle ? `Instagram: @${client.instagram_handle}` : '',
         client.tiktok_handle ? `TikTok: @${client.tiktok_handle}` : '',
         client.threads_handle ? `Threads: @${client.threads_handle}` : '',
+        client.core_hashtags ? `MANDATORY CORE HASHTAGS (always include first): ${client.core_hashtags}` : '',
       ].filter(Boolean).join('\n');
 
       const prompt = `You are a social media content creator. Based on this video transcript and the brand context below, generate content for posting this video on social media.
