@@ -340,6 +340,7 @@ export const analyzeInspiration = (data) => request('/yt-thumbnails?action=analy
 export const generateThumbnail = (data) => request('/yt-thumbnails?action=generate', { method: 'POST', body: JSON.stringify(data) });
 export const getYTThumbnails = (clientId) => request(`/yt-thumbnails?client_id=${clientId}`);
 export const deleteYTThumbnail = (id) => request(`/yt-thumbnails?id=${id}`, { method: 'DELETE' });
+export const editThumbnail = (data) => request('/yt-thumbnails?action=edit', { method: 'POST', body: JSON.stringify(data) });
 
 // Assets
 export const getYTAssets = (clientId, type) => request(`/yt-assets?client_id=${clientId}${type ? '&asset_type=' + type : ''}`);

@@ -290,6 +290,16 @@ Return ONLY valid JSON:
         console.log(`Auto-detected brand logos: ${detectedLogoNames.join(', ')}`);
       }
 
+      // ── 16 thumbnail example references for style guidance ──
+      const THUMB_EXAMPLE_BASE = 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/thumbnail_examples';
+      const thumbExampleBlocks = [];
+      for (let i = 1; i <= 16; i++) {
+        thumbExampleBlocks.push({
+          type: 'image',
+          source: { type: 'url', url: `${THUMB_EXAMPLE_BASE}/${i}.png` },
+        });
+      }
+
       // Use Claude to create an optimized Kie.ai prompt using the VTM Image Prompt Enhancer system
       const analysisContext = inspiration_analysis
         ? `\nINSPIRATION ANALYSIS (match these visual patterns):\n${JSON.stringify(inspiration_analysis.combined || inspiration_analysis, null, 2)}`
@@ -305,6 +315,10 @@ Return ONLY valid JSON:
         : `\nDescribe the person/subject in the thumbnail with enough detail to generate them from scratch.`;
 
       const promptSystemPrompt = `You are a professional YouTube thumbnail prompt engineer using the VTM Image Prompt Enhancer system.
+
+You will be shown 16 reference thumbnail examples. Study their visual style, composition, color grading, text placement, and overall aesthetic. Use these as style guidance for the thumbnail you create.
+
+IMPORTANT: The reference thumbnails may show video duration/length numbers in the bottom-right corner (e.g., "12:34", "1:05:23"). These are YouTube UI overlay elements — do NOT include any video duration numbers, timestamps, or runtime indicators in your prompt. Only include intentional design elements.
 
 Build the prompt using this exact layer architecture:
 [SUBJECT + POSE + POSITION] → [COMPOSITION + LAYOUT] → [LIGHTING] → [MOOD + COLOR GRADE] → [TEXT OVERLAY] → [QUALITY TAGS]
@@ -338,8 +352,10 @@ RULES:
 - No contradictions (e.g., don't say "f/1.8 deep focus")
 - Be specific and concrete, not vague buzzwords
 - ${character_ref_url ? 'NEVER describe the character\'s physical appearance — the reference image handles that' : 'Describe the subject in vivid detail'}
+- Do NOT include video duration numbers, timestamps, or any numeric overlay elements from the reference thumbnails
 
-Return ONLY the prompt as plain text. No JSON, no code blocks, no labels. Just the ready-to-use prompt.`;
+Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no code blocks, no labels. Example format:
+["prompt 1 here", "prompt 2 here", "prompt 3 here"]`;
 
       const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -350,11 +366,17 @@ Return ONLY the prompt as plain text. No JSON, no code blocks, no labels. Just t
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5',
-          max_tokens: 1024,
+          max_tokens: 3072,
           system: promptSystemPrompt,
           messages: [{
             role: 'user',
-            content: `Create a thumbnail generation prompt for this video:\n\nTitle: "${video_title}"`,
+            content: [
+              ...thumbExampleBlocks,
+              {
+                type: 'text',
+                text: `Study the 16 reference thumbnails above for style guidance. Now create 3 DISTINCT thumbnail generation prompts for this video. Each variation should have a different creative direction (e.g., different composition, color grade, mood, or text placement) while all staying on-brand and effective.\n\nTitle: "${video_title}"`,
+              },
+            ],
           }],
         }),
       });
@@ -365,35 +387,119 @@ Return ONLY the prompt as plain text. No JSON, no code blocks, no labels. Just t
       }
 
       const aiData = await aiRes.json();
-      const imagePrompt = aiData.content[0].text.trim();
+      const rawText = aiData.content[0].text.trim();
 
-      // Generate the thumbnail via Kie.ai
-      let taskId;
-      if (character_ref_url) {
-        console.log(`Thumbnail: image-to-image from character ref (${model || 'nano-banana'})`);
-        taskId = await imageToImage(character_ref_url, imagePrompt, model);
-      } else {
-        console.log(`Thumbnail: text-to-image (${model || 'nano-banana'})`);
-        taskId = await generateImage(imagePrompt, model);
+      // Parse the 3 prompts from Claude's response
+      let imagePrompts;
+      try {
+        const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        imagePrompts = JSON.parse(cleaned);
+        if (!Array.isArray(imagePrompts)) throw new Error('Not an array');
+      } catch {
+        // Fallback: try to extract JSON array
+        const match = rawText.match(/\[[\s\S]*\]/);
+        if (match) {
+          imagePrompts = JSON.parse(match[0]);
+        } else {
+          // Last resort: use the whole text as a single prompt, generate 3 with same prompt
+          imagePrompts = [rawText, rawText, rawText];
+        }
       }
+      // Ensure exactly 3
+      while (imagePrompts.length < 3) imagePrompts.push(imagePrompts[0] || rawText);
+      imagePrompts = imagePrompts.slice(0, 3);
 
+      console.log(`Generated 3 thumbnail prompts for "${video_title}"`);
+
+      // Fire off all 3 Kie.ai tasks in parallel
+      const taskIds = await Promise.all(imagePrompts.map(async (prompt, i) => {
+        if (character_ref_url) {
+          console.log(`Thumbnail variation ${i + 1}: image-to-image (${model || 'nano-banana'})`);
+          return imageToImage(character_ref_url, prompt, model);
+        } else {
+          console.log(`Thumbnail variation ${i + 1}: text-to-image (${model || 'nano-banana'})`);
+          return generateImage(prompt, model);
+        }
+      }));
+
+      // Wait for all 3 images in parallel
+      const imgUrls = await Promise.all(taskIds.map(tid => waitForImage(tid)));
+
+      // Upload all 3 to storage in parallel
+      const storageResults = await Promise.all(imgUrls.map(async (imgUrl, i) => {
+        const thumbnailId = Date.now().toString(36) + '_v' + (i + 1);
+        return saveImageToStorage(imgUrl, client_id, thumbnailId);
+      }));
+
+      // Save all 3 thumbnail records
+      const dbRows = storageResults.map((storageUrl, i) => ({
+        client_id,
+        script_id: script_id || null,
+        video_title,
+        result_url: storageUrl,
+        generation_prompt: imagePrompts[i],
+        vision_analysis: JSON.stringify(inspiration_analysis || {}),
+        inspiration_urls: inspiration_analysis?.inspiration_urls || [],
+        character_ref_url: character_ref_url || '',
+        logo_urls: allLogoUrls,
+        status: 'complete',
+      }));
+
+      const rows = await supaFetch('crm_yt_thumbnails', {
+        method: 'POST',
+        body: JSON.stringify(dbRows),
+      });
+
+      return res.json({
+        thumbnails: rows || dbRows.map((r, i) => ({ ...r, result_url: storageResults[i] })),
+        variations: storageResults.map((url, i) => ({
+          result_url: url,
+          generation_prompt: imagePrompts[i],
+        })),
+        count: 3,
+      });
+    } catch (err) {
+      console.error('Generate thumbnail error:', err);
+      return res.status(500).json({ error: 'Thumbnail generation failed: ' + err.message });
+    }
+  }
+
+  // ── Edit/regenerate a thumbnail ──
+  if (action === 'edit' && req.method === 'POST') {
+    try {
+      const { thumbnail_id, edit_prompt, model } = req.body;
+      if (!thumbnail_id || !edit_prompt) {
+        return res.status(400).json({ error: 'thumbnail_id and edit_prompt required' });
+      }
+      if (!KIE_API_KEY) return res.status(400).json({ error: 'KIE_API_KEY not configured' });
+
+      // Fetch original thumbnail
+      const thumbs = await supaFetch(`crm_yt_thumbnails?id=eq.${thumbnail_id}`);
+      const thumb = thumbs?.[0];
+      if (!thumb) return res.status(404).json({ error: 'Thumbnail not found' });
+      if (!thumb.result_url) return res.status(400).json({ error: 'Original thumbnail has no image' });
+
+      // Use image-to-image with the edit prompt on top of the original
+      const fullPrompt = `${edit_prompt}. Maintain the overall composition and style of the original thumbnail.`;
+      console.log(`Thumbnail edit: image-to-image on ${thumbnail_id} (${model || 'nano-banana'})`);
+      const taskId = await imageToImage(thumb.result_url, fullPrompt, model || 'nano-banana');
       const imgUrl = await waitForImage(taskId);
-      const thumbnailId = Date.now().toString(36);
-      const storageUrl = await saveImageToStorage(imgUrl, client_id, thumbnailId);
+      const newThumbId = Date.now().toString(36);
+      const storageUrl = await saveImageToStorage(imgUrl, thumb.client_id, newThumbId);
 
-      // Save to crm_yt_thumbnails
+      // Save as a new thumbnail record linked to the original
       const rows = await supaFetch('crm_yt_thumbnails', {
         method: 'POST',
         body: JSON.stringify([{
-          client_id,
-          script_id: script_id || null,
-          video_title,
+          client_id: thumb.client_id,
+          script_id: thumb.script_id || null,
+          video_title: thumb.video_title,
           result_url: storageUrl,
-          generation_prompt: imagePrompt,
-          vision_analysis: JSON.stringify(inspiration_analysis || {}),
-          inspiration_urls: inspiration_analysis?.inspiration_urls || [],
-          character_ref_url: character_ref_url || '',
-          logo_urls: allLogoUrls,
+          generation_prompt: fullPrompt,
+          vision_analysis: thumb.vision_analysis || '{}',
+          inspiration_urls: thumb.inspiration_urls || [],
+          character_ref_url: thumb.character_ref_url || '',
+          logo_urls: thumb.logo_urls || [],
           status: 'complete',
         }]),
       });
@@ -401,11 +507,11 @@ Return ONLY the prompt as plain text. No JSON, no code blocks, no labels. Just t
       return res.json({
         thumbnail: rows?.[0] || { result_url: storageUrl },
         result_url: storageUrl,
-        generation_prompt: imagePrompt,
+        generation_prompt: fullPrompt,
       });
     } catch (err) {
-      console.error('Generate thumbnail error:', err);
-      return res.status(500).json({ error: 'Thumbnail generation failed: ' + err.message });
+      console.error('Edit thumbnail error:', err);
+      return res.status(500).json({ error: 'Thumbnail edit failed: ' + err.message });
     }
   }
 

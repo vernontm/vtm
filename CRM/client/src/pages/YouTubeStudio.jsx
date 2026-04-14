@@ -5,7 +5,7 @@ import {
   transcribeVideo, analyzeVideo, deleteCompetitorVideo,
   generateYTScript, getYTScripts, updateYTScript, deleteYTScript, completeYTPackage,
   analyzeInspiration, generateThumbnail, getYTThumbnails, deleteYTThumbnail,
-  getYTAssets, createYTAsset, deleteYTAsset,
+  getYTAssets, createYTAsset, deleteYTAsset, editThumbnail,
 } from '../api';
 import {
   Search, Plus, Trash2, Loader, Play, Film, FileText, Image, Upload, Download,
@@ -110,6 +110,11 @@ export default function YouTubeStudio() {
   const logoInputRef = useRef(null);
   const [uploadingCharRef, setUploadingCharRef] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Thumbnail modal
+  const [previewThumb, setPreviewThumb] = useState(null);
+  const [editPrompt, setEditPrompt] = useState('');
+  const [editingThumb, setEditingThumb] = useState(false);
 
   // General
   const [loading, setLoading] = useState(false);
@@ -481,7 +486,12 @@ export default function YouTubeStudio() {
         logo_urls: logoUrl ? [logoUrl] : undefined,
         inspiration_analysis: inspAnalysis || undefined,
       });
-      setThumbPromptUsed(result?.generation_prompt || '');
+      // Show prompts used for all 3 variations
+      if (result?.variations?.length) {
+        setThumbPromptUsed(result.variations.map((v, i) => `--- Variation ${i + 1} ---\n${v.generation_prompt}`).join('\n\n'));
+      } else {
+        setThumbPromptUsed(result?.generation_prompt || '');
+      }
       const t = await getYTThumbnails(selectedClientId);
       setThumbnails(t || []);
     } catch (e) { setError(e.message || 'Thumbnail generation failed'); }
@@ -493,7 +503,28 @@ export default function YouTubeStudio() {
     try {
       await deleteYTThumbnail(id);
       setThumbnails(prev => prev.filter(t => t.id !== id));
+      if (previewThumb?.id === id) setPreviewThumb(null);
     } catch (e) { setError(e.message || 'Failed to delete thumbnail'); }
+  }
+
+  async function handleEditThumbnail() {
+    if (!previewThumb || !editPrompt.trim()) return;
+    setEditingThumb(true); setError('');
+    try {
+      const result = await editThumbnail({
+        thumbnail_id: previewThumb.id,
+        edit_prompt: editPrompt.trim(),
+        model: thumbModel,
+      });
+      setEditPrompt('');
+      const t = await getYTThumbnails(selectedClientId);
+      setThumbnails(t || []);
+      // Switch preview to the new thumbnail
+      if (result?.thumbnail) {
+        setPreviewThumb(result.thumbnail);
+      }
+    } catch (e) { setError(e.message || 'Thumbnail edit failed'); }
+    setEditingThumb(false);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -647,6 +678,111 @@ export default function YouTubeStudio() {
           </>
         )}
       </div>
+
+      {/* ── Thumbnail Preview Modal ── */}
+      {previewThumb && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+          onClick={() => { setPreviewThumb(null); setEditPrompt(''); }}
+        >
+          <div
+            style={{
+              background: '#fff', borderRadius: 16, maxWidth: 900, width: '100%', maxHeight: '90vh',
+              overflow: 'auto', position: 'relative',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => { setPreviewThumb(null); setEditPrompt(''); }}
+              style={{
+                position: 'absolute', top: 12, right: 12, zIndex: 10,
+                background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+                width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: '#fff',
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            {/* Full-size image */}
+            {previewThumb.result_url && (
+              <img
+                src={previewThumb.result_url}
+                alt={previewThumb.video_title || 'thumbnail'}
+                style={{ width: '100%', borderRadius: '16px 16px 0 0', display: 'block' }}
+              />
+            )}
+
+            {/* Info + editing section */}
+            <div style={{ padding: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>
+                {previewThumb.video_title || 'Untitled'}
+              </div>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 14 }}>
+                {previewThumb.created_at && new Date(previewThumb.created_at).toLocaleString()}
+              </div>
+
+              {/* Generation prompt used */}
+              {previewThumb.generation_prompt && (
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStyle}>Generation Prompt</label>
+                  <div style={{
+                    background: '#f8f9fc', border: '1px solid #e5e7ef', borderRadius: 8, padding: 10,
+                    fontSize: 12, color: '#5a5a6e', lineHeight: 1.5, maxHeight: 120, overflowY: 'auto',
+                  }}>
+                    {previewThumb.generation_prompt}
+                  </div>
+                </div>
+              )}
+
+              {/* Edit with agent */}
+              <div style={{ borderTop: '1px solid #e5e7ef', paddingTop: 14 }}>
+                <label style={labelStyle}>Edit Thumbnail</label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <textarea
+                    style={{ ...inputStyle, flex: 1, minHeight: 60, resize: 'vertical' }}
+                    placeholder="Describe your edits... e.g. 'make the text bigger', 'change background to blue', 'add a glow effect around the subject'"
+                    value={editPrompt}
+                    onChange={e => setEditPrompt(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditThumbnail(); } }}
+                  />
+                  <button
+                    onClick={handleEditThumbnail}
+                    disabled={editingThumb || !editPrompt.trim()}
+                    style={{ ...btnPrimary, opacity: editingThumb ? 0.6 : 1, height: 40, flexShrink: 0 }}
+                  >
+                    {editingThumb ? <Loader size={14} className="spin" /> : <Sparkles size={14} />}
+                    {editingThumb ? 'Editing...' : 'Apply Edit'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Actions row */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+                {previewThumb.result_url && (
+                  <a href={previewThumb.result_url} target="_blank" rel="noreferrer" style={{ ...btnSecondary, textDecoration: 'none' }}>
+                    <ExternalLink size={13} /> Open Full Size
+                  </a>
+                )}
+                <button onClick={() => copyToClipboard(previewThumb.result_url || '')} style={btnSecondary}>
+                  <Copy size={13} /> Copy URL
+                </button>
+                <button
+                  onClick={() => { handleDeleteThumbnail(previewThumb.id); }}
+                  style={btnDanger}
+                >
+                  <Trash2 size={13} /> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Spin animation */}
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .spin { animation: spin 1s linear infinite; }`}</style>
@@ -1280,7 +1416,7 @@ export default function YouTubeStudio() {
               style={{ ...btnPrimary, opacity: generatingThumb ? 0.6 : 1 }}
             >
               {generatingThumb ? <Loader size={14} className="spin" /> : <Image size={14} />}
-              Generate Thumbnail
+              {generatingThumb ? 'Generating 3 Variations...' : 'Generate 3 Thumbnails'}
             </button>
           </div>
 
@@ -1311,7 +1447,16 @@ export default function YouTubeStudio() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
             {thumbnails.map(t => (
-              <div key={t.id} style={{ border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#fafbfe' }}>
+              <div
+                key={t.id}
+                style={{
+                  border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#fafbfe',
+                  cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onClick={() => setPreviewThumb(t)}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
                 {t.result_url && (
                   <img src={t.result_url} alt={t.video_title || 'thumbnail'} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
                 )}
@@ -1320,12 +1465,10 @@ export default function YouTubeStudio() {
                   <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 8 }}>
                     {t.created_at && <span>{new Date(t.created_at).toLocaleDateString()}</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {t.result_url && (
-                      <a href={t.result_url} target="_blank" rel="noreferrer" style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, textDecoration: 'none' }}>
-                        <ExternalLink size={11} /> Open
-                      </a>
-                    )}
+                  <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setPreviewThumb(t)} style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11 }}>
+                      <Eye size={11} /> Preview
+                    </button>
                     <button onClick={() => handleDeleteThumbnail(t.id)} style={{ ...btnDanger, padding: '4px 8px', fontSize: 11 }}>
                       <Trash2 size={11} />
                     </button>
