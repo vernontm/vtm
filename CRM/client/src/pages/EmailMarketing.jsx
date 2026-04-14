@@ -7,9 +7,11 @@ import {
   getTagContexts, saveTagContext, deleteTagContext,
   getContactStats, getContactSends,
 } from '../api';
+import EmailEditor from '../components/EmailEditor';
 import {
   Mail, Users, FileText, Send, Plus, Trash2, Loader, Check, X, ChevronDown,
   Settings, Tag, Clock, RefreshCw, Eye, Calendar, Zap, BookOpen, Info, Cake, Gift,
+  Edit3, Search, MailOpen, MousePointer, UserMinus, Globe,
 } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -112,15 +114,18 @@ export default function EmailMarketing() {
   const [tplName, setTplName] = useState('');
   const [tplSubject, setTplSubject] = useState('');
   const [tplBody, setTplBody] = useState('');
+  const [tplPreview, setTplPreview] = useState('');
+  const [tplShowPreview, setTplShowPreview] = useState(false);
   const [tplType, setTplType] = useState('blast');
   const [savingTpl, setSavingTpl] = useState(false);
   const [editingTplId, setEditingTplId] = useState(null);
-  const tplBodyRef = useRef(null);
   const tplSubjectRef = useRef(null);
 
   // Campaign form
   const [campSubject, setCampSubject] = useState('');
   const [campBody, setCampBody] = useState('');
+  const [campPreview, setCampPreview] = useState('');
+  const [campShowPreview, setCampShowPreview] = useState(false);
   const [campTags, setCampTags] = useState([]);
   const [campSchedule, setCampSchedule] = useState('');
   const [campAutoTrigger, setCampAutoTrigger] = useState(false);
@@ -128,7 +133,9 @@ export default function EmailMarketing() {
   const [campTriggerType, setCampTriggerType] = useState('tag'); // 'tag' | 'birthday'
   const [creatingCamp, setCreatingCamp] = useState(false);
   const [sendingCampId, setSendingCampId] = useState(null);
-  const campBodyRef = useRef(null);
+  const [showComposer, setShowComposer] = useState(false);
+  const [campFilter, setCampFilter] = useState('all'); // all | draft | scheduled | sending | sent
+  const [campSearch, setCampSearch] = useState('');
   const campSubjectRef = useRef(null);
 
   // Tag context form
@@ -300,11 +307,11 @@ export default function EmailMarketing() {
     setSavingTpl(true); setError('');
     try {
       if (editingTplId) {
-        await updateEmailTemplate(editingTplId, { name: tplName, subject: tplSubject, html_body: tplBody, template_type: tplType });
+        await updateEmailTemplate(editingTplId, { name: tplName, subject: tplSubject, html_body: tplBody, preview_text: tplPreview, template_type: tplType });
       } else {
-        await createEmailTemplate({ client_id: selectedClientId, name: tplName, subject: tplSubject, html_body: tplBody, template_type: tplType });
+        await createEmailTemplate({ client_id: selectedClientId, name: tplName, subject: tplSubject, html_body: tplBody, preview_text: tplPreview, template_type: tplType });
       }
-      setTplName(''); setTplSubject(''); setTplBody(''); setTplType('blast'); setEditingTplId(null);
+      setTplName(''); setTplSubject(''); setTplBody(''); setTplPreview(''); setTplShowPreview(false); setTplType('blast'); setEditingTplId(null);
       const t = await getEmailTemplates(selectedClientId);
       setTemplates(t || []);
     } catch (e) { setError(e.message); }
@@ -312,7 +319,7 @@ export default function EmailMarketing() {
   }
 
   function startEditTemplate(t) {
-    setTplName(t.name); setTplSubject(t.subject); setTplBody(t.html_body || ''); setTplType(t.template_type); setEditingTplId(t.id);
+    setTplName(t.name); setTplSubject(t.subject); setTplBody(t.html_body || ''); setTplPreview(t.preview_text || ''); setTplShowPreview(!!t.preview_text); setTplType(t.template_type); setEditingTplId(t.id);
     setActiveTab('templates');
   }
 
@@ -325,14 +332,16 @@ export default function EmailMarketing() {
         client_id: selectedClientId,
         subject: campSubject,
         html_body: campBody,
+        preview_text: campPreview,
         tag_filter: campTags,
         scheduled_at: campAutoTrigger ? null : (campSchedule || undefined),
         trigger_type: campAutoTrigger ? campTriggerType : 'tag',
         trigger_on_tag: campAutoTrigger && campTriggerType === 'tag' ? campTriggerTag : null,
         auto_trigger_enabled: !!campAutoTrigger && (campTriggerType === 'birthday' || !!campTriggerTag),
       });
-      setCampSubject(''); setCampBody(''); setCampTags([]); setCampSchedule('');
+      setCampSubject(''); setCampBody(''); setCampPreview(''); setCampShowPreview(false); setCampTags([]); setCampSchedule('');
       setCampAutoTrigger(false); setCampTriggerTag(''); setCampTriggerType('tag');
+      setShowComposer(false);
       const camp = await getEmailCampaigns(selectedClientId);
       setCampaigns(camp || []);
     } catch (e) { setError(e.message); }
@@ -802,16 +811,29 @@ export default function EmailMarketing() {
               </div>
             </div>
           </div>
-          <label style={labelStyle}>Body <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(plain text or HTML — emails are auto-wrapped in a styled shell)</span></label>
-          <VarButtons onInsert={token => insertAtCursor(tplBodyRef, tplBody, setTplBody, token)} />
-          <textarea ref={tplBodyRef} style={{ ...inputStyle, minHeight: 200, fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }} placeholder={'Hey {{name}},\n\nThanks for joining our community...'} value={tplBody} onChange={e => setTplBody(e.target.value)} />
+          {!tplShowPreview && (
+            <div style={{ marginBottom: 10 }}>
+              <button type="button" onClick={() => setTplShowPreview(true)} style={{ ...btnSecondary, fontSize: 11, padding: '5px 10px' }}>
+                <Plus size={12} /> Add preview text
+              </button>
+            </div>
+          )}
+          {tplShowPreview && (
+            <div style={{ marginBottom: 10 }}>
+              <label style={labelStyle}>Preview text <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(shown in inbox before they open)</span></label>
+              <input style={inputStyle} placeholder="A short teaser shown under the subject in most inboxes" value={tplPreview} onChange={e => setTplPreview(e.target.value)} />
+            </div>
+          )}
+          <label style={labelStyle}>Body <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(rich editor · switch to HTML source for full control · emails auto-wrapped in styled shell)</span></label>
+          <VarButtons onInsert={token => setTplBody((tplBody || '') + token)} />
+          <EmailEditor value={tplBody} onChange={setTplBody} clientId={selectedClientId} placeholder="Hey {{name}}," height={320} />
           <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
             <button onClick={handleSaveTemplate} disabled={savingTpl || !tplName.trim() || !tplSubject.trim()} style={{ ...btnPrimary, opacity: savingTpl ? 0.6 : 1 }}>
               {savingTpl ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
               {editingTplId ? 'Update Template' : 'Save Template'}
             </button>
             {editingTplId && (
-              <button onClick={() => { setEditingTplId(null); setTplName(''); setTplSubject(''); setTplBody(''); setTplType('blast'); }} style={btnSecondary}>
+              <button onClick={() => { setEditingTplId(null); setTplName(''); setTplSubject(''); setTplBody(''); setTplPreview(''); setTplShowPreview(false); setTplType('blast'); }} style={btnSecondary}>
                 <X size={13} /> Cancel
               </button>
             )}
@@ -851,173 +873,286 @@ export default function EmailMarketing() {
   // TAB: CAMPAIGNS
   // ══════════════════════════════════════════════════════════════
   function renderCampaignsTab() {
+    // Broadcast-style tabs
+    const statusTabs = [
+      { key: 'all', label: 'All broadcasts', match: () => true },
+      { key: 'draft', label: 'Drafts', match: c => c.status === 'draft' },
+      { key: 'scheduled', label: 'Scheduled', match: c => c.status === 'scheduled' },
+      { key: 'sending', label: 'Processing', match: c => c.status === 'sending' || c.status === 'partial' },
+      { key: 'sent', label: 'Published', match: c => c.status === 'sent' },
+      { key: 'auto', label: 'Automations', match: c => !!c.auto_trigger_enabled },
+    ];
+    const counts = {};
+    statusTabs.forEach(t => { counts[t.key] = campaigns.filter(t.match).length; });
+    const filtered = campaigns.filter(statusTabs.find(t => t.key === campFilter)?.match || (() => true))
+      .filter(c => !campSearch || (c.subject || '').toLowerCase().includes(campSearch.toLowerCase()));
+
+    // Composer modal — reused by "+ New Broadcast"
+    const composer = showComposer && (
+      <div onClick={() => setShowComposer(false)} style={{
+        position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.55)', zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}>
+        <div onClick={e => e.stopPropagation()} style={{
+          background: '#fff', borderRadius: 14, maxWidth: 840, width: '100%', maxHeight: '94vh',
+          overflow: 'auto', padding: 0, display: 'flex', flexDirection: 'column',
+        }}>
+          {/* Composer header */}
+          <div style={{ padding: '16px 22px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Edit3 size={16} /> New Broadcast
+            </div>
+            <button onClick={() => setShowComposer(false)} style={btnSecondary}><X size={14} /></button>
+          </div>
+
+          <div style={{ padding: 22 }}>
+            {/* Subject */}
+            <label style={labelStyle}>Subject line</label>
+            <VarButtons onInsert={token => insertAtCursor(campSubjectRef, campSubject, setCampSubject, token)} />
+            <input ref={campSubjectRef} style={{ ...inputStyle, fontSize: 15, padding: '12px 14px' }} placeholder="Your email subject line" value={campSubject} onChange={e => setCampSubject(e.target.value)} />
+
+            {/* Preview text */}
+            {!campShowPreview && (
+              <div style={{ marginTop: 8 }}>
+                <button type="button" onClick={() => setCampShowPreview(true)} style={{ ...btnSecondary, fontSize: 11, padding: '5px 10px' }}>
+                  <Plus size={12} /> Add preview text
+                </button>
+              </div>
+            )}
+            {campShowPreview && (
+              <div style={{ marginTop: 12 }}>
+                <label style={labelStyle}>Preview text</label>
+                <input style={inputStyle} placeholder="Short teaser shown under subject in most inboxes" value={campPreview} onChange={e => setCampPreview(e.target.value)} />
+              </div>
+            )}
+
+            {/* Audience tags */}
+            <div style={{ marginTop: 16 }}>
+              <label style={labelStyle}>Audience <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(filter by tags — leave empty for all active contacts)</span></label>
+              {allKnownTags.length > 0 ? (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {allKnownTags.map(tag => {
+                    const isSelected = campTags.includes(tag);
+                    const ctx = tagContexts.find(tc => tc.tag === tag);
+                    return (
+                      <button key={tag} type="button" title={ctx?.description || ''} onClick={() => {
+                        if (isSelected) setCampTags(campTags.filter(t => t !== tag));
+                        else setCampTags([...campTags, tag]);
+                      }} style={{
+                        padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        background: isSelected ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
+                        color: isSelected ? '#fff' : '#5a5a6e', border: 'none',
+                      }}>
+                        <Tag size={11} style={{ marginRight: 4 }} />{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: '#b0b0c0' }}>No tags yet — add tags to contacts first.</div>
+              )}
+            </div>
+
+            {/* Rich editor body */}
+            <div style={{ marginTop: 16 }}>
+              <label style={labelStyle}>Body</label>
+              <VarButtons onInsert={token => setCampBody((campBody || '') + token)} />
+              <EmailEditor value={campBody} onChange={setCampBody} clientId={selectedClientId} placeholder="Hey {{name}}," height={340} />
+            </div>
+
+            {/* Auto-trigger */}
+            <div style={{ marginTop: 16, padding: 12, background: '#f8f9fc', borderRadius: 8, border: '1px solid #e5e7ef' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
+                <input type="checkbox" checked={campAutoTrigger} onChange={e => setCampAutoTrigger(e.target.checked)} />
+                Automate (trigger on tag or birthday)
+              </label>
+              {campAutoTrigger && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    {[
+                      { key: 'tag', label: 'On new contact with tag', Icon: Tag },
+                      { key: 'birthday', label: "On contact's birthday", Icon: Cake },
+                    ].map(opt => (
+                      <button key={opt.key} type="button" onClick={() => setCampTriggerType(opt.key)} style={{
+                        padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        background: campTriggerType === opt.key ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
+                        color: campTriggerType === opt.key ? '#fff' : '#5a5a6e',
+                      }}><opt.Icon size={12} /> {opt.label}</button>
+                    ))}
+                  </div>
+                  {campTriggerType === 'tag' && (
+                    <>
+                      <label style={labelStyle}>Trigger tag</label>
+                      <select style={inputStyle} value={campTriggerTag} onChange={e => setCampTriggerTag(e.target.value)}>
+                        <option value="">-- select a tag --</option>
+                        {allKnownTags.map(tag => (<option key={tag} value={tag}>{tag}</option>))}
+                      </select>
+                    </>
+                  )}
+                  {campTriggerType === 'birthday' && (
+                    <div style={{ fontSize: 12, color: '#5a5a6e', padding: 10, background: '#fff7ed', borderRadius: 8, border: '1px solid #fed7aa' }}>
+                      <Cake size={12} style={{ marginRight: 6, color: '#f59e0b' }} />
+                      Sends at 8am Chicago time each year on the contact's birthday.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Schedule + submit */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 16, flexWrap: 'wrap' }}>
+              {!campAutoTrigger && (
+                <div style={{ minWidth: 220 }}>
+                  <label style={labelStyle}>Schedule (optional)</label>
+                  <input type="datetime-local" style={inputStyle} value={campSchedule} onChange={e => setCampSchedule(e.target.value)} />
+                </div>
+              )}
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                <button onClick={() => setShowComposer(false)} style={btnSecondary}>Cancel</button>
+                <button onClick={handleCreateCampaign} disabled={creatingCamp || !campSubject.trim() || (campAutoTrigger && campTriggerType === 'tag' && !campTriggerTag)} style={{ ...btnPrimary, opacity: creatingCamp ? 0.6 : 1 }}>
+                  {creatingCamp ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : campAutoTrigger ? <Zap size={14} /> : campSchedule ? <Calendar size={14} /> : <Check size={14} />}
+                  {campAutoTrigger ? 'Create Automation' : campSchedule ? 'Schedule' : 'Save Draft'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        {composer}
+
         {!config && (
-          <div style={{ ...cardStyle, background: '#fef3c7', borderColor: '#fbbf24' }}>
+          <div style={{ ...cardStyle, background: '#fef3c7', borderColor: '#fbbf24', marginBottom: 16 }}>
             <div style={{ fontSize: 13, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Settings size={16} /> Set up your Resend API key in the Settings tab before sending campaigns.
+              <Settings size={16} /> Set up your Resend API key in the Settings tab before sending.
             </div>
           </div>
         )}
 
-        <div style={cardStyle}>
-          <div style={sectionTitle}>Create Campaign</div>
-
-          <label style={labelStyle}>Subject</label>
-          <VarButtons onInsert={token => insertAtCursor(campSubjectRef, campSubject, setCampSubject, token)} />
-          <input ref={campSubjectRef} style={inputStyle} placeholder="Your email subject line" value={campSubject} onChange={e => setCampSubject(e.target.value)} />
-
-          <div style={{ marginTop: 12 }}>
-            <label style={labelStyle}>Filter by tags (leave empty to send to all)</label>
-            {allKnownTags.length > 0 ? (
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {allKnownTags.map(tag => {
-                  const isSelected = campTags.includes(tag);
-                  const ctx = tagContexts.find(tc => tc.tag === tag);
-                  return (
-                    <button key={tag} type="button" title={ctx?.description || ''} onClick={() => {
-                      if (isSelected) setCampTags(campTags.filter(t => t !== tag));
-                      else setCampTags([...campTags, tag]);
-                    }} style={{
-                      padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: isSelected ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
-                      color: isSelected ? '#fff' : '#5a5a6e', border: 'none',
-                    }}>
-                      <Tag size={11} style={{ marginRight: 4 }} />{tag}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ fontSize: 11, color: '#b0b0c0' }}>No tags yet — add tags to contacts first.</div>
-            )}
+        {/* Header: title + New Broadcast */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 6 }}>
+            Broadcasts <span style={{ color: '#8e8ea0', fontWeight: 500, fontSize: 16 }}>{campaigns.length}</span>
           </div>
+          <button onClick={() => { setShowComposer(true); }} style={{ ...btnPrimary, background: '#1a1a2e', padding: '10px 18px' }}>
+            <Plus size={14} /> New Broadcast
+          </button>
+        </div>
 
-          <label style={{ ...labelStyle, marginTop: 12 }}>Body</label>
-          <VarButtons onInsert={token => insertAtCursor(campBodyRef, campBody, setCampBody, token)} />
-          <textarea ref={campBodyRef} style={{ ...inputStyle, minHeight: 200, fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }} placeholder={'Hey {{name}},\n\nCheck out our latest...\n\n— The team'} value={campBody} onChange={e => setCampBody(e.target.value)} />
-
-          {/* Auto-trigger toggle */}
-          <div style={{ marginTop: 14, padding: 12, background: '#f8f9fc', borderRadius: 8, border: '1px solid #e5e7ef' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
-              <input type="checkbox" checked={campAutoTrigger} onChange={e => setCampAutoTrigger(e.target.checked)} />
-              Auto-trigger (tag or birthday)
-            </label>
-            {campAutoTrigger && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                  {[
-                    { key: 'tag', label: 'On new contact with tag', Icon: Tag },
-                    { key: 'birthday', label: "On contact's birthday", Icon: Cake },
-                  ].map(opt => (
-                    <button key={opt.key} type="button" onClick={() => setCampTriggerType(opt.key)} style={{
-                      padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      background: campTriggerType === opt.key ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
-                      color: campTriggerType === opt.key ? '#fff' : '#5a5a6e',
-                    }}><opt.Icon size={12} /> {opt.label}</button>
-                  ))}
-                </div>
-                {campTriggerType === 'tag' && (
-                  <>
-                    <label style={labelStyle}>Trigger tag</label>
-                    <select style={inputStyle} value={campTriggerTag} onChange={e => setCampTriggerTag(e.target.value)}>
-                      <option value="">-- select a tag --</option>
-                      {allKnownTags.map(tag => (
-                        <option key={tag} value={tag}>{tag}</option>
-                      ))}
-                    </select>
-                    <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>
-                      When a new contact is added with this tag, they'll automatically receive this email.
-                    </div>
-                  </>
-                )}
-                {campTriggerType === 'birthday' && (
-                  <div style={{ fontSize: 12, color: '#5a5a6e', padding: 10, background: '#fff7ed', borderRadius: 8, border: '1px solid #fed7aa' }}>
-                    <Cake size={12} style={{ marginRight: 6, color: '#f59e0b' }} />
-                    Sent automatically each year on the contact's birthday. Make sure contacts have birthday month/day set. Use <code>{'{{discount_code}}'}</code> for a personal gift.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 14, flexWrap: 'wrap' }}>
-            {!campAutoTrigger && (
-              <div style={{ minWidth: 200 }}>
-                <label style={labelStyle}>Schedule (optional)</label>
-                <input type="datetime-local" style={inputStyle} value={campSchedule} onChange={e => setCampSchedule(e.target.value)} />
-              </div>
-            )}
-            <button onClick={handleCreateCampaign} disabled={creatingCamp || !campSubject.trim() || (campAutoTrigger && campTriggerType === 'tag' && !campTriggerTag)} style={{ ...btnPrimary, opacity: creatingCamp ? 0.6 : 1 }}>
-              {creatingCamp ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : campAutoTrigger ? <Zap size={14} /> : campSchedule ? <Calendar size={14} /> : <Plus size={14} />}
-              {campAutoTrigger ? 'Create Auto-Trigger' : campSchedule ? 'Schedule Campaign' : 'Create Draft'}
+        {/* Status tabs */}
+        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e5e7ef', marginBottom: 14, overflowX: 'auto' }}>
+          {statusTabs.map(t => (
+            <button key={t.key} onClick={() => setCampFilter(t.key)} style={{
+              padding: '10px 14px', border: 'none', background: 'transparent',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              color: campFilter === t.key ? '#1a1a2e' : '#8e8ea0',
+              borderBottom: campFilter === t.key ? '2px solid #1a1a2e' : '2px solid transparent',
+              marginBottom: -1, display: 'inline-flex', alignItems: 'center', gap: 8,
+            }}>
+              {t.label}
+              <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 10, background: '#f0f0f5', color: '#5a5a6e', fontWeight: 600 }}>
+                {counts[t.key]}
+              </span>
             </button>
-          </div>
+          ))}
         </div>
 
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={sectionTitle}>Campaigns ({campaigns.length})</div>
-            <button onClick={loadAllData} style={btnSecondary}><RefreshCw size={13} /> Refresh</button>
+        {/* Search + refresh */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
+          <div style={{ flex: 1, position: 'relative', maxWidth: 340 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
+            <input
+              style={{ ...inputStyle, paddingLeft: 36 }}
+              placeholder="Search broadcasts..."
+              value={campSearch}
+              onChange={e => setCampSearch(e.target.value)}
+            />
           </div>
+          <button onClick={loadAllData} style={btnSecondary}><RefreshCw size={13} /> Refresh</button>
+        </div>
 
-          {campaigns.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 30, color: '#8e8ea0' }}>
-              <Send size={32} strokeWidth={1} />
-              <div style={{ marginTop: 8, fontSize: 13 }}>No campaigns yet.</div>
+        {/* Broadcast table */}
+        {filtered.length === 0 ? (
+          <div style={{ ...cardStyle, textAlign: 'center', padding: 50, color: '#8e8ea0' }}>
+            <Send size={32} strokeWidth={1} />
+            <div style={{ marginTop: 8, fontSize: 13 }}>No broadcasts in this view.</div>
+          </div>
+        ) : (
+          <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e5e7ef', background: '#fafbfd' }}>
+                    <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Subject line</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Date</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Recipients</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Opened</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Open rate</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Failed</th>
+                    <th style={{ textAlign: 'center', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Status</th>
+                    <th style={{ padding: '12px 16px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(c => {
+                    const recipients = c.total_recipients || c.sent_count || 0;
+                    const openRate = recipients > 0 && c.opened_count ? ((c.opened_count / recipients) * 100).toFixed(2) + '%' : '-';
+                    const dateLabel = c.sent_at || c.scheduled_at || c.updated_at || c.created_at;
+                    const d = dateLabel ? new Date(dateLabel) : null;
+                    return (
+                      <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f5', transition: 'background 0.1s' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#fafbfd'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {c.auto_trigger_enabled
+                              ? (c.trigger_type === 'birthday' ? <Cake size={14} color="#f59e0b" /> : <Zap size={14} color="#f59e0b" />)
+                              : <FileText size={14} color="#b0b0c0" />}
+                            <div>
+                              <div style={{ fontWeight: 600, color: '#1a1a2e' }}>{c.subject}</div>
+                              {c.preview_text && (
+                                <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2, maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {c.preview_text}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#5a5a6e', fontSize: 12 }}>
+                          {d ? (
+                            <>
+                              <div>{d.toLocaleString('en-US', { weekday: 'short' })} {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
+                              <div style={{ color: '#8e8ea0' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                            </>
+                          ) : '-'}
+                        </td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#1a1a2e', fontWeight: 600 }}>{recipients || '-'}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#1a1a2e' }}>{c.opened_count || '-'}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#1a1a2e' }}>{openRate}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: c.failed_count ? '#ef4444' : '#b0b0c0' }}>{c.failed_count || '-'}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'center' }}><StatusPill status={c.status} /></td>
+                        <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {(c.status === 'draft' || c.status === 'scheduled') && !c.auto_trigger_enabled && (
+                            <button onClick={() => handleSendCampaign(c.id)} disabled={sendingCampId === c.id || !config} style={{ ...btnPrimary, padding: '5px 10px', fontSize: 11, marginRight: 4, opacity: (sendingCampId === c.id || !config) ? 0.6 : 1 }}>
+                              {sendingCampId === c.id ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={12} />} Send
+                            </button>
+                          )}
+                          {c.status !== 'sending' && (
+                            <button onClick={() => handleDeleteCampaign(c.id)} style={{ ...btnDanger, padding: '5px 8px', fontSize: 11 }}><Trash2 size={12} /></button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {campaigns.map(c => {
-              const tags = c.tag_filter || [];
-              return (
-                <div key={c.id} style={{ border: '1px solid #e5e7ef', borderRadius: 10, padding: 14, background: '#fafbfe' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#1a1a2e', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {c.auto_trigger_enabled && <Zap size={13} color="#f59e0b" />}
-                        {c.subject}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <StatusPill status={c.status} />
-                        {c.auto_trigger_enabled && c.trigger_type === 'birthday' && (
-                          <span style={{ padding: '2px 8px', borderRadius: 8, background: '#fff7ed', color: '#c2410c', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Cake size={10} /> Birthday
-                          </span>
-                        )}
-                        {c.auto_trigger_enabled && c.trigger_on_tag && (
-                          <span style={{ padding: '2px 8px', borderRadius: 8, background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
-                            Auto on #{c.trigger_on_tag}
-                          </span>
-                        )}
-                        {c.total_recipients > 0 && <span>Recipients: {c.total_recipients}</span>}
-                        {c.sent_count > 0 && <span style={{ color: '#22c55e' }}>Sent: {c.sent_count}</span>}
-                        {c.failed_count > 0 && <span style={{ color: '#ef4444' }}>Failed: {c.failed_count}</span>}
-                        {c.scheduled_at && <span><Clock size={10} /> {new Date(c.scheduled_at).toLocaleString()}</span>}
-                        {tags.length > 0 && tags.map((t, i) => (
-                          <span key={i} style={{ padding: '1px 6px', borderRadius: 6, fontSize: 10, background: '#e0f2fe', color: '#0ea5e9' }}>{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {(c.status === 'draft' || c.status === 'scheduled') && !c.auto_trigger_enabled && (
-                        <button onClick={() => handleSendCampaign(c.id)} disabled={sendingCampId === c.id || !config} style={{ ...btnPrimary, padding: '5px 10px', fontSize: 11, opacity: (sendingCampId === c.id || !config) ? 0.6 : 1 }}>
-                          {sendingCampId === c.id ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={12} />} Send Now
-                        </button>
-                      )}
-                      {c.status !== 'sending' && (
-                        <button onClick={() => handleDeleteCampaign(c.id)} style={{ ...btnDanger, padding: '5px 10px', fontSize: 11 }}><Trash2 size={12} /></button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
-        </div>
+        )}
       </div>
     );
   }

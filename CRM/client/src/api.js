@@ -387,6 +387,9 @@ export const deleteTagContext = (id) => request(`/email-tag-context?id=${id}`, {
 export const getContactStats = (clientId) => request(`/email-stats?action=contact-stats&client_id=${clientId}`);
 export const getContactSends = (contactId) => request(`/email-stats?action=contact-sends&contact_id=${contactId}`);
 
+// Email image upload (returns { url, key })
+export const uploadEmailImage = (data) => request('/email-upload-image', { method: 'POST', body: JSON.stringify(data) });
+
 // ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══
 // ══════════════════════════════════════════════════════════════

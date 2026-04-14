@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
   // POST — create template
   if (req.method === 'POST') {
     try {
-      const { client_id, name, subject, html_body, template_type } = req.body;
+      const { client_id, name, subject, html_body, preview_text, template_type } = req.body;
       if (!client_id || !name || !subject) {
         return res.status(400).json({ error: 'client_id, name, and subject required' });
       }
@@ -34,6 +34,7 @@ module.exports = async function handler(req, res) {
           name,
           subject,
           html_body: html_body || '',
+          preview_text: preview_text || null,
           template_type: template_type || 'blast',
         }]),
       });
@@ -48,11 +49,12 @@ module.exports = async function handler(req, res) {
     try {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'id query param required' });
-      const { name, subject, html_body, template_type } = req.body;
+      const { name, subject, html_body, preview_text, template_type } = req.body;
       const update = { updated_at: new Date().toISOString() };
       if (name !== undefined) update.name = name;
       if (subject !== undefined) update.subject = subject;
       if (html_body !== undefined) update.html_body = html_body;
+      if (preview_text !== undefined) update.preview_text = preview_text;
       if (template_type !== undefined) update.template_type = template_type;
       const rows = await supaFetch(`crm_email_templates?id=eq.${id}`, {
         method: 'PATCH',

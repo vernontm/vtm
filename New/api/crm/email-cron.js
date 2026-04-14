@@ -143,7 +143,7 @@ module.exports = async function handler(req, res) {
               const subject = (campaign.subject || '')
                 .replace(/\{\{name\}\}/g, send.name || 'there')
                 .replace(/\{\{discount_code\}\}/g, dCode);
-              const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
+              const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name, previewText: campaign.preview_text });
 
               const emailRes = await fetch('https://api.resend.com/emails', {
                 method: 'POST',
@@ -266,7 +266,7 @@ module.exports = async function handler(req, res) {
               const subject = (camp.subject || '')
                 .replace(/\{\{name\}\}/g, contact.name || 'there')
                 .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
-              const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
+              const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name, previewText: camp.preview_text });
 
               const emailRes = await fetch('https://api.resend.com/emails', {
                 method: 'POST',

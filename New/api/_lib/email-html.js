@@ -11,10 +11,21 @@ function escapeHtml(s) {
 function wrapEmailHtml(body, opts = {}) {
   const subject = opts.subject || '';
   const fromName = opts.fromName || '';
+  const previewText = opts.previewText || '';
   const raw = (body || '').trim();
 
-  // Already a full HTML document — send as-is
-  if (/<!DOCTYPE|<html[\s>]/i.test(raw)) return raw;
+  // Hidden preheader — shows as preview text in inbox
+  const preheader = previewText
+    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f5f7fa;opacity:0;">${escapeHtml(previewText)}</div>`
+    : '';
+
+  // Already a full HTML document — inject preheader if missing, otherwise send as-is
+  if (/<!DOCTYPE|<html[\s>]/i.test(raw)) {
+    if (previewText && !/preheader/i.test(raw)) {
+      return raw.replace(/<body[^>]*>/i, m => `${m}\n${preheader}`);
+    }
+    return raw;
+  }
 
   // Detect block-level HTML tags (user wrote HTML fragments)
   const hasBlockTags = /<(p|div|h[1-6]|ul|ol|li|br|a|strong|em|b|i|img|table)\b/i.test(raw);
@@ -37,6 +48,7 @@ function wrapEmailHtml(body, opts = {}) {
 <title>${escapeHtml(subject)}</title>
 </head>
 <body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a1a2e;">
+  ${preheader}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fa;padding:30px 10px;">
     <tr>
       <td align="center">
