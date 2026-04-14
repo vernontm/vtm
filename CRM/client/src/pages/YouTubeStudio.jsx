@@ -413,7 +413,7 @@ export default function YouTubeStudio() {
     if (!urls.length) return;
     setAnalyzingInsp(true); setError(''); setInspAnalysis(null);
     try {
-      const result = await analyzeInspiration({ urls });
+      const result = await analyzeInspiration({ inspiration_urls: urls });
       setInspAnalysis(result);
     } catch (e) { setError(e.message || 'Inspiration analysis failed'); }
     setAnalyzingInsp(false);
