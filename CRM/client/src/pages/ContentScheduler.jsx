@@ -12,7 +12,9 @@ import {
   Trash2, Check, X, Eye, RefreshCw, Loader, Sparkles, Calendar,
   Upload, Download, Clock, Film, Image, Mic, Send, FileText,
   Play, ChevronLeft, ChevronRight, Copy, GripVertical, Settings,
+  AlertCircle, CheckCircle2, Clock3, Filter,
 } from 'lucide-react';
+import EditPostModal from '../components/EditPostModal';
 
 const STATUS_COLORS = {
   draft: { bg: '#f0f0f5', text: '#8e8ea0', label: 'Draft' },
@@ -80,9 +82,12 @@ export default function ContentScheduler() {
   const [dragOverId, setDragOverId] = useState(null);
   const [savingClient, setSavingClient] = useState(false);
   const [processingBible, setProcessingBible] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'calendar'
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'day' | 'week' | 'month'
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [activeSection, setActiveSection] = useState('content');
+  const [postsTab, setPostsTab] = useState('queued'); // queued | unscheduled | error | delivered | pending_review
+  const [postsSearch, setPostsSearch] = useState('');
+  const [editingPost, setEditingPost] = useState(null); // script obj for modal
 
   // Generator state
   const [genMessages, setGenMessages] = useState([]);
@@ -1023,18 +1028,16 @@ export default function ContentScheduler() {
           <div className="cs-topbar-right" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {client && activeSection === 'content' && (
               <>
-                {/* View toggle */}
+                {/* View toggle: List / Day / Week / Month */}
                 <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
-                  <button onClick={() => setViewMode('table')} style={{
-                    padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
-                    background: viewMode === 'table' ? '#4a6cf7' : '#fff',
-                    color: viewMode === 'table' ? '#fff' : '#8e8ea0',
-                  }}>Table</button>
-                  <button onClick={() => setViewMode('calendar')} style={{
-                    padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
-                    background: viewMode === 'calendar' ? '#4a6cf7' : '#fff',
-                    color: viewMode === 'calendar' ? '#fff' : '#8e8ea0',
-                  }}>Calendar</button>
+                  {['list', 'day', 'week', 'month'].map(v => (
+                    <button key={v} onClick={() => setViewMode(v)} style={{
+                      padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                      background: viewMode === v ? '#4a6cf7' : '#fff',
+                      color: viewMode === v ? '#fff' : '#8e8ea0',
+                      textTransform: 'capitalize',
+                    }}>{v}</button>
+                  ))}
                 </div>
                 <button style={btnGhost} onClick={() => loadClientData(client.id)}>
                   <RefreshCw size={12} />
@@ -1220,8 +1223,86 @@ export default function ContentScheduler() {
                 </div>
               )}
 
+              {/* ── Publer-style tabs + search ── */}
+              {(() => {
+                const pendingReviewStatuses = ['caption_ready'];
+                const unscheduledStatuses = ['draft', 'media_uploaded'];
+                const deliveredStatuses = ['posted', 'exported'];
+                const errorStatuses = ['failed', 'error'];
+                const counts = {
+                  queued: scripts.filter(s => s.status === 'scheduled').length,
+                  unscheduled: scripts.filter(s => !s.scheduled_datetime && unscheduledStatuses.includes(s.status)).length,
+                  error: scripts.filter(s => errorStatuses.includes(s.status)).length,
+                  delivered: scripts.filter(s => deliveredStatuses.includes(s.status)).length,
+                  pending_review: scripts.filter(s => pendingReviewStatuses.includes(s.status)).length,
+                };
+                const tabs = [
+                  { key: 'queued', label: 'Queued Posts' },
+                  { key: 'unscheduled', label: 'Unscheduled' },
+                  { key: 'error', label: 'Error' },
+                  { key: 'delivered', label: 'Delivered' },
+                  { key: 'pending_review', label: 'Pending Review' },
+                ];
+                return (
+                  <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 18, padding: '0 18px',
+                      borderBottom: '1px solid #eef0f5', overflowX: 'auto',
+                    }}>
+                      {tabs.map(t => {
+                        const active = postsTab === t.key;
+                        const count = counts[t.key];
+                        return (
+                          <button key={t.key} onClick={() => setPostsTab(t.key)} style={{
+                            padding: '14px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
+                            fontSize: 13, fontWeight: active ? 700 : 500,
+                            color: active ? '#1a1a2e' : '#8e8ea0',
+                            borderBottom: active ? '2px solid #E8650A' : '2px solid transparent',
+                            marginBottom: -1, whiteSpace: 'nowrap',
+                            display: 'flex', alignItems: 'center', gap: 6,
+                          }}>
+                            {t.label}
+                            {count > 0 && (
+                              <span style={{
+                                fontSize: 10, fontWeight: 700,
+                                background: active ? '#fff0e6' : '#f0f2f8',
+                                color: active ? '#E8650A' : '#8e8ea0',
+                                padding: '1px 7px', borderRadius: 10,
+                              }}>{count}</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fafbfd' }}>
+                      <div style={{ position: 'relative', flex: 1, maxWidth: 340 }}>
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
+                        <input
+                          type="text"
+                          value={postsSearch}
+                          onChange={e => setPostsSearch(e.target.value)}
+                          placeholder="Search a Post"
+                          style={{
+                            width: '100%', padding: '7px 10px 7px 32px', borderRadius: 8,
+                            border: '1px solid #eef0f5', fontSize: 12, outline: 'none', background: '#fff',
+                          }}
+                        />
+                      </div>
+                      <button style={{ ...btnGhost, fontSize: 11 }}><Calendar size={12} /> Select Dates <ChevronDown size={12} /></button>
+                      <button style={{ ...btnGhost, fontSize: 11 }}><Filter size={12} /> Filter Posts</button>
+                      <div style={{ marginLeft: 'auto', fontSize: 11, color: '#8e8ea0' }}>
+                        {(() => {
+                          const total = counts[postsTab] ?? scripts.length;
+                          return total > 0 ? `1 – ${total} of ${total}` : '0 of 0';
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Toolbar */}
-              <div className="cs-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div className="cs-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0' }}>
                 <div className="cs-toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button style={{ ...btnPrimary, fontSize: 12, padding: '6px 14px' }} onClick={async () => {
                     try {
@@ -1279,7 +1360,7 @@ export default function ContentScheduler() {
               </div>
 
               {/* Calendar View */}
-              {viewMode === 'calendar' && (() => {
+              {viewMode === 'month' && (() => {
                 const year = calendarMonth.getFullYear();
                 const month = calendarMonth.getMonth();
                 const firstDay = new Date(year, month, 1).getDay();
@@ -1386,7 +1467,7 @@ export default function ContentScheduler() {
               })()}
 
               {/* Content Table */}
-              {viewMode === 'table' && (
+              {['list','day','week'].includes(viewMode) && (
                 <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
                   {loading ? (
                     <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
@@ -1414,7 +1495,45 @@ export default function ContentScheduler() {
                           </tr>
                         </thead>
                         <tbody>
-                          {scripts.map(script => (
+                          {(() => {
+                            const q = postsSearch.trim().toLowerCase();
+                            const pendingReviewStatuses = ['caption_ready'];
+                            const unscheduledStatuses = ['draft', 'media_uploaded'];
+                            const deliveredStatuses = ['posted', 'exported'];
+                            const errorStatuses = ['failed', 'error'];
+                            let list = scripts;
+                            if (postsTab === 'queued') list = list.filter(s => s.status === 'scheduled');
+                            else if (postsTab === 'unscheduled') list = list.filter(s => !s.scheduled_datetime && unscheduledStatuses.includes(s.status));
+                            else if (postsTab === 'error') list = list.filter(s => errorStatuses.includes(s.status));
+                            else if (postsTab === 'delivered') list = list.filter(s => deliveredStatuses.includes(s.status));
+                            else if (postsTab === 'pending_review') list = list.filter(s => pendingReviewStatuses.includes(s.status));
+                            // Day/Week filters on top of tab
+                            if (viewMode === 'day' || viewMode === 'week') {
+                              const now = new Date();
+                              const end = new Date(now);
+                              if (viewMode === 'day') end.setDate(end.getDate() + 1);
+                              else end.setDate(end.getDate() + 7);
+                              list = list.filter(s => {
+                                if (!s.scheduled_datetime) return false;
+                                const d = new Date(s.scheduled_datetime);
+                                return d >= now && d < end;
+                              });
+                            }
+                            if (q) {
+                              list = list.filter(s =>
+                                (s.title || '').toLowerCase().includes(q) ||
+                                (s.caption || '').toLowerCase().includes(q) ||
+                                (s.hashtags || '').toLowerCase().includes(q)
+                              );
+                            }
+                            if (!list.length) {
+                              return (
+                                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: '#b0b0c0', fontSize: 13 }}>
+                                  No posts match this filter.
+                                </td></tr>
+                              );
+                            }
+                            return list.map(script => (
                             <tr key={script.id} style={{ borderBottom: '1px solid #f5f5f8', verticalAlign: 'top' }}>
                               {/* Checkbox */}
                               <td style={{ padding: 10 }}>
@@ -1556,6 +1675,10 @@ export default function ContentScheduler() {
                               {/* Actions */}
                               <td style={{ padding: 10 }}>
                                 <div style={{ display: 'flex', gap: 4 }}>
+                                  <button onClick={() => setEditingPost(script)}
+                                    style={{ ...btnGhost, padding: '4px 6px', color: '#4a6cf7' }} title="Edit post">
+                                    <Edit3 size={12} />
+                                  </button>
                                   <button onClick={async () => {
                                     setActionLoading('captions');
                                     await generateCaptions({ client_id: client.id, script_ids: [script.id] });
@@ -1575,7 +1698,8 @@ export default function ContentScheduler() {
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                          ));
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -2302,6 +2426,23 @@ export default function ContentScheduler() {
       </div>
 
       {/* ── Media Preview Modal ── */}
+      {/* Edit Post Modal (Publer-style) */}
+      {editingPost && (
+        <EditPostModal
+          post={editingPost}
+          client={client}
+          onClose={() => setEditingPost(null)}
+          onSave={async (patch) => {
+            await updateContentScript(editingPost.id, patch);
+            await loadClientData(client.id);
+          }}
+          onDelete={async () => {
+            await deleteContentScript(editingPost.id);
+            await loadClientData(client.id);
+          }}
+        />
+      )}
+
       {showMediaModal && (
         <div style={modalOverlay} onClick={() => { setShowMediaModal(null); setSlideEditIndex(null); setSlideEditPrompt(''); }}>
           <div style={{ ...modalBox, maxWidth: 800, padding: 0 }} onClick={e => e.stopPropagation()}>
