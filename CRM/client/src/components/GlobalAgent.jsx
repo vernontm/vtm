@@ -196,12 +196,15 @@ export default function GlobalAgent() {
           }]);
         }
       } else if (ctx.type === 'content') {
-        const result = await runBulkAgent({ prompt: msg });
+        const result = await runBulkAgent({ prompt: msg, attachments: msgAttachments });
         let summary = `${result.interpretation}\n\nCompleted ${result.successful}/${result.total_actions} actions:\n`;
         for (const r of result.results) {
           const icon = r.status === 'success' ? '\u2705' : r.status === 'skipped' ? '\u23ed' : '\u274c';
           const detail = r.status === 'success'
-            ? (r.count ? `${r.count} posts created` : r.scheduled ? `${r.scheduled} scripts scheduled` : 'done')
+            ? (r.count ? `${r.count} posts created`
+                : r.scheduled ? `${r.scheduled} scripts scheduled`
+                : r.scheduled_datetime ? `"${r.title || 'Post'}" scheduled for ${r.scheduled_datetime}`
+                : 'done')
             : (r.reason || r.error || r.status);
           summary += `${icon} ${r.client_name}: ${detail}\n`;
         }
