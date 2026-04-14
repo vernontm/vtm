@@ -412,87 +412,112 @@ export default function EmailMarketing() {
   // ══════════════════════════════════════════════════════════════
 
   return (
-    <div style={{ padding: 0, fontFamily: 'Inter, sans-serif', minHeight: '100vh', background: '#f8f9fc' }}>
-      {/* Top Bar */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7ef', padding: '16px 28px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Mail size={22} color="#4a6cf7" />
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>Email Marketing</span>
+    <div style={{ fontFamily: 'Inter, sans-serif', height: '100%', minHeight: '100vh', display: 'flex', background: '#f8f9fc' }}>
+      {/* ══════ LEFT CLIENT SIDEBAR ══════ */}
+      <div style={{
+        width: 220, background: '#fff', borderRight: '1px solid #e5e7ef',
+        display: 'flex', flexDirection: 'column', flexShrink: 0,
+      }}>
+        <div style={{ padding: '18px 16px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Mail size={18} color="#4a6cf7" />
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Email Marketing</span>
         </div>
 
-        <div style={{ position: 'relative', minWidth: 200 }}>
-          <button onClick={() => setClientDropdownOpen(!clientDropdownOpen)} style={{ ...btnSecondary, width: '100%', justifyContent: 'space-between' }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedClient ? selectedClient.business_name : 'Select Client'}
-            </span>
-            <ChevronDown size={14} />
-          </button>
-          {clientDropdownOpen && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', maxHeight: 240, overflowY: 'auto', marginTop: 4 }}>
-              {clients.map(c => (
-                <div key={c.id} onClick={() => { setSelectedClientId(c.id); setClientDropdownOpen(false); }}
-                  style={{ padding: '8px 14px', fontSize: 13, cursor: 'pointer', background: selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent', color: selectedClientId === c.id ? '#4a6cf7' : '#1a1a2e', fontWeight: selectedClientId === c.id ? 600 : 400 }}>
-                  {c.business_name}
-                </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px' }}>
+          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Clients
+          </div>
+          {clients.length === 0 && (
+            <div style={{ padding: '8px 16px', fontSize: 12, color: '#ccc' }}>No clients yet</div>
+          )}
+          {clients.map(c => (
+            <div
+              key={c.id}
+              onClick={() => setSelectedClientId(c.id)}
+              style={{
+                padding: '8px 16px',
+                fontSize: 13,
+                cursor: 'pointer',
+                color: selectedClientId === c.id ? '#4a6cf7' : '#1a1a2e',
+                background: selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent',
+                borderLeft: selectedClientId === c.id ? '3px solid #4a6cf7' : '3px solid transparent',
+                fontWeight: selectedClientId === c.id ? 600 : 400,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                transition: 'all 0.15s',
+              }}
+            >
+              {c.business_name}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ══════ RIGHT MAIN AREA ══════ */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Top bar with client name + tabs + status */}
+        <div style={{
+          background: '#fff', borderBottom: '1px solid #e5e7ef', padding: '14px 24px',
+          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flexShrink: 0,
+        }}>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a1a2e' }}>
+            {selectedClient ? selectedClient.business_name : 'Select a Client'}
+          </h2>
+          {selectedClientId && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              {config ? (
+                <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Resend connected</span>
+              ) : (
+                <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 4 }}><Settings size={14} /> Setup needed</span>
+              )}
+            </div>
+          )}
+          {selectedClientId && (
+            <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexWrap: 'wrap' }}>
+              {TABS.map(t => (
+                <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
+                  padding: '8px 14px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                  background: activeTab === t.key ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
+                  color: activeTab === t.key ? '#fff' : '#5a5a6e', transition: 'all 0.15s',
+                }}>
+                  <t.Icon size={14} /> {t.label}
+                </button>
               ))}
             </div>
           )}
         </div>
 
-        {selectedClientId && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-            {config ? (
-              <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Resend connected</span>
-            ) : (
-              <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 4 }}><Settings size={14} /> Setup needed</span>
-            )}
+        {error && (
+          <div style={{ padding: '10px 24px', background: '#fef2f2', color: '#dc2626', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{error}</span>
+            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><X size={14} /></button>
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexWrap: 'wrap' }}>
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-              padding: '8px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-              background: activeTab === t.key ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
-              color: activeTab === t.key ? '#fff' : '#5a5a6e', transition: 'all 0.15s',
-            }}>
-              <t.Icon size={14} /> {t.label}
-            </button>
-          ))}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px', minWidth: 0 }}>
+          {loading && (
+            <div style={{ textAlign: 'center', padding: 40, color: '#8e8ea0' }}>
+              <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
+              <div style={{ marginTop: 8, fontSize: 13 }}>Loading...</div>
+            </div>
+          )}
+
+          {!selectedClientId && !loading && (
+            <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+              <Mail size={48} strokeWidth={1} />
+              <div style={{ marginTop: 12, fontSize: 15, fontWeight: 600 }}>Select a client from the sidebar</div>
+            </div>
+          )}
+
+          {selectedClientId && !loading && (
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              {activeTab === 'contacts' && renderContactsTab()}
+              {activeTab === 'templates' && renderTemplatesTab()}
+              {activeTab === 'campaigns' && renderCampaignsTab()}
+              {activeTab === 'tags' && renderTagsTab()}
+              {activeTab === 'settings' && renderSettingsTab()}
+            </div>
+          )}
         </div>
-      </div>
-
-      {error && (
-        <div style={{ padding: '10px 28px', background: '#fef2f2', color: '#dc2626', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>{error}</span>
-          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><X size={14} /></button>
-        </div>
-      )}
-
-      <div style={{ padding: '24px 28px', maxWidth: 1200, margin: '0 auto' }}>
-        {loading && (
-          <div style={{ textAlign: 'center', padding: 40, color: '#8e8ea0' }}>
-            <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
-            <div style={{ marginTop: 8, fontSize: 13 }}>Loading...</div>
-          </div>
-        )}
-
-        {!selectedClientId && !loading && (
-          <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
-            <Mail size={48} strokeWidth={1} />
-            <div style={{ marginTop: 12, fontSize: 15, fontWeight: 600 }}>Select a client to get started</div>
-          </div>
-        )}
-
-        {selectedClientId && !loading && (
-          <>
-            {activeTab === 'contacts' && renderContactsTab()}
-            {activeTab === 'templates' && renderTemplatesTab()}
-            {activeTab === 'campaigns' && renderCampaignsTab()}
-            {activeTab === 'tags' && renderTagsTab()}
-            {activeTab === 'settings' && renderSettingsTab()}
-          </>
-        )}
       </div>
 
       {/* Contact sends modal */}
