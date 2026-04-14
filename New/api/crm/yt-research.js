@@ -38,9 +38,8 @@ module.exports = async function handler(req, res) {
   // ── Transcribe a video ──
   if (action === 'transcribe' && req.method === 'POST') {
     try {
-      const { video_id, audio_url } = req.body;
+      const { video_id } = req.body;
       if (!video_id) return res.status(400).json({ error: 'video_id required' });
-      if (!ELEVENLABS_API_KEY) return res.status(400).json({ error: 'ELEVENLABS_API_KEY not configured' });
 
       // Mark as processing
       await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
@@ -48,97 +47,28 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({ transcription_status: 'processing', updated_at: new Date().toISOString() }),
       });
 
-      let fileBuffer, fileName, mimeType;
+      // Fetch the video record
+      const videos = await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`);
+      const video = videos?.[0];
+      if (!video?.video_url) throw new Error('Video URL not found');
 
-      if (audio_url) {
-        // Direct audio URL provided (e.g. from Supabase storage upload)
-        const fileRes = await fetch(audio_url);
-        if (!fileRes.ok) throw new Error('Failed to download audio');
-        fileBuffer = Buffer.from(await fileRes.arrayBuffer());
-        const urlPath = new URL(audio_url).pathname;
-        fileName = urlPath.split('/').pop() || 'audio.mp4';
-      } else {
-        // Extract audio from YouTube URL automatically
-        const videos = await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`);
-        const video = videos?.[0];
-        if (!video?.video_url) throw new Error('Video URL not found');
+      // Extract YouTube captions/subtitles directly (no audio download needed)
+      const { YoutubeTranscript } = require('youtube-transcript');
+      let transcript = '';
 
-        // Use cobalt API to extract audio from YouTube
-        const cobaltRes = await fetch('https://api.cobalt.tools/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({
-            url: video.video_url,
-            audioFormat: 'mp3',
-            audioBitrate: '128',
-          }),
-        });
-
-        if (!cobaltRes.ok) {
-          const errText = await cobaltRes.text();
-          throw new Error(`Audio extraction failed (${cobaltRes.status}): ${errText}`);
-        }
-
-        const cobaltData = await cobaltRes.json();
-        console.log('Cobalt response:', JSON.stringify(cobaltData).slice(0, 500));
-        const downloadUrl = cobaltData.url;
-        if (!downloadUrl) throw new Error(`No download URL from cobalt (status: ${cobaltData.status}). ${cobaltData.error?.code || cobaltData.text || JSON.stringify(cobaltData)}`);
-
-        console.log('Downloading audio from:', downloadUrl);
-        const audioRes = await fetch(downloadUrl);
-        if (!audioRes.ok) throw new Error('Failed to download extracted audio');
-        fileBuffer = Buffer.from(await audioRes.arrayBuffer());
-        fileName = 'audio.mp3';
+      try {
+        console.log('Fetching YouTube captions for:', video.video_url);
+        const segments = await YoutubeTranscript.fetchTranscript(video.video_url);
+        transcript = segments.map(s => s.text).join(' ');
+        console.log(`Got ${segments.length} caption segments, ${transcript.length} chars`);
+      } catch (captionErr) {
+        console.log('No captions available:', captionErr.message);
+        throw new Error('No captions/subtitles available for this video. YouTube auto-captions may be disabled.');
       }
 
-      mimeType = fileName.endsWith('.mp3') ? 'audio/mpeg'
-        : fileName.endsWith('.wav') ? 'audio/wav'
-        : fileName.endsWith('.m4a') ? 'audio/mp4'
-        : 'video/mp4';
-
-      // Build multipart form data for ElevenLabs
-      const boundary = '----FormBoundary' + Date.now();
-      const parts = [];
-
-      // model_id field
-      parts.push(
-        `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="model_id"\r\n\r\n` +
-        `scribe_v1\r\n`
-      );
-
-      // file field header
-      parts.push(
-        `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-        `Content-Type: ${mimeType}\r\n\r\n`
-      );
-
-      // Combine into a single buffer
-      const preFileBuffer = Buffer.from(parts.join(''));
-      const postFileBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);
-      const body = Buffer.concat([preFileBuffer, fileBuffer, postFileBuffer]);
-
-      // Call ElevenLabs Speech-to-Text
-      const sttRes = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-        method: 'POST',
-        headers: {
-          'xi-api-key': ELEVENLABS_API_KEY,
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        },
-        body,
-      });
-
-      if (!sttRes.ok) {
-        const errText = await sttRes.text();
-        throw new Error(`Transcription failed: ${errText}`);
+      if (!transcript || transcript.length < 20) {
+        throw new Error('Transcript too short or empty. This video may not have captions.');
       }
-
-      const sttData = await sttRes.json();
-      const transcript = sttData.text || '';
 
       // Save transcript to the video record
       await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
