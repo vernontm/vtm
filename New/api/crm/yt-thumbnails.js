@@ -3,6 +3,28 @@ const { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const KIE_API_KEY = process.env.KIE_API_KEY;
 
+// ── Brand logo map: keyword → logo URL ──
+const LOGO_BASE = 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/logos';
+const BRAND_LOGOS = [
+  { keywords: ['chatgpt', 'chat gpt', 'openai', 'gpt-4', 'gpt4', 'gpt-5', 'gpt5'], url: `${LOGO_BASE}/Chatgpt.png`, name: 'ChatGPT' },
+  { keywords: ['claude', 'anthropic'], url: `${LOGO_BASE}/claude.png`, name: 'Claude' },
+  { keywords: ['elevenlabs', 'eleven labs', '11labs'], url: `${LOGO_BASE}/elevenlabs.png`, name: 'ElevenLabs' },
+  { keywords: ['github', 'git hub'], url: `${LOGO_BASE}/github.png`, name: 'GitHub' },
+  { keywords: ['gmail', 'google mail'], url: `${LOGO_BASE}/gmail.png`, name: 'Gmail' },
+  { keywords: ['heygen', 'hey gen'], url: `${LOGO_BASE}/heygen.jpeg`, name: 'HeyGen' },
+  { keywords: ['higgsfield'], url: `${LOGO_BASE}/higgsfield.jpeg`, name: 'Higgsfield' },
+  { keywords: ['nano banana', 'nanobanana'], url: `${LOGO_BASE}/Nano%20Banana.jpeg`, name: 'Nano Banana' },
+  { keywords: ['openart', 'open art'], url: `${LOGO_BASE}/Openart.jpeg`, name: 'OpenArt' },
+  { keywords: ['supabase', 'supa base'], url: `${LOGO_BASE}/supabase.jpeg`, name: 'Supabase' },
+  { keywords: ['vercel'], url: `${LOGO_BASE}/vercel.png`, name: 'Vercel' },
+];
+
+function detectBrandLogos(text) {
+  if (!text) return [];
+  const lower = text.toLowerCase();
+  return BRAND_LOGOS.filter(b => b.keywords.some(k => lower.includes(k)));
+}
+
 const MODELS = {
   'nano-banana': {
     id: 'google/nano-banana-edit',
@@ -254,13 +276,27 @@ Return ONLY valid JSON:
       if (!ANTHROPIC_API_KEY) return res.status(400).json({ error: 'ANTHROPIC_API_KEY not configured' });
       if (!KIE_API_KEY) return res.status(400).json({ error: 'KIE_API_KEY not configured' });
 
+      // Auto-detect brand logos from video title
+      const detectedBrands = detectBrandLogos(video_title);
+      const allLogoUrls = [...(logo_urls || [])];
+      const detectedLogoNames = [];
+      for (const brand of detectedBrands) {
+        if (!allLogoUrls.includes(brand.url)) {
+          allLogoUrls.push(brand.url);
+        }
+        detectedLogoNames.push(brand.name);
+      }
+      if (detectedBrands.length) {
+        console.log(`Auto-detected brand logos: ${detectedLogoNames.join(', ')}`);
+      }
+
       // Use Claude to create an optimized Kie.ai prompt using the VTM Image Prompt Enhancer system
       const analysisContext = inspiration_analysis
         ? `\nINSPIRATION ANALYSIS (match these visual patterns):\n${JSON.stringify(inspiration_analysis.combined || inspiration_analysis, null, 2)}`
         : '';
 
-      const logoContext = logo_urls?.length
-        ? `\nInclude a brand logo element in the composition.`
+      const logoContext = allLogoUrls.length
+        ? `\nInclude these brand logos/icons in the thumbnail composition: ${detectedLogoNames.length ? detectedLogoNames.join(', ') : 'brand logo'}. Place them visibly but not overwhelming — floating near the subject or in the background as recognizable elements.`
         : '';
 
       // CRITICAL: When character ref is provided, do NOT describe the person — the reference image handles that
@@ -357,7 +393,7 @@ Return ONLY the prompt as plain text. No JSON, no code blocks, no labels. Just t
           vision_analysis: JSON.stringify(inspiration_analysis || {}),
           inspiration_urls: inspiration_analysis?.inspiration_urls || [],
           character_ref_url: character_ref_url || '',
-          logo_urls: logo_urls || [],
+          logo_urls: allLogoUrls,
           status: 'complete',
         }]),
       });
