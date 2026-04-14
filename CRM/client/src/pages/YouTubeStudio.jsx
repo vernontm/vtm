@@ -458,13 +458,13 @@ export default function YouTubeStudio() {
     try {
       const result = await generateThumbnail({
         client_id: selectedClientId,
-        title: thumbTitle.trim(),
+        video_title: thumbTitle.trim(),
         model: thumbModel,
         character_ref_url: charRefUrl || undefined,
-        logo_url: logoUrl || undefined,
+        logo_urls: logoUrl ? [logoUrl] : undefined,
         inspiration_analysis: inspAnalysis || undefined,
       });
-      setThumbPromptUsed(result?.prompt_used || '');
+      setThumbPromptUsed(result?.generation_prompt || '');
       const t = await getYTThumbnails(selectedClientId);
       setThumbnails(t || []);
     } catch (e) { setError(e.message || 'Thumbnail generation failed'); }
