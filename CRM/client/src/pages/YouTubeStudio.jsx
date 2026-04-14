@@ -79,9 +79,7 @@ export default function YouTubeStudio() {
   const [expandedVideoId, setExpandedVideoId] = useState(null);
   const [transcribingId, setTranscribingId] = useState(null);
   const [analyzingId, setAnalyzingId] = useState(null);
-  const [uploadingAudioId, setUploadingAudioId] = useState(null);
-  const audioInputRef = useRef(null);
-  const pendingTranscribeVideoId = useRef(null);
+  // audio upload refs removed — transcription now extracts audio from YouTube URL automatically
 
   // Scripts
   const [scripts, setScripts] = useState([]);
@@ -194,39 +192,14 @@ export default function YouTubeStudio() {
     setBatchAdding(false);
   }
 
-  function handleTranscribeClick(videoId) {
-    pendingTranscribeVideoId.current = videoId;
-    setUploadingAudioId(videoId);
-    if (audioInputRef.current) {
-      audioInputRef.current.value = '';
-      audioInputRef.current.click();
-    }
-  }
-
-  async function handleAudioFileSelected(e) {
-    const file = e.target.files?.[0];
-    const videoId = pendingTranscribeVideoId.current;
-    if (!file || !videoId) { setUploadingAudioId(null); return; }
-
+  async function handleTranscribe(videoId) {
     setTranscribingId(videoId); setError('');
     try {
-      const ext = file.name.split('.').pop();
-      const path = `${selectedClientId}/yt-audio/${videoId}_${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('content-media')
-        .upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-
-      const { data: urlData } = supabase.storage.from('content-media').getPublicUrl(path);
-      const audioUrl = urlData?.publicUrl;
-      if (!audioUrl) throw new Error('Failed to get public URL');
-
-      await transcribeVideo({ video_id: videoId, audio_url: audioUrl });
+      await transcribeVideo({ video_id: videoId });
       const v = await getCompetitorVideos(selectedClientId);
       setVideos(v || []);
     } catch (e) { setError(e.message || 'Transcription failed'); }
     setTranscribingId(null);
-    setUploadingAudioId(null);
   }
 
   async function handleAnalyze(videoId) {
@@ -430,14 +403,6 @@ export default function YouTubeStudio() {
 
   return (
     <div style={{ padding: 0, fontFamily: 'Inter, sans-serif', minHeight: '100vh', background: '#f8f9fc' }}>
-      {/* Hidden audio input for transcription uploads */}
-      <input
-        ref={audioInputRef}
-        type="file"
-        accept=".mp3,.mp4,.m4a,.wav"
-        style={{ display: 'none' }}
-        onChange={handleAudioFileSelected}
-      />
       {/* Hidden file inputs for thumbnail uploads */}
       <input ref={charRefInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCharRefUpload} />
       <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
@@ -670,11 +635,11 @@ export default function YouTubeStudio() {
                             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                               {!hasTranscript && status !== 'processing' && (
                                 <button
-                                  onClick={() => handleTranscribeClick(v.id)}
+                                  onClick={() => handleTranscribe(v.id)}
                                   disabled={transcribingId === v.id}
                                   style={{ ...btnSecondary, padding: '5px 10px', fontSize: 11, opacity: transcribingId === v.id ? 0.6 : 1 }}
                                 >
-                                  {transcribingId === v.id ? <Loader size={12} className="spin" /> : <Upload size={12} />}
+                                  {transcribingId === v.id ? <Loader size={12} className="spin" /> : <Play size={12} />}
                                   Transcribe
                                 </button>
                               )}

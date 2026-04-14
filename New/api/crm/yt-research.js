@@ -39,18 +39,62 @@ module.exports = async function handler(req, res) {
   if (action === 'transcribe' && req.method === 'POST') {
     try {
       const { video_id, audio_url } = req.body;
-      if (!video_id || !audio_url) return res.status(400).json({ error: 'video_id and audio_url required' });
+      if (!video_id) return res.status(400).json({ error: 'video_id required' });
       if (!ELEVENLABS_API_KEY) return res.status(400).json({ error: 'ELEVENLABS_API_KEY not configured' });
 
-      // Download the audio file from Supabase storage
-      const fileRes = await fetch(audio_url);
-      if (!fileRes.ok) throw new Error('Failed to download audio from storage');
-      const fileBuffer = Buffer.from(await fileRes.arrayBuffer());
+      // Mark as processing
+      await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ transcription_status: 'processing', updated_at: new Date().toISOString() }),
+      });
 
-      // Determine filename and mime
-      const urlPath = new URL(audio_url).pathname;
-      const fileName = urlPath.split('/').pop() || 'audio.mp4';
-      const mimeType = fileName.endsWith('.mp3') ? 'audio/mpeg'
+      let fileBuffer, fileName, mimeType;
+
+      if (audio_url) {
+        // Direct audio URL provided (e.g. from Supabase storage upload)
+        const fileRes = await fetch(audio_url);
+        if (!fileRes.ok) throw new Error('Failed to download audio');
+        fileBuffer = Buffer.from(await fileRes.arrayBuffer());
+        const urlPath = new URL(audio_url).pathname;
+        fileName = urlPath.split('/').pop() || 'audio.mp4';
+      } else {
+        // Extract audio from YouTube URL automatically
+        const videos = await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`);
+        const video = videos?.[0];
+        if (!video?.video_url) throw new Error('Video URL not found');
+
+        // Use cobalt API to extract audio from YouTube
+        const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            url: video.video_url,
+            isAudioOnly: true,
+            aFormat: 'mp3',
+            filenamePattern: 'basic',
+          }),
+        });
+
+        if (!cobaltRes.ok) {
+          const errText = await cobaltRes.text();
+          throw new Error(`Audio extraction failed: ${errText}`);
+        }
+
+        const cobaltData = await cobaltRes.json();
+        const downloadUrl = cobaltData.url;
+        if (!downloadUrl) throw new Error('No download URL from audio extractor. Try uploading the audio file manually.');
+
+        console.log('Downloading audio from:', downloadUrl);
+        const audioRes = await fetch(downloadUrl);
+        if (!audioRes.ok) throw new Error('Failed to download extracted audio');
+        fileBuffer = Buffer.from(await audioRes.arrayBuffer());
+        fileName = 'audio.mp3';
+      }
+
+      mimeType = fileName.endsWith('.mp3') ? 'audio/mpeg'
         : fileName.endsWith('.wav') ? 'audio/wav'
         : fileName.endsWith('.m4a') ? 'audio/mp4'
         : 'video/mp4';
@@ -99,12 +143,17 @@ module.exports = async function handler(req, res) {
       // Save transcript to the video record
       await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ transcript, updated_at: new Date().toISOString() }),
+        body: JSON.stringify({ transcript, transcription_status: 'complete', updated_at: new Date().toISOString() }),
       });
 
       return res.json({ transcript, video_id, status: 'complete' });
     } catch (err) {
       console.error('Transcribe error:', err);
+      // Mark as failed
+      await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ transcription_status: 'failed', updated_at: new Date().toISOString() }),
+      }).catch(() => {});
       return res.status(500).json({ error: 'Transcription failed: ' + err.message });
     }
   }
