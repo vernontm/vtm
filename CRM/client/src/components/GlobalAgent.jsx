@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy } from 'lucide-react';
+import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem } from '../api';
 
 /* ── page context config ────────────────────────────────────────── */
@@ -75,8 +75,11 @@ export default function GlobalAgent() {
   const [draft, setDraft] = useState(null);
   const [sending, setSending] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
+  const [attachments, setAttachments] = useState([]); // [{ name, type, media_type, data_base64, size }]
+  const [attachError, setAttachError] = useState('');
   const endRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (expanded && endRef.current) {
@@ -89,12 +92,92 @@ export default function GlobalAgent() {
     if (expanded) setTimeout(() => inputRef.current?.focus(), 150);
   }, [expanded]);
 
+  /* ── attachment handling ──────────────────────────────────────── */
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
+  const MAX_TOTAL_FILES = 5;
+
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = reader.result || '';
+      const comma = res.indexOf(',');
+      resolve(comma >= 0 ? res.slice(comma + 1) : res);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const fileToText = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result || '');
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+
+  const handleFiles = async (fileList) => {
+    setAttachError('');
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    if (attachments.length + files.length > MAX_TOTAL_FILES) {
+      setAttachError(`Max ${MAX_TOTAL_FILES} files at a time.`);
+      return;
+    }
+    const next = [];
+    for (const f of files) {
+      if (f.size > MAX_FILE_SIZE) {
+        setAttachError(`${f.name} is larger than 10MB.`);
+        continue;
+      }
+      const mt = f.type || 'application/octet-stream';
+      try {
+        if (mt.startsWith('image/')) {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, kind: 'image', media_type: mt, data_base64: data, size: f.size });
+        } else if (mt === 'application/pdf') {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, kind: 'pdf', media_type: mt, data_base64: data, size: f.size });
+        } else {
+          // treat as text (md, txt, csv, json, code)
+          const text = await fileToText(f);
+          next.push({ name: f.name, kind: 'text', media_type: mt, text: text.slice(0, 120000), size: f.size });
+        }
+      } catch (e) {
+        setAttachError('Failed to read ' + f.name);
+      }
+    }
+    if (next.length) setAttachments(prev => [...prev, ...next]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (idx) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+    setAttachError('');
+  };
+
+  const onPaste = (e) => {
+    const items = e.clipboardData?.items || [];
+    const files = [];
+    for (const it of items) {
+      if (it.kind === 'file') {
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      handleFiles(files);
+    }
+  };
+
   /* ── handle send ──────────────────────────────────────────────── */
   const handleSend = async (overrideMsg) => {
     const msg = (overrideMsg || input).trim();
-    if (!msg || loading) return;
+    if ((!msg && attachments.length === 0) || loading) return;
     if (!overrideMsg) setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: msg }]);
+    const msgAttachments = attachments;
+    const displayText = msg + (msgAttachments.length ? `\n\n📎 ${msgAttachments.map(a => a.name).join(', ')}` : '');
+    setMessages(prev => [...prev, { role: 'user', content: displayText || '(files attached)' }]);
+    setAttachments([]);
     setLoading(true);
     setDraft(null);
     if (!expanded) setExpanded(true);
@@ -102,7 +185,7 @@ export default function GlobalAgent() {
     try {
       if (ctx.type === 'email') {
         const convo = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
-        const result = await emailAgent({ prompt: msg, conversation: convo });
+        const result = await emailAgent({ prompt: msg, conversation: convo, attachments: msgAttachments });
         if (result.action === 'ask' || result.needs_info) {
           setMessages(prev => [...prev, { role: 'assistant', content: result.question || 'Could you provide more details?' }]);
         } else if (result.action === 'draft_email') {
@@ -128,7 +211,7 @@ export default function GlobalAgent() {
         const res = await fetch('/api/crm/global-agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: msg, conversation: convo, page: '/youtube', context_type: 'youtube' }),
+          body: JSON.stringify({ prompt: msg, conversation: convo, page: '/youtube', context_type: 'youtube', attachments: msgAttachments }),
         });
         if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Agent error');
         const result = await res.json();
@@ -138,7 +221,7 @@ export default function GlobalAgent() {
         const res = await fetch('/api/crm/global-agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: msg, conversation: convo, page: location.pathname }),
+          body: JSON.stringify({ prompt: msg, conversation: convo, page: location.pathname, attachments: msgAttachments }),
         });
         if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Agent error');
         const result = await res.json();
@@ -315,6 +398,35 @@ export default function GlobalAgent() {
         </div>
       )}
 
+      {/* Attachment chips row */}
+      {(attachments.length > 0 || attachError) && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+          padding: '6px 14px 0', background: '#fff',
+        }}>
+          {attachments.map((a, i) => (
+            <div key={i} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '3px 6px 3px 8px', borderRadius: 6,
+              background: '#eef2ff', border: '1px solid #dbe2ff',
+              fontSize: 10, color: '#4a6cf7', fontWeight: 600, maxWidth: 220,
+            }}>
+              {a.kind === 'image' ? <ImageIcon size={10} /> : <FileText size={10} />}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+              <button onClick={() => removeAttachment(i)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                color: '#4a6cf7', display: 'flex', alignItems: 'center',
+              }}>
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+          {attachError && (
+            <span style={{ fontSize: 10, color: '#ef4444', fontWeight: 500 }}>{attachError}</span>
+          )}
+        </div>
+      )}
+
       {/* ── Bottom input bar (always visible) ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -335,12 +447,36 @@ export default function GlobalAgent() {
           <span style={{ fontSize: 11, fontWeight: 600, color: '#4a6cf7' }}>{ctx.label}</span>
         </div>
 
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,application/pdf,text/*,.md,.txt,.csv,.json,.js,.jsx,.ts,.tsx,.html,.css,.log"
+          style={{ display: 'none' }}
+          onChange={e => handleFiles(e.target.files)}
+        />
+
+        {/* Paperclip */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          title="Attach reference files (images, PDFs, text)"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: attachments.length ? '#4a6cf7' : '#8e8ea0',
+            display: 'flex', alignItems: 'center', padding: 2, flexShrink: 0,
+          }}
+        >
+          <Paperclip size={15} />
+        </button>
+
         {/* Input */}
         <input
           ref={inputRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          onPaste={onPaste}
           onFocus={() => { if (!expanded && messages.length === 0) setExpanded(true); }}
           placeholder={PLACEHOLDERS[ctx.type] || PLACEHOLDERS.general}
           style={{
@@ -351,11 +487,11 @@ export default function GlobalAgent() {
         />
 
         {/* Send button */}
-        <button onClick={() => handleSend()} disabled={!input.trim() || loading} style={{
+        <button onClick={() => handleSend()} disabled={(!input.trim() && attachments.length === 0) || loading} style={{
           padding: '7px 12px', borderRadius: 8, border: 'none',
-          cursor: input.trim() && !loading ? 'pointer' : 'default',
-          background: input.trim() && !loading ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#e5e7ef',
-          color: input.trim() && !loading ? '#fff' : '#b0b0c0',
+          cursor: (input.trim() || attachments.length) && !loading ? 'pointer' : 'default',
+          background: (input.trim() || attachments.length) && !loading ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#e5e7ef',
+          color: (input.trim() || attachments.length) && !loading ? '#fff' : '#b0b0c0',
           fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
         }}>
           <Send size={12} />

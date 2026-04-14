@@ -1,4 +1,5 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { buildUserContent } = require('../_lib/agent-attachments.js');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -16,8 +17,8 @@ module.exports = async function handler(req, res) {
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const { prompt, conversation, page } = req.body;
-    if (!prompt) return res.status(400).json({ error: 'prompt required' });
+    const { prompt, conversation, page, attachments } = req.body;
+    if (!prompt && (!attachments || !attachments.length)) return res.status(400).json({ error: 'prompt required' });
 
     // Gather CRM context
     const [settings, contacts, leads, deals, todos] = await Promise.all([
@@ -79,7 +80,7 @@ Return ONLY valid JSON. No code blocks.`;
         messages.push({ role: msg.role, content: msg.content });
       }
     }
-    messages.push({ role: 'user', content: prompt });
+    messages.push({ role: 'user', content: buildUserContent(prompt || 'Please review the attached files.', attachments) });
 
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
