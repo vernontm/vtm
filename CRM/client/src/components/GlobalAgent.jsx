@@ -63,6 +63,39 @@ function getContext(pathname) {
   return match ? match[1] : { label: 'CRM', type: 'general' };
 }
 
+// Route by INTENT (what the user is asking), not just by current page.
+// Keywords + attachments override the page default so the agent can do any
+// task from any page.
+function detectIntent(prompt, attachments, pageType) {
+  const p = (prompt || '').toLowerCase();
+  const hasImage = (attachments || []).some(a => a.kind === 'image');
+
+  const contentSignals = [
+    'post', 'posts', 'caption', 'captions', 'hashtag', 'hashtags',
+    'schedule this', 'schedule the', 'schedule a post', 'auto schedule',
+    'upload and schedule', 'upload this', 'reel', 'story', 'instagram',
+    'tiktok', 'threads', 'social', 'carousel', 'content scheduler',
+    'generate posts', 'generate a post', 'post for', 'scripts', 'script',
+  ];
+  const emailSignals = [
+    'email', 'emails', 'draft an email', 'write an email', 'reply to',
+    'send to', 'follow up with', 'newsletter', 'broadcast', 'campaign',
+    'template', 'subject line',
+  ];
+  const youtubeSignals = ['youtube', 'video idea', 'thumbnail', 'channel'];
+
+  const hits = (list) => list.filter(k => p.includes(k)).length;
+  const cHits = hits(contentSignals) + (hasImage ? 2 : 0);
+  const eHits = hits(emailSignals);
+  const yHits = hits(youtubeSignals);
+
+  if (cHits >= 2 || (cHits >= 1 && cHits > eHits)) return 'content';
+  if (eHits >= 1 && eHits >= cHits) return 'email';
+  if (yHits >= 1) return 'youtube';
+  // Fall back to the page default
+  return pageType || 'general';
+}
+
 export default function GlobalAgent() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -182,8 +215,10 @@ export default function GlobalAgent() {
     setDraft(null);
     if (!expanded) setExpanded(true);
 
+    const intent = detectIntent(msg, msgAttachments, ctx.type);
+
     try {
-      if (ctx.type === 'email') {
+      if (intent === 'email') {
         const convo = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
         const result = await emailAgent({ prompt: msg, conversation: convo, attachments: msgAttachments });
         if (result.action === 'ask' || result.needs_info) {
@@ -194,8 +229,10 @@ export default function GlobalAgent() {
             role: 'assistant',
             content: `Email ready for ${result.to_name || result.to_email}${result.reasoning ? ` - ${result.reasoning}` : ''}`,
           }]);
+        } else if (result.message || result.answer) {
+          setMessages(prev => [...prev, { role: 'assistant', content: result.message || result.answer }]);
         }
-      } else if (ctx.type === 'content') {
+      } else if (intent === 'content') {
         const result = await runBulkAgent({ prompt: msg, attachments: msgAttachments });
         let summary = `${result.interpretation}\n\nCompleted ${result.successful}/${result.total_actions} actions:\n`;
         for (const r of result.results) {
@@ -209,7 +246,7 @@ export default function GlobalAgent() {
           summary += `${icon} ${r.client_name}: ${detail}\n`;
         }
         setMessages(prev => [...prev, { role: 'assistant', content: summary.trim() }]);
-      } else if (ctx.type === 'youtube') {
+      } else if (intent === 'youtube') {
         const convo = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
         const res = await fetch('/api/crm/global-agent', {
           method: 'POST',
