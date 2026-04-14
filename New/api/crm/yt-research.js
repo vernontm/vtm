@@ -266,6 +266,7 @@ Be thorough. Extract EVERY hook, intro pattern, and CTA you can find.`;
           source_video_id: video_id,
           category: 'intros',
           pattern_text: intro.text,
+          effectiveness_score: 0,
           metadata: { style: intro.style },
         });
       }
@@ -276,6 +277,7 @@ Be thorough. Extract EVERY hook, intro pattern, and CTA you can find.`;
           source_video_id: video_id,
           category: 'ctas',
           pattern_text: cta.text,
+          effectiveness_score: 0,
           metadata: { placement: cta.placement },
         });
       }
