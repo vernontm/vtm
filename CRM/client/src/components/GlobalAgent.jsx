@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown } from 'lucide-react';
+import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem } from '../api';
 
 /* ── page context config ────────────────────────────────────────── */
@@ -74,6 +74,7 @@ export default function GlobalAgent() {
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState(null);
   const [sending, setSending] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState(null);
   const endRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -232,7 +233,7 @@ export default function GlobalAgent() {
 
             {/* Message bubbles */}
             {messages.map((msg, i) => (
-              <div key={i} style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
+              <div key={i} style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '75%', position: 'relative', display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <div style={{
                   padding: '6px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap',
                   background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : msg.role === 'system' ? '#f0f2f8' : '#f8f9fc',
@@ -241,6 +242,23 @@ export default function GlobalAgent() {
                 }}>
                   {msg.content}
                 </div>
+                {msg.role === 'assistant' && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(msg.content).then(() => {
+                        setCopiedIdx(i);
+                        setTimeout(() => setCopiedIdx(c => c === i ? null : c), 1500);
+                      });
+                    }}
+                    style={{
+                      alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer',
+                      color: copiedIdx === i ? '#22c55e' : '#8e8ea0', fontSize: 10, fontWeight: 600,
+                      display: 'flex', alignItems: 'center', gap: 3, padding: '2px 4px',
+                    }}
+                  >
+                    {copiedIdx === i ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
+                  </button>
+                )}
               </div>
             ))}
 

@@ -1,4 +1,5 @@
 const { setCors, supaFetch } = require('../_lib/supabase.js');
+const { wrapEmailHtml } = require('../_lib/email-html.js');
 
 // This endpoint is called by Vercel Cron every 15 minutes.
 // It handles:
@@ -66,7 +67,7 @@ module.exports = async function handler(req, res) {
         });
 
         // Send with daily limit + rollover
-        const result = await sendBatchWithRollover(config, campaign, contacts);
+        const result = await sendBatchWithRollover(config, campaign, contacts, wrapEmailHtml);
 
         await supaFetch(`crm_email_campaigns?id=eq.${campaign.id}`, {
           method: 'PATCH',
@@ -128,9 +129,11 @@ module.exports = async function handler(req, res) {
           let sentCount = 0;
           for (const send of toSendNow) {
             try {
-              const html = campaign.html_body
+              const rawBody = (campaign.html_body || '')
                 .replace(/\{\{name\}\}/g, send.name || 'there')
                 .replace(/\{\{email\}\}/g, send.email);
+              const subject = (campaign.subject || '').replace(/\{\{name\}\}/g, send.name || 'there');
+              const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
 
               const emailRes = await fetch('https://api.resend.com/emails', {
                 method: 'POST',
@@ -141,7 +144,7 @@ module.exports = async function handler(req, res) {
                 body: JSON.stringify({
                   from: config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email,
                   to: [send.email],
-                  subject: campaign.subject.replace(/\{\{name\}\}/g, ''),
+                  subject,
                   html,
                 }),
               });
@@ -213,7 +216,7 @@ module.exports = async function handler(req, res) {
 };
 
 // Duplicated from email-campaigns.js for the cron context
-async function sendBatchWithRollover(config, campaign, contacts) {
+async function sendBatchWithRollover(config, campaign, contacts, wrap = null) {
   const configId = config.id;
   const dailyLimit = config.daily_limit || 100;
   const today = new Date().toISOString().slice(0, 10);
@@ -237,9 +240,11 @@ async function sendBatchWithRollover(config, campaign, contacts) {
 
   for (const contact of toSendNow) {
     try {
-      const html = campaign.html_body
+      const rawBody = (campaign.html_body || '')
         .replace(/\{\{name\}\}/g, contact.name || 'there')
         .replace(/\{\{email\}\}/g, contact.email);
+      const subject = (campaign.subject || '').replace(/\{\{name\}\}/g, contact.name || 'there');
+      const html = wrap ? wrap(rawBody, { subject, fromName: config.from_name }) : rawBody;
 
       const emailRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -250,7 +255,7 @@ async function sendBatchWithRollover(config, campaign, contacts) {
         body: JSON.stringify({
           from: config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email,
           to: [contact.email],
-          subject: campaign.subject.replace(/\{\{name\}\}/g, contact.name || 'there'),
+          subject,
           html,
         }),
       });

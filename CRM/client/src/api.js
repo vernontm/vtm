@@ -377,6 +377,15 @@ export const scheduleEmailCampaign = (data) => request('/email-campaigns?action=
 export const updateEmailCampaign = (id, data) => request(`/email-campaigns?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteEmailCampaign = (id) => request(`/email-campaigns?id=${id}`, { method: 'DELETE' });
 
+// Tag context (descriptions per tag for AI)
+export const getTagContexts = (clientId) => request(`/email-tag-context?client_id=${clientId}`);
+export const saveTagContext = (data) => request('/email-tag-context', { method: 'POST', body: JSON.stringify(data) });
+export const deleteTagContext = (id) => request(`/email-tag-context?id=${id}`, { method: 'DELETE' });
+
+// Contact stats
+export const getContactStats = (clientId) => request(`/email-stats?action=contact-stats&client_id=${clientId}`);
+export const getContactSends = (contactId) => request(`/email-stats?action=contact-sends&contact_id=${contactId}`);
+
 // ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══
 // ══════════════════════════════════════════════════════════════
