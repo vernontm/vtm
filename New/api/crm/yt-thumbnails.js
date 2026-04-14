@@ -254,35 +254,56 @@ Return ONLY valid JSON:
       if (!ANTHROPIC_API_KEY) return res.status(400).json({ error: 'ANTHROPIC_API_KEY not configured' });
       if (!KIE_API_KEY) return res.status(400).json({ error: 'KIE_API_KEY not configured' });
 
-      // Use Claude to create an optimized Kie.ai prompt
+      // Use Claude to create an optimized Kie.ai prompt using the VTM Image Prompt Enhancer system
       const analysisContext = inspiration_analysis
-        ? `\nINSPIRATION ANALYSIS (match these patterns):\n${JSON.stringify(inspiration_analysis.combined || inspiration_analysis, null, 2)}`
+        ? `\nINSPIRATION ANALYSIS (match these visual patterns):\n${JSON.stringify(inspiration_analysis.combined || inspiration_analysis, null, 2)}`
         : '';
 
       const logoContext = logo_urls?.length
-        ? `\nInclude brand logos in the design.`
+        ? `\nInclude a brand logo element in the composition.`
         : '';
 
+      // CRITICAL: When character ref is provided, do NOT describe the person — the reference image handles that
       const characterContext = character_ref_url
-        ? `\nThe thumbnail should feature the person from the character reference image in a creative, expressive pose related to the video topic.`
-        : '';
+        ? `\nIMPORTANT: A character reference image is provided. Do NOT describe the person's appearance (face, skin, hair, ethnicity, features). Instead, describe only their POSE, EXPRESSION, POSITION in frame, and INTERACTION with the scene. The AI model will use the reference image for the person's actual appearance. Example: "the person from the reference image positioned right of center, looking directly at camera with a confident expression, leaning slightly forward" — NOT "a man with brown hair and blue eyes".`
+        : `\nDescribe the person/subject in the thumbnail with enough detail to generate them from scratch.`;
 
-      const promptSystemPrompt = `You are a YouTube thumbnail prompt engineer. Create a detailed image generation prompt for a YouTube thumbnail.
+      const promptSystemPrompt = `You are a professional YouTube thumbnail prompt engineer using the VTM Image Prompt Enhancer system.
 
-The prompt must describe:
-1. A 16:9 YouTube thumbnail that is visually striking and click-worthy
-2. The character/person in an expressive, engaging pose${characterContext}
-3. Bold, readable text overlay with the video title or a shortened version
-4. Eye-catching colors and visual effects${analysisContext}${logoContext}
+Build the prompt using this exact layer architecture:
+[SUBJECT + POSE + POSITION] → [COMPOSITION + LAYOUT] → [LIGHTING] → [MOOD + COLOR GRADE] → [TEXT OVERLAY] → [QUALITY TAGS]
+
+LAYER DETAILS:
+
+1. SUBJECT + POSE: ${character_ref_url ? 'A character reference image is provided — do NOT describe the person\'s physical appearance. Only describe their pose, expression, body language, and position in frame. Say "the person from the reference image" and describe what they are DOING, not what they LOOK LIKE.' : 'Describe the person/subject in detail — what they look like, what they are doing, expression, pose.'}
+
+2. COMPOSITION: YouTube thumbnail is 16:9. Use rule of thirds. Place subject on one side, text/graphics on the other. Leave space for text overlay. Think about what catches the eye at SMALL sizes (mobile feed).
+
+3. LIGHTING: Be specific — not just "dramatic lighting" but exactly what kind:
+   - Low-key side lighting with deep shadows = drama
+   - Rim lighting from behind = glowing separation edge
+   - Neon practical lights = colored ambient from environment
+   - Golden hour backlight = warm, directional, natural rim halo
+   Choose lighting that matches the video topic mood.
+
+4. MOOD + COLOR GRADE: Pair mood with concrete color treatment:
+   - Teal and orange grade = Hollywood blockbuster standard
+   - Desaturated muted tones = prestige, sophisticated
+   - High contrast with saturated accents = energetic, attention-grabbing
+   - Dark gradient background = modern tech/tutorial feel
+
+5. TEXT OVERLAY: Extract 2-5 punchy words from the video title. Describe text placement, size, color, and style (bold sans-serif, outline, shadow, glow). Text must be READABLE at small sizes.
+
+6. QUALITY TAGS: End with: ultra-detailed, sharp focus, 8K, professional YouTube thumbnail, high contrast, vibrant${analysisContext}${logoContext}${characterContext}
 
 RULES:
-1. The prompt should be specific and detailed for an AI image generator
-2. Describe the exact composition, colors, lighting, and text placement
-3. Keep text overlay SHORT (3-6 words max from the title)
-4. Emphasize contrast and readability at small sizes
-5. Include dramatic lighting or effects that catch the eye
+- Every word costs the AI's attention budget — make every word work
+- Lead with subject + action, never with mood words alone
+- No contradictions (e.g., don't say "f/1.8 deep focus")
+- Be specific and concrete, not vague buzzwords
+- ${character_ref_url ? 'NEVER describe the character\'s physical appearance — the reference image handles that' : 'Describe the subject in vivid detail'}
 
-Return ONLY a plain text prompt string, no JSON, no code blocks. Just the prompt.`;
+Return ONLY the prompt as plain text. No JSON, no code blocks, no labels. Just the ready-to-use prompt.`;
 
       const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
