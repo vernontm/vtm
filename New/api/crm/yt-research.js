@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
         if (!video?.video_url) throw new Error('Video URL not found');
 
         // Use cobalt API to extract audio from YouTube
-        const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+        const cobaltRes = await fetch('https://api.cobalt.tools/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -72,20 +72,20 @@ module.exports = async function handler(req, res) {
           },
           body: JSON.stringify({
             url: video.video_url,
-            isAudioOnly: true,
-            aFormat: 'mp3',
-            filenamePattern: 'basic',
+            audioFormat: 'mp3',
+            audioBitrate: '128',
           }),
         });
 
         if (!cobaltRes.ok) {
           const errText = await cobaltRes.text();
-          throw new Error(`Audio extraction failed: ${errText}`);
+          throw new Error(`Audio extraction failed (${cobaltRes.status}): ${errText}`);
         }
 
         const cobaltData = await cobaltRes.json();
+        console.log('Cobalt response:', JSON.stringify(cobaltData).slice(0, 500));
         const downloadUrl = cobaltData.url;
-        if (!downloadUrl) throw new Error('No download URL from audio extractor. Try uploading the audio file manually.');
+        if (!downloadUrl) throw new Error(`No download URL from cobalt (status: ${cobaltData.status}). ${cobaltData.error?.code || cobaltData.text || JSON.stringify(cobaltData)}`);
 
         console.log('Downloading audio from:', downloadUrl);
         const audioRes = await fetch(downloadUrl);
