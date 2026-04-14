@@ -127,11 +127,28 @@ export default function YouTubeStudio() {
     })();
   }, []);
 
+  // ── Client-specific defaults for thumbnail generation ──
+  const CLIENT_DEFAULTS = {
+    '632a79e3-bdd1-4c80-9a64-583b64afcd2f': { // rayvaughnceo
+      charRefUrl: 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/freepik_a-professional-character-_2777707712.png',
+      logoUrl: 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/VTM_icon_logo.png',
+    },
+  };
+
   // ── Reload data when client changes ──
   useEffect(() => {
     if (!selectedClientId) {
       setVideos([]); setScripts([]); setThumbnails([]);
       return;
+    }
+    // Apply client defaults for thumbnail assets
+    const defaults = CLIENT_DEFAULTS[selectedClientId];
+    if (defaults) {
+      setCharRefUrl(defaults.charRefUrl || '');
+      setLogoUrl(defaults.logoUrl || '');
+    } else {
+      setCharRefUrl('');
+      setLogoUrl('');
     }
     loadAllData();
   }, [selectedClientId]);
