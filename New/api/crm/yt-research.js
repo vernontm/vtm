@@ -38,7 +38,7 @@ module.exports = async function handler(req, res) {
   // ── Transcribe a video ──
   if (action === 'transcribe' && req.method === 'POST') {
     try {
-      const { video_id } = req.body;
+      const { video_id, audio_url } = req.body;
       if (!video_id) return res.status(400).json({ error: 'video_id required' });
 
       // Mark as processing
@@ -47,65 +47,108 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({ transcription_status: 'processing', updated_at: new Date().toISOString() }),
       });
 
-      // Fetch the video record
       const videos = await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`);
       const video = videos?.[0];
-      if (!video?.video_url) throw new Error('Video URL not found');
+      if (!video) throw new Error('Video not found');
 
-      // Extract video ID from URL
-      const vidMatch = video.video_url.match(/(?:v=|youtu\.be\/|shorts\/)([\w-]{11})/);
-      if (!vidMatch) throw new Error('Invalid YouTube URL');
-      const ytVideoId = vidMatch[1];
+      let transcript = '';
 
-      // Use youtubei.js to get video info and caption tracks
-      const { Innertube } = require('youtubei.js');
-      const yt = await Innertube.create();
-      const info = await yt.getInfo(ytVideoId);
+      if (audio_url) {
+        // ── PATH A: Audio file uploaded → ElevenLabs STT ──
+        if (!ELEVENLABS_API_KEY) throw new Error('ELEVENLABS_API_KEY not configured');
 
-      // Auto-fill title and channel if missing
-      const autoTitle = info.basic_info?.title || '';
-      const autoChannel = info.basic_info?.author || '';
-      if (autoTitle || autoChannel) {
-        const updates = {};
-        if (!video.video_title && autoTitle) updates.video_title = autoTitle;
-        if (!video.channel_name && autoChannel) updates.channel_name = autoChannel;
-        if (Object.keys(updates).length) {
-          await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(updates),
-          });
+        console.log('Transcribing via ElevenLabs:', audio_url);
+        const fileRes = await fetch(audio_url);
+        if (!fileRes.ok) throw new Error('Failed to download audio file');
+        const fileBuffer = Buffer.from(await fileRes.arrayBuffer());
+
+        const urlPath = new URL(audio_url).pathname;
+        const fileName = urlPath.split('/').pop() || 'audio.mp3';
+        const mimeType = fileName.endsWith('.mp3') ? 'audio/mpeg'
+          : fileName.endsWith('.wav') ? 'audio/wav'
+          : fileName.endsWith('.m4a') ? 'audio/mp4'
+          : fileName.endsWith('.webm') ? 'audio/webm'
+          : 'video/mp4';
+
+        const boundary = '----FormBoundary' + Date.now();
+        const parts = [];
+        parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="model_id"\r\n\r\nscribe_v1\r\n`);
+        parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`);
+
+        const preFileBuffer = Buffer.from(parts.join(''));
+        const postFileBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);
+        const body = Buffer.concat([preFileBuffer, fileBuffer, postFileBuffer]);
+
+        const sttRes = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+          method: 'POST',
+          headers: {
+            'xi-api-key': ELEVENLABS_API_KEY,
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          },
+          body,
+        });
+
+        if (!sttRes.ok) {
+          const errText = await sttRes.text();
+          throw new Error(`ElevenLabs transcription failed: ${errText}`);
+        }
+
+        const sttData = await sttRes.json();
+        transcript = sttData.text || '';
+        console.log(`ElevenLabs transcript: ${transcript.length} chars`);
+
+      } else {
+        // ── PATH B: YouTube URL → pull captions ──
+        if (!video.video_url) throw new Error('No video URL or audio file provided');
+
+        const vidMatch = video.video_url.match(/(?:v=|youtu\.be\/|shorts\/)([\w-]{11})/);
+        if (!vidMatch) throw new Error('Invalid YouTube URL. Upload an audio file instead.');
+        const ytVideoId = vidMatch[1];
+
+        const { Innertube } = require('youtubei.js');
+        const yt = await Innertube.create();
+        const info = await yt.getInfo(ytVideoId);
+
+        // Auto-fill title and channel if missing
+        const autoTitle = info.basic_info?.title || '';
+        const autoChannel = info.basic_info?.author || '';
+        if (autoTitle || autoChannel) {
+          const updates = {};
+          if (!video.video_title && autoTitle) updates.video_title = autoTitle;
+          if (!video.channel_name && autoChannel) updates.channel_name = autoChannel;
+          if (Object.keys(updates).length) {
+            await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
+              method: 'PATCH',
+              body: JSON.stringify(updates),
+            });
+          }
+        }
+
+        const tracks = info.captions?.caption_tracks || [];
+        if (!tracks.length) throw new Error('No captions available for this video. Try uploading the audio file instead.');
+
+        const track = tracks.find(t => t.language_code === 'en' && t.kind !== 'asr')
+          || tracks.find(t => t.language_code === 'en')
+          || tracks[0];
+
+        console.log(`Caption track: ${track.language_code} (${track.kind || 'manual'})`);
+
+        const capRes = await fetch(track.base_url);
+        const xml = await capRes.text();
+
+        if (xml && xml.length > 0) {
+          const segments = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)]
+            .map(m => m[1]
+              .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+              .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\n/g, ' ')
+            );
+          transcript = segments.join(' ').replace(/  +/g, ' ').trim();
+          console.log(`Parsed ${segments.length} caption segments, ${transcript.length} chars`);
         }
       }
 
-      // Get caption tracks
-      const tracks = info.captions?.caption_tracks || [];
-      if (!tracks.length) throw new Error('No captions/subtitles available for this video.');
-
-      // Prefer English manual, then English auto, then first track
-      const track = tracks.find(t => t.language_code === 'en' && t.kind !== 'asr')
-        || tracks.find(t => t.language_code === 'en')
-        || tracks[0];
-
-      console.log(`Found caption track: ${track.language_code} (${track.kind || 'manual'})`);
-
-      // Fetch captions XML (the server's real IP makes the signed URL work)
-      const capRes = await fetch(track.base_url);
-      const xml = await capRes.text();
-
-      let transcript = '';
-      if (xml && xml.length > 0) {
-        // Parse XML: <text start="0" dur="5.1">caption text here</text>
-        const segments = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)]
-          .map(m => m[1]
-            .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-            .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\n/g, ' ')
-          );
-        transcript = segments.join(' ').replace(/  +/g, ' ').trim();
-        console.log(`Parsed ${segments.length} caption segments, ${transcript.length} chars`);
-      }
-
       if (!transcript || transcript.length < 20) {
-        throw new Error('Could not extract transcript. Captions may be empty or restricted.');
+        throw new Error('Transcript too short or empty. Try uploading the audio file instead.');
       }
 
       // Save transcript to the video record

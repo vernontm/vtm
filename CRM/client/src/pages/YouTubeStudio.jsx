@@ -79,7 +79,8 @@ export default function YouTubeStudio() {
   const [expandedVideoId, setExpandedVideoId] = useState(null);
   const [transcribingId, setTranscribingId] = useState(null);
   const [analyzingId, setAnalyzingId] = useState(null);
-  // audio upload refs removed — transcription now extracts audio from YouTube URL automatically
+  const [audioFile, setAudioFile] = useState(null);
+  const audioInputRef = useRef(null);
 
   // Scripts
   const [scripts, setScripts] = useState([]);
@@ -162,11 +163,11 @@ export default function YouTubeStudio() {
   // RESEARCH TAB HANDLERS
   // ══════════════════════════════════════════════════════════════
 
-  // Auto-process: add → transcribe → analyze in one go
-  async function autoProcess(videoId) {
+  // Auto-process: transcribe → analyze
+  async function autoProcess(videoId, audioUrl) {
     try {
       setTranscribingId(videoId);
-      await transcribeVideo({ video_id: videoId });
+      await transcribeVideo({ video_id: videoId, audio_url: audioUrl });
       const v1 = await getCompetitorVideos(selectedClientId);
       setVideos(v1 || []);
       setTranscribingId(null);
@@ -184,23 +185,42 @@ export default function YouTubeStudio() {
   }
 
   async function handleAddVideo() {
-    if (!videoUrl.trim() || !selectedClientId) return;
+    if (!selectedClientId) return;
+    if (!videoUrl.trim() && !audioFile) return;
     setAddingVideo(true); setError('');
     try {
+      // Create the video record
       const added = await addCompetitorVideo({
         client_id: selectedClientId,
-        video_url: videoUrl.trim(),
-        video_title: videoTitle.trim() || undefined,
+        video_url: videoUrl.trim() || `upload-${Date.now()}`,
+        video_title: videoTitle.trim() || (audioFile ? audioFile.name.replace(/\.[^.]+$/, '') : undefined),
         channel_name: videoChannel.trim() || undefined,
       });
-      setVideoUrl(''); setVideoTitle(''); setVideoChannel('');
+
       const v = await getCompetitorVideos(selectedClientId);
       setVideos(v || []);
+      const newId = added?.id || (v || [])[0]?.id;
+
+      // Upload audio file to Supabase storage if provided
+      let audioUrl = null;
+      if (audioFile && newId) {
+        const ext = audioFile.name.split('.').pop();
+        const path = `${selectedClientId}/yt-audio/${newId}_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('content-media')
+          .upload(path, audioFile, { upsert: true });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from('content-media').getPublicUrl(path);
+        audioUrl = urlData?.publicUrl;
+      }
+
+      setVideoUrl(''); setVideoTitle(''); setVideoChannel('');
+      setAudioFile(null);
+      if (audioInputRef.current) audioInputRef.current.value = '';
       setAddingVideo(false);
 
-      // Auto-transcribe and analyze in background
-      const newId = added?.id || (v || []).find(x => x.video_url === videoUrl.trim())?.id;
-      if (newId) autoProcess(newId);
+      // Auto-transcribe and analyze
+      if (newId) autoProcess(newId, audioUrl);
     } catch (e) { setError(e.message || 'Failed to add video'); setAddingVideo(false); }
   }
 
@@ -569,10 +589,10 @@ export default function YouTubeStudio() {
         {/* Add single video */}
         <div style={cardStyle}>
           <div style={sectionTitle}>Add Competitor Video</div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               style={{ ...inputStyle, flex: 2, minWidth: 200 }}
-              placeholder="YouTube URL"
+              placeholder="YouTube URL (optional)"
               value={videoUrl}
               onChange={e => setVideoUrl(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddVideo()}
@@ -589,10 +609,38 @@ export default function YouTubeStudio() {
               value={videoChannel}
               onChange={e => setVideoChannel(e.target.value)}
             />
-            <button onClick={handleAddVideo} disabled={addingVideo || !videoUrl.trim()} style={{ ...btnPrimary, opacity: addingVideo ? 0.6 : 1 }}>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 10 }}>
+            <label style={{
+              ...btnSecondary, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: audioFile ? '#e8f5e9' : '#f8f9fc',
+              color: audioFile ? '#22c55e' : '#5a5a6e',
+              border: audioFile ? '1px solid #86efac' : '1px solid #e5e7ef',
+            }}>
+              <Upload size={14} />
+              {audioFile ? audioFile.name : 'Upload Audio'}
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept=".mp3,.mp4,.m4a,.wav,.webm"
+                style={{ display: 'none' }}
+                onChange={e => setAudioFile(e.target.files?.[0] || null)}
+              />
+            </label>
+            {audioFile && (
+              <button onClick={() => { setAudioFile(null); if (audioInputRef.current) audioInputRef.current.value = ''; }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}>
+                <X size={14} />
+              </button>
+            )}
+            <div style={{ flex: 1 }} />
+            <button onClick={handleAddVideo} disabled={addingVideo || (!videoUrl.trim() && !audioFile)} style={{ ...btnPrimary, opacity: addingVideo ? 0.6 : 1 }}>
               {addingVideo ? <Loader size={14} className="spin" /> : <Plus size={14} />}
-              Add
+              Add & Process
             </button>
+          </div>
+          <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 8 }}>
+            Upload an audio/video file (.mp3, .mp4, .m4a, .wav) to transcribe with ElevenLabs. Or paste a YouTube URL to pull captions automatically.
           </div>
         </div>
 
