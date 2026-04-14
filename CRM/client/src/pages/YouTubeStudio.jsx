@@ -80,7 +80,10 @@ export default function YouTubeStudio() {
   const [transcribingId, setTranscribingId] = useState(null);
   const [analyzingId, setAnalyzingId] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
+  const [transcriptFile, setTranscriptFile] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
   const audioInputRef = useRef(null);
+  const transcriptInputRef = useRef(null);
 
   // Scripts
   const [scripts, setScripts] = useState([]);
@@ -184,22 +187,71 @@ export default function YouTubeStudio() {
     }
   }
 
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (['txt', 'srt', 'vtt'].includes(ext)) {
+      setTranscriptFile(file);
+      setAudioFile(null);
+    } else if (['mp3', 'mp4', 'm4a', 'wav', 'webm'].includes(ext)) {
+      setAudioFile(file);
+      setTranscriptFile(null);
+    }
+  }
+
   async function handleAddVideo() {
     if (!selectedClientId) return;
-    if (!videoUrl.trim() && !audioFile) return;
+    if (!videoUrl.trim() && !audioFile && !transcriptFile) return;
     setAddingVideo(true); setError('');
     try {
       // Create the video record
+      const fileName = audioFile?.name || transcriptFile?.name || '';
       const added = await addCompetitorVideo({
         client_id: selectedClientId,
         video_url: videoUrl.trim() || `upload-${Date.now()}`,
-        video_title: videoTitle.trim() || (audioFile ? audioFile.name.replace(/\.[^.]+$/, '') : undefined),
+        video_title: videoTitle.trim() || fileName.replace(/\.[^.]+$/, '') || undefined,
         channel_name: videoChannel.trim() || undefined,
       });
 
       const v = await getCompetitorVideos(selectedClientId);
       setVideos(v || []);
       const newId = added?.id || (v || [])[0]?.id;
+
+      if (transcriptFile && newId) {
+        // ── Transcript file: read text, save directly, skip to analyze ──
+        const text = await transcriptFile.text();
+        // Clean SRT/VTT timestamps if present
+        const cleaned = text
+          .replace(/^\d+\s*$/gm, '')                           // SRT sequence numbers
+          .replace(/\d{2}:\d{2}:\d{2}[.,]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[.,]\d{3}/g, '') // timestamps
+          .replace(/^WEBVTT.*$/gm, '')                          // VTT header
+          .replace(/<[^>]+>/g, '')                              // HTML tags
+          .replace(/\n{2,}/g, ' ')
+          .replace(/\n/g, ' ')
+          .replace(/  +/g, ' ')
+          .trim();
+
+        // Save transcript directly via API
+        await transcribeVideo({ video_id: newId, transcript_text: cleaned });
+        const v2 = await getCompetitorVideos(selectedClientId);
+        setVideos(v2 || []);
+
+        clearForm();
+        setAddingVideo(false);
+
+        // Auto-analyze only (transcription already done)
+        setAnalyzingId(newId);
+        try {
+          await analyzeVideo({ video_id: newId });
+          const v3 = await getCompetitorVideos(selectedClientId);
+          setVideos(v3 || []);
+        } catch (e) { setError(e.message || 'Analysis failed'); }
+        setAnalyzingId(null);
+        return;
+      }
 
       // Upload audio file to Supabase storage if provided
       let audioUrl = null;
@@ -214,14 +266,19 @@ export default function YouTubeStudio() {
         audioUrl = urlData?.publicUrl;
       }
 
-      setVideoUrl(''); setVideoTitle(''); setVideoChannel('');
-      setAudioFile(null);
-      if (audioInputRef.current) audioInputRef.current.value = '';
+      clearForm();
       setAddingVideo(false);
 
       // Auto-transcribe and analyze
       if (newId) autoProcess(newId, audioUrl);
     } catch (e) { setError(e.message || 'Failed to add video'); setAddingVideo(false); }
+  }
+
+  function clearForm() {
+    setVideoUrl(''); setVideoTitle(''); setVideoChannel('');
+    setAudioFile(null); setTranscriptFile(null);
+    if (audioInputRef.current) audioInputRef.current.value = '';
+    if (transcriptInputRef.current) transcriptInputRef.current.value = '';
   }
 
   async function handleBatchAdd() {
@@ -587,8 +644,61 @@ export default function YouTubeStudio() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Add single video */}
-        <div style={cardStyle}>
+        <div
+          style={{
+            ...cardStyle,
+            border: dragOver ? '2px dashed #4a6cf7' : cardStyle.border,
+            background: dragOver ? '#f0f4ff' : cardStyle.background,
+            transition: 'all 0.2s',
+          }}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+        >
           <div style={sectionTitle}>Add Competitor Video</div>
+
+          {/* Drag & drop zone */}
+          {!audioFile && !transcriptFile && (
+            <div style={{
+              border: '2px dashed #e5e7ef', borderRadius: 10, padding: '24px 16px',
+              textAlign: 'center', marginBottom: 14, cursor: 'pointer',
+              background: dragOver ? '#eef2ff' : '#fafbfd', transition: 'all 0.2s',
+            }}
+              onClick={() => audioInputRef.current?.click()}
+            >
+              <Upload size={28} color="#8e8ea0" strokeWidth={1.5} />
+              <div style={{ fontSize: 13, color: '#5a5a6e', marginTop: 8, fontWeight: 600 }}>
+                Drag & drop audio or transcript file
+              </div>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 4 }}>
+                Audio (.mp3, .mp4, .m4a, .wav) or transcript (.txt, .srt, .vtt)
+              </div>
+            </div>
+          )}
+
+          {/* File selected banner */}
+          {(audioFile || transcriptFile) && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+              borderRadius: 8, marginBottom: 14,
+              background: '#e8f5e9', border: '1px solid #86efac',
+            }}>
+              {audioFile ? <Film size={16} color="#22c55e" /> : <FileText size={16} color="#22c55e" />}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>
+                  {(audioFile || transcriptFile).name}
+                </div>
+                <div style={{ fontSize: 10, color: '#22c55e' }}>
+                  {audioFile ? 'Audio file — will transcribe with ElevenLabs' : 'Transcript file — will import text directly'}
+                </div>
+              </div>
+              <button onClick={() => { clearForm(); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               style={{ ...inputStyle, flex: 2, minWidth: 200 }}
@@ -610,37 +720,44 @@ export default function YouTubeStudio() {
               onChange={e => setVideoChannel(e.target.value)}
             />
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10 }}>
             <label style={{
-              ...btnSecondary, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+              ...btnSecondary, cursor: 'pointer', fontSize: 11, padding: '6px 12px',
               background: audioFile ? '#e8f5e9' : '#f8f9fc',
               color: audioFile ? '#22c55e' : '#5a5a6e',
               border: audioFile ? '1px solid #86efac' : '1px solid #e5e7ef',
             }}>
-              <Upload size={14} />
-              {audioFile ? audioFile.name : 'Upload Audio'}
+              <Upload size={12} />
+              Audio
               <input
                 ref={audioInputRef}
                 type="file"
                 accept=".mp3,.mp4,.m4a,.wav,.webm"
                 style={{ display: 'none' }}
-                onChange={e => setAudioFile(e.target.files?.[0] || null)}
+                onChange={e => { setAudioFile(e.target.files?.[0] || null); setTranscriptFile(null); }}
               />
             </label>
-            {audioFile && (
-              <button onClick={() => { setAudioFile(null); if (audioInputRef.current) audioInputRef.current.value = ''; }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4 }}>
-                <X size={14} />
-              </button>
-            )}
+            <label style={{
+              ...btnSecondary, cursor: 'pointer', fontSize: 11, padding: '6px 12px',
+              background: transcriptFile ? '#e8f5e9' : '#f8f9fc',
+              color: transcriptFile ? '#22c55e' : '#5a5a6e',
+              border: transcriptFile ? '1px solid #86efac' : '1px solid #e5e7ef',
+            }}>
+              <FileText size={12} />
+              Transcript
+              <input
+                ref={transcriptInputRef}
+                type="file"
+                accept=".txt,.srt,.vtt"
+                style={{ display: 'none' }}
+                onChange={e => { setTranscriptFile(e.target.files?.[0] || null); setAudioFile(null); }}
+              />
+            </label>
             <div style={{ flex: 1 }} />
-            <button onClick={handleAddVideo} disabled={addingVideo || (!videoUrl.trim() && !audioFile)} style={{ ...btnPrimary, opacity: addingVideo ? 0.6 : 1 }}>
+            <button onClick={handleAddVideo} disabled={addingVideo || (!videoUrl.trim() && !audioFile && !transcriptFile)} style={{ ...btnPrimary, opacity: addingVideo ? 0.6 : 1 }}>
               {addingVideo ? <Loader size={14} className="spin" /> : <Plus size={14} />}
               Add & Process
             </button>
-          </div>
-          <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 8 }}>
-            Upload an audio/video file (.mp3, .mp4, .m4a, .wav) to transcribe with ElevenLabs. Or paste a YouTube URL to pull captions automatically.
           </div>
         </div>
 

@@ -38,8 +38,17 @@ module.exports = async function handler(req, res) {
   // ── Transcribe a video ──
   if (action === 'transcribe' && req.method === 'POST') {
     try {
-      const { video_id, audio_url } = req.body;
+      const { video_id, audio_url, transcript_text } = req.body;
       if (!video_id) return res.status(400).json({ error: 'video_id required' });
+
+      // ── PATH C: Transcript text provided directly (from .txt/.srt/.vtt file) ──
+      if (transcript_text && transcript_text.length >= 20) {
+        await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ transcript: transcript_text, transcription_status: 'complete', updated_at: new Date().toISOString() }),
+        });
+        return res.json({ transcript: transcript_text, video_id, status: 'complete' });
+      }
 
       // Mark as processing
       await supaFetch(`crm_yt_competitor_videos?id=eq.${video_id}`, {
