@@ -24,6 +24,7 @@ const nav = [
   { to: '/outreach',       icon: Zap,             label: 'Outreach' },
   { to: '/content-scheduler', icon: Film,          label: 'Content' },
   { to: '/youtube',          icon: Film,          label: 'YouTube Studio' },
+  { to: '/email-marketing',  icon: Mail,          label: 'Email Marketing' },
 ];
 
 const navTools = [

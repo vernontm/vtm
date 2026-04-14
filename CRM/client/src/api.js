@@ -350,6 +350,34 @@ export const createYTAsset = (data) => request('/yt-assets', { method: 'POST', b
 export const deleteYTAsset = (id) => request(`/yt-assets?id=${id}`, { method: 'DELETE' });
 
 // ══════════════════════════════════════════════════════════════
+// ══ EMAIL MARKETING ══
+// ══════════════════════════════════════════════════════════════
+
+// Config
+export const getEmailConfig = (clientId) => request(`/email-config?client_id=${clientId}`);
+export const saveEmailConfig = (data) => request('/email-config', { method: 'POST', body: JSON.stringify(data) });
+
+// Contacts
+export const getEmailContacts = (clientId, tag) => request(`/email-contacts?client_id=${clientId}${tag ? '&tag=' + encodeURIComponent(tag) : ''}`);
+export const addEmailContacts = (data) => request('/email-contacts', { method: 'POST', body: JSON.stringify(data) });
+export const updateContactTags = (data) => request('/email-contacts?action=update-tags', { method: 'POST', body: JSON.stringify(data) });
+export const deleteEmailContact = (id) => request(`/email-contacts?id=${id}`, { method: 'DELETE' });
+
+// Templates
+export const getEmailTemplates = (clientId, type) => request(`/email-templates?client_id=${clientId}${type ? '&template_type=' + type : ''}`);
+export const createEmailTemplate = (data) => request('/email-templates', { method: 'POST', body: JSON.stringify(data) });
+export const updateEmailTemplate = (id, data) => request(`/email-templates?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteEmailTemplate = (id) => request(`/email-templates?id=${id}`, { method: 'DELETE' });
+
+// Campaigns
+export const getEmailCampaigns = (clientId) => request(`/email-campaigns?client_id=${clientId}`);
+export const createEmailCampaign = (data) => request('/email-campaigns?action=create', { method: 'POST', body: JSON.stringify(data) });
+export const sendEmailCampaign = (data) => request('/email-campaigns?action=send', { method: 'POST', body: JSON.stringify(data) });
+export const scheduleEmailCampaign = (data) => request('/email-campaigns?action=schedule', { method: 'POST', body: JSON.stringify(data) });
+export const updateEmailCampaign = (id, data) => request(`/email-campaigns?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteEmailCampaign = (id) => request(`/email-campaigns?id=${id}`, { method: 'DELETE' });
+
+// ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══
 // ══════════════════════════════════════════════════════════════
 
