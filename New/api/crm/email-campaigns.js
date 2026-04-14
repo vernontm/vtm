@@ -30,8 +30,11 @@ async function sendBatch(config, campaign, contacts, supaFetchFn) {
     try {
       const rawBody = (campaign.html_body || '')
         .replace(/\{\{name\}\}/g, contact.name || 'there')
-        .replace(/\{\{email\}\}/g, contact.email);
-      const subject = (campaign.subject || '').replace(/\{\{name\}\}/g, contact.name || 'there');
+        .replace(/\{\{email\}\}/g, contact.email)
+        .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
+      const subject = (campaign.subject || '')
+        .replace(/\{\{name\}\}/g, contact.name || 'there')
+        .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
       const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
 
       const emailRes = await fetch('https://api.resend.com/emails', {
@@ -140,7 +143,7 @@ module.exports = async function handler(req, res) {
   // POST — create campaign
   if (req.method === 'POST' && action === 'create') {
     try {
-      const { client_id, subject, html_body, tag_filter, scheduled_at, trigger_on_tag, auto_trigger_enabled } = req.body;
+      const { client_id, subject, html_body, tag_filter, scheduled_at, trigger_on_tag, auto_trigger_enabled, trigger_type } = req.body;
       if (!client_id || !subject) {
         return res.status(400).json({ error: 'client_id and subject required' });
       }
@@ -156,6 +159,7 @@ module.exports = async function handler(req, res) {
           scheduled_at: scheduled_at || null,
           trigger_on_tag: trigger_on_tag || null,
           auto_trigger_enabled: !!auto_trigger_enabled,
+          trigger_type: trigger_type || 'tag',
         }]),
       });
       return res.json(rows?.[0] || { created: true });
@@ -262,13 +266,14 @@ module.exports = async function handler(req, res) {
     try {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'id query param required' });
-      const { subject, html_body, tag_filter, scheduled_at, trigger_on_tag, auto_trigger_enabled } = req.body;
+      const { subject, html_body, tag_filter, scheduled_at, trigger_on_tag, auto_trigger_enabled, trigger_type } = req.body;
       const update = { updated_at: new Date().toISOString() };
       if (subject !== undefined) update.subject = subject;
       if (html_body !== undefined) update.html_body = html_body;
       if (tag_filter !== undefined) update.tag_filter = tag_filter;
       if (trigger_on_tag !== undefined) update.trigger_on_tag = trigger_on_tag;
       if (auto_trigger_enabled !== undefined) update.auto_trigger_enabled = !!auto_trigger_enabled;
+      if (trigger_type !== undefined) update.trigger_type = trigger_type;
       if (scheduled_at !== undefined) {
         update.scheduled_at = scheduled_at;
         update.status = scheduled_at ? 'scheduled' : 'draft';

@@ -7,8 +7,11 @@ async function sendWelcomeEmail(config, template, contact) {
 
   const rawBody = (template.html_body || '')
     .replace(/\{\{name\}\}/g, contact.name || 'there')
-    .replace(/\{\{email\}\}/g, contact.email);
-  const subject = (template.subject || '').replace(/\{\{name\}\}/g, contact.name || 'there');
+    .replace(/\{\{email\}\}/g, contact.email)
+    .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
+  const subject = (template.subject || '')
+    .replace(/\{\{name\}\}/g, contact.name || 'there')
+    .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
   const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
 
   const res = await fetch('https://api.resend.com/emails', {
@@ -79,16 +82,21 @@ module.exports = async function handler(req, res) {
         if (!c.email) continue;
         try {
           // Upsert contact
+          const row = {
+            client_id,
+            email: c.email.toLowerCase().trim(),
+            name: c.name || '',
+            tags: c.tags || [],
+            status: 'active',
+            signed_up_at: c.signed_up_at || new Date().toISOString(),
+          };
+          if (c.birthday_month) row.birthday_month = parseInt(c.birthday_month) || null;
+          if (c.birthday_day) row.birthday_day = parseInt(c.birthday_day) || null;
+          if (c.discount_code !== undefined) row.discount_code = c.discount_code || null;
           const rows = await supaFetch('crm_email_contacts', {
             method: 'POST',
             headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' },
-            body: JSON.stringify([{
-              client_id,
-              email: c.email.toLowerCase().trim(),
-              name: c.name || '',
-              tags: c.tags || [],
-              status: 'active',
-            }]),
+            body: JSON.stringify([row]),
           });
           const contact = rows?.[0];
           results.push(contact);
@@ -148,6 +156,28 @@ module.exports = async function handler(req, res) {
       const rows = await supaFetch(`crm_email_contacts?id=eq.${contact_id}`, {
         method: 'PATCH',
         body: JSON.stringify({ tags: tags || [], updated_at: new Date().toISOString() }),
+      });
+      return res.json(rows?.[0] || { updated: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // POST — update contact fields (name, birthday, discount code, etc.)
+  if (req.method === 'POST' && action === 'update-contact') {
+    try {
+      const { contact_id, name, birthday_month, birthday_day, tags, discount_code, signed_up_at } = req.body;
+      if (!contact_id) return res.status(400).json({ error: 'contact_id required' });
+      const update = { updated_at: new Date().toISOString() };
+      if (name !== undefined) update.name = name;
+      if (tags !== undefined) update.tags = tags;
+      if (birthday_month !== undefined) update.birthday_month = birthday_month ? parseInt(birthday_month) : null;
+      if (birthday_day !== undefined) update.birthday_day = birthday_day ? parseInt(birthday_day) : null;
+      if (discount_code !== undefined) update.discount_code = discount_code || null;
+      if (signed_up_at !== undefined) update.signed_up_at = signed_up_at || null;
+      const rows = await supaFetch(`crm_email_contacts?id=eq.${contact_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(update),
       });
       return res.json(rows?.[0] || { updated: true });
     } catch (err) {

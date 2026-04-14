@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   getContentClients, getEmailConfig, saveEmailConfig,
-  getEmailContacts, addEmailContacts, deleteEmailContact,
+  getEmailContacts, addEmailContacts, deleteEmailContact, updateEmailContact,
   getEmailTemplates, createEmailTemplate, updateEmailTemplate, deleteEmailTemplate,
   getEmailCampaigns, createEmailCampaign, sendEmailCampaign, deleteEmailCampaign,
   getTagContexts, saveTagContext, deleteTagContext,
@@ -9,7 +9,7 @@ import {
 } from '../api';
 import {
   Mail, Users, FileText, Send, Plus, Trash2, Loader, Check, X, ChevronDown,
-  Settings, Tag, Clock, RefreshCw, Eye, Calendar, Zap, BookOpen, Info,
+  Settings, Tag, Clock, RefreshCw, Eye, Calendar, Zap, BookOpen, Info, Cake, Gift,
 } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -53,7 +53,10 @@ const labelStyle = { fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBott
 const DYNAMIC_VARS = [
   { token: '{{name}}', label: 'Name' },
   { token: '{{email}}', label: 'Email' },
+  { token: '{{discount_code}}', label: 'Discount Code' },
 ];
+
+const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // Small helper: append a dynamic variable to a text state
 function VarButtons({ onInsert }) {
@@ -96,8 +99,14 @@ export default function EmailMarketing() {
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newTags, setNewTags] = useState('');
+  const [newBdayMonth, setNewBdayMonth] = useState('');
+  const [newBdayDay, setNewBdayDay] = useState('');
+  const [newDiscount, setNewDiscount] = useState('');
+  const [newSignedUpAt, setNewSignedUpAt] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
   const [adding, setAdding] = useState(false);
+  const [editContactId, setEditContactId] = useState(null);
+  const [editForm, setEditForm] = useState({ birthday_month: '', birthday_day: '', discount_code: '', signed_up_at: '' });
 
   // Template form
   const [tplName, setTplName] = useState('');
@@ -116,6 +125,7 @@ export default function EmailMarketing() {
   const [campSchedule, setCampSchedule] = useState('');
   const [campAutoTrigger, setCampAutoTrigger] = useState(false);
   const [campTriggerTag, setCampTriggerTag] = useState('');
+  const [campTriggerType, setCampTriggerType] = useState('tag'); // 'tag' | 'birthday'
   const [creatingCamp, setCreatingCamp] = useState(false);
   const [sendingCampId, setSendingCampId] = useState(null);
   const campBodyRef = useRef(null);
@@ -207,9 +217,18 @@ export default function EmailMarketing() {
       const tags = newTags.split(',').map(t => t.trim()).filter(Boolean);
       await addEmailContacts({
         client_id: selectedClientId,
-        contacts: [{ email: newEmail.trim(), name: newName.trim(), tags }],
+        contacts: [{
+          email: newEmail.trim(),
+          name: newName.trim(),
+          tags,
+          birthday_month: newBdayMonth ? parseInt(newBdayMonth) : null,
+          birthday_day: newBdayDay ? parseInt(newBdayDay) : null,
+          discount_code: newDiscount.trim() || null,
+          signed_up_at: newSignedUpAt ? new Date(newSignedUpAt).toISOString() : null,
+        }],
       });
-      setNewEmail(''); setNewName(''); setNewTags('');
+      setNewEmail(''); setNewName(''); setNewTags(''); setNewBdayMonth(''); setNewBdayDay('');
+      setNewDiscount(''); setNewSignedUpAt('');
       const [c, stats] = await Promise.all([getEmailContacts(selectedClientId), getContactStats(selectedClientId)]);
       setContacts(c || []); setContactStats(stats || {});
     } catch (e) { setError(e.message); }
@@ -238,6 +257,31 @@ export default function EmailMarketing() {
       await deleteEmailContact(id);
       setContacts(prev => prev.filter(c => c.id !== id));
     } catch (e) { setError(e.message); }
+  }
+
+  async function handleSaveEdit(contactId) {
+    try {
+      await updateEmailContact({
+        contact_id: contactId,
+        birthday_month: editForm.birthday_month || null,
+        birthday_day: editForm.birthday_day || null,
+        discount_code: editForm.discount_code || null,
+        signed_up_at: editForm.signed_up_at ? new Date(editForm.signed_up_at).toISOString() : null,
+      });
+      const c = await getEmailContacts(selectedClientId);
+      setContacts(c || []);
+      setEditContactId(null);
+    } catch (e) { setError(e.message); }
+  }
+
+  function startEditContact(c) {
+    setEditContactId(c.id);
+    setEditForm({
+      birthday_month: c.birthday_month || '',
+      birthday_day: c.birthday_day || '',
+      discount_code: c.discount_code || '',
+      signed_up_at: c.signed_up_at ? new Date(c.signed_up_at).toISOString().slice(0, 10) : '',
+    });
   }
 
   async function handleViewSends(contact) {
@@ -283,11 +327,12 @@ export default function EmailMarketing() {
         html_body: campBody,
         tag_filter: campTags,
         scheduled_at: campAutoTrigger ? null : (campSchedule || undefined),
-        trigger_on_tag: campAutoTrigger ? campTriggerTag : null,
-        auto_trigger_enabled: !!campAutoTrigger && !!campTriggerTag,
+        trigger_type: campAutoTrigger ? campTriggerType : 'tag',
+        trigger_on_tag: campAutoTrigger && campTriggerType === 'tag' ? campTriggerTag : null,
+        auto_trigger_enabled: !!campAutoTrigger && (campTriggerType === 'birthday' || !!campTriggerTag),
       });
       setCampSubject(''); setCampBody(''); setCampTags([]); setCampSchedule('');
-      setCampAutoTrigger(false); setCampTriggerTag('');
+      setCampAutoTrigger(false); setCampTriggerTag(''); setCampTriggerType('tag');
       const camp = await getEmailCampaigns(selectedClientId);
       setCampaigns(camp || []);
     } catch (e) { setError(e.message); }
@@ -537,6 +582,29 @@ export default function EmailMarketing() {
                 </div>
               )}
             </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
+            <div style={{ minWidth: 170 }}>
+              <label style={labelStyle}><Cake size={10} style={{ marginRight: 3 }} />Birthday</label>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <select style={{ ...inputStyle, flex: 1 }} value={newBdayMonth} onChange={e => setNewBdayMonth(e.target.value)}>
+                  <option value="">Month</option>
+                  {MONTHS.slice(1).map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+                </select>
+                <select style={{ ...inputStyle, width: 70 }} value={newBdayDay} onChange={e => setNewBdayDay(e.target.value)}>
+                  <option value="">Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <label style={labelStyle}><Gift size={10} style={{ marginRight: 3 }} />Discount Code</label>
+              <input style={inputStyle} placeholder="WELCOME10" value={newDiscount} onChange={e => setNewDiscount(e.target.value)} />
+            </div>
+            <div style={{ flex: 1, minWidth: 140 }}>
+              <label style={labelStyle}>Signed Up</label>
+              <input type="date" style={inputStyle} value={newSignedUpAt} onChange={e => setNewSignedUpAt(e.target.value)} />
+            </div>
             <button onClick={handleAddContact} disabled={adding || !newEmail.trim()} style={{ ...btnPrimary, opacity: adding ? 0.6 : 1 }}>
               {adding ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />} Add
             </button>
@@ -593,6 +661,9 @@ export default function EmailMarketing() {
                     <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Email</th>
                     <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Name</th>
                     <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Tags</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Birthday</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Code</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Signed Up</th>
                     <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Sent</th>
                     <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Opened</th>
                     <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Status</th>
@@ -602,24 +673,68 @@ export default function EmailMarketing() {
                 <tbody>
                   {contacts.map(c => {
                     const stats = contactStats[c.id] || { sent: 0, opened: 0, failed: 0 };
+                    const isEditing = editContactId === c.id;
                     return (
-                      <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f5', cursor: 'pointer' }} onClick={() => handleViewSends(c)}>
-                        <td style={{ padding: '10px 10px', fontWeight: 600, color: '#1a1a2e' }}>{c.email}</td>
-                        <td style={{ padding: '10px 10px', color: '#5a5a6e' }}>{c.name || '-'}</td>
-                        <td style={{ padding: '10px 10px' }}>
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {(c.tags || []).map((tag, i) => (
-                              <span key={i} style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, background: '#e0f2fe', color: '#0ea5e9' }}>{tag}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px 10px', textAlign: 'center', color: '#22c55e', fontWeight: 600 }}>{stats.sent}</td>
-                        <td style={{ padding: '10px 10px', textAlign: 'center', color: '#4a6cf7', fontWeight: 600 }}>{stats.opened}</td>
-                        <td style={{ padding: '10px 10px', textAlign: 'center' }}><StatusPill status={c.status} /></td>
-                        <td style={{ padding: '10px 10px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                          <button onClick={() => handleDeleteContact(c.id)} style={{ ...btnDanger, padding: '4px 8px', fontSize: 11 }}><Trash2 size={11} /></button>
-                        </td>
-                      </tr>
+                      <React.Fragment key={c.id}>
+                        <tr style={{ borderBottom: isEditing ? 'none' : '1px solid #f0f0f5', cursor: 'pointer' }} onClick={() => !isEditing && handleViewSends(c)}>
+                          <td style={{ padding: '10px 10px', fontWeight: 600, color: '#1a1a2e' }}>{c.email}</td>
+                          <td style={{ padding: '10px 10px', color: '#5a5a6e' }}>{c.name || '-'}</td>
+                          <td style={{ padding: '10px 10px' }}>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {(c.tags || []).map((tag, i) => (
+                                <span key={i} style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, background: '#e0f2fe', color: '#0ea5e9' }}>{tag}</span>
+                              ))}
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 10px', color: '#5a5a6e', fontSize: 12 }}>
+                            {c.birthday_month && c.birthday_day ? `${MONTHS[c.birthday_month]} ${c.birthday_day}` : '-'}
+                          </td>
+                          <td style={{ padding: '10px 10px', color: '#5a5a6e', fontSize: 12, fontFamily: 'monospace' }}>{c.discount_code || '-'}</td>
+                          <td style={{ padding: '10px 10px', color: '#5a5a6e', fontSize: 12 }}>
+                            {c.signed_up_at ? new Date(c.signed_up_at).toLocaleDateString() : '-'}
+                          </td>
+                          <td style={{ padding: '10px 10px', textAlign: 'center', color: '#22c55e', fontWeight: 600 }}>{stats.sent}</td>
+                          <td style={{ padding: '10px 10px', textAlign: 'center', color: '#4a6cf7', fontWeight: 600 }}>{stats.opened}</td>
+                          <td style={{ padding: '10px 10px', textAlign: 'center' }}><StatusPill status={c.status} /></td>
+                          <td style={{ padding: '10px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                            <button onClick={() => isEditing ? setEditContactId(null) : startEditContact(c)} style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, marginRight: 4 }}>
+                              {isEditing ? <X size={11} /> : <Eye size={11} />}
+                            </button>
+                            <button onClick={() => handleDeleteContact(c.id)} style={{ ...btnDanger, padding: '4px 8px', fontSize: 11 }}><Trash2 size={11} /></button>
+                          </td>
+                        </tr>
+                        {isEditing && (
+                          <tr style={{ borderBottom: '1px solid #f0f0f5', background: '#fafbfe' }}>
+                            <td colSpan={10} style={{ padding: '12px 10px' }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 170 }}>
+                                  <label style={labelStyle}>Birthday</label>
+                                  <div style={{ display: 'flex', gap: 4 }}>
+                                    <select style={{ ...inputStyle, flex: 1 }} value={editForm.birthday_month} onChange={e => setEditForm({ ...editForm, birthday_month: e.target.value })}>
+                                      <option value="">Month</option>
+                                      {MONTHS.slice(1).map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+                                    </select>
+                                    <select style={{ ...inputStyle, width: 70 }} value={editForm.birthday_day} onChange={e => setEditForm({ ...editForm, birthday_day: e.target.value })}>
+                                      <option value="">Day</option>
+                                      {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 140 }}>
+                                  <label style={labelStyle}>Discount Code</label>
+                                  <input style={inputStyle} value={editForm.discount_code} onChange={e => setEditForm({ ...editForm, discount_code: e.target.value })} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 140 }}>
+                                  <label style={labelStyle}>Signed Up</label>
+                                  <input type="date" style={inputStyle} value={editForm.signed_up_at} onChange={e => setEditForm({ ...editForm, signed_up_at: e.target.value })} />
+                                </div>
+                                <button onClick={() => handleSaveEdit(c.id)} style={btnPrimary}><Check size={13} /> Save</button>
+                                <button onClick={() => setEditContactId(null)} style={btnSecondary}><X size={13} /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -762,20 +877,43 @@ export default function EmailMarketing() {
           <div style={{ marginTop: 14, padding: 12, background: '#f8f9fc', borderRadius: 8, border: '1px solid #e5e7ef' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
               <input type="checkbox" checked={campAutoTrigger} onChange={e => setCampAutoTrigger(e.target.checked)} />
-              Auto-trigger on new contact with tag
+              Auto-trigger (tag or birthday)
             </label>
             {campAutoTrigger && (
-              <div style={{ marginTop: 8 }}>
-                <label style={labelStyle}>Trigger tag</label>
-                <select style={inputStyle} value={campTriggerTag} onChange={e => setCampTriggerTag(e.target.value)}>
-                  <option value="">-- select a tag --</option>
-                  {allKnownTags.map(tag => (
-                    <option key={tag} value={tag}>{tag}</option>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                  {[
+                    { key: 'tag', label: 'On new contact with tag', Icon: Tag },
+                    { key: 'birthday', label: "On contact's birthday", Icon: Cake },
+                  ].map(opt => (
+                    <button key={opt.key} type="button" onClick={() => setCampTriggerType(opt.key)} style={{
+                      padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: campTriggerType === opt.key ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
+                      color: campTriggerType === opt.key ? '#fff' : '#5a5a6e',
+                    }}><opt.Icon size={12} /> {opt.label}</button>
                   ))}
-                </select>
-                <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>
-                  When a new contact is added with this tag, they'll automatically receive this email.
                 </div>
+                {campTriggerType === 'tag' && (
+                  <>
+                    <label style={labelStyle}>Trigger tag</label>
+                    <select style={inputStyle} value={campTriggerTag} onChange={e => setCampTriggerTag(e.target.value)}>
+                      <option value="">-- select a tag --</option>
+                      {allKnownTags.map(tag => (
+                        <option key={tag} value={tag}>{tag}</option>
+                      ))}
+                    </select>
+                    <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>
+                      When a new contact is added with this tag, they'll automatically receive this email.
+                    </div>
+                  </>
+                )}
+                {campTriggerType === 'birthday' && (
+                  <div style={{ fontSize: 12, color: '#5a5a6e', padding: 10, background: '#fff7ed', borderRadius: 8, border: '1px solid #fed7aa' }}>
+                    <Cake size={12} style={{ marginRight: 6, color: '#f59e0b' }} />
+                    Sent automatically each year on the contact's birthday. Make sure contacts have birthday month/day set. Use <code>{'{{discount_code}}'}</code> for a personal gift.
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -787,7 +925,7 @@ export default function EmailMarketing() {
                 <input type="datetime-local" style={inputStyle} value={campSchedule} onChange={e => setCampSchedule(e.target.value)} />
               </div>
             )}
-            <button onClick={handleCreateCampaign} disabled={creatingCamp || !campSubject.trim() || (campAutoTrigger && !campTriggerTag)} style={{ ...btnPrimary, opacity: creatingCamp ? 0.6 : 1 }}>
+            <button onClick={handleCreateCampaign} disabled={creatingCamp || !campSubject.trim() || (campAutoTrigger && campTriggerType === 'tag' && !campTriggerTag)} style={{ ...btnPrimary, opacity: creatingCamp ? 0.6 : 1 }}>
               {creatingCamp ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : campAutoTrigger ? <Zap size={14} /> : campSchedule ? <Calendar size={14} /> : <Plus size={14} />}
               {campAutoTrigger ? 'Create Auto-Trigger' : campSchedule ? 'Schedule Campaign' : 'Create Draft'}
             </button>
@@ -820,6 +958,11 @@ export default function EmailMarketing() {
                       </div>
                       <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <StatusPill status={c.status} />
+                        {c.auto_trigger_enabled && c.trigger_type === 'birthday' && (
+                          <span style={{ padding: '2px 8px', borderRadius: 8, background: '#fff7ed', color: '#c2410c', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Cake size={10} /> Birthday
+                          </span>
+                        )}
                         {c.auto_trigger_enabled && c.trigger_on_tag && (
                           <span style={{ padding: '2px 8px', borderRadius: 8, background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
                             Auto on #{c.trigger_on_tag}

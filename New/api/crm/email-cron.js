@@ -129,10 +129,20 @@ module.exports = async function handler(req, res) {
           let sentCount = 0;
           for (const send of toSendNow) {
             try {
+              // Fetch latest contact record for fresh discount_code
+              let contactRow = null;
+              try {
+                const cRows = await supaFetch(`crm_email_contacts?id=eq.${send.contact_id}&limit=1`);
+                contactRow = cRows?.[0] || null;
+              } catch (_) {}
+              const dCode = contactRow?.discount_code || '';
               const rawBody = (campaign.html_body || '')
                 .replace(/\{\{name\}\}/g, send.name || 'there')
-                .replace(/\{\{email\}\}/g, send.email);
-              const subject = (campaign.subject || '').replace(/\{\{name\}\}/g, send.name || 'there');
+                .replace(/\{\{email\}\}/g, send.email)
+                .replace(/\{\{discount_code\}\}/g, dCode);
+              const subject = (campaign.subject || '')
+                .replace(/\{\{name\}\}/g, send.name || 'there')
+                .replace(/\{\{discount_code\}\}/g, dCode);
               const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
 
               const emailRes = await fetch('https://api.resend.com/emails', {
@@ -208,6 +218,98 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ── 3. Process birthday campaigns ──
+    results.birthdaySent = 0;
+    results.birthdayFailed = 0;
+    const nowDate = new Date();
+    const curMonth = nowDate.getUTCMonth() + 1;
+    const curDay = nowDate.getUTCDate();
+    const curYear = nowDate.getUTCFullYear();
+
+    try {
+      const birthdayCampaigns = await supaFetch(
+        `crm_email_campaigns?trigger_type=eq.birthday&auto_trigger_enabled=eq.true`
+      );
+      for (const camp of (birthdayCampaigns || [])) {
+        try {
+          const configs = await supaFetch(`crm_email_config?client_id=eq.${camp.client_id}`);
+          const config = configs?.[0];
+          if (!config) continue;
+
+          const birthdayContacts = await supaFetch(
+            `crm_email_contacts?client_id=eq.${camp.client_id}&status=eq.active&birthday_month=eq.${curMonth}&birthday_day=eq.${curDay}`
+          );
+          if (!birthdayContacts?.length) continue;
+
+          for (const contact of birthdayContacts) {
+            try {
+              // Skip if already sent this year
+              const existing = await supaFetch(
+                `crm_email_birthday_sends?campaign_id=eq.${camp.id}&contact_id=eq.${contact.id}&send_year=eq.${curYear}&limit=1`
+              );
+              if (existing?.length) continue;
+
+              const rawBody = (camp.html_body || '')
+                .replace(/\{\{name\}\}/g, contact.name || 'there')
+                .replace(/\{\{email\}\}/g, contact.email)
+                .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
+              const subject = (camp.subject || '')
+                .replace(/\{\{name\}\}/g, contact.name || 'there')
+                .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
+              const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
+
+              const emailRes = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${config.resend_api_key}`,
+                },
+                body: JSON.stringify({
+                  from: config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email,
+                  to: [contact.email],
+                  subject,
+                  html,
+                }),
+              });
+
+              if (emailRes.ok) {
+                const data = await emailRes.json();
+                await supaFetch('crm_email_sends', {
+                  method: 'POST',
+                  body: JSON.stringify([{
+                    campaign_id: camp.id,
+                    contact_id: contact.id,
+                    email: contact.email,
+                    status: 'sent',
+                    sent_at: new Date().toISOString(),
+                    resend_id: data.id || '',
+                  }]),
+                });
+                await supaFetch('crm_email_birthday_sends', {
+                  method: 'POST',
+                  body: JSON.stringify([{
+                    campaign_id: camp.id,
+                    contact_id: contact.id,
+                    send_year: curYear,
+                  }]),
+                });
+                results.birthdaySent++;
+              } else {
+                results.birthdayFailed++;
+              }
+            } catch (e) {
+              results.birthdayFailed++;
+              results.errors.push(`Birthday send ${contact.email}: ${e.message}`);
+            }
+          }
+        } catch (e) {
+          results.errors.push(`Birthday campaign ${camp.id}: ${e.message}`);
+        }
+      }
+    } catch (e) {
+      results.errors.push(`Birthday processing: ${e.message}`);
+    }
+
     return res.json({ ok: true, processed_at: now, ...results });
   } catch (err) {
     console.error('Email cron error:', err);
@@ -242,8 +344,11 @@ async function sendBatchWithRollover(config, campaign, contacts, wrap = null) {
     try {
       const rawBody = (campaign.html_body || '')
         .replace(/\{\{name\}\}/g, contact.name || 'there')
-        .replace(/\{\{email\}\}/g, contact.email);
-      const subject = (campaign.subject || '').replace(/\{\{name\}\}/g, contact.name || 'there');
+        .replace(/\{\{email\}\}/g, contact.email)
+        .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
+      const subject = (campaign.subject || '')
+        .replace(/\{\{name\}\}/g, contact.name || 'there')
+        .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
       const html = wrap ? wrap(rawBody, { subject, fromName: config.from_name }) : rawBody;
 
       const emailRes = await fetch('https://api.resend.com/emails', {

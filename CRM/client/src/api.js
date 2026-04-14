@@ -362,6 +362,7 @@ export const getEmailContacts = (clientId, tag) => request(`/email-contacts?clie
 export const addEmailContacts = (data) => request('/email-contacts', { method: 'POST', body: JSON.stringify(data) });
 export const updateContactTags = (data) => request('/email-contacts?action=update-tags', { method: 'POST', body: JSON.stringify(data) });
 export const deleteEmailContact = (id) => request(`/email-contacts?id=${id}`, { method: 'DELETE' });
+export const updateEmailContact = (data) => request('/email-contacts?action=update-contact', { method: 'POST', body: JSON.stringify(data) });
 
 // Templates
 export const getEmailTemplates = (clientId, type) => request(`/email-templates?client_id=${clientId}${type ? '&template_type=' + type : ''}`);
