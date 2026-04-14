@@ -390,6 +390,12 @@ export const getContactSends = (contactId) => request(`/email-stats?action=conta
 // Email image upload (returns { url, key })
 export const uploadEmailImage = (data) => request('/email-upload-image', { method: 'POST', body: JSON.stringify(data) });
 
+// Client logo upload — also persists logo_url on crm_content_clients
+export const uploadClientLogo = (data) => request('/client-logo-upload', { method: 'POST', body: JSON.stringify(data) });
+
+// AI-generate an email template using the client's brand bible + logo + colors
+export const generateEmailTemplateAI = (data) => request('/email-template-ai', { method: 'POST', body: JSON.stringify(data) });
+
 // ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══
 // ══════════════════════════════════════════════════════════════

@@ -6,12 +6,13 @@ import {
   getEmailCampaigns, createEmailCampaign, sendEmailCampaign, deleteEmailCampaign,
   getTagContexts, saveTagContext, deleteTagContext,
   getContactStats, getContactSends,
+  generateEmailTemplateAI, uploadClientLogo, updateContentClient, createContentClient,
 } from '../api';
 import EmailEditor from '../components/EmailEditor';
 import {
   Mail, Users, FileText, Send, Plus, Trash2, Loader, Check, X, ChevronDown,
   Settings, Tag, Clock, RefreshCw, Eye, Calendar, Zap, BookOpen, Info, Cake, Gift,
-  Edit3, Search, MailOpen, MousePointer, UserMinus, Globe,
+  Edit3, Search, MailOpen, MousePointer, UserMinus, Globe, Sparkles, Image as ImageIcon, Upload,
 } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -120,6 +121,20 @@ export default function EmailMarketing() {
   const [savingTpl, setSavingTpl] = useState(false);
   const [editingTplId, setEditingTplId] = useState(null);
   const tplSubjectRef = useRef(null);
+  // AI template generator + logo upload
+  const [aiGenOpen, setAiGenOpen] = useState(false);
+  const [aiGenPrompt, setAiGenPrompt] = useState('');
+  const [aiGenLoading, setAiGenLoading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef(null);
+  // New client modal
+  const [newClientOpen, setNewClientOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientWebsite, setNewClientWebsite] = useState('');
+  const [newClientTone, setNewClientTone] = useState('');
+  const [newClientPrimary, setNewClientPrimary] = useState('#E8650A');
+  const [newClientSecondary, setNewClientSecondary] = useState('#1a1a2e');
+  const [creatingClient, setCreatingClient] = useState(false);
 
   // Campaign form
   const [campSubject, setCampSubject] = useState('');
@@ -323,6 +338,85 @@ export default function EmailMarketing() {
     setActiveTab('templates');
   }
 
+  // ── AI template generator ──
+  async function handleAIGenerate() {
+    if (!selectedClientId) return;
+    setAiGenLoading(true); setError('');
+    try {
+      const r = await generateEmailTemplateAI({
+        client_id: selectedClientId,
+        prompt: aiGenPrompt.trim(),
+        template_type: tplType,
+      });
+      if (r.subject) setTplSubject(r.subject);
+      if (r.preview_text) { setTplPreview(r.preview_text); setTplShowPreview(true); }
+      if (r.html_body) setTplBody(r.html_body);
+      if (!tplName.trim()) setTplName(aiGenPrompt.trim().slice(0, 40) || `AI ${tplType} template`);
+      setAiGenOpen(false);
+      setAiGenPrompt('');
+    } catch (e) { setError('AI generation failed: ' + e.message); }
+    setAiGenLoading(false);
+  }
+
+  // ── Logo upload ──
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  async function handleLogoUpload(file) {
+    if (!file || !selectedClientId) return;
+    setLogoUploading(true); setError('');
+    try {
+      const b64 = await fileToBase64(file);
+      await uploadClientLogo({
+        client_id: selectedClientId,
+        filename: file.name,
+        content_type: file.type,
+        data_base64: b64,
+      });
+      // Refresh clients
+      const data = await getContentClients();
+      setClients(data || []);
+    } catch (e) { setError('Logo upload failed: ' + e.message); }
+    setLogoUploading(false);
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  }
+  async function handleBrandColorChange(field, value) {
+    if (!selectedClientId) return;
+    try {
+      await updateContentClient(selectedClientId, { [field]: value });
+      const data = await getContentClients();
+      setClients(data || []);
+    } catch (e) { setError('Color save failed: ' + e.message); }
+  }
+
+  // ── New client ──
+  async function handleCreateClient() {
+    if (!newClientName.trim()) return;
+    setCreatingClient(true); setError('');
+    try {
+      const created = await createContentClient({
+        business_name: newClientName.trim(),
+        website_url: newClientWebsite.trim() || null,
+        preferred_tone: newClientTone.trim() || null,
+        brand_primary_color: newClientPrimary,
+        brand_secondary_color: newClientSecondary,
+      });
+      const data = await getContentClients();
+      setClients(data || []);
+      const newId = created?.id || created?.[0]?.id;
+      if (newId) setSelectedClientId(newId);
+      setNewClientOpen(false);
+      setNewClientName(''); setNewClientWebsite(''); setNewClientTone('');
+      setNewClientPrimary('#E8650A'); setNewClientSecondary('#1a1a2e');
+    } catch (e) { setError('Create client failed: ' + e.message); }
+    setCreatingClient(false);
+  }
+
   // ── Campaign handlers ──
   async function handleCreateCampaign() {
     if (!campSubject.trim() || !selectedClientId) return;
@@ -439,6 +533,15 @@ export default function EmailMarketing() {
           {clients.length === 0 && (
             <div style={{ padding: '8px 16px', fontSize: 12, color: '#ccc' }}>No clients yet</div>
           )}
+          <div style={{ padding: '4px 12px 10px' }}>
+            <button onClick={() => setNewClientOpen(true)} style={{
+              width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px dashed #c7d2fe',
+              background: '#eef2ff', color: '#4a6cf7', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+              <Plus size={13} /> New Client
+            </button>
+          </div>
           {clients.map(c => (
             <div
               key={c.id}
@@ -569,6 +672,120 @@ export default function EmailMarketing() {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* New client modal */}
+      {newClientOpen && (
+        <div onClick={() => !creatingClient && setNewClientOpen(false)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 480, width: '100%', padding: 22 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Create New Client</div>
+              <button onClick={() => setNewClientOpen(false)} disabled={creatingClient} style={btnSecondary}><X size={13} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Business Name *</label>
+                <input style={inputStyle} placeholder="Acme Coffee Co." value={newClientName} onChange={e => setNewClientName(e.target.value)} autoFocus />
+              </div>
+              <div>
+                <label style={labelStyle}>Website (optional)</label>
+                <input style={inputStyle} placeholder="https://example.com" value={newClientWebsite} onChange={e => setNewClientWebsite(e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>Preferred Tone (optional)</label>
+                <input style={inputStyle} placeholder="warm, confident, direct" value={newClientTone} onChange={e => setNewClientTone(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Primary Color</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input type="color" value={newClientPrimary} onChange={e => setNewClientPrimary(e.target.value)}
+                      style={{ width: 44, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                    <input style={inputStyle} value={newClientPrimary} onChange={e => setNewClientPrimary(e.target.value)} />
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Secondary Color</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input type="color" value={newClientSecondary} onChange={e => setNewClientSecondary(e.target.value)}
+                      style={{ width: 44, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                    <input style={inputStyle} value={newClientSecondary} onChange={e => setNewClientSecondary(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+                Logo and brand bible can be added from Settings after creation.
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <button onClick={handleCreateClient} disabled={creatingClient || !newClientName.trim()}
+                  style={{ ...btnPrimary, opacity: (creatingClient || !newClientName.trim()) ? 0.6 : 1 }}>
+                  {creatingClient ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
+                  Create Client
+                </button>
+                <button onClick={() => setNewClientOpen(false)} disabled={creatingClient} style={btnSecondary}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI template generator modal */}
+      {aiGenOpen && (
+        <div onClick={() => !aiGenLoading && setAiGenOpen(false)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 520, width: '100%', padding: 22 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={16} color="#E8650A" /> Generate Template with AI
+              </div>
+              <button onClick={() => setAiGenOpen(false)} disabled={aiGenLoading} style={btnSecondary}><X size={13} /></button>
+            </div>
+            <div style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14 }}>
+              Uses <strong>{selectedClient?.business_name}</strong>'s brand bible, logo, and colors to produce a ready-to-send HTML template.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Template Type</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['welcome', 'blast'].map(t => (
+                    <button key={t} onClick={() => setTplType(t)} style={{
+                      padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
+                      background: tplType === t ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
+                      color: tplType === t ? '#fff' : '#5a5a6e',
+                    }}>{t}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>What should this email accomplish? (optional)</label>
+                <textarea style={{ ...inputStyle, minHeight: 90, fontFamily: 'inherit', resize: 'vertical' }}
+                  placeholder="e.g. Announce our Spring Sale - 25% off all blends, urgency around Friday deadline, drive clicks to /shop"
+                  value={aiGenPrompt} onChange={e => setAiGenPrompt(e.target.value)} />
+              </div>
+              {!selectedClient?.logo_url && (
+                <div style={{ fontSize: 11, padding: 8, background: '#fef3c7', color: '#b45309', borderRadius: 6 }}>
+                  Tip: upload a logo in Settings for better results.
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+                <button onClick={handleAIGenerate} disabled={aiGenLoading} style={{
+                  background: 'linear-gradient(135deg, #E8650A, #f59e0b)', color: '#fff', borderRadius: 8, border: 'none',
+                  padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex',
+                  alignItems: 'center', gap: 6, opacity: aiGenLoading ? 0.6 : 1,
+                }}>
+                  {aiGenLoading ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={14} />}
+                  {aiGenLoading ? 'Generating...' : 'Generate'}
+                </button>
+                <button onClick={() => setAiGenOpen(false)} disabled={aiGenLoading} style={btnSecondary}>Cancel</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -827,10 +1044,17 @@ export default function EmailMarketing() {
           <label style={labelStyle}>Body <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(rich editor · switch to HTML source for full control · emails auto-wrapped in styled shell)</span></label>
           <VarButtons onInsert={token => setTplBody((tplBody || '') + token)} />
           <EmailEditor value={tplBody} onChange={setTplBody} clientId={selectedClientId} placeholder="Hey {{name}}," height={320} />
-          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
             <button onClick={handleSaveTemplate} disabled={savingTpl || !tplName.trim() || !tplSubject.trim()} style={{ ...btnPrimary, opacity: savingTpl ? 0.6 : 1 }}>
               {savingTpl ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
               {editingTplId ? 'Update Template' : 'Save Template'}
+            </button>
+            <button type="button" onClick={() => setAiGenOpen(true)} style={{
+              background: 'linear-gradient(135deg, #E8650A, #f59e0b)', color: '#fff', borderRadius: 8, border: 'none',
+              padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex',
+              alignItems: 'center', gap: 6,
+            }}>
+              <Sparkles size={14} /> Generate with AI
             </button>
             {editingTplId && (
               <button onClick={() => { setEditingTplId(null); setTplName(''); setTplSubject(''); setTplBody(''); setTplPreview(''); setTplShowPreview(false); setTplType('blast'); }} style={btnSecondary}>
@@ -1240,6 +1464,56 @@ export default function EmailMarketing() {
               {savingConfig ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
               Save Configuration
             </button>
+          </div>
+        </div>
+
+        <div style={cardStyle}>
+          <div style={sectionTitle}>Branding — used by AI template generator</div>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
+              <label style={labelStyle}>Logo</label>
+              <div style={{
+                width: 160, height: 160, border: '1px dashed #c7d2fe', borderRadius: 10, background: '#f8f9fc',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+              }}>
+                {selectedClient?.logo_url ? (
+                  <img src={selectedClient.logo_url} alt="logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                ) : (
+                  <ImageIcon size={36} color="#b0b0c0" strokeWidth={1} />
+                )}
+              </div>
+              <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => handleLogoUpload(e.target.files?.[0])} />
+              <button onClick={() => logoInputRef.current?.click()} disabled={logoUploading} style={{ ...btnSecondary, opacity: logoUploading ? 0.6 : 1 }}>
+                {logoUploading ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={13} />}
+                {selectedClient?.logo_url ? 'Replace logo' : 'Upload logo'}
+              </button>
+            </div>
+            <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Primary color (CTA buttons, accents)</label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="color" value={selectedClient?.brand_primary_color || '#E8650A'}
+                    onChange={e => handleBrandColorChange('brand_primary_color', e.target.value)}
+                    style={{ width: 48, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                  <input style={inputStyle} value={selectedClient?.brand_primary_color || ''}
+                    onChange={e => handleBrandColorChange('brand_primary_color', e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Secondary color (headings, dark)</label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="color" value={selectedClient?.brand_secondary_color || '#1a1a2e'}
+                    onChange={e => handleBrandColorChange('brand_secondary_color', e.target.value)}
+                    style={{ width: 48, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                  <input style={inputStyle} value={selectedClient?.brand_secondary_color || ''}
+                    onChange={e => handleBrandColorChange('brand_secondary_color', e.target.value)} />
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: '#8e8ea0', lineHeight: 1.5 }}>
+                These values plus the client's brand bible are used when you click <strong>Generate with AI</strong> on a template.
+              </div>
+            </div>
           </div>
         </div>
 
