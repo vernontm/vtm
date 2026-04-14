@@ -21,11 +21,13 @@ const PAGE_CONTEXTS = {
   '/quick-notes':       { label: 'Notes',          type: 'general' },
   '/settings':          { label: 'Settings',       type: 'general' },
   '/notifications':     { label: 'Notifications',  type: 'general' },
+  '/youtube':           { label: 'YouTube',         type: 'youtube' },
 };
 
 const PLACEHOLDERS = {
   email: 'Describe the email you want to create...',
   content: 'Describe a task for your content accounts...',
+  youtube: 'Create a YouTube script about...',
   general: 'Ask me anything about your CRM...',
 };
 
@@ -41,6 +43,12 @@ const QUICK_BUTTONS = {
     { label: 'Schedule 10 Threads posts for all accounts', icon: '\ud83d\udcc5' },
     { label: 'Generate AI automation posts for all accounts', icon: '\ud83e\udd16' },
     { label: 'Schedule all unscheduled content', icon: '\u23f0' },
+  ],
+  youtube: [
+    'Create a script about AI automation for business',
+    'Analyze my last 5 competitor videos',
+    'Generate a thumbnail for my latest script',
+    'Complete the package for my draft script',
   ],
   general: [
     'What leads need follow-up?',
@@ -114,6 +122,16 @@ export default function GlobalAgent() {
           summary += `${icon} ${r.client_name}: ${detail}\n`;
         }
         setMessages(prev => [...prev, { role: 'assistant', content: summary.trim() }]);
+      } else if (ctx.type === 'youtube') {
+        const convo = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
+        const res = await fetch('/api/crm/global-agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: msg, conversation: convo, page: '/youtube', context_type: 'youtube' }),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Agent error');
+        const result = await res.json();
+        setMessages(prev => [...prev, { role: 'assistant', content: result.message || result.answer || JSON.stringify(result) }]);
       } else {
         const convo = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
         const res = await fetch('/api/crm/global-agent', {
@@ -271,7 +289,7 @@ export default function GlobalAgent() {
                 fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 5,
               }}>
                 <Loader size={11} className="spin" />
-                {ctx.type === 'email' ? 'Generating email...' : ctx.type === 'content' ? 'Running across accounts...' : 'Thinking...'}
+                {ctx.type === 'email' ? 'Generating email...' : ctx.type === 'content' ? 'Running across accounts...' : ctx.type === 'youtube' ? 'Working on YouTube...' : 'Thinking...'}
               </div>
             )}
             <div ref={endRef} />

@@ -317,6 +317,36 @@ export const runBulkAgent = (data) => request('/bulk-agent', { method: 'POST', b
 export const approveAndSchedule = (data) => request('/content-ai?action=approve-and-schedule', { method: 'POST', body: JSON.stringify(data) });
 
 // ══════════════════════════════════════════════════════════════
+// ══ YOUTUBE STUDIO API ══
+// ══════════════════════════════════════════════════════════════
+
+// Research
+export const getCompetitorVideos = (clientId) => request(`/yt-research${clientId ? '?client_id=' + clientId : ''}`);
+export const addCompetitorVideo = (data) => request('/yt-research?action=add', { method: 'POST', body: JSON.stringify(data) });
+export const transcribeVideo = (data) => request('/yt-research?action=transcribe', { method: 'POST', body: JSON.stringify(data) });
+export const analyzeVideo = (data) => request('/yt-research?action=analyze', { method: 'POST', body: JSON.stringify(data) });
+export const batchAddVideos = (data) => request('/yt-research?action=batch', { method: 'POST', body: JSON.stringify(data) });
+export const deleteCompetitorVideo = (id) => request(`/yt-research?id=${id}`, { method: 'DELETE' });
+
+// Scripts
+export const generateYTScript = (data) => request('/yt-scripts?action=generate', { method: 'POST', body: JSON.stringify(data) });
+export const completeYTPackage = (data) => request('/yt-scripts?action=complete-package', { method: 'POST', body: JSON.stringify(data) });
+export const getYTScripts = (clientId) => request(`/yt-scripts?client_id=${clientId}`);
+export const updateYTScript = (id, data) => request(`/yt-scripts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteYTScript = (id) => request(`/yt-scripts?id=${id}`, { method: 'DELETE' });
+
+// Thumbnails
+export const analyzeInspiration = (data) => request('/yt-thumbnails?action=analyze-inspiration', { method: 'POST', body: JSON.stringify(data) });
+export const generateThumbnail = (data) => request('/yt-thumbnails?action=generate', { method: 'POST', body: JSON.stringify(data) });
+export const getYTThumbnails = (clientId) => request(`/yt-thumbnails?client_id=${clientId}`);
+export const deleteYTThumbnail = (id) => request(`/yt-thumbnails?id=${id}`, { method: 'DELETE' });
+
+// Assets
+export const getYTAssets = (clientId, type) => request(`/yt-assets?client_id=${clientId}${type ? '&asset_type=' + type : ''}`);
+export const createYTAsset = (data) => request('/yt-assets', { method: 'POST', body: JSON.stringify(data) });
+export const deleteYTAsset = (id) => request(`/yt-assets?id=${id}`, { method: 'DELETE' });
+
+// ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══
 // ══════════════════════════════════════════════════════════════
 

@@ -23,6 +23,7 @@ const nav = [
   { to: '/portfolio',      icon: FolderOpen,      label: 'Portfolio' },
   { to: '/outreach',       icon: Zap,             label: 'Outreach' },
   { to: '/content-scheduler', icon: Film,          label: 'Content' },
+  { to: '/youtube',          icon: Film,          label: 'YouTube Studio' },
 ];
 
 const navTools = [

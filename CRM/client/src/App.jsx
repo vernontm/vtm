@@ -23,6 +23,7 @@ import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
 import Outreach from './pages/Outreach';
 import ContentScheduler from './pages/ContentScheduler';
+import YouTubeStudio from './pages/YouTubeStudio';
 import GlobalAgent from './components/GlobalAgent';
 
 // Academy Admin Pages
@@ -81,6 +82,7 @@ function AppLayout() {
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/outreach" element={<Outreach />} />
               <Route path="/content-scheduler" element={<ContentScheduler />} />
+              <Route path="/youtube" element={<YouTubeStudio />} />
               <Route path="/settings" element={<Settings />} />
               {/* Academy Admin */}
               <Route path="/academy" element={<AcademyDashboard />} />
