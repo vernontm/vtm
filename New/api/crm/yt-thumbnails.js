@@ -290,15 +290,13 @@ Return ONLY valid JSON:
         console.log(`Auto-detected brand logos: ${detectedLogoNames.join(', ')}`);
       }
 
-      // ── 16 thumbnail example references for style guidance ──
+      // ── Thumbnail example references for style guidance (4 representative samples to stay within token limits) ──
       const THUMB_EXAMPLE_BASE = 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/thumbnail_examples';
-      const thumbExampleBlocks = [];
-      for (let i = 1; i <= 16; i++) {
-        thumbExampleBlocks.push({
-          type: 'image',
-          source: { type: 'url', url: `${THUMB_EXAMPLE_BASE}/${i}.png` },
-        });
-      }
+      const exampleIndices = [1, 5, 9, 13]; // 4 spread across the 16 examples
+      const thumbExampleBlocks = exampleIndices.map(i => ({
+        type: 'image',
+        source: { type: 'url', url: `${THUMB_EXAMPLE_BASE}/${i}.png` },
+      }));
 
       // Use Claude to create an optimized Kie.ai prompt using the VTM Image Prompt Enhancer system
       const analysisContext = inspiration_analysis
@@ -316,7 +314,7 @@ Return ONLY valid JSON:
 
       const promptSystemPrompt = `You are a professional YouTube thumbnail prompt engineer using the VTM Image Prompt Enhancer system.
 
-You will be shown 16 reference thumbnail examples. Study their visual style, composition, color grading, text placement, and overall aesthetic. Use these as style guidance for the thumbnail you create.
+You will be shown reference thumbnail examples. Study their visual style, composition, color grading, text placement, and overall aesthetic. Use these as style guidance for the thumbnails you create.
 
 IMPORTANT: The reference thumbnails may show video duration/length numbers in the bottom-right corner (e.g., "12:34", "1:05:23"). These are YouTube UI overlay elements — do NOT include any video duration numbers, timestamps, or runtime indicators in your prompt. Only include intentional design elements.
 
@@ -374,7 +372,7 @@ Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no
               ...thumbExampleBlocks,
               {
                 type: 'text',
-                text: `Study the 16 reference thumbnails above for style guidance. Now create 3 DISTINCT thumbnail generation prompts for this video. Each variation should have a different creative direction (e.g., different composition, color grade, mood, or text placement) while all staying on-brand and effective.\n\nTitle: "${video_title}"`,
+                text: `Study the reference thumbnails above for style guidance. Now create 3 DISTINCT thumbnail generation prompts for this video. Each variation should have a different creative direction (e.g., different composition, color grade, mood, or text placement) while all staying on-brand and effective.\n\nTitle: "${video_title}"`,
               },
             ],
           }],
