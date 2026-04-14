@@ -170,9 +170,9 @@ export default function YouTubeStudio() {
     try {
       await addCompetitorVideo({
         client_id: selectedClientId,
-        url: videoUrl.trim(),
-        title: videoTitle.trim() || undefined,
-        channel: videoChannel.trim() || undefined,
+        video_url: videoUrl.trim(),
+        video_title: videoTitle.trim() || undefined,
+        channel_name: videoChannel.trim() || undefined,
       });
       setVideoUrl(''); setVideoTitle(''); setVideoChannel('');
       const v = await getCompetitorVideos(selectedClientId);
@@ -186,7 +186,7 @@ export default function YouTubeStudio() {
     if (!urls.length || !selectedClientId) return;
     setBatchAdding(true); setError('');
     try {
-      await batchAddVideos({ client_id: selectedClientId, urls });
+      await batchAddVideos({ client_id: selectedClientId, video_urls: urls.map(u => ({ url: u })) });
       setBatchUrls('');
       const v = await getCompetitorVideos(selectedClientId);
       setVideos(v || []);
