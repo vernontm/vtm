@@ -338,6 +338,8 @@ export const deleteYTScript = (id) => request(`/yt-scripts?id=${id}`, { method: 
 // Thumbnails
 export const analyzeInspiration = (data) => request('/yt-thumbnails?action=analyze-inspiration', { method: 'POST', body: JSON.stringify(data) });
 export const generateThumbnail = (data) => request('/yt-thumbnails?action=generate', { method: 'POST', body: JSON.stringify(data) });
+export const generateThumbPrompts = (data) => request('/yt-thumbnails?action=generate-prompts', { method: 'POST', body: JSON.stringify(data) });
+export const generateFromPrompts = (data) => request('/yt-thumbnails?action=generate-from-prompts', { method: 'POST', body: JSON.stringify(data) });
 export const getYTThumbnails = (clientId) => request(`/yt-thumbnails?client_id=${clientId}`);
 export const deleteYTThumbnail = (id) => request(`/yt-thumbnails?id=${id}`, { method: 'DELETE' });
 export const editThumbnail = (data) => request('/yt-thumbnails?action=edit', { method: 'POST', body: JSON.stringify(data) });

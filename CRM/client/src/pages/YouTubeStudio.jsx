@@ -4,8 +4,9 @@ import {
   getContentClients, getCompetitorVideos, addCompetitorVideo, batchAddVideos,
   transcribeVideo, analyzeVideo, deleteCompetitorVideo,
   generateYTScript, getYTScripts, updateYTScript, deleteYTScript, completeYTPackage,
-  analyzeInspiration, generateThumbnail, getYTThumbnails, deleteYTThumbnail,
+  analyzeInspiration, getYTThumbnails, deleteYTThumbnail,
   getYTAssets, createYTAsset, deleteYTAsset, editThumbnail,
+  generateThumbPrompts, generateFromPrompts,
 } from '../api';
 import {
   Search, Plus, Trash2, Loader, Play, Film, FileText, Image, Upload, Download,
@@ -61,6 +62,21 @@ const cardStyle = {
 const sectionTitle = { fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 };
 const labelStyle = { fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' };
 
+const LOGO_BASE = 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/logos';
+const AVAILABLE_LOGOS = [
+  { name: 'ChatGPT', url: `${LOGO_BASE}/Chatgpt.png` },
+  { name: 'Claude', url: `${LOGO_BASE}/claude.png` },
+  { name: 'ElevenLabs', url: `${LOGO_BASE}/elevenlabs.png` },
+  { name: 'GitHub', url: `${LOGO_BASE}/github.png` },
+  { name: 'Gmail', url: `${LOGO_BASE}/gmail.png` },
+  { name: 'HeyGen', url: `${LOGO_BASE}/heygen.jpeg` },
+  { name: 'Higgsfield', url: `${LOGO_BASE}/higgsfield.jpeg` },
+  { name: 'Nano Banana', url: `${LOGO_BASE}/Nano%20Banana.jpeg` },
+  { name: 'OpenArt', url: `${LOGO_BASE}/Openart.jpeg` },
+  { name: 'Supabase', url: `${LOGO_BASE}/supabase.jpeg` },
+  { name: 'Vercel', url: `${LOGO_BASE}/vercel.png` },
+];
+
 export default function YouTubeStudio() {
   // Client
   const [clients, setClients] = useState([]);
@@ -104,8 +120,10 @@ export default function YouTubeStudio() {
   const [logoUrl, setLogoUrl] = useState('');
   const [thumbTitle, setThumbTitle] = useState('');
   const [thumbModel, setThumbModel] = useState('nano-banana');
-  const [generatingThumb, setGeneratingThumb] = useState(false);
-  const [thumbPromptUsed, setThumbPromptUsed] = useState('');
+  const [generatingPrompts, setGeneratingPrompts] = useState(false);
+  const [pendingPrompts, setPendingPrompts] = useState(null); // array of 3 editable prompts
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [selectedLogos, setSelectedLogos] = useState(new Set());
   const charRefInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const [uploadingCharRef, setUploadingCharRef] = useState(false);
@@ -474,28 +492,55 @@ export default function YouTubeStudio() {
     setUploadingLogo(false);
   }
 
-  async function handleGenerateThumbnail() {
-    if (!thumbTitle.trim() || !selectedClientId) return;
-    setGeneratingThumb(true); setError(''); setThumbPromptUsed('');
+  // Step 1: Generate prompts for review
+  async function handleGeneratePrompts() {
+    if (!thumbTitle.trim()) return;
+    setGeneratingPrompts(true); setError(''); setPendingPrompts(null);
     try {
-      const result = await generateThumbnail({
-        client_id: selectedClientId,
+      const logoNames = Array.from(selectedLogos);
+      const result = await generateThumbPrompts({
         video_title: thumbTitle.trim(),
-        model: thumbModel,
         character_ref_url: charRefUrl || undefined,
-        logo_urls: logoUrl ? [logoUrl] : undefined,
+        logo_names: logoNames.length ? logoNames : undefined,
         inspiration_analysis: inspAnalysis || undefined,
       });
-      // Show prompts used for all 3 variations
-      if (result?.variations?.length) {
-        setThumbPromptUsed(result.variations.map((v, i) => `--- Variation ${i + 1} ---\n${v.generation_prompt}`).join('\n\n'));
-      } else {
-        setThumbPromptUsed(result?.generation_prompt || '');
-      }
+      setPendingPrompts(result?.prompts || []);
+    } catch (e) { setError(e.message || 'Prompt generation failed'); }
+    setGeneratingPrompts(false);
+  }
+
+  // Step 2: Approve & generate images from the (possibly edited) prompts
+  async function handleApproveAndGenerate() {
+    if (!pendingPrompts?.length || !selectedClientId) return;
+    setGeneratingImages(true); setError('');
+    try {
+      const selectedLogoUrls = AVAILABLE_LOGOS.filter(l => selectedLogos.has(l.name)).map(l => l.url);
+      const allLogos = [...selectedLogoUrls];
+      if (logoUrl && !allLogos.includes(logoUrl)) allLogos.push(logoUrl);
+
+      await generateFromPrompts({
+        client_id: selectedClientId,
+        video_title: thumbTitle.trim(),
+        prompts: pendingPrompts,
+        model: thumbModel,
+        character_ref_url: charRefUrl || undefined,
+        logo_urls: allLogos.length ? allLogos : undefined,
+        inspiration_analysis: inspAnalysis || undefined,
+      });
       const t = await getYTThumbnails(selectedClientId);
       setThumbnails(t || []);
+      setPendingPrompts(null); // Clear after successful generation
     } catch (e) { setError(e.message || 'Thumbnail generation failed'); }
-    setGeneratingThumb(false);
+    setGeneratingImages(false);
+  }
+
+  function toggleLogo(name) {
+    setSelectedLogos(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
   }
 
   async function handleDeleteThumbnail(id) {
@@ -1353,9 +1398,9 @@ export default function YouTubeStudio() {
               </div>
             </div>
 
-            {/* Logo */}
+            {/* Logo upload */}
             <div>
-              <label style={labelStyle}>Logo</label>
+              <label style={labelStyle}>Custom Logo</label>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} style={btnSecondary}>
                   {uploadingLogo ? <Loader size={13} className="spin" /> : <Upload size={13} />}
@@ -1370,6 +1415,41 @@ export default function YouTubeStudio() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Company logos selector */}
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Company Logos (select to feature in thumbnail)</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {AVAILABLE_LOGOS.map(logo => {
+                const isSelected = selectedLogos.has(logo.name);
+                return (
+                  <button
+                    key={logo.name}
+                    onClick={() => toggleLogo(logo.name)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      background: isSelected ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
+                      color: isSelected ? '#fff' : '#5a5a6e',
+                      border: isSelected ? '1px solid #4a6cf7' : '1px solid #e5e7ef',
+                    }}
+                  >
+                    <img
+                      src={logo.url}
+                      alt={logo.name}
+                      style={{
+                        width: 18, height: 18, borderRadius: 4, objectFit: 'cover',
+                        filter: isSelected ? 'brightness(1.2)' : 'none',
+                      }}
+                    />
+                    {logo.name}
+                    {isSelected && <Check size={12} />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1408,27 +1488,71 @@ export default function YouTubeStudio() {
             </div>
           </div>
 
-          {/* Generate button */}
+          {/* Step 1: Generate Prompts button */}
           <div style={{ marginTop: 16 }}>
             <button
-              onClick={handleGenerateThumbnail}
-              disabled={generatingThumb || !thumbTitle.trim()}
-              style={{ ...btnPrimary, opacity: generatingThumb ? 0.6 : 1 }}
+              onClick={handleGeneratePrompts}
+              disabled={generatingPrompts || generatingImages || !thumbTitle.trim()}
+              style={{ ...btnPrimary, opacity: (generatingPrompts || generatingImages) ? 0.6 : 1 }}
             >
-              {generatingThumb ? <Loader size={14} className="spin" /> : <Image size={14} />}
-              {generatingThumb ? 'Generating 3 Variations...' : 'Generate 3 Thumbnails'}
+              {generatingPrompts ? <Loader size={14} className="spin" /> : <Sparkles size={14} />}
+              {generatingPrompts ? 'Generating Prompts...' : 'Generate 3 Prompts'}
             </button>
           </div>
 
-          {/* Prompt used */}
-          {thumbPromptUsed && (
-            <div style={{ marginTop: 14 }}>
-              <label style={labelStyle}>Generation Prompt Used</label>
-              <div style={{
-                background: '#f8f9fc', border: '1px solid #e5e7ef', borderRadius: 8, padding: 10,
-                fontSize: 12, color: '#5a5a6e', lineHeight: 1.5,
-              }}>
-                {thumbPromptUsed}
+          {/* Step 2: Prompt review & edit */}
+          {pendingPrompts && pendingPrompts.length > 0 && (
+            <div style={{ marginTop: 16, borderTop: '1px solid #e5e7ef', paddingTop: 16 }}>
+              <div style={{ ...sectionTitle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Review & Edit Prompts</span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#8e8ea0' }}>Edit any prompt below, then approve to generate images</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {pendingPrompts.map((prompt, i) => (
+                  <div key={i}>
+                    <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{
+                        width: 20, height: 20, borderRadius: '50%', display: 'inline-flex',
+                        alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700,
+                        background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', color: '#fff',
+                      }}>{i + 1}</span>
+                      Variation {i + 1}
+                    </label>
+                    <textarea
+                      style={{ ...inputStyle, minHeight: 100, resize: 'vertical', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5 }}
+                      value={prompt}
+                      onChange={e => {
+                        const updated = [...pendingPrompts];
+                        updated[i] = e.target.value;
+                        setPendingPrompts(updated);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                <button
+                  onClick={handleApproveAndGenerate}
+                  disabled={generatingImages}
+                  style={{ ...btnPrimary, opacity: generatingImages ? 0.6 : 1 }}
+                >
+                  {generatingImages ? <Loader size={14} className="spin" /> : <Image size={14} />}
+                  {generatingImages ? 'Generating 3 Images...' : 'Approve & Generate'}
+                </button>
+                <button
+                  onClick={handleGeneratePrompts}
+                  disabled={generatingPrompts || generatingImages}
+                  style={{ ...btnSecondary, opacity: generatingPrompts ? 0.6 : 1 }}
+                >
+                  <RefreshCw size={13} /> Regenerate Prompts
+                </button>
+                <button
+                  onClick={() => setPendingPrompts(null)}
+                  disabled={generatingImages}
+                  style={btnSecondary}
+                >
+                  <X size={13} /> Discard
+                </button>
               </div>
             </div>
           )}

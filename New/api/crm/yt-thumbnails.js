@@ -286,48 +286,23 @@ Return ONLY valid JSON:
     }
   }
 
-  // ── Generate a thumbnail ──
-  if (action === 'generate' && req.method === 'POST') {
-    try {
-      const { client_id, script_id, video_title, character_ref_url, logo_urls, inspiration_analysis, model } = req.body;
-      if (!client_id || !video_title) {
-        return res.status(400).json({ error: 'client_id and video_title required' });
-      }
-      if (!ANTHROPIC_API_KEY) return res.status(400).json({ error: 'ANTHROPIC_API_KEY not configured' });
-      if (!KIE_API_KEY) return res.status(400).json({ error: 'KIE_API_KEY not configured' });
+  // ── Helper: build the Claude prompt system message ──
+  function buildPromptSystemMessage({ character_ref_url, logo_names, inspiration_analysis }) {
+    const examplePromptsText = THUMBNAIL_EXAMPLES.map((p, i) => `EXAMPLE ${i + 1}:\n${p}`).join('\n\n');
 
-      // Auto-detect brand logos from video title
-      const detectedBrands = detectBrandLogos(video_title);
-      const allLogoUrls = [...(logo_urls || [])];
-      const detectedLogoNames = [];
-      for (const brand of detectedBrands) {
-        if (!allLogoUrls.includes(brand.url)) {
-          allLogoUrls.push(brand.url);
-        }
-        detectedLogoNames.push(brand.name);
-      }
-      if (detectedBrands.length) {
-        console.log(`Auto-detected brand logos: ${detectedLogoNames.join(', ')}`);
-      }
+    const analysisContext = inspiration_analysis
+      ? `\nINSPIRATION ANALYSIS (match these visual patterns):\n${JSON.stringify(inspiration_analysis.combined || inspiration_analysis, null, 2)}`
+      : '';
 
-      // ── Build style reference text from the 16 example prompts ──
-      const examplePromptsText = THUMBNAIL_EXAMPLES.map((p, i) => `EXAMPLE ${i + 1}:\n${p}`).join('\n\n');
+    const logoContext = logo_names?.length
+      ? `\nInclude these brand logos/icons in the thumbnail composition: ${logo_names.join(', ')}. Place them visibly but not overwhelming — floating near the subject or in the background as recognizable elements.`
+      : '';
 
-      // Use Claude to create an optimized Kie.ai prompt using the VTM Image Prompt Enhancer system
-      const analysisContext = inspiration_analysis
-        ? `\nINSPIRATION ANALYSIS (match these visual patterns):\n${JSON.stringify(inspiration_analysis.combined || inspiration_analysis, null, 2)}`
-        : '';
+    const characterContext = character_ref_url
+      ? `\nIMPORTANT: A character reference image is provided. Do NOT describe the person's appearance (face, skin, hair, ethnicity, features). Instead, describe only their POSE, EXPRESSION, POSITION in frame, and INTERACTION with the scene. The AI model will use the reference image for the person's actual appearance. Example: "the person from the reference image positioned right of center, looking directly at camera with a confident expression, leaning slightly forward" — NOT "a man with brown hair and blue eyes".`
+      : `\nDescribe the person/subject in the thumbnail with enough detail to generate them from scratch.`;
 
-      const logoContext = allLogoUrls.length
-        ? `\nInclude these brand logos/icons in the thumbnail composition: ${detectedLogoNames.length ? detectedLogoNames.join(', ') : 'brand logo'}. Place them visibly but not overwhelming — floating near the subject or in the background as recognizable elements.`
-        : '';
-
-      // CRITICAL: When character ref is provided, do NOT describe the person — the reference image handles that
-      const characterContext = character_ref_url
-        ? `\nIMPORTANT: A character reference image is provided. Do NOT describe the person's appearance (face, skin, hair, ethnicity, features). Instead, describe only their POSE, EXPRESSION, POSITION in frame, and INTERACTION with the scene. The AI model will use the reference image for the person's actual appearance. Example: "the person from the reference image positioned right of center, looking directly at camera with a confident expression, leaning slightly forward" — NOT "a man with brown hair and blue eyes".`
-        : `\nDescribe the person/subject in the thumbnail with enough detail to generate them from scratch.`;
-
-      const promptSystemPrompt = `You are a professional YouTube thumbnail prompt engineer using the VTM Image Prompt Enhancer system.
+    return `You are a professional YouTube thumbnail prompt engineer using the VTM Image Prompt Enhancer system.
 
 Below are 16 example thumbnail prompts that define the visual style, composition patterns, and quality level to match. Study these examples carefully and create prompts at the SAME level of detail and specificity. Your output prompts should follow the same structure: subject positioning → background/graphics → text overlays → lighting → color palette → composition → mood.
 
@@ -372,6 +347,16 @@ RULES:
 
 Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no code blocks, no labels. Example format:
 ["prompt 1 here", "prompt 2 here", "prompt 3 here"]`;
+  }
+
+  // ── Generate prompts only (Step 1: preview before generating images) ──
+  if (action === 'generate-prompts' && req.method === 'POST') {
+    try {
+      const { video_title, character_ref_url, logo_names, inspiration_analysis } = req.body;
+      if (!video_title) return res.status(400).json({ error: 'video_title required' });
+      if (!ANTHROPIC_API_KEY) return res.status(400).json({ error: 'ANTHROPIC_API_KEY not configured' });
+
+      const systemPrompt = buildPromptSystemMessage({ character_ref_url, logo_names, inspiration_analysis });
 
       const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -383,7 +368,7 @@ Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no
         body: JSON.stringify({
           model: 'claude-sonnet-4-5',
           max_tokens: 3072,
-          system: promptSystemPrompt,
+          system: systemPrompt,
           messages: [{
             role: 'user',
             content: `Create 3 DISTINCT thumbnail generation prompts for this video. Each variation should have a different creative direction (e.g., different composition, color grade, mood, or text placement) while all staying on-brand and matching the quality/detail level of the 16 reference examples.\n\nTitle: "${video_title}"`,
@@ -399,29 +384,42 @@ Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no
       const aiData = await aiRes.json();
       const rawText = aiData.content[0].text.trim();
 
-      // Parse the 3 prompts from Claude's response
-      let imagePrompts;
+      let prompts;
       try {
         const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-        imagePrompts = JSON.parse(cleaned);
-        if (!Array.isArray(imagePrompts)) throw new Error('Not an array');
+        prompts = JSON.parse(cleaned);
+        if (!Array.isArray(prompts)) throw new Error('Not an array');
       } catch {
-        // Fallback: try to extract JSON array
         const match = rawText.match(/\[[\s\S]*\]/);
         if (match) {
-          imagePrompts = JSON.parse(match[0]);
+          prompts = JSON.parse(match[0]);
         } else {
-          // Last resort: use the whole text as a single prompt, generate 3 with same prompt
-          imagePrompts = [rawText, rawText, rawText];
+          prompts = [rawText, rawText, rawText];
         }
       }
-      // Ensure exactly 3
-      while (imagePrompts.length < 3) imagePrompts.push(imagePrompts[0] || rawText);
-      imagePrompts = imagePrompts.slice(0, 3);
+      while (prompts.length < 3) prompts.push(prompts[0] || rawText);
+      prompts = prompts.slice(0, 3);
 
-      console.log(`Generated 3 thumbnail prompts for "${video_title}"`);
+      return res.json({ prompts });
+    } catch (err) {
+      console.error('Generate prompts error:', err);
+      return res.status(500).json({ error: 'Prompt generation failed: ' + err.message });
+    }
+  }
 
-      // Validate character ref URL is accessible before using image-to-image
+  // ── Generate images from approved prompts (Step 2) ──
+  if (action === 'generate-from-prompts' && req.method === 'POST') {
+    try {
+      const { client_id, script_id, video_title, prompts, character_ref_url, logo_urls, inspiration_analysis, model } = req.body;
+      if (!client_id || !video_title || !prompts?.length) {
+        return res.status(400).json({ error: 'client_id, video_title, and prompts array required' });
+      }
+      if (!KIE_API_KEY) return res.status(400).json({ error: 'KIE_API_KEY not configured' });
+
+      const imagePrompts = prompts.slice(0, 3);
+      console.log(`Generating ${imagePrompts.length} thumbnails for "${video_title}"`);
+
+      // Validate character ref URL
       let validCharRef = null;
       if (character_ref_url) {
         try {
@@ -436,7 +434,7 @@ Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no
         }
       }
 
-      // Fire off all 3 Kie.ai tasks in parallel
+      // Fire off all Kie.ai tasks in parallel
       const taskIds = await Promise.all(imagePrompts.map(async (prompt, i) => {
         if (validCharRef) {
           console.log(`Thumbnail variation ${i + 1}: image-to-image (${model || 'nano-banana'})`);
@@ -447,16 +445,17 @@ Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no
         }
       }));
 
-      // Wait for all 3 images in parallel
+      // Wait for all images in parallel
       const imgUrls = await Promise.all(taskIds.map(tid => waitForImage(tid)));
 
-      // Upload all 3 to storage in parallel
+      // Upload all to storage in parallel
       const storageResults = await Promise.all(imgUrls.map(async (imgUrl, i) => {
         const thumbnailId = Date.now().toString(36) + '_v' + (i + 1);
         return saveImageToStorage(imgUrl, client_id, thumbnailId);
       }));
 
-      // Save all 3 thumbnail records
+      // Save all thumbnail records
+      const allLogoUrls = logo_urls || [];
       const dbRows = storageResults.map((storageUrl, i) => ({
         client_id,
         script_id: script_id || null,
@@ -481,7 +480,7 @@ Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no
           result_url: url,
           generation_prompt: imagePrompts[i],
         })),
-        count: 3,
+        count: imagePrompts.length,
       });
     } catch (err) {
       console.error('Generate thumbnail error:', err);
