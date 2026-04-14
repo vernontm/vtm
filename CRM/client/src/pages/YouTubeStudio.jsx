@@ -135,7 +135,7 @@ export default function YouTubeStudio() {
   // ── Client-specific defaults for thumbnail generation ──
   const CLIENT_DEFAULTS = {
     '632a79e3-bdd1-4c80-9a64-583b64afcd2f': { // rayvaughnceo
-      charRefUrl: 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/freepik_a-professional-character-_2777707712.png',
+      charRefUrl: 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/content-media/632a79e3-bdd1-4c80-9a64-583b64afcd2f/yt-char-ref/1776142852806.png',
       logoUrl: 'https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/publice_images/VTM_icon_logo.png',
     },
   };

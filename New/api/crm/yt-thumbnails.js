@@ -421,11 +421,26 @@ Return ONLY valid JSON — an array of exactly 3 prompt strings. No markdown, no
 
       console.log(`Generated 3 thumbnail prompts for "${video_title}"`);
 
+      // Validate character ref URL is accessible before using image-to-image
+      let validCharRef = null;
+      if (character_ref_url) {
+        try {
+          const checkRes = await fetch(character_ref_url, { method: 'HEAD' });
+          if (checkRes.ok) {
+            validCharRef = character_ref_url;
+          } else {
+            console.warn(`Character ref URL returned ${checkRes.status}, falling back to text-to-image`);
+          }
+        } catch (e) {
+          console.warn(`Character ref URL unreachable: ${e.message}, falling back to text-to-image`);
+        }
+      }
+
       // Fire off all 3 Kie.ai tasks in parallel
       const taskIds = await Promise.all(imagePrompts.map(async (prompt, i) => {
-        if (character_ref_url) {
+        if (validCharRef) {
           console.log(`Thumbnail variation ${i + 1}: image-to-image (${model || 'nano-banana'})`);
-          return imageToImage(character_ref_url, prompt, model);
+          return imageToImage(validCharRef, prompt, model);
         } else {
           console.log(`Thumbnail variation ${i + 1}: text-to-image (${model || 'nano-banana'})`);
           return generateImage(prompt, model);
