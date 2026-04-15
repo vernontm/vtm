@@ -93,6 +93,9 @@ module.exports = async function handler(req, res) {
           if (c.birthday_month) row.birthday_month = parseInt(c.birthday_month) || null;
           if (c.birthday_day) row.birthday_day = parseInt(c.birthday_day) || null;
           if (c.discount_code !== undefined) row.discount_code = c.discount_code || null;
+          if (c.city !== undefined) row.city = c.city || null;
+          if (c.state !== undefined) row.state = c.state || null;
+          if (c.country !== undefined) row.country = c.country || null;
           const rows = await supaFetch('crm_email_contacts', {
             method: 'POST',
             headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' },
@@ -166,7 +169,7 @@ module.exports = async function handler(req, res) {
   // POST — update contact fields (name, birthday, discount code, etc.)
   if (req.method === 'POST' && action === 'update-contact') {
     try {
-      const { contact_id, name, birthday_month, birthday_day, tags, discount_code, signed_up_at } = req.body;
+      const { contact_id, name, birthday_month, birthday_day, tags, discount_code, signed_up_at, city, state, country } = req.body;
       if (!contact_id) return res.status(400).json({ error: 'contact_id required' });
       const update = { updated_at: new Date().toISOString() };
       if (name !== undefined) update.name = name;
@@ -175,6 +178,9 @@ module.exports = async function handler(req, res) {
       if (birthday_day !== undefined) update.birthday_day = birthday_day ? parseInt(birthday_day) : null;
       if (discount_code !== undefined) update.discount_code = discount_code || null;
       if (signed_up_at !== undefined) update.signed_up_at = signed_up_at || null;
+      if (city !== undefined) update.city = city || null;
+      if (state !== undefined) update.state = state || null;
+      if (country !== undefined) update.country = country || null;
       const rows = await supaFetch(`crm_email_contacts?id=eq.${contact_id}`, {
         method: 'PATCH',
         body: JSON.stringify(update),
