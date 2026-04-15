@@ -330,18 +330,24 @@ module.exports = async function handler(req, res) {
       const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
       const activeSeqs = await supaFetch(`crm_email_sequences?active=eq.true`);
       for (const seq of (activeSeqs || [])) {
-        // Enroll new contacts matching trigger tag
-        if (seq.trigger_tag) {
+        // Enroll new contacts matching trigger tag rules (must have ALL of tags_all, NONE of tags_none)
+        const tagsAll = Array.isArray(seq.trigger_tags_all) ? seq.trigger_tags_all : (seq.trigger_tag ? [seq.trigger_tag] : []);
+        const tagsNone = Array.isArray(seq.trigger_tags_none) ? seq.trigger_tags_none : [];
+        if (tagsAll.length || tagsNone.length) {
           try {
             const stepsList = await supaFetch(`crm_email_sequence_steps?sequence_id=eq.${seq.id}&order=step_order.asc&limit=1`);
             const firstStep = stepsList?.[0];
             if (firstStep) {
-              const matching = await supaFetch(
-                `crm_email_contacts?client_id=eq.${seq.client_id}&status=eq.active&tags=cs.["${seq.trigger_tag}"]`
+              const contacts = await supaFetch(
+                `crm_email_contacts?client_id=eq.${seq.client_id}&status=eq.active`
               );
+              const matching = (contacts || []).filter(c => {
+                const tags = c.tags || [];
+                return tagsAll.every(t => tags.includes(t)) && tagsNone.every(t => !tags.includes(t));
+              });
               const existing = await supaFetch(`crm_email_sequence_enrollments?sequence_id=eq.${seq.id}&select=contact_id`);
               const already = new Set((existing || []).map(e => e.contact_id));
-              const toEnroll = (matching || []).filter(c => !already.has(c.id));
+              const toEnroll = matching.filter(c => !already.has(c.id));
               if (toEnroll.length) {
                 const delayMs = ((firstStep.delay_unit === 'hours' ? 3600_000 : firstStep.delay_unit === 'minutes' ? 60_000 : 86_400_000)) * (firstStep.delay_amount || 0);
                 const firstSend = new Date(Date.now() + delayMs).toISOString();

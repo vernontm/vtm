@@ -1795,7 +1795,7 @@ export default function EmailMarketing() {
       const created = await createEmailSequence({
         client_id: selectedClientId,
         name: newSeqName.trim(),
-        trigger_tag: newSeqTag.trim() || null,
+        trigger_tags_all: newSeqTag.trim() ? [newSeqTag.trim()] : [],
       });
       setNewSeqOpen(false); setNewSeqName(''); setNewSeqTag('');
       await reloadSequences();
@@ -2242,15 +2242,22 @@ function MetricCol({ label, value }) {
 // SEQUENCE EDITOR MODAL
 // ══════════════════════════════════════════════════════════════
 function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep, onDeleteStep, onEnrollMatching, onDelete }) {
+  const initAll = Array.isArray(seq.trigger_tags_all) && seq.trigger_tags_all.length
+    ? seq.trigger_tags_all : (seq.trigger_tag ? [seq.trigger_tag] : []);
+  const initNone = Array.isArray(seq.trigger_tags_none) ? seq.trigger_tags_none : [];
   const [name, setName] = useState(seq.name || '');
-  const [triggerTag, setTriggerTag] = useState(seq.trigger_tag || '');
+  const [tagsAll, setTagsAll] = useState(initAll);
+  const [tagsNone, setTagsNone] = useState(initNone);
   const [sendDays, setSendDays] = useState(Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']);
   const [active, setActive] = useState(!!seq.active);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
+    const a = Array.isArray(seq.trigger_tags_all) && seq.trigger_tags_all.length
+      ? seq.trigger_tags_all : (seq.trigger_tag ? [seq.trigger_tag] : []);
+    const n = Array.isArray(seq.trigger_tags_none) ? seq.trigger_tags_none : [];
     setName(seq.name || '');
-    setTriggerTag(seq.trigger_tag || '');
+    setTagsAll(a); setTagsNone(n);
     setSendDays(Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']);
     setActive(!!seq.active);
     setDirty(false);
@@ -2262,7 +2269,7 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
   }
 
   async function saveHeader() {
-    await onUpdate({ name, trigger_tag: triggerTag || null, send_days: sendDays, active });
+    await onUpdate({ name, trigger_tags_all: tagsAll, trigger_tags_none: tagsNone, send_days: sendDays, active });
     setDirty(false);
   }
 
@@ -2303,14 +2310,28 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
 
         {/* Settings */}
         <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 10, padding: 16, marginBottom: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>Sequence behavior</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>Qualification rules</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 14 }}>
+            <TagMultiPicker
+              label="Contact must have ALL of these tags"
+              hint="Contact is only enrolled if they have every tag listed here."
+              color="#22c55e"
+              values={tagsAll}
+              allTags={allTags}
+              exclude={tagsNone}
+              onChange={next => { setTagsAll(next); setDirty(true); }}
+            />
+            <TagMultiPicker
+              label="Contact must NOT have any of these tags"
+              hint="Contacts with any of these tags are excluded."
+              color="#ef4444"
+              values={tagsNone}
+              allTags={allTags}
+              exclude={tagsAll}
+              onChange={next => { setTagsNone(next); setDirty(true); }}
+            />
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-            <div>
-              <label style={lbl}>Trigger tag</label>
-              <input list="seq-tags" style={inp} placeholder="e.g. newsletter" value={triggerTag} onChange={e => { setTriggerTag(e.target.value); setDirty(true); }} />
-              <datalist id="seq-tags">{(allTags||[]).map(t => <option key={t} value={t} />)}</datalist>
-              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>Contacts with this tag are auto-enrolled.</div>
-            </div>
             <div>
               <label style={lbl}>Allowed send days</label>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -2436,6 +2457,100 @@ function StepEditor({ step, index, onSave, onDelete }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// MULTI-TAG PICKER (include/exclude)
+// ══════════════════════════════════════════════════════════════
+function TagMultiPicker({ label, hint, color = '#1a1a2e', values = [], allTags = [], exclude = [], onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function onDocClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  const lowerQ = query.toLowerCase();
+  const available = allTags.filter(t =>
+    !values.includes(t) &&
+    !exclude.includes(t) &&
+    (t.toLowerCase().includes(lowerQ))
+  );
+  const canCreate = query.trim() && !allTags.includes(query.trim()) && !values.includes(query.trim());
+
+  function add(tag) {
+    const t = tag.trim(); if (!t) return;
+    if (values.includes(t)) return;
+    onChange([...values, t]);
+    setQuery('');
+  }
+  function remove(tag) { onChange(values.filter(v => v !== tag)); }
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 }}>{label}</div>
+      <div
+        onClick={() => setOpen(true)}
+        style={{
+          display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+          minHeight: 38, padding: '6px 10px',
+          background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8, cursor: 'text',
+        }}
+      >
+        {values.map(v => (
+          <span key={v} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            background: color + '1a', color, padding: '3px 8px', borderRadius: 10,
+            fontSize: 12, fontWeight: 600,
+          }}>
+            {v}
+            <button onClick={e => { e.stopPropagation(); remove(v); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color, padding: 0, display: 'flex', alignItems: 'center' }}>
+              <X size={11} />
+            </button>
+          </span>
+        ))}
+        <input
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && query.trim()) { e.preventDefault(); add(query.trim()); }
+            else if (e.key === 'Backspace' && !query && values.length) remove(values[values.length - 1]);
+          }}
+          placeholder={values.length ? '' : 'Click to add tags...'}
+          style={{ flex: 1, minWidth: 120, border: 'none', outline: 'none', fontSize: 13, background: 'transparent', padding: '4px 0', fontFamily: 'Inter, sans-serif' }}
+        />
+      </div>
+      {open && (available.length > 0 || canCreate) && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, zIndex: 20,
+          background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8,
+          boxShadow: '0 4px 16px rgba(10,20,40,0.08)', maxHeight: 220, overflowY: 'auto',
+        }}>
+          {available.slice(0, 50).map(t => (
+            <div key={t} onClick={() => add(t)} style={{ padding: '8px 12px', fontSize: 13, color: '#1a1a2e', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f0f0f5'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              {t}
+            </div>
+          ))}
+          {canCreate && (
+            <div onClick={() => add(query.trim())} style={{ padding: '8px 12px', fontSize: 13, color: color, cursor: 'pointer', borderTop: available.length ? '1px solid #f0f0f5' : 'none', fontWeight: 600 }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f0f0f5'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              + Create "{query.trim()}"
+            </div>
+          )}
+        </div>
+      )}
+      {hint && <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>{hint}</div>}
     </div>
   );
 }

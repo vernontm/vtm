@@ -78,15 +78,18 @@ module.exports = async function handler(req, res) {
 
     // ── POST create sequence ──
     if (req.method === 'POST' && !action) {
-      const { client_id, name, description, trigger_tag, active, send_days } = req.body;
+      const { client_id, name, description, trigger_tag, trigger_tags_all, trigger_tags_none, active, send_days } = req.body;
       if (!client_id || !name) return res.status(400).json({ error: 'client_id and name required' });
+      const tagsAll = Array.isArray(trigger_tags_all) ? trigger_tags_all : (trigger_tag ? [trigger_tag] : []);
       const rows = await supaFetch('crm_email_sequences', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify([{
           client_id, name,
           description: description || null,
-          trigger_tag: trigger_tag || null,
+          trigger_tag: tagsAll[0] || null,
+          trigger_tags_all: tagsAll,
+          trigger_tags_none: Array.isArray(trigger_tags_none) ? trigger_tags_none : [],
           active: !!active,
           send_days: send_days || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
         }]),
@@ -96,12 +99,19 @@ module.exports = async function handler(req, res) {
 
     // ── POST update sequence ──
     if (req.method === 'POST' && action === 'update') {
-      const { id, name, description, trigger_tag, active, send_days } = req.body;
+      const { id, name, description, trigger_tag, trigger_tags_all, trigger_tags_none, active, send_days } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
       const update = { updated_at: new Date().toISOString() };
       if (name !== undefined) update.name = name;
       if (description !== undefined) update.description = description;
-      if (trigger_tag !== undefined) update.trigger_tag = trigger_tag || null;
+      if (trigger_tags_all !== undefined) {
+        update.trigger_tags_all = Array.isArray(trigger_tags_all) ? trigger_tags_all : [];
+        update.trigger_tag = update.trigger_tags_all[0] || null;
+      } else if (trigger_tag !== undefined) {
+        update.trigger_tag = trigger_tag || null;
+        update.trigger_tags_all = trigger_tag ? [trigger_tag] : [];
+      }
+      if (trigger_tags_none !== undefined) update.trigger_tags_none = Array.isArray(trigger_tags_none) ? trigger_tags_none : [];
       if (active !== undefined) update.active = !!active;
       if (send_days !== undefined) update.send_days = send_days;
       const rows = await supaFetch(`crm_email_sequences?id=eq.${id}`, {
@@ -150,25 +160,35 @@ module.exports = async function handler(req, res) {
       return res.json({ deleted: true });
     }
 
-    // ── POST enroll-matching: find contacts with trigger_tag, enroll them ──
+    // ── POST enroll-matching: find contacts matching all/none tag rules, enroll them ──
     if (req.method === 'POST' && action === 'enroll-matching') {
       const { sequence_id } = req.body;
       if (!sequence_id) return res.status(400).json({ error: 'sequence_id required' });
       const seqs = await supaFetch(`crm_email_sequences?id=eq.${sequence_id}`);
       const seq = seqs?.[0];
       if (!seq) return res.status(404).json({ error: 'Sequence not found' });
-      if (!seq.trigger_tag) return res.status(400).json({ error: 'Sequence has no trigger tag' });
+
+      const tagsAll = Array.isArray(seq.trigger_tags_all) ? seq.trigger_tags_all : (seq.trigger_tag ? [seq.trigger_tag] : []);
+      const tagsNone = Array.isArray(seq.trigger_tags_none) ? seq.trigger_tags_none : [];
+      if (!tagsAll.length && !tagsNone.length) return res.status(400).json({ error: 'Sequence has no qualification tags' });
 
       const steps = await supaFetch(`crm_email_sequence_steps?sequence_id=eq.${sequence_id}&order=step_order.asc&limit=1`);
       const firstStep = steps?.[0];
       if (!firstStep) return res.status(400).json({ error: 'Sequence has no steps' });
 
+      // Fetch all active contacts for client, then filter in JS (PostgREST can't do multi-tag AND easily across jsonb)
       const contacts = await supaFetch(
-        `crm_email_contacts?client_id=eq.${seq.client_id}&status=eq.active&tags=cs.["${seq.trigger_tag}"]`
+        `crm_email_contacts?client_id=eq.${seq.client_id}&status=eq.active`
       );
+      const matching = (contacts || []).filter(c => {
+        const tags = c.tags || [];
+        const hasAll = tagsAll.every(t => tags.includes(t));
+        const hasNoneOfExcluded = tagsNone.every(t => !tags.includes(t));
+        return hasAll && hasNoneOfExcluded;
+      });
       const existing = await supaFetch(`crm_email_sequence_enrollments?sequence_id=eq.${sequence_id}&select=contact_id`);
       const already = new Set((existing || []).map(e => e.contact_id));
-      const newOnes = (contacts || []).filter(c => !already.has(c.id));
+      const newOnes = matching.filter(c => !already.has(c.id));
 
       if (!newOnes.length) return res.json({ enrolled: 0 });
 
