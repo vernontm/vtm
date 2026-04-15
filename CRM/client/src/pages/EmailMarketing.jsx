@@ -282,6 +282,7 @@ export default function EmailMarketing() {
   // Active template wrapper for the broadcast composer.
   // When set, campBody is ONLY the editable body paragraph; the wrapper HTML
   // has a {{body}} placeholder that gets substituted on save.
+  const [campTemplateId, setCampTemplateId] = useState('');
   const [campTemplateHtml, setCampTemplateHtml] = useState(null);
   const [campTemplateName, setCampTemplateName] = useState('');
   const [campCtaText, setCampCtaText] = useState('Get Access');
@@ -665,7 +666,7 @@ export default function EmailMarketing() {
       });
       setCampSubject(''); setCampBody(''); setCampPreview(''); setCampShowPreview(false); setCampTags([]); setCampSchedule('');
       setCampAutoTrigger(false); setCampTriggerTag(''); setCampTriggerType('tag');
-      setCampTemplateHtml(null); setCampTemplateName('');
+      setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName('');
       setCampCtaText('Get Access'); setCampCtaUrl('https://www.vernontm.com/book-call');
       setCampShowLivePreview(false);
       setShowComposer(false);
@@ -1574,22 +1575,28 @@ export default function EmailMarketing() {
               <FileText size={14} color="#4a6cf7" />
               <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>Start from template</label>
               <select
-                value=""
+                value={campTemplateId}
                 onChange={(e) => {
                   const tplId = e.target.value;
-                  if (!tplId) return;
+                  if (!tplId) {
+                    // "-- Select --" chosen → clear active template
+                    setCampTemplateId('');
+                    setCampTemplateHtml(null);
+                    setCampTemplateName('');
+                    return;
+                  }
                   setTplPicker({
                     initialTemplateId: tplId,
                     onApply: ({ template_html, body_text, subject, preview_text, has_slot, name }) => {
                       if (has_slot && template_html) {
-                        // Keep wrapper separate; body editor edits just the paragraph
+                        setCampTemplateId(tplId);
                         setCampTemplateHtml(template_html);
                         setCampTemplateName(name || '');
                         setCampBody(body_text || '');
                       } else {
-                        // Template has no editable slot — drop raw HTML into editor
+                        setCampTemplateId(tplId);
                         setCampTemplateHtml(null);
-                        setCampTemplateName('');
+                        setCampTemplateName(name || '');
                         setCampBody(template_html || '');
                       }
                       if (subject && !campSubject) setCampSubject(subject);
@@ -1666,14 +1673,16 @@ export default function EmailMarketing() {
                   <button
                     type="button"
                     onClick={() => setTplPicker({
-                      onApply: ({ template_html, body_text, subject, preview_text, has_slot, name }) => {
+                      onApply: ({ template_html, body_text, subject, preview_text, has_slot, name, id }) => {
                         if (has_slot && template_html) {
+                          setCampTemplateId(id || '');
                           setCampTemplateHtml(template_html);
                           setCampTemplateName(name || '');
                           setCampBody(body_text || '');
                         } else {
+                          setCampTemplateId(id || '');
                           setCampTemplateHtml(null);
-                          setCampTemplateName('');
+                          setCampTemplateName(name || '');
                           setCampBody(template_html || '');
                         }
                         if (subject && !campSubject) setCampSubject(subject);
@@ -1693,7 +1702,7 @@ export default function EmailMarketing() {
                   <span style={{ color: '#64748b', fontSize: 11 }}>— only the body paragraph below is editable.</span>
                   <button
                     type="button"
-                    onClick={() => { setCampTemplateHtml(null); setCampTemplateName(''); }}
+                    onClick={() => { setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName(''); }}
                     style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                   >
                     <X size={11} /> Remove
@@ -2932,6 +2941,7 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
             <button
               disabled={!selected}
               onClick={() => onApply({
+                id: selected?.id || '',
                 html: renderHtml(),
                 template_html: selected?.html_body || '',
                 body_text: bodyText,
