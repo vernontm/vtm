@@ -195,6 +195,9 @@ export default function EmailMarketing() {
   const [viewSendsData, setViewSendsData] = useState([]);
   const [loadingSends, setLoadingSends] = useState(false);
 
+  // View broadcast modal
+  const [viewCampaign, setViewCampaign] = useState(null);
+
   // Add contact form
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
@@ -859,6 +862,100 @@ export default function EmailMarketing() {
           </div>
         </div>
       )}
+
+      {/* View broadcast modal */}
+      {viewCampaign && (() => {
+        const c = viewCampaign;
+        const recipients = c.total_recipients || c.sent_count || 0;
+        const openRate = recipients > 0 && c.opened_count ? ((c.opened_count / recipients) * 100).toFixed(1) + '%' : '-';
+        const dateLabel = c.sent_at || c.scheduled_at || c.updated_at || c.created_at;
+        const d = dateLabel ? new Date(dateLabel) : null;
+        const rawBody = c.html_body || c.body || '';
+        const previewHtml = rawBody.trim().toLowerCase().startsWith('<!doctype') || rawBody.trim().toLowerCase().startsWith('<html')
+          ? rawBody
+          : `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:20px;color:#1a1a2e;line-height:1.6;max-width:640px;margin:0 auto;}</style></head><body>${rawBody}</body></html>`;
+        return (
+          <div onClick={() => setViewCampaign(null)} style={{
+            position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 900, width: '100%', maxHeight: '90vh', overflow: 'auto', padding: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Broadcast</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', wordBreak: 'break-word' }}>{c.subject}</div>
+                  {c.preview_text && (
+                    <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 4 }}>{c.preview_text}</div>
+                  )}
+                </div>
+                <button onClick={() => setViewCampaign(null)} style={btnSecondary}><X size={14} /></button>
+              </div>
+
+              {/* Stats row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 16 }}>
+                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Status</div>
+                  <div style={{ marginTop: 6 }}><StatusPill status={c.status} /></div>
+                </div>
+                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>{c.sent_at ? 'Sent' : c.scheduled_at ? 'Scheduled' : 'Updated'}</div>
+                  <div style={{ fontSize: 13, color: '#1a1a2e', fontWeight: 600, marginTop: 6 }}>{d ? d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-'}</div>
+                </div>
+                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Recipients</div>
+                  <div style={{ fontSize: 16, color: '#1a1a2e', fontWeight: 700, marginTop: 4 }}>{recipients || '-'}</div>
+                </div>
+                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Opened</div>
+                  <div style={{ fontSize: 16, color: '#1a1a2e', fontWeight: 700, marginTop: 4 }}>{c.opened_count || 0} <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 500 }}>({openRate})</span></div>
+                </div>
+                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Failed</div>
+                  <div style={{ fontSize: 16, color: c.failed_count ? '#ef4444' : '#1a1a2e', fontWeight: 700, marginTop: 4 }}>{c.failed_count || 0}</div>
+                </div>
+              </div>
+
+              {/* Auto-trigger info */}
+              {c.auto_trigger_enabled && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: 10, marginBottom: 14, fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {c.trigger_type === 'birthday' ? <Cake size={14} /> : <Zap size={14} />}
+                  Auto-trigger: {c.trigger_type === 'birthday' ? 'sends on contact birthday' : <>sends when contact gets tag <strong>{c.trigger_on_tag}</strong></>}
+                </div>
+              )}
+
+              {/* HTML preview */}
+              <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>Email preview</div>
+              <div style={{ border: '1px solid #e5e7ef', borderRadius: 8, overflow: 'hidden', background: '#f5f5f7' }}>
+                {rawBody ? (
+                  <iframe
+                    title="Broadcast preview"
+                    srcDoc={previewHtml}
+                    sandbox=""
+                    style={{ width: '100%', height: 500, border: 0, background: '#fff' }}
+                  />
+                ) : (
+                  <div style={{ padding: 30, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>No body content.</div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                {(c.status === 'draft' || c.status === 'scheduled') && !c.auto_trigger_enabled && (
+                  <button onClick={() => { handleSendCampaign(c.id); setViewCampaign(null); }} disabled={sendingCampId === c.id || !config} style={{ ...btnPrimary, opacity: (sendingCampId === c.id || !config) ? 0.6 : 1 }}>
+                    <Zap size={14} /> Send now
+                  </button>
+                )}
+                {c.status !== 'sending' && (
+                  <button onClick={() => { if (confirm('Delete this broadcast?')) { handleDeleteCampaign(c.id); setViewCampaign(null); } }} style={btnDanger}>
+                    <Trash2 size={14} /> Delete
+                  </button>
+                )}
+                <button onClick={() => setViewCampaign(null)} style={btnSecondary}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* New client modal */}
       {newClientOpen && (
@@ -1611,7 +1708,8 @@ export default function EmailMarketing() {
                     const dateLabel = c.sent_at || c.scheduled_at || c.updated_at || c.created_at;
                     const d = dateLabel ? new Date(dateLabel) : null;
                     return (
-                      <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f5', transition: 'background 0.1s' }}
+                      <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f5', transition: 'background 0.1s', cursor: 'pointer' }}
+                          onClick={() => setViewCampaign(c)}
                           onMouseEnter={e => e.currentTarget.style.background = '#fafbfd'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <td style={{ padding: '14px 16px' }}>
@@ -1642,7 +1740,7 @@ export default function EmailMarketing() {
                         <td style={{ padding: '14px 12px', textAlign: 'right', color: '#1a1a2e' }}>{openRate}</td>
                         <td style={{ padding: '14px 12px', textAlign: 'right', color: c.failed_count ? '#ef4444' : '#b0b0c0' }}>{c.failed_count || '-'}</td>
                         <td style={{ padding: '14px 12px', textAlign: 'center' }}><StatusPill status={c.status} /></td>
-                        <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                           {(c.status === 'draft' || c.status === 'scheduled') && !c.auto_trigger_enabled && (
                             <button onClick={() => handleSendCampaign(c.id)} disabled={sendingCampId === c.id || !config} style={{ ...btnPrimary, padding: '5px 10px', fontSize: 11, marginRight: 4, opacity: (sendingCampId === c.id || !config) ? 0.6 : 1 }}>
                               {sendingCampId === c.id ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={12} />} Send
