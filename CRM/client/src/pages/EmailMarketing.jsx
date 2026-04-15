@@ -275,8 +275,14 @@ export default function EmailMarketing() {
   const campSubjectRef = useRef(null);
 
   // Template picker (campaigns + sequence steps)
-  // tplPicker: null | { onApply: ({ html, subject, preview_text }) => void }
+  // tplPicker: null | { onApply: ({ html, template_html, body_text, subject, preview_text, has_slot }) => void }
   const [tplPicker, setTplPicker] = useState(null);
+
+  // Active template wrapper for the broadcast composer.
+  // When set, campBody is ONLY the editable body paragraph; the wrapper HTML
+  // has a {{body}} placeholder that gets substituted on save.
+  const [campTemplateHtml, setCampTemplateHtml] = useState(null);
+  const [campTemplateName, setCampTemplateName] = useState('');
 
   // Tag context form
   const [newTagName, setNewTagName] = useState('');
@@ -629,10 +635,14 @@ export default function EmailMarketing() {
     if (!campSubject.trim() || !selectedClientId) return;
     setCreatingCamp(true); setError('');
     try {
+      // If a template wrapper is active, substitute the editable body into {{body}}
+      const finalHtml = campTemplateHtml
+        ? String(campTemplateHtml).replace(/\{\{body\}\}/g, campBody || '')
+        : campBody;
       await createEmailCampaign({
         client_id: selectedClientId,
         subject: campSubject,
-        html_body: campBody,
+        html_body: finalHtml,
         preview_text: campPreview,
         tag_filter: campTags,
         scheduled_at: campAutoTrigger ? null : (campSchedule || undefined),
@@ -642,6 +652,7 @@ export default function EmailMarketing() {
       });
       setCampSubject(''); setCampBody(''); setCampPreview(''); setCampShowPreview(false); setCampTags([]); setCampSchedule('');
       setCampAutoTrigger(false); setCampTriggerTag(''); setCampTriggerType('tag');
+      setCampTemplateHtml(null); setCampTemplateName('');
       setShowComposer(false);
       const camp = await getEmailCampaigns(selectedClientId);
       setCampaigns(camp || []);
@@ -1554,8 +1565,18 @@ export default function EmailMarketing() {
                   if (!tplId) return;
                   setTplPicker({
                     initialTemplateId: tplId,
-                    onApply: ({ html, subject, preview_text }) => {
-                      setCampBody(html || '');
+                    onApply: ({ template_html, body_text, subject, preview_text, has_slot, name }) => {
+                      if (has_slot && template_html) {
+                        // Keep wrapper separate; body editor edits just the paragraph
+                        setCampTemplateHtml(template_html);
+                        setCampTemplateName(name || '');
+                        setCampBody(body_text || '');
+                      } else {
+                        // Template has no editable slot — drop raw HTML into editor
+                        setCampTemplateHtml(null);
+                        setCampTemplateName('');
+                        setCampBody(template_html || '');
+                      }
                       if (subject && !campSubject) setCampSubject(subject);
                       if (preview_text && !campPreview) setCampPreview(preview_text);
                     },
@@ -1623,23 +1644,49 @@ export default function EmailMarketing() {
             {/* Rich editor body */}
             <div style={{ marginTop: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Body</label>
-                <button
-                  type="button"
-                  onClick={() => setTplPicker({
-                    onApply: ({ html, subject, preview_text }) => {
-                      setCampBody(html || '');
-                      if (subject && !campSubject) setCampSubject(subject);
-                      if (preview_text && !campPreview) setCampPreview(preview_text);
-                    },
-                  })}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-                >
-                  <FileText size={12} /> Use template
-                </button>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>
+                  Body {campTemplateHtml && <span style={{ fontWeight: 500, color: '#8e8ea0', fontSize: 11 }}>(editable slot only)</span>}
+                </label>
+                {!campTemplateHtml && (
+                  <button
+                    type="button"
+                    onClick={() => setTplPicker({
+                      onApply: ({ template_html, body_text, subject, preview_text, has_slot, name }) => {
+                        if (has_slot && template_html) {
+                          setCampTemplateHtml(template_html);
+                          setCampTemplateName(name || '');
+                          setCampBody(body_text || '');
+                        } else {
+                          setCampTemplateHtml(null);
+                          setCampTemplateName('');
+                          setCampBody(template_html || '');
+                        }
+                        if (subject && !campSubject) setCampSubject(subject);
+                        if (preview_text && !campPreview) setCampPreview(preview_text);
+                      },
+                    })}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    <FileText size={12} /> Use template
+                  </button>
+                )}
               </div>
+              {campTemplateHtml && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
+                  <FileText size={13} color="#2563eb" />
+                  <span style={{ color: '#1e3a8a' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
+                  <span style={{ color: '#64748b', fontSize: 11 }}>— only the body paragraph below is editable.</span>
+                  <button
+                    type="button"
+                    onClick={() => { setCampTemplateHtml(null); setCampTemplateName(''); }}
+                    style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                  >
+                    <X size={11} /> Remove
+                  </button>
+                </div>
+              )}
               <VarButtons onInsert={token => setCampBody((campBody || '') + token)} />
-              <EmailEditor value={campBody} onChange={setCampBody} clientId={selectedClientId} placeholder="Hey {{name}}," height={340} />
+              <EmailEditor value={campBody} onChange={setCampBody} clientId={selectedClientId} placeholder={campTemplateHtml ? 'Type your message here — this is what goes in the editable slot.' : 'Hey {{name}},'} height={340} />
             </div>
 
             {/* Auto-trigger */}
@@ -2566,6 +2613,7 @@ function StepEditor({ step, index, onSave, onDelete, onOpenTemplatePicker }) {
               <button
                 type="button"
                 onClick={() => onOpenTemplatePicker(({ html, subject: s, preview_text: p }) => {
+                  // Sequences use the fully rendered HTML directly (no wrapper state here)
                   setBody(html || '');
                   if (s && !subject) setSubject(s);
                   if (p && !preview) setPreview(p);
@@ -2812,6 +2860,10 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
               disabled={!selected}
               onClick={() => onApply({
                 html: renderHtml(),
+                template_html: selected?.html_body || '',
+                body_text: bodyText,
+                has_slot: !!hasBodyVar,
+                name: selected?.name || '',
                 subject: selected?.subject || '',
                 preview_text: selected?.preview_text || '',
               })}
