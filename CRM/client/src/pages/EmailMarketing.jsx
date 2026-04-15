@@ -204,6 +204,13 @@ export default function EmailMarketing() {
   const [newDiscount, setNewDiscount] = useState('');
   const [newSignedUpAt, setNewSignedUpAt] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkPreview, setBulkPreview] = useState([]); // parsed contact objects
+  const [bulkError, setBulkError] = useState('');
+  const [showMoreFields, setShowMoreFields] = useState(false);
+  const [newCity, setNewCity] = useState('');
+  const [newState, setNewState] = useState('');
+  const [newCountry, setNewCountry] = useState('');
+  const bulkFileRef = useRef(null);
   const [adding, setAdding] = useState(false);
   const [editContactId, setEditContactId] = useState(null);
   const [editForm, setEditForm] = useState({ birthday_month: '', birthday_day: '', discount_code: '', signed_up_at: '' });
@@ -344,27 +351,107 @@ export default function EmailMarketing() {
           birthday_day: newBdayDay ? parseInt(newBdayDay) : null,
           discount_code: newDiscount.trim() || null,
           signed_up_at: newSignedUpAt ? new Date(newSignedUpAt).toISOString() : null,
+          city: newCity.trim() || null,
+          state: newState.trim() || null,
+          country: newCountry.trim() || null,
         }],
       });
       setNewEmail(''); setNewName(''); setNewTags(''); setNewBdayMonth(''); setNewBdayDay('');
-      setNewDiscount(''); setNewSignedUpAt('');
+      setNewDiscount(''); setNewSignedUpAt(''); setNewCity(''); setNewState(''); setNewCountry('');
       const [c, stats] = await Promise.all([getEmailContacts(selectedClientId), getContactStats(selectedClientId)]);
       setContacts(c || []); setContactStats(stats || {});
     } catch (e) { setError(e.message); }
     setAdding(false);
   }
 
+  // Parse a single CSV line respecting quoted fields
+  function parseCsvLine(line) {
+    const out = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map(s => s.trim().replace(/^'/, ''));
+  }
+
+  // Smart bulk parser: handles CSV with header (email/name/tags/city/state/country/...)
+  // OR positional "email, name, tag1, tag2..." format.
+  function parseBulkContacts(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return [];
+
+    // Detect header row: look for an "email" field
+    const firstFields = parseCsvLine(lines[0]).map(f => f.toLowerCase());
+    const hasHeader = firstFields.some(f => f === 'email');
+
+    if (hasHeader) {
+      const headers = firstFields;
+      const idx = (name) => headers.indexOf(name);
+      const out = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cells = parseCsvLine(lines[i]);
+        if (!cells.length) continue;
+        const email = (cells[idx('email')] || '').toLowerCase().trim();
+        if (!email) continue;
+        const tagsRaw = idx('tags') >= 0 ? (cells[idx('tags')] || '') : '';
+        const tags = tagsRaw.split(/[;,|]/).map(s => s.trim()).filter(Boolean);
+        out.push({
+          email,
+          name: cells[idx('first_name')] || cells[idx('name')] || '',
+          tags,
+          city: idx('city') >= 0 ? cells[idx('city')] || null : null,
+          state: idx('state') >= 0 ? cells[idx('state')] || null : null,
+          country: idx('country') >= 0 ? cells[idx('country')] || null : null,
+        });
+      }
+      return out;
+    }
+
+    // Positional fallback
+    return lines.map(line => {
+      const cells = parseCsvLine(line);
+      const email = (cells[0] || '').toLowerCase().trim();
+      return {
+        email,
+        name: cells[1] || '',
+        tags: cells.slice(2).filter(Boolean),
+      };
+    }).filter(c => c.email);
+  }
+
+  function reparseBulk(text) {
+    setBulkEmails(text);
+    setBulkError('');
+    try {
+      const parsed = parseBulkContacts(text);
+      setBulkPreview(parsed);
+    } catch (e) {
+      setBulkError(e.message);
+      setBulkPreview([]);
+    }
+  }
+
+  function handleBulkFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => reparseBulk(String(reader.result || ''));
+    reader.onerror = () => setBulkError('Failed to read file');
+    reader.readAsText(file);
+  }
+
   async function handleBulkAdd() {
-    const lines = bulkEmails.split('\n').map(l => l.trim()).filter(Boolean);
-    if (!lines.length || !selectedClientId) return;
+    const contactsList = bulkPreview.length ? bulkPreview : parseBulkContacts(bulkEmails);
+    if (!contactsList.length || !selectedClientId) return;
     setAdding(true); setError('');
     try {
-      const contactsList = lines.map(line => {
-        const [email, ...rest] = line.split(',').map(s => s.trim());
-        return { email, name: rest[0] || '', tags: rest.slice(1).filter(Boolean) };
-      });
       await addEmailContacts({ client_id: selectedClientId, contacts: contactsList });
-      setBulkEmails('');
+      setBulkEmails(''); setBulkPreview([]); setBulkError('');
       const [c, stats] = await Promise.all([getEmailContacts(selectedClientId), getContactStats(selectedClientId)]);
       setContacts(c || []); setContactStats(stats || {});
     } catch (e) { setError(e.message); }
@@ -898,47 +985,78 @@ export default function EmailMarketing() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={cardStyle}>
-          <div style={sectionTitle}>Add Contact</div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ flex: 2, minWidth: 180 }}>
-              <label style={labelStyle}>Email</label>
-              <input style={inputStyle} placeholder="email@example.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddContact()} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={sectionTitle} >Add Contact</div>
+            <button type="button" onClick={() => setShowMoreFields(s => !s)} style={{
+              background: 'transparent', border: 'none', color: '#4a6cf7', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              <ChevronDown size={13} style={{ transform: showMoreFields ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              {showMoreFields ? 'Hide details' : 'More details'}
+            </button>
+          </div>
+          {/* Primary row — fast path */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 2fr) minmax(140px, 1fr) minmax(180px, 1.5fr) auto', gap: 10, alignItems: 'end' }}>
+            <div>
+              <label style={labelStyle}>Email *</label>
+              <input style={inputStyle} placeholder="email@example.com" value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && newEmail.trim() && handleAddContact()} autoFocus />
             </div>
-            <div style={{ flex: 1, minWidth: 140 }}>
+            <div>
               <label style={labelStyle}>Name</label>
               <input style={inputStyle} placeholder="First Last" value={newName} onChange={e => setNewName(e.target.value)} />
             </div>
-            <div style={{ flex: 1, minWidth: 180 }}>
+            <div>
               <label style={labelStyle}>Tags</label>
-              <TagSelect value={newTags} onChange={setNewTags} options={allKnownTags} placeholder="Click to choose tags..." />
+              <TagSelect value={newTags} onChange={setNewTags} options={allKnownTags} placeholder="Choose tags..." />
             </div>
+            <button onClick={handleAddContact} disabled={adding || !newEmail.trim()} style={{ ...btnPrimary, opacity: adding ? 0.6 : 1, height: 38 }}>
+              {adding ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />} Add
+            </button>
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
-            <div style={{ minWidth: 170 }}>
-              <label style={labelStyle}><Cake size={10} style={{ marginRight: 3 }} />Birthday</label>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <select style={{ ...inputStyle, flex: 1 }} value={newBdayMonth} onChange={e => setNewBdayMonth(e.target.value)}>
+
+          {/* Secondary fields — collapsed by default */}
+          {showMoreFields && (
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed #e5e7ef',
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+              <div>
+                <label style={labelStyle}><Cake size={10} style={{ marginRight: 3 }} />Birthday Month</label>
+                <select style={inputStyle} value={newBdayMonth} onChange={e => setNewBdayMonth(e.target.value)}>
                   <option value="">Month</option>
                   {MONTHS.slice(1).map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
                 </select>
-                <select style={{ ...inputStyle, width: 70 }} value={newBdayDay} onChange={e => setNewBdayDay(e.target.value)}>
+              </div>
+              <div>
+                <label style={labelStyle}>Birthday Day</label>
+                <select style={inputStyle} value={newBdayDay} onChange={e => setNewBdayDay(e.target.value)}>
                   <option value="">Day</option>
                   {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
+              <div>
+                <label style={labelStyle}><Gift size={10} style={{ marginRight: 3 }} />Discount Code</label>
+                <input style={inputStyle} placeholder="WELCOME10" value={newDiscount} onChange={e => setNewDiscount(e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>Signed Up</label>
+                <input type="date" style={inputStyle} value={newSignedUpAt} onChange={e => setNewSignedUpAt(e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>City</label>
+                <input style={inputStyle} placeholder="Houston" value={newCity} onChange={e => setNewCity(e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>State</label>
+                <input style={inputStyle} placeholder="TX" value={newState} onChange={e => setNewState(e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>Country</label>
+                <input style={inputStyle} placeholder="US" value={newCountry} onChange={e => setNewCountry(e.target.value)} />
+              </div>
             </div>
-            <div style={{ flex: 1, minWidth: 140 }}>
-              <label style={labelStyle}><Gift size={10} style={{ marginRight: 3 }} />Discount Code</label>
-              <input style={inputStyle} placeholder="WELCOME10" value={newDiscount} onChange={e => setNewDiscount(e.target.value)} />
-            </div>
-            <div style={{ flex: 1, minWidth: 140 }}>
-              <label style={labelStyle}>Signed Up</label>
-              <input type="date" style={inputStyle} value={newSignedUpAt} onChange={e => setNewSignedUpAt(e.target.value)} />
-            </div>
-            <button onClick={handleAddContact} disabled={adding || !newEmail.trim()} style={{ ...btnPrimary, opacity: adding ? 0.6 : 1 }}>
-              {adding ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />} Add
-            </button>
-          </div>
+          )}
+
           {campaigns.some(c => c.auto_trigger_enabled) && (
             <div style={{ marginTop: 10, fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Info size={12} /> Auto-trigger campaigns active: new contacts with matching tags will receive them automatically.
@@ -947,12 +1065,98 @@ export default function EmailMarketing() {
         </div>
 
         <div style={cardStyle}>
-          <div style={sectionTitle}>Bulk Import</div>
-          <label style={labelStyle}>One per line: email, name, tag1, tag2...</label>
-          <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} placeholder={'john@example.com, John Doe, newsletter\njane@example.com, Jane, vip, newsletter'} value={bulkEmails} onChange={e => setBulkEmails(e.target.value)} />
-          <div style={{ marginTop: 10 }}>
-            <button onClick={handleBulkAdd} disabled={adding || !bulkEmails.trim()} style={{ ...btnPrimary, opacity: adding ? 0.6 : 1 }}>
-              {adding ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />} Import All
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={sectionTitle}>Bulk Import</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input ref={bulkFileRef} type="file" accept=".csv,text/csv,text/plain" style={{ display: 'none' }}
+                onChange={e => { handleBulkFile(e.target.files?.[0]); if (bulkFileRef.current) bulkFileRef.current.value = ''; }} />
+              <button onClick={() => bulkFileRef.current?.click()} style={btnSecondary}>
+                <Upload size={13} /> Upload CSV
+              </button>
+              {(bulkEmails || bulkPreview.length > 0) && (
+                <button onClick={() => { setBulkEmails(''); setBulkPreview([]); setBulkError(''); }} style={btnSecondary}>
+                  <X size={13} /> Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Drag-drop zone */}
+          <div
+            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#4a6cf7'; e.currentTarget.style.background = '#eef2ff'; }}
+            onDragLeave={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#f8f9fc'; }}
+            onDrop={e => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = '#c7d2fe';
+              e.currentTarget.style.background = '#f8f9fc';
+              const f = e.dataTransfer.files?.[0];
+              if (f) handleBulkFile(f);
+            }}
+            style={{
+              border: '1px dashed #c7d2fe', borderRadius: 10, padding: 14, background: '#f8f9fc',
+              fontSize: 12, color: '#5a5a6e', textAlign: 'center', marginBottom: 10,
+              transition: 'all 0.15s',
+            }}
+          >
+            Drop a CSV here, paste below, or click <strong>Upload CSV</strong>. Headers like <code>email,first_name,tags,city,state,country</code> are auto-detected.
+          </div>
+
+          <textarea
+            style={{ ...inputStyle, minHeight: 100, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }}
+            placeholder={'email,first_name,tags,city,state,country\njohn@example.com,John,"newsletter,vip",Houston,TX,US'}
+            value={bulkEmails}
+            onChange={e => reparseBulk(e.target.value)}
+          />
+
+          {bulkError && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#dc2626' }}>{bulkError}</div>
+          )}
+
+          {bulkPreview.length > 0 && (
+            <div style={{ marginTop: 12, border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ padding: '8px 12px', background: '#f8f9fc', fontSize: 12, fontWeight: 600, color: '#1a1a2e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Preview · {bulkPreview.length} contact{bulkPreview.length === 1 ? '' : 's'} ready</span>
+                <span style={{ color: '#8e8ea0', fontWeight: 500 }}>
+                  {(() => {
+                    const existingEmails = new Set(contacts.map(c => (c.email || '').toLowerCase()));
+                    const dupes = bulkPreview.filter(p => existingEmails.has(p.email)).length;
+                    return dupes > 0 ? `${dupes} already in list (will update tags)` : 'all new';
+                  })()}
+                </span>
+              </div>
+              <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead style={{ position: 'sticky', top: 0, background: '#fff' }}>
+                    <tr style={{ borderBottom: '1px solid #e5e7ef' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Email</th>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Name</th>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Tags</th>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Location</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bulkPreview.slice(0, 100).map((p, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #f0f0f5' }}>
+                        <td style={{ padding: '6px 10px', color: '#1a1a2e' }}>{p.email}</td>
+                        <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{p.name || '-'}</td>
+                        <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{(p.tags || []).join(', ') || '-'}</td>
+                        <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{[p.city, p.state, p.country].filter(Boolean).join(', ') || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {bulkPreview.length > 100 && (
+                  <div style={{ padding: 8, fontSize: 11, color: '#8e8ea0', textAlign: 'center' }}>+{bulkPreview.length - 100} more...</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+            <button onClick={handleBulkAdd} disabled={adding || bulkPreview.length === 0}
+              style={{ ...btnPrimary, opacity: (adding || bulkPreview.length === 0) ? 0.6 : 1 }}>
+              {adding ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />}
+              Import {bulkPreview.length || ''} contact{bulkPreview.length === 1 ? '' : 's'}
             </button>
           </div>
         </div>
