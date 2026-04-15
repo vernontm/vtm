@@ -2190,17 +2190,21 @@ function SequenceCard({ seq, onOpen, onDelete }) {
   return (
     <div onClick={onOpen} style={{
       background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: 20,
-      cursor: 'pointer', transition: 'box-shadow 0.15s, transform 0.15s', position: 'relative',
+      cursor: 'pointer', transition: 'box-shadow 0.15s, transform 0.15s',
+      display: 'flex', flexDirection: 'column',
     }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(10,20,40,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Mail size={18} color="#1a1a2e" />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', letterSpacing: -0.3 }}>{seq.name}</div>
-        </div>
+      {/* Status badge row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, minHeight: 20 }}>
+        <span style={{
+          fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
+          padding: '3px 8px', borderRadius: 10,
+          background: seq.active ? '#e8f5e9' : '#f0f0f5',
+          color: seq.active ? '#22c55e' : '#8e8ea0',
+        }}>
+          {seq.active ? 'Active' : 'Inactive'}
+        </span>
         <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
           <button onClick={() => setMenuOpen(o => !o)} style={{ background: 'transparent', border: 'none', padding: 4, cursor: 'pointer', color: '#8e8ea0', fontSize: 18, lineHeight: 1 }}>⋮</button>
           {menuOpen && (
@@ -2211,29 +2215,34 @@ function SequenceCard({ seq, onOpen, onDelete }) {
           )}
         </div>
       </div>
-      <div style={{ fontSize: 13, color: '#8e8ea0', fontStyle: 'italic', marginTop: 12 }}>
+
+      {/* Title row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Mail size={18} color="#1a1a2e" />
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', letterSpacing: -0.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seq.name}</div>
+      </div>
+
+      <div style={{ fontSize: 13, color: '#8e8ea0', fontStyle: 'italic', marginTop: 14 }}>
         A {dayLabel} sequence with {emailsLabel}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 18 }}>
-        <MetricCol label="SUBSCRIBERS" value={seq.subscribers || 0} />
-        <MetricCol label="OPEN RATE" value={`${(seq.open_rate || 0).toFixed(seq.open_rate >= 10 ? 0 : 2)}%`} />
-        <MetricCol label="CLICK RATE" value={`${(seq.click_rate || 0).toFixed(seq.click_rate >= 10 ? 0 : 2)}%`} />
-        <MetricCol label="UNSUBSCRIBERS" value={seq.unsubscribers || 0} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 18 }}>
+        <MetricCol label="SUBS" value={seq.subscribers || 0} />
+        <MetricCol label="OPEN" value={`${(seq.open_rate || 0).toFixed(seq.open_rate >= 10 ? 0 : 1)}%`} />
+        <MetricCol label="CLICK" value={`${(seq.click_rate || 0).toFixed(seq.click_rate >= 10 ? 0 : 1)}%`} />
+        <MetricCol label="UNSUB" value={seq.unsubscribers || 0} />
       </div>
-      {!seq.active && (
-        <div style={{ position: 'absolute', top: 14, left: 14, background: '#f0f0f5', color: '#8e8ea0', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', padding: '2px 8px', borderRadius: 10, letterSpacing: 0.5 }}>
-          Inactive
-        </div>
-      )}
     </div>
   );
 }
 
 function MetricCol({ label, value }) {
   return (
-    <div>
-      <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 700, letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', marginTop: 4 }}>{value}</div>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 700, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
     </div>
   );
 }
