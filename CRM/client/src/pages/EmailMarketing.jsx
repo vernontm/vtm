@@ -1501,7 +1501,7 @@ export default function EmailMarketing() {
       { key: 'scheduled', label: 'Scheduled', match: c => c.status === 'scheduled' },
       { key: 'sending', label: 'Processing', match: c => c.status === 'sending' || c.status === 'partial' },
       { key: 'sent', label: 'Published', match: c => c.status === 'sent' },
-      { key: 'auto', label: 'Automations', match: c => !!c.auto_trigger_enabled },
+      { key: 'auto', label: 'Sequences', match: c => !!c.auto_trigger_enabled },
     ];
     const counts = {};
     statusTabs.forEach(t => { counts[t.key] = campaigns.filter(t.match).length; });
