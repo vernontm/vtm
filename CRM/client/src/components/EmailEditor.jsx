@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Bold, Italic, Underline, Strikethrough,
   AlignLeft, AlignCenter, AlignRight,
@@ -10,7 +10,7 @@ import { uploadEmailImage } from '../api';
 // Broadcast-style rich text editor with image upload.
 // Emits HTML via onChange(html). Accepts initial `value` (HTML string).
 // Passes clientId for scoping uploaded images in storage.
-export default function EmailEditor({ value, onChange, clientId, placeholder, height = 360 }) {
+const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId, placeholder, height = 360 }, ref) {
   const editorRef = useRef(null);
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -47,6 +47,26 @@ export default function EmailEditor({ value, onChange, clientId, placeholder, he
     setHtmlSource(html);
     onChange?.(html);
   }
+
+  // Expose imperative API for parent to insert HTML at the caret position.
+  useImperativeHandle(ref, () => ({
+    insertHtml(html) {
+      if (!editorRef.current) return;
+      editorRef.current.focus();
+      // If the current selection is outside the editor, place caret at end
+      const sel = window.getSelection();
+      if (!sel || !editorRef.current.contains(sel.anchorNode)) {
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+      document.execCommand('insertHTML', false, html);
+      flush();
+    },
+    focus() { editorRef.current?.focus(); },
+  }));
 
   function applyHeading(tag) {
     exec('formatBlock', tag);
@@ -242,10 +262,25 @@ export default function EmailEditor({ value, onChange, clientId, placeholder, he
         [contentEditable=true] ul, [contentEditable=true] ol { margin: 0 0 12px 20px; }
         [contentEditable=true] a { color: #4a6cf7; text-decoration: underline; }
         [contentEditable=true] img { max-width: 100%; height: auto; border-radius: 4px; }
+        [contentEditable=true] .merge-tag {
+          display: inline-block;
+          background: #eff6ff;
+          border: 1px solid #60a5fa;
+          color: #1d4ed8;
+          padding: 1px 7px;
+          border-radius: 5px;
+          font-size: 0.92em;
+          font-weight: 600;
+          line-height: 1.4;
+          margin: 0 1px;
+          white-space: nowrap;
+        }
       `}</style>
     </div>
   );
-}
+});
+
+export default EmailEditor;
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {

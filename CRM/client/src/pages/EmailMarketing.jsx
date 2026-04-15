@@ -273,6 +273,7 @@ export default function EmailMarketing() {
   const [campFilter, setCampFilter] = useState('all'); // all | draft | scheduled | sending | sent
   const [campSearch, setCampSearch] = useState('');
   const campSubjectRef = useRef(null);
+  const campBodyEditorRef = useRef(null);
 
   // Template picker (campaigns + sequence steps)
   // tplPicker: null | { onApply: ({ html, template_html, body_text, subject, preview_text, has_slot }) => void }
@@ -283,6 +284,9 @@ export default function EmailMarketing() {
   // has a {{body}} placeholder that gets substituted on save.
   const [campTemplateHtml, setCampTemplateHtml] = useState(null);
   const [campTemplateName, setCampTemplateName] = useState('');
+  const [campCtaText, setCampCtaText] = useState('Get Access');
+  const [campCtaUrl, setCampCtaUrl] = useState('https://www.vernontm.com/book-call');
+  const [campShowLivePreview, setCampShowLivePreview] = useState(false);
 
   // Tag context form
   const [newTagName, setNewTagName] = useState('');
@@ -635,10 +639,19 @@ export default function EmailMarketing() {
     if (!campSubject.trim() || !selectedClientId) return;
     setCreatingCamp(true); setError('');
     try {
-      // If a template wrapper is active, substitute the editable body into {{body}}
+      // Strip visual merge-tag chip wrappers — keep the raw token so the
+      // send-side substitution (`{{name}}` -> contact.name) still works cleanly.
+      const unwrapChips = (html) => (html || '')
+        .replace(/<span[^>]*class=["'][^"']*merge-tag[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi, '$1')
+        .replace(/&nbsp;/g, ' ');
+      const cleanBody = unwrapChips(campBody);
+      // If a template wrapper is active, substitute the editable body + CTA into placeholders
       const finalHtml = campTemplateHtml
-        ? String(campTemplateHtml).replace(/\{\{body\}\}/g, campBody || '')
-        : campBody;
+        ? String(campTemplateHtml)
+            .replace(/\{\{body\}\}/g, cleanBody || '')
+            .replace(/\{\{cta_text\}\}/g, campCtaText || 'Learn more')
+            .replace(/\{\{cta_url\}\}/g, campCtaUrl || '#')
+        : cleanBody;
       await createEmailCampaign({
         client_id: selectedClientId,
         subject: campSubject,
@@ -653,6 +666,8 @@ export default function EmailMarketing() {
       setCampSubject(''); setCampBody(''); setCampPreview(''); setCampShowPreview(false); setCampTags([]); setCampSchedule('');
       setCampAutoTrigger(false); setCampTriggerTag(''); setCampTriggerType('tag');
       setCampTemplateHtml(null); setCampTemplateName('');
+      setCampCtaText('Get Access'); setCampCtaUrl('https://www.vernontm.com/book-call');
+      setCampShowLivePreview(false);
       setShowComposer(false);
       const camp = await getEmailCampaigns(selectedClientId);
       setCampaigns(camp || []);
@@ -1685,8 +1700,66 @@ export default function EmailMarketing() {
                   </button>
                 </div>
               )}
-              <VarButtons onInsert={token => setCampBody((campBody || '') + token)} />
-              <EmailEditor value={campBody} onChange={setCampBody} clientId={selectedClientId} placeholder={campTemplateHtml ? 'Type your message here — this is what goes in the editable slot.' : 'Hey {{name}},'} height={340} />
+              <VarButtons onInsert={token => {
+                const chip = `<span class="merge-tag" contenteditable="false" style="display:inline-block; background:#eff6ff; border:1px solid #60a5fa; color:#1d4ed8; padding:1px 7px; border-radius:5px; font-size:0.92em; font-weight:600; line-height:1.4; margin:0 1px; white-space:nowrap;">${token}</span>&nbsp;`;
+                if (campBodyEditorRef.current?.insertHtml) {
+                  campBodyEditorRef.current.insertHtml(chip);
+                } else {
+                  setCampBody((campBody || '') + token);
+                }
+              }} />
+              <EmailEditor ref={campBodyEditorRef} value={campBody} onChange={setCampBody} clientId={selectedClientId} placeholder={campTemplateHtml ? 'Type your message here — this is what goes in the editable slot.' : 'Hey {{name}},'} height={340} />
+
+              {/* CTA customization — shown when a template wrapper is active */}
+              {campTemplateHtml && (
+                <div style={{ marginTop: 12, padding: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9a3412', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 200px', minWidth: 160 }}>
+                      <label style={{ ...labelStyle, color: '#9a3412' }}>Button text</label>
+                      <input style={inputStyle} placeholder="Get Access" value={campCtaText} onChange={e => setCampCtaText(e.target.value)} />
+                    </div>
+                    <div style={{ flex: '2 1 320px', minWidth: 240 }}>
+                      <label style={{ ...labelStyle, color: '#9a3412' }}>Button URL</label>
+                      <input style={inputStyle} placeholder="https://..." value={campCtaUrl} onChange={e => setCampCtaUrl(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Live preview toggle + iframe */}
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setCampShowLivePreview(v => !v)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: campShowLivePreview ? '#1a1a2e' : '#f3f4f6', color: campShowLivePreview ? '#fff' : '#1a1a2e', border: '1px solid #e5e7ef', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  <Eye size={13} /> {campShowLivePreview ? 'Hide preview' : 'Show live preview'}
+                </button>
+                <span style={{ fontSize: 11, color: '#8e8ea0' }}>See exactly how the email will look as you type.</span>
+              </div>
+              {campShowLivePreview && (
+                <div style={{ marginTop: 10, border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#0a0a0a' }}>
+                  <iframe
+                    title="Live email preview"
+                    srcDoc={(() => {
+                      const unwrapChips = (html) => (html || '')
+                        .replace(/<span[^>]*class=["'][^"']*merge-tag[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi, '$1')
+                        .replace(/&nbsp;/g, ' ');
+                      const cleanBody = unwrapChips(campBody) || '<span style="opacity:0.4">[your message here]</span>';
+                      if (campTemplateHtml) {
+                        return String(campTemplateHtml)
+                          .replace(/\{\{body\}\}/g, cleanBody)
+                          .replace(/\{\{cta_text\}\}/g, campCtaText || 'Learn more')
+                          .replace(/\{\{cta_url\}\}/g, campCtaUrl || '#');
+                      }
+                      return `<div style="padding:24px; font-family:Helvetica,Arial,sans-serif; background:#fff;">${cleanBody}</div>`;
+                    })()}
+                    sandbox=""
+                    style={{ width: '100%', height: 560, border: 0, background: '#0a0a0a' }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Auto-trigger */}
