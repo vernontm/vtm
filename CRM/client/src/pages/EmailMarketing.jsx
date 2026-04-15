@@ -2178,6 +2178,8 @@ export default function EmailMarketing() {
           <SequenceEditor
             seq={editingSeq}
             allTags={allKnownTags}
+            templates={templates}
+            clientId={selectedClientId}
             onClose={() => setEditingSeq(null)}
             onUpdate={handleUpdateSequence}
             onAddStep={handleAddStep}
@@ -2185,7 +2187,6 @@ export default function EmailMarketing() {
             onDeleteStep={handleDeleteStep}
             onEnrollMatching={handleEnrollMatching}
             onDelete={() => handleDeleteSequence(editingSeq.id)}
-            onOpenTemplatePicker={(onApply) => setTplPicker({ onApply })}
           />
         )}
       </div>
@@ -2441,7 +2442,7 @@ function MetricCol({ label, value }) {
 // ══════════════════════════════════════════════════════════════
 // SEQUENCE EDITOR MODAL
 // ══════════════════════════════════════════════════════════════
-function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep, onDeleteStep, onEnrollMatching, onDelete, onOpenTemplatePicker }) {
+function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, onAddStep, onSaveStep, onDeleteStep, onEnrollMatching, onDelete }) {
   const initAll = Array.isArray(seq.trigger_tags_all) && seq.trigger_tags_all.length
     ? seq.trigger_tags_all : (seq.trigger_tag ? [seq.trigger_tag] : []);
   const initNone = Array.isArray(seq.trigger_tags_none) ? seq.trigger_tags_none : [];
@@ -2618,7 +2619,7 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {(seq.steps || []).map((step, i) => (
-              <StepEditor key={step.id} step={step} index={i} onSave={onSaveStep} onDelete={() => onDeleteStep(step.id)} onOpenTemplatePicker={onOpenTemplatePicker} />
+              <StepEditor key={step.id} step={step} index={i} templates={templates} clientId={clientId} onSave={onSaveStep} onDelete={() => onDeleteStep(step.id)} />
             ))}
           </div>
         )}
@@ -2636,7 +2637,7 @@ function MetricBox({ label, value }) {
   );
 }
 
-function StepEditor({ step, index, onSave, onDelete, onOpenTemplatePicker }) {
+function StepEditor({ step, index, templates = [], clientId, onSave, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const [subject, setSubject] = useState(step.subject || '');
   const [preview, setPreview] = useState(step.preview_text || '');
@@ -2645,17 +2646,62 @@ function StepEditor({ step, index, onSave, onDelete, onOpenTemplatePicker }) {
   const [unit, setUnit] = useState(step.delay_unit || 'days');
   const [saving, setSaving] = useState(false);
 
+  // Template wrapper state (same model as the broadcast composer)
+  const [tplId, setTplId] = useState('');
+  const [tplHtml, setTplHtml] = useState(null);
+  const [tplName, setTplName] = useState('');
+  const [ctaText, setCtaText] = useState('Get Access');
+  const [ctaUrl, setCtaUrl] = useState('https://www.vernontm.com/book-call');
+  const [showPreview, setShowPreview] = useState(false);
+  const editorRef = useRef(null);
+
   useEffect(() => {
     setSubject(step.subject || '');
     setPreview(step.preview_text || '');
     setBody(step.html_body || '');
     setAmount(step.delay_amount ?? 1);
     setUnit(step.delay_unit || 'days');
+    setTplId(''); setTplHtml(null); setTplName('');
   }, [step.id]);
+
+  function applyTemplate(templateId) {
+    if (!templateId) { setTplId(''); setTplHtml(null); setTplName(''); return; }
+    const tpl = templates.find(t => t.id === templateId);
+    if (!tpl) return;
+    const hasSlot = !!(tpl.html_body || '').includes('{{body}}');
+    setTplId(templateId);
+    if (hasSlot) {
+      setTplHtml(tpl.html_body || '');
+      setTplName(tpl.name || '');
+      setBody('');
+    } else {
+      setTplHtml(null);
+      setTplName(tpl.name || '');
+      setBody(tpl.html_body || '');
+    }
+    if (tpl.subject && !subject) setSubject(tpl.subject);
+    if (tpl.preview_text && !preview) setPreview(tpl.preview_text);
+  }
+
+  const unwrapChips = (html) => (html || '')
+    .replace(/<span[^>]*class=["'][^"']*merge-tag[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi, '$1')
+    .replace(/&nbsp;/g, ' ');
+
+  function renderFinal() {
+    const cleanBody = unwrapChips(body);
+    if (tplHtml) {
+      return String(tplHtml)
+        .replace(/\{\{body\}\}/g, cleanBody || '')
+        .replace(/\{\{cta_text\}\}/g, ctaText || 'Learn more')
+        .replace(/\{\{cta_url\}\}/g, ctaUrl || '#');
+    }
+    return cleanBody;
+  }
 
   async function save() {
     setSaving(true);
-    await onSave({ id: step.id, step_order: step.step_order, subject, preview_text: preview, html_body: body, delay_amount: parseInt(amount) || 0, delay_unit: unit });
+    const finalHtml = renderFinal();
+    await onSave({ id: step.id, step_order: step.step_order, subject, preview_text: preview, html_body: finalHtml, delay_amount: parseInt(amount) || 0, delay_unit: unit });
     setSaving(false);
   }
 
@@ -2690,23 +2736,107 @@ function StepEditor({ step, index, onSave, onDelete, onOpenTemplatePicker }) {
           </div>
           <input style={inp} placeholder="Subject line" value={subject} onChange={e => setSubject(e.target.value)} />
           <input style={inp} placeholder="Preview text (optional)" value={preview} onChange={e => setPreview(e.target.value)} />
-          {onOpenTemplatePicker && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+
+          {/* Template picker dropdown */}
+          {templates && templates.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 }}>Start from template</div>
+              <select
+                value={tplId}
+                onChange={e => applyTemplate(e.target.value)}
+                style={{ ...inp, width: '100%', cursor: 'pointer' }}
+              >
+                <option value="">-- Select a template --</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Template banner */}
+          {tplHtml && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12 }}>
+              <FileText size={13} color="#2563eb" />
+              <span style={{ color: '#1e3a8a' }}>Using template: <strong>{tplName || 'Template'}</strong></span>
+              <span style={{ color: '#64748b', fontSize: 11 }}>— only the body below is editable.</span>
               <button
                 type="button"
-                onClick={() => onOpenTemplatePicker(({ html, subject: s, preview_text: p }) => {
-                  // Sequences use the fully rendered HTML directly (no wrapper state here)
-                  setBody(html || '');
-                  if (s && !subject) setSubject(s);
-                  if (p && !preview) setPreview(p);
-                })}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => { setTplId(''); setTplHtml(null); setTplName(''); }}
+                style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
               >
-                <FileText size={12} /> Use template
+                <X size={11} /> Remove
               </button>
             </div>
           )}
-          <textarea style={{ ...inp, minHeight: 200, fontFamily: 'Inter, sans-serif', resize: 'vertical' }} placeholder="Email body (HTML supported). Use {{name}} and {{discount_code}} as merge tags." value={body} onChange={e => setBody(e.target.value)} />
+
+          {/* Merge-tag chip buttons (insert at cursor) */}
+          <VarButtons onInsert={token => {
+            const chip = `<span class="merge-tag" contenteditable="false" style="display:inline-block; background:#eff6ff; border:1px solid #60a5fa; color:#1d4ed8; padding:1px 7px; border-radius:5px; font-size:0.92em; font-weight:600; line-height:1.4; margin:0 1px; white-space:nowrap;">${token}</span>&nbsp;`;
+            if (editorRef.current?.insertHtml) {
+              editorRef.current.insertHtml(chip);
+            } else {
+              setBody((body || '') + token);
+            }
+          }} />
+
+          {/* Rich email editor (never raw HTML) */}
+          <EmailEditor
+            ref={editorRef}
+            value={body}
+            onChange={setBody}
+            clientId={clientId}
+            placeholder={tplHtml ? 'Type your message here — this is what goes in the editable slot.' : 'Hey {{name}},'}
+            height={280}
+          />
+
+          {/* CTA editor (when template wrapper is active) */}
+          {tplHtml && (
+            <div style={{ padding: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9a3412', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 180px', minWidth: 140 }}>
+                  <div style={{ fontSize: 11, color: '#9a3412', fontWeight: 600, marginBottom: 4 }}>Button text</div>
+                  <input style={inp} placeholder="Get Access" value={ctaText} onChange={e => setCtaText(e.target.value)} />
+                </div>
+                <div style={{ flex: '2 1 280px', minWidth: 220 }}>
+                  <div style={{ fontSize: 11, color: '#9a3412', fontWeight: 600, marginBottom: 4 }}>Button URL</div>
+                  <input style={inp} placeholder="https://..." value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Live preview toggle + iframe */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => setShowPreview(v => !v)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: showPreview ? '#1a1a2e' : '#f3f4f6', color: showPreview ? '#fff' : '#1a1a2e', border: '1px solid #e5e7ef', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+            >
+              <Eye size={13} /> {showPreview ? 'Hide preview' : 'Show live preview'}
+            </button>
+            <span style={{ fontSize: 11, color: '#8e8ea0' }}>See how the email will look to subscribers.</span>
+          </div>
+          {showPreview && (
+            <div style={{ border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#0a0a0a' }}>
+              <iframe
+                title="Step live preview"
+                srcDoc={(() => {
+                  const cleanBody = unwrapChips(body) || '<span style="opacity:0.4">[your message here]</span>';
+                  if (tplHtml) {
+                    return String(tplHtml)
+                      .replace(/\{\{body\}\}/g, cleanBody)
+                      .replace(/\{\{cta_text\}\}/g, ctaText || 'Learn more')
+                      .replace(/\{\{cta_url\}\}/g, ctaUrl || '#');
+                  }
+                  return `<div style="padding:24px; font-family:Helvetica,Arial,sans-serif; background:#fff;">${cleanBody}</div>`;
+                })()}
+                sandbox=""
+                style={{ width: '100%', height: 520, border: 0, background: '#0a0a0a' }}
+              />
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button onClick={() => onDelete()} style={{ background: '#fff', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
               <Trash2 size={12} />
