@@ -955,7 +955,7 @@ export default function ContentScheduler() {
                 transition: 'all 0.15s',
               }}
             >
-              {c.business_name}
+              <span className="private-value">{c.business_name}</span>
             </div>
           ))}
 
@@ -1011,7 +1011,7 @@ export default function ContentScheduler() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a1a2e' }}>
-              {client ? client.business_name : 'Select a Client'}
+              {client ? <span className="private-value">{client.business_name}</span> : 'Select a Client'}
             </h2>
             {client && (
               <>
@@ -2700,7 +2700,7 @@ export default function ContentScheduler() {
         <div style={modalOverlay} onClick={() => setShowClientModal(false)}>
           <div className="cs-modal" style={{ ...modalBox, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>
-              {editingClient ? `Edit ${editingClient.business_name}` : 'Add Content Client'}
+              {editingClient ? <>Edit <span className="private-value">{editingClient.business_name}</span></> : 'Add Content Client'}
             </h3>
 
             {/* Basic Info */}

@@ -906,7 +906,7 @@ export default function Outreach() {
                 {client.logo_url ? (
                   <img src={client.logo_url} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <div style={{
+                  <div className="private-value" style={{
                     width: 32, height: 32, borderRadius: 8, background: '#e8ecf4', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#4a6cf7', fontWeight: 700, fontSize: 14,
@@ -916,7 +916,7 @@ export default function Outreach() {
                 )}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <h2 className="private-value" style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {client.business_name}
                     </h2>
                     <span style={{
@@ -1101,7 +1101,7 @@ export default function Outreach() {
                         {chatMessages.length === 0 && (
                           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8e8ea0' }}>
                             <Sparkles size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
-                            <p style={{ fontSize: 14, marginBottom: 8 }}>What would you like to do for <strong style={{ color: '#1a1a2e' }}>{client.business_name}</strong>?</p>
+                            <p style={{ fontSize: 14, marginBottom: 8 }}>What would you like to do for <strong className="private-value" style={{ color: '#1a1a2e' }}>{client.business_name}</strong>?</p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 12 }}>
                               {[
                                 `Find ${client.location_city || 'local'} influencers for ${client.business_name}`,

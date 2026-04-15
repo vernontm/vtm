@@ -626,7 +626,7 @@ export default function YouTubeStudio() {
               ...btnSecondary, width: '100%', justifyContent: 'space-between',
             }}
           >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span className={selectedClient ? 'private-value' : ''} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {selectedClient ? selectedClient.business_name : 'Select Client'}
             </span>
             <ChevronDown size={14} />
@@ -651,7 +651,7 @@ export default function YouTubeStudio() {
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,108,247,0.04)'}
                   onMouseLeave={e => e.currentTarget.style.background = selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent'}
                 >
-                  {c.business_name}
+                  <span className="private-value">{c.business_name}</span>
                 </div>
               ))}
               {clients.length === 0 && (

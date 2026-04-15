@@ -792,7 +792,7 @@ export default function EmailMarketing() {
                 transition: 'all 0.15s',
               }}
             >
-              {c.business_name}
+              <span className="private-value">{c.business_name}</span>
             </div>
           ))}
         </div>
@@ -806,7 +806,7 @@ export default function EmailMarketing() {
           display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flexShrink: 0,
         }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a1a2e' }}>
-            {selectedClient ? selectedClient.business_name : 'Select a Client'}
+            {selectedClient ? <span className="private-value">{selectedClient.business_name}</span> : 'Select a Client'}
           </h2>
           {selectedClientId && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
@@ -1087,7 +1087,7 @@ export default function EmailMarketing() {
               <button onClick={() => setAiGenOpen(false)} disabled={aiGenLoading} style={btnSecondary}><X size={13} /></button>
             </div>
             <div style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14 }}>
-              Uses <strong>{selectedClient?.business_name}</strong>'s brand bible, logo, and colors to produce a ready-to-send HTML template.
+              Uses <strong className="private-value">{selectedClient?.business_name}</strong>'s brand bible, logo, and colors to produce a ready-to-send HTML template.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
@@ -2247,7 +2247,7 @@ export default function EmailMarketing() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={cardStyle}>
-          <div style={sectionTitle}>Resend Configuration — {selectedClient?.business_name}</div>
+          <div style={sectionTitle}>Resend Configuration — <span className="private-value">{selectedClient?.business_name}</span></div>
           {config && (
             <div style={{ marginBottom: 14, padding: 12, background: '#e8f5e9', borderRadius: 8, fontSize: 12, color: '#1a7a3a' }}>
               <Check size={14} style={{ marginRight: 6 }} /> Connected. API key: <code>{config.resend_api_key_masked}</code> &middot; From: {config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email} &middot; Daily limit: {config.daily_limit}

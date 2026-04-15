@@ -293,7 +293,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   background: 'linear-gradient(135deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <div style={{
+                  <div className="private-value" style={{
                     width: 26, height: 26, borderRadius: '50%',
                     background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 11, fontWeight: 700, color: '#1a1a2e',
@@ -302,7 +302,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>
+                  <div className="private-value" style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>
                     {client?.instagram_handle || client?.business_name || 'your_account'}
                   </div>
                   <div style={{ fontSize: 10, color: '#8e8ea0' }}>Now{location ? ` · ${location}` : ''}</div>
