@@ -2258,6 +2258,9 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
   const [tagsAll, setTagsAll] = useState(initAll);
   const [tagsNone, setTagsNone] = useState(initNone);
   const [sendDays, setSendDays] = useState(Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']);
+  const [winStart, setWinStart] = useState(seq.send_window_start ? seq.send_window_start.slice(0,5) : '');
+  const [winEnd, setWinEnd] = useState(seq.send_window_end ? seq.send_window_end.slice(0,5) : '');
+  const [winTz, setWinTz] = useState(seq.send_timezone || 'America/Chicago');
   const [active, setActive] = useState(!!seq.active);
   const [dirty, setDirty] = useState(false);
 
@@ -2268,6 +2271,9 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
     setName(seq.name || '');
     setTagsAll(a); setTagsNone(n);
     setSendDays(Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']);
+    setWinStart(seq.send_window_start ? seq.send_window_start.slice(0,5) : '');
+    setWinEnd(seq.send_window_end ? seq.send_window_end.slice(0,5) : '');
+    setWinTz(seq.send_timezone || 'America/Chicago');
     setActive(!!seq.active);
     setDirty(false);
   }, [seq.id]);
@@ -2278,7 +2284,13 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
   }
 
   async function saveHeader() {
-    await onUpdate({ name, trigger_tags_all: tagsAll, trigger_tags_none: tagsNone, send_days: sendDays, active });
+    await onUpdate({
+      name, trigger_tags_all: tagsAll, trigger_tags_none: tagsNone,
+      send_days: sendDays, active,
+      send_window_start: winStart || null,
+      send_window_end: winEnd || null,
+      send_timezone: winTz || 'America/Chicago',
+    });
     setDirty(false);
   }
 
@@ -2340,7 +2352,39 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
               onChange={next => { setTagsNone(next); setDirty(true); }}
             />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+            <div>
+              <label style={lbl}>Send time window</label>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                <input type="time" value={winStart} onChange={e => { setWinStart(e.target.value); setDirty(true); }} style={{ ...inp, width: 120 }} />
+                <span style={{ fontSize: 12, color: '#8e8ea0' }}>to</span>
+                <input type="time" value={winEnd} onChange={e => { setWinEnd(e.target.value); setDirty(true); }} style={{ ...inp, width: 120 }} />
+                {(winStart || winEnd) && (
+                  <button onClick={() => { setWinStart(''); setWinEnd(''); setDirty(true); }} style={{ background: 'transparent', border: 'none', color: '#8e8ea0', fontSize: 11, cursor: 'pointer', padding: '4px 6px' }}>Clear</button>
+                )}
+              </div>
+              <select value={winTz} onChange={e => { setWinTz(e.target.value); setDirty(true); }} style={{ ...inp, marginTop: 6 }}>
+                <option value="America/Chicago">America/Chicago (CT)</option>
+                <option value="America/New_York">America/New_York (ET)</option>
+                <option value="America/Denver">America/Denver (MT)</option>
+                <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
+                <option value="America/Phoenix">America/Phoenix (AZ)</option>
+                <option value="America/Anchorage">America/Anchorage (AK)</option>
+                <option value="Pacific/Honolulu">Pacific/Honolulu (HI)</option>
+                <option value="Europe/London">Europe/London (UK)</option>
+                <option value="Europe/Paris">Europe/Paris (CET)</option>
+                <option value="Asia/Dubai">Asia/Dubai</option>
+                <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                <option value="Australia/Sydney">Australia/Sydney</option>
+                <option value="UTC">UTC</option>
+              </select>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>
+                {winStart && winEnd
+                  ? `Sends only between ${winStart} and ${winEnd}. Emails due outside the window wait until it reopens.`
+                  : 'Leave empty to allow sending any time of day.'}
+              </div>
+            </div>
             <div>
               <label style={lbl}>Allowed send days</label>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>

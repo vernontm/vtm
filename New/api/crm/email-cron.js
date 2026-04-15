@@ -369,10 +369,27 @@ module.exports = async function handler(req, res) {
           }
         }
 
-        // Check allowed send days
+        // Check allowed send days + time window (in the sequence's configured timezone)
+        const tz = seq.send_timezone || 'America/Chicago';
+        const tzParts = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+        }).formatToParts(new Date()).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+        const tzDayShort = (tzParts.weekday || '').slice(0, 3); // "Mon", "Tue", ...
+        const tzHHMM = `${(tzParts.hour || '00').padStart(2, '0')}:${(tzParts.minute || '00').padStart(2, '0')}`;
+
         const sendDays = Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-        if (sendDays.length > 0 && sendDays.length < 7 && !sendDays.includes(dayNames[new Date().getDay()])) {
+        if (sendDays.length > 0 && sendDays.length < 7 && !sendDays.includes(tzDayShort)) {
           continue;
+        }
+        const winStart = (seq.send_window_start || '').slice(0, 5);
+        const winEnd = (seq.send_window_end || '').slice(0, 5);
+        if (winStart && winEnd) {
+          // Support overnight windows (e.g. 22:00-06:00) and regular windows
+          const inWindow = winStart <= winEnd
+            ? (tzHHMM >= winStart && tzHHMM <= winEnd)
+            : (tzHHMM >= winStart || tzHHMM <= winEnd);
+          if (!inWindow) continue;
         }
 
         const steps = await supaFetch(`crm_email_sequence_steps?sequence_id=eq.${seq.id}&order=step_order.asc`);

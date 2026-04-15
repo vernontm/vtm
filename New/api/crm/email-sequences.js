@@ -78,7 +78,7 @@ module.exports = async function handler(req, res) {
 
     // ── POST create sequence ──
     if (req.method === 'POST' && !action) {
-      const { client_id, name, description, trigger_tag, trigger_tags_all, trigger_tags_none, active, send_days } = req.body;
+      const { client_id, name, description, trigger_tag, trigger_tags_all, trigger_tags_none, active, send_days, send_window_start, send_window_end, send_timezone } = req.body;
       if (!client_id || !name) return res.status(400).json({ error: 'client_id and name required' });
       const tagsAll = Array.isArray(trigger_tags_all) ? trigger_tags_all : (trigger_tag ? [trigger_tag] : []);
       const rows = await supaFetch('crm_email_sequences', {
@@ -92,6 +92,9 @@ module.exports = async function handler(req, res) {
           trigger_tags_none: Array.isArray(trigger_tags_none) ? trigger_tags_none : [],
           active: !!active,
           send_days: send_days || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+          send_window_start: send_window_start || null,
+          send_window_end: send_window_end || null,
+          send_timezone: send_timezone || 'America/Chicago',
         }]),
       });
       return res.json(rows?.[0] || {});
@@ -99,7 +102,7 @@ module.exports = async function handler(req, res) {
 
     // ── POST update sequence ──
     if (req.method === 'POST' && action === 'update') {
-      const { id, name, description, trigger_tag, trigger_tags_all, trigger_tags_none, active, send_days } = req.body;
+      const { id, name, description, trigger_tag, trigger_tags_all, trigger_tags_none, active, send_days, send_window_start, send_window_end, send_timezone } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
       const update = { updated_at: new Date().toISOString() };
       if (name !== undefined) update.name = name;
@@ -114,6 +117,9 @@ module.exports = async function handler(req, res) {
       if (trigger_tags_none !== undefined) update.trigger_tags_none = Array.isArray(trigger_tags_none) ? trigger_tags_none : [];
       if (active !== undefined) update.active = !!active;
       if (send_days !== undefined) update.send_days = send_days;
+      if (send_window_start !== undefined) update.send_window_start = send_window_start || null;
+      if (send_window_end !== undefined) update.send_window_end = send_window_end || null;
+      if (send_timezone !== undefined) update.send_timezone = send_timezone || 'America/Chicago';
       const rows = await supaFetch(`crm_email_sequences?id=eq.${id}`, {
         method: 'PATCH',
         headers: { 'Prefer': 'return=representation' },
