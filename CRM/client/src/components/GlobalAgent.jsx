@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
-import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem } from '../api';
+import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem, sequenceAgent } from '../api';
 
 /* ── page context config ────────────────────────────────────────── */
 const PAGE_CONTEXTS = {
@@ -83,12 +83,19 @@ function detectIntent(prompt, attachments, pageType) {
     'template', 'subject line',
   ];
   const youtubeSignals = ['youtube', 'video idea', 'thumbnail', 'channel'];
+  const sequenceSignals = [
+    'sequence', 'drip', 'drip campaign', 'welcome series', 'welcome sequence',
+    'nurture sequence', 'nurture series', 'email series', 'onboarding series',
+    'onboarding sequence', 'reactivation sequence', 'autoresponder',
+  ];
 
   const hits = (list) => list.filter(k => p.includes(k)).length;
   const cHits = hits(contentSignals) + (hasImage ? 2 : 0);
   const eHits = hits(emailSignals);
   const yHits = hits(youtubeSignals);
+  const sHits = hits(sequenceSignals);
 
+  if (sHits >= 1) return 'sequence';
   if (cHits >= 2 || (cHits >= 1 && cHits > eHits)) return 'content';
   if (eHits >= 1 && eHits >= cHits) return 'email';
   if (yHits >= 1) return 'youtube';
@@ -229,6 +236,20 @@ export default function GlobalAgent() {
             role: 'assistant',
             content: `Email ready for ${result.to_name || result.to_email}${result.reasoning ? ` - ${result.reasoning}` : ''}`,
           }]);
+        } else if (result.message || result.answer) {
+          setMessages(prev => [...prev, { role: 'assistant', content: result.message || result.answer }]);
+        }
+      } else if (intent === 'sequence') {
+        const convo = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
+        const result = await sequenceAgent({ prompt: msg, conversation: convo });
+        if (result.action === 'ask' || result.needs_info) {
+          setMessages(prev => [...prev, { role: 'assistant', content: result.question || 'Which client is this sequence for?' }]);
+        } else if (result.created) {
+          const tagLine = (result.trigger_tags_all || []).length
+            ? `\nQualification tags: ${result.trigger_tags_all.join(', ')}${(result.trigger_tags_none || []).length ? ` (excludes: ${result.trigger_tags_none.join(', ')})` : ''}`
+            : '';
+          const body = `\u2705 Created sequence "${result.name}" for ${result.client_name} with ${result.steps_created} emails.${tagLine}\n\nWhy: ${result.reasoning || result.summary || 'Structured for typical engagement curves.'}\n\nThe sequence is inactive - review the steps in Email Marketing > Sequences and toggle it on when ready.`;
+          setMessages(prev => [...prev, { role: 'assistant', content: body }]);
         } else if (result.message || result.answer) {
           setMessages(prev => [...prev, { role: 'assistant', content: result.message || result.answer }]);
         }

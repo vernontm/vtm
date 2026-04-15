@@ -274,6 +274,10 @@ export default function EmailMarketing() {
   const [campSearch, setCampSearch] = useState('');
   const campSubjectRef = useRef(null);
 
+  // Template picker (campaigns + sequence steps)
+  // tplPicker: null | { onApply: ({ html, subject, preview_text }) => void }
+  const [tplPicker, setTplPicker] = useState(null);
+
   // Tag context form
   const [newTagName, setNewTagName] = useState('');
   const [newTagDesc, setNewTagDesc] = useState('');
@@ -835,6 +839,16 @@ export default function EmailMarketing() {
           )}
         </div>
       </div>
+
+      {/* Template picker modal (campaigns + sequences) */}
+      {tplPicker && (
+        <TemplatePickerModal
+          templates={templates}
+          initialTemplateId={tplPicker.initialTemplateId}
+          onClose={() => setTplPicker(null)}
+          onApply={(data) => { tplPicker?.onApply?.(data); setTplPicker(null); }}
+        />
+      )}
 
       {/* Contact sends modal */}
       {viewSendsContact && (
@@ -1529,6 +1543,36 @@ export default function EmailMarketing() {
           </div>
 
           <div style={{ padding: 22 }}>
+            {/* Template picker — top of composer */}
+            <div style={{ marginBottom: 16, padding: 12, background: '#f8f9fc', border: '1px solid #e5e7ef', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <FileText size={14} color="#4a6cf7" />
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>Start from template</label>
+              <select
+                value=""
+                onChange={(e) => {
+                  const tplId = e.target.value;
+                  if (!tplId) return;
+                  setTplPicker({
+                    initialTemplateId: tplId,
+                    onApply: ({ html, subject, preview_text }) => {
+                      setCampBody(html || '');
+                      if (subject && !campSubject) setCampSubject(subject);
+                      if (preview_text && !campPreview) setCampPreview(preview_text);
+                    },
+                  });
+                }}
+                style={{ flex: 1, minWidth: 200, padding: '8px 10px', border: '1px solid #e5e7ef', borderRadius: 8, fontSize: 13, background: '#fff', color: '#1a1a2e', cursor: 'pointer' }}
+              >
+                <option value="">-- Select a template --</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              {templates.length === 0 && (
+                <span style={{ fontSize: 11, color: '#8e8ea0' }}>No templates yet — create one in the Templates tab.</span>
+              )}
+            </div>
+
             {/* Subject */}
             <label style={labelStyle}>Subject line</label>
             <VarButtons onInsert={token => insertAtCursor(campSubjectRef, campSubject, setCampSubject, token)} />
@@ -1578,7 +1622,22 @@ export default function EmailMarketing() {
 
             {/* Rich editor body */}
             <div style={{ marginTop: 16 }}>
-              <label style={labelStyle}>Body</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Body</label>
+                <button
+                  type="button"
+                  onClick={() => setTplPicker({
+                    onApply: ({ html, subject, preview_text }) => {
+                      setCampBody(html || '');
+                      if (subject && !campSubject) setCampSubject(subject);
+                      if (preview_text && !campPreview) setCampPreview(preview_text);
+                    },
+                  })}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  <FileText size={12} /> Use template
+                </button>
+              </div>
               <VarButtons onInsert={token => setCampBody((campBody || '') + token)} />
               <EmailEditor value={campBody} onChange={setCampBody} clientId={selectedClientId} placeholder="Hey {{name}}," height={340} />
             </div>
@@ -1997,6 +2056,7 @@ export default function EmailMarketing() {
             onDeleteStep={handleDeleteStep}
             onEnrollMatching={handleEnrollMatching}
             onDelete={() => handleDeleteSequence(editingSeq.id)}
+            onOpenTemplatePicker={(onApply) => setTplPicker({ onApply })}
           />
         )}
       </div>
@@ -2252,7 +2312,7 @@ function MetricCol({ label, value }) {
 // ══════════════════════════════════════════════════════════════
 // SEQUENCE EDITOR MODAL
 // ══════════════════════════════════════════════════════════════
-function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep, onDeleteStep, onEnrollMatching, onDelete }) {
+function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep, onDeleteStep, onEnrollMatching, onDelete, onOpenTemplatePicker }) {
   const initAll = Array.isArray(seq.trigger_tags_all) && seq.trigger_tags_all.length
     ? seq.trigger_tags_all : (seq.trigger_tag ? [seq.trigger_tag] : []);
   const initNone = Array.isArray(seq.trigger_tags_none) ? seq.trigger_tags_none : [];
@@ -2429,7 +2489,7 @@ function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {(seq.steps || []).map((step, i) => (
-              <StepEditor key={step.id} step={step} index={i} onSave={onSaveStep} onDelete={() => onDeleteStep(step.id)} />
+              <StepEditor key={step.id} step={step} index={i} onSave={onSaveStep} onDelete={() => onDeleteStep(step.id)} onOpenTemplatePicker={onOpenTemplatePicker} />
             ))}
           </div>
         )}
@@ -2447,7 +2507,7 @@ function MetricBox({ label, value }) {
   );
 }
 
-function StepEditor({ step, index, onSave, onDelete }) {
+function StepEditor({ step, index, onSave, onDelete, onOpenTemplatePicker }) {
   const [expanded, setExpanded] = useState(false);
   const [subject, setSubject] = useState(step.subject || '');
   const [preview, setPreview] = useState(step.preview_text || '');
@@ -2501,6 +2561,21 @@ function StepEditor({ step, index, onSave, onDelete }) {
           </div>
           <input style={inp} placeholder="Subject line" value={subject} onChange={e => setSubject(e.target.value)} />
           <input style={inp} placeholder="Preview text (optional)" value={preview} onChange={e => setPreview(e.target.value)} />
+          {onOpenTemplatePicker && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => onOpenTemplatePicker(({ html, subject: s, preview_text: p }) => {
+                  setBody(html || '');
+                  if (s && !subject) setSubject(s);
+                  if (p && !preview) setPreview(p);
+                })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+              >
+                <FileText size={12} /> Use template
+              </button>
+            </div>
+          )}
           <textarea style={{ ...inp, minHeight: 200, fontFamily: 'Inter, sans-serif', resize: 'vertical' }} placeholder="Email body (HTML supported). Use {{name}} and {{discount_code}} as merge tags." value={body} onChange={e => setBody(e.target.value)} />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button onClick={() => onDelete()} style={{ background: '#fff', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
@@ -2606,6 +2681,147 @@ function TagMultiPicker({ label, hint, color = '#1a1a2e', values = [], allTags =
         </div>
       )}
       {hint && <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>{hint}</div>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// TEMPLATE PICKER MODAL
+// Lets the user pick a saved template, type body content for the
+// {{body}} placeholder, live-preview the rendered HTML, then apply
+// the finished HTML to the calling composer/step editor.
+// ══════════════════════════════════════════════════════════════
+function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId }) {
+  const [selectedId, setSelectedId] = useState(initialTemplateId || templates?.[0]?.id || null);
+  const [bodyText, setBodyText] = useState('');
+  const selected = templates.find(t => t.id === selectedId) || null;
+
+  const hasBodyVar = selected?.html_body?.includes('{{body}}');
+
+  // Render preview: replace {{body}} with the user's typed content
+  // (HTML-escaped + newlines -> <br>). If the template has no {{body}}
+  // placeholder, preview the raw HTML as-is.
+  function renderHtml() {
+    if (!selected) return '';
+    const raw = selected.html_body || '';
+    if (!hasBodyVar) return raw;
+    const esc = (bodyText || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    return raw.replace(/\{\{body\}\}/g, esc || '<span style="opacity:0.4">[your message here]</span>');
+  }
+
+  const btnGhost = { background: '#fff', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+  const btnPrimary = { background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', color: '#fff', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.55)', zIndex: 1100,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: 14, width: '100%', maxWidth: 1100, height: '90vh',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid #e5e7ef' }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Use a template</div>
+            <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>Type your message — the rest of the email stays on-brand.</div>
+          </div>
+          <button onClick={onClose} style={btnGhost}><X size={14} /></button>
+        </div>
+
+        {/* Body split: left = list + body textarea, right = preview */}
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          {/* Left column */}
+          <div style={{ width: 360, borderRight: '1px solid #e5e7ef', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ padding: 14, borderBottom: '1px solid #f0f0f5' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', letterSpacing: 0.5, marginBottom: 8 }}>TEMPLATES ({templates.length})</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                {templates.length === 0 && (
+                  <div style={{ fontSize: 12, color: '#8e8ea0', padding: 10, textAlign: 'center' }}>No templates yet. Create one in the Templates tab.</div>
+                )}
+                {templates.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedId(t.id)}
+                    style={{
+                      textAlign: 'left', padding: '10px 12px', borderRadius: 8,
+                      border: selectedId === t.id ? '2px solid #4a6cf7' : '1px solid #e5e7ef',
+                      background: selectedId === t.id ? '#eff3ff' : '#fff',
+                      cursor: 'pointer', fontSize: 12,
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, color: '#1a1a2e' }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject || '(no subject)'}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', letterSpacing: 0.5, marginBottom: 8 }}>
+                YOUR MESSAGE {hasBodyVar ? '' : '(template has no editable section)'}
+              </div>
+              <textarea
+                disabled={!hasBodyVar}
+                value={bodyText}
+                onChange={e => setBodyText(e.target.value)}
+                placeholder={hasBodyVar ? 'Type the paragraph that goes in the editable slot...' : 'This template is fully hard-coded.'}
+                style={{
+                  flex: 1, resize: 'none', padding: 12, borderRadius: 8, border: '1px solid #e5e7ef',
+                  fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', lineHeight: 1.6,
+                  background: hasBodyVar ? '#fff' : '#f8f9fc', color: '#1a1a2e',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Right column: preview */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: '#f0f0f5' }}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 8, background: '#fff' }}>
+              <Eye size={14} color="#8e8ea0" />
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>Preview</div>
+              {selected && <div style={{ fontSize: 11, color: '#8e8ea0' }}>— {selected.subject}</div>}
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
+              {selected ? (
+                <iframe
+                  title="Template preview"
+                  srcDoc={renderHtml()}
+                  style={{ width: '100%', height: '100%', border: 0, background: '#fff' }}
+                  sandbox=""
+                />
+              ) : (
+                <div style={{ padding: 40, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>Select a template to preview</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderTop: '1px solid #e5e7ef', background: '#fafbfd' }}>
+          <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+            {hasBodyVar ? 'Your message replaces the {{body}} slot. Everything else stays as-is.' : 'No editable slot — template will be applied as-is.'}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onClose} style={btnGhost}>Cancel</button>
+            <button
+              disabled={!selected}
+              onClick={() => onApply({
+                html: renderHtml(),
+                subject: selected?.subject || '',
+                preview_text: selected?.preview_text || '',
+              })}
+              style={{ ...btnPrimary, opacity: selected ? 1 : 0.5 }}
+            >
+              <Check size={14} /> Use this template
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

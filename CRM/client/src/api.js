@@ -131,6 +131,7 @@ export const trashGmailMessage = (messageId) => request('/gmail-trash', { method
 // AI Follow-ups
 export const getAIFollowups = () => request('/ai-followups');
 export const emailAgent = (data) => request('/email-agent', { method: 'POST', body: JSON.stringify(data) });
+export const sequenceAgent = (data) => request('/sequence-agent', { method: 'POST', body: JSON.stringify(data) });
 
 // Subscriptions
 export const getSubscriptions = (params = {}) => {
