@@ -1501,10 +1501,12 @@ export default function EmailMarketing() {
       { key: 'scheduled', label: 'Scheduled', match: c => c.status === 'scheduled' },
       { key: 'sending', label: 'Processing', match: c => c.status === 'sending' || c.status === 'partial' },
       { key: 'sent', label: 'Published', match: c => c.status === 'sent' },
-      { key: 'auto', label: 'Sequences', match: c => !!c.auto_trigger_enabled },
+      { key: 'sequences', label: 'Sequences', jumpTo: 'sequences', count: sequences.length },
     ];
     const counts = {};
-    statusTabs.forEach(t => { counts[t.key] = campaigns.filter(t.match).length; });
+    statusTabs.forEach(t => {
+      counts[t.key] = t.count !== undefined ? t.count : campaigns.filter(t.match).length;
+    });
     const filtered = campaigns.filter(statusTabs.find(t => t.key === campFilter)?.match || (() => true))
       .filter(c => !campSearch || (c.subject || '').toLowerCase().includes(campSearch.toLowerCase()));
 
@@ -1667,7 +1669,7 @@ export default function EmailMarketing() {
         {/* Status tabs */}
         <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e5e7ef', marginBottom: 14, overflowX: 'auto' }}>
           {statusTabs.map(t => (
-            <button key={t.key} onClick={() => setCampFilter(t.key)} style={{
+            <button key={t.key} onClick={() => t.jumpTo ? setActiveTab(t.jumpTo) : setCampFilter(t.key)} style={{
               padding: '10px 14px', border: 'none', background: 'transparent',
               fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
               color: campFilter === t.key ? '#1a1a2e' : '#8e8ea0',
