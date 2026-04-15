@@ -322,6 +322,162 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ── 4. Process email sequences ──
+    results.sequenceSent = 0;
+    results.sequenceFailed = 0;
+    results.sequenceCompleted = 0;
+    try {
+      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const activeSeqs = await supaFetch(`crm_email_sequences?active=eq.true`);
+      for (const seq of (activeSeqs || [])) {
+        // Enroll new contacts matching trigger tag
+        if (seq.trigger_tag) {
+          try {
+            const stepsList = await supaFetch(`crm_email_sequence_steps?sequence_id=eq.${seq.id}&order=step_order.asc&limit=1`);
+            const firstStep = stepsList?.[0];
+            if (firstStep) {
+              const matching = await supaFetch(
+                `crm_email_contacts?client_id=eq.${seq.client_id}&status=eq.active&tags=cs.["${seq.trigger_tag}"]`
+              );
+              const existing = await supaFetch(`crm_email_sequence_enrollments?sequence_id=eq.${seq.id}&select=contact_id`);
+              const already = new Set((existing || []).map(e => e.contact_id));
+              const toEnroll = (matching || []).filter(c => !already.has(c.id));
+              if (toEnroll.length) {
+                const delayMs = ((firstStep.delay_unit === 'hours' ? 3600_000 : firstStep.delay_unit === 'minutes' ? 60_000 : 86_400_000)) * (firstStep.delay_amount || 0);
+                const firstSend = new Date(Date.now() + delayMs).toISOString();
+                await supaFetch('crm_email_sequence_enrollments', {
+                  method: 'POST',
+                  headers: { 'Prefer': 'resolution=ignore-duplicates' },
+                  body: JSON.stringify(toEnroll.map(c => ({
+                    sequence_id: seq.id,
+                    contact_id: c.id,
+                    current_step: 0,
+                    next_send_at: firstSend,
+                    status: 'active',
+                  }))),
+                });
+              }
+            }
+          } catch (e) {
+            results.errors.push(`Sequence enrol ${seq.id}: ${e.message}`);
+          }
+        }
+
+        // Check allowed send days
+        const sendDays = Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        if (sendDays.length > 0 && sendDays.length < 7 && !sendDays.includes(dayNames[new Date().getDay()])) {
+          continue;
+        }
+
+        const steps = await supaFetch(`crm_email_sequence_steps?sequence_id=eq.${seq.id}&order=step_order.asc`);
+        if (!steps?.length) continue;
+
+        const configs = await supaFetch(`crm_email_config?client_id=eq.${seq.client_id}`);
+        const config = configs?.[0];
+        if (!config?.resend_api_key) continue;
+
+        const due = await supaFetch(
+          `crm_email_sequence_enrollments?sequence_id=eq.${seq.id}&status=eq.active&next_send_at=lte.${now}&limit=100`
+        );
+        for (const enr of (due || [])) {
+          try {
+            const step = steps[enr.current_step];
+            if (!step) {
+              await supaFetch(`crm_email_sequence_enrollments?id=eq.${enr.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 'completed', completed_at: now }),
+              });
+              results.sequenceCompleted++;
+              continue;
+            }
+            const contactRows = await supaFetch(`crm_email_contacts?id=eq.${enr.contact_id}&limit=1`);
+            const contact = contactRows?.[0];
+            if (!contact || contact.status !== 'active') {
+              await supaFetch(`crm_email_sequence_enrollments?id=eq.${enr.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 'unsubscribed' }),
+              });
+              continue;
+            }
+            const rawBody = (step.html_body || '')
+              .replace(/\{\{name\}\}/g, contact.name || 'there')
+              .replace(/\{\{email\}\}/g, contact.email)
+              .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
+            const subject = (step.subject || '')
+              .replace(/\{\{name\}\}/g, contact.name || 'there')
+              .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
+            const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name, previewText: step.preview_text });
+
+            const emailRes = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.resend_api_key}`,
+              },
+              body: JSON.stringify({
+                from: config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email,
+                to: [contact.email],
+                subject,
+                html,
+              }),
+            });
+
+            if (emailRes.ok) {
+              const data = await emailRes.json();
+              await supaFetch('crm_email_sequence_sends', {
+                method: 'POST',
+                body: JSON.stringify([{
+                  sequence_id: seq.id,
+                  step_id: step.id,
+                  contact_id: contact.id,
+                  email: contact.email,
+                  status: 'sent',
+                  sent_at: now,
+                  resend_id: data.id || '',
+                }]),
+              });
+              const nextIdx = enr.current_step + 1;
+              const nextStep = steps[nextIdx];
+              if (!nextStep) {
+                await supaFetch(`crm_email_sequence_enrollments?id=eq.${enr.id}`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ status: 'completed', current_step: nextIdx, completed_at: now }),
+                });
+                results.sequenceCompleted++;
+              } else {
+                const delayMs = ((nextStep.delay_unit === 'hours' ? 3600_000 : nextStep.delay_unit === 'minutes' ? 60_000 : 86_400_000)) * (nextStep.delay_amount || 0);
+                const nextAt = new Date(Date.now() + delayMs).toISOString();
+                await supaFetch(`crm_email_sequence_enrollments?id=eq.${enr.id}`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ current_step: nextIdx, next_send_at: nextAt }),
+                });
+              }
+              results.sequenceSent++;
+            } else {
+              const errText = await emailRes.text();
+              await supaFetch('crm_email_sequence_sends', {
+                method: 'POST',
+                body: JSON.stringify([{
+                  sequence_id: seq.id,
+                  step_id: step.id,
+                  contact_id: contact.id,
+                  email: contact.email,
+                  status: 'failed',
+                  error: errText.slice(0, 500),
+                }]),
+              });
+              results.sequenceFailed++;
+            }
+          } catch (e) {
+            results.sequenceFailed++;
+            results.errors.push(`Seq enrollment ${enr.id}: ${e.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      results.errors.push(`Sequence processing: ${e.message}`);
+    }
+
     return res.json({ ok: true, processed_at: now, ...results });
   } catch (err) {
     console.error('Email cron error:', err);

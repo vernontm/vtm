@@ -7,6 +7,8 @@ import {
   getTagContexts, saveTagContext, deleteTagContext,
   getContactStats, getContactSends,
   generateEmailTemplateAI, uploadClientLogo, updateContentClient, createContentClient,
+  getEmailSequences, getEmailSequenceDetail, createEmailSequence, updateEmailSequence,
+  saveSequenceStep, deleteSequenceStep, enrollSequenceMatching, deleteEmailSequence,
 } from '../api';
 import EmailEditor from '../components/EmailEditor';
 import {
@@ -41,9 +43,12 @@ const TABS = [
   { key: 'contacts', label: 'Contacts', Icon: Users },
   { key: 'templates', label: 'Templates', Icon: FileText },
   { key: 'campaigns', label: 'Campaigns', Icon: Send },
+  { key: 'sequences', label: 'Sequences', Icon: Zap },
   { key: 'tags', label: 'Tag Context', Icon: BookOpen },
   { key: 'settings', label: 'Settings', Icon: Settings },
 ];
+
+const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const inputStyle = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', width: '100%', boxSizing: 'border-box' };
 const btnPrimary = { background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
@@ -187,6 +192,15 @@ export default function EmailMarketing() {
   const [contacts, setContacts] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
+  const [sequences, setSequences] = useState([]);
+  const [seqSort, setSeqSort] = useState('alpha'); // 'alpha' | 'recent' | 'subs'
+  const [seqFilter, setSeqFilter] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [seqView, setSeqView] = useState('grid'); // 'grid' | 'list'
+  const [editingSeq, setEditingSeq] = useState(null); // sequence detail object when editor open
+  const [newSeqOpen, setNewSeqOpen] = useState(false);
+  const [newSeqName, setNewSeqName] = useState('');
+  const [newSeqTag, setNewSeqTag] = useState('');
+  const [savingSeq, setSavingSeq] = useState(false);
   const [tagContexts, setTagContexts] = useState([]);
   const [contactStats, setContactStats] = useState({});
 
@@ -283,7 +297,7 @@ export default function EmailMarketing() {
 
   useEffect(() => {
     if (!selectedClientId) {
-      setContacts([]); setTemplates([]); setCampaigns([]); setConfig(null); setTagContexts([]); setContactStats({});
+      setContacts([]); setTemplates([]); setCampaigns([]); setSequences([]); setConfig(null); setTagContexts([]); setContactStats({});
       return;
     }
     loadAllData();
@@ -292,13 +306,14 @@ export default function EmailMarketing() {
   async function loadAllData() {
     setLoading(true); setError('');
     try {
-      const [cfg, c, t, camp, tc, stats] = await Promise.all([
+      const [cfg, c, t, camp, tc, stats, seqs] = await Promise.all([
         getEmailConfig(selectedClientId),
         getEmailContacts(selectedClientId),
         getEmailTemplates(selectedClientId),
         getEmailCampaigns(selectedClientId),
         getTagContexts(selectedClientId),
         getContactStats(selectedClientId),
+        getEmailSequences(selectedClientId).catch(() => []),
       ]);
       setConfig(cfg);
       setContacts(c || []);
@@ -306,6 +321,7 @@ export default function EmailMarketing() {
       setCampaigns(camp || []);
       setTagContexts(tc || []);
       setContactStats(stats || {});
+      setSequences(seqs || []);
       if (cfg) {
         setCfgFromEmail(cfg.from_email || '');
         setCfgFromName(cfg.from_name || '');
@@ -812,6 +828,7 @@ export default function EmailMarketing() {
               {activeTab === 'contacts' && renderContactsTab()}
               {activeTab === 'templates' && renderTemplatesTab()}
               {activeTab === 'campaigns' && renderCampaignsTab()}
+              {activeTab === 'sequences' && renderSequencesTab()}
               {activeTab === 'tags' && renderTagsTab()}
               {activeTab === 'settings' && renderSettingsTab()}
             </div>
@@ -1763,6 +1780,228 @@ export default function EmailMarketing() {
   }
 
   // ══════════════════════════════════════════════════════════════
+  // SEQUENCE HANDLERS
+  // ══════════════════════════════════════════════════════════════
+  async function reloadSequences() {
+    try {
+      const s = await getEmailSequences(selectedClientId);
+      setSequences(s || []);
+    } catch (e) { setError(e.message); }
+  }
+  async function handleCreateSequence() {
+    if (!newSeqName.trim()) return;
+    setSavingSeq(true);
+    try {
+      const created = await createEmailSequence({
+        client_id: selectedClientId,
+        name: newSeqName.trim(),
+        trigger_tag: newSeqTag.trim() || null,
+      });
+      setNewSeqOpen(false); setNewSeqName(''); setNewSeqTag('');
+      await reloadSequences();
+      if (created?.id) {
+        const detail = await getEmailSequenceDetail(created.id);
+        setEditingSeq(detail);
+      }
+    } catch (e) { setError(e.message); }
+    setSavingSeq(false);
+  }
+  async function handleOpenSequence(id) {
+    try { const d = await getEmailSequenceDetail(id); setEditingSeq(d); }
+    catch (e) { setError(e.message); }
+  }
+  async function handleUpdateSequence(updates) {
+    if (!editingSeq) return;
+    try {
+      await updateEmailSequence({ id: editingSeq.id, ...updates });
+      setEditingSeq({ ...editingSeq, ...updates });
+      reloadSequences();
+    } catch (e) { setError(e.message); }
+  }
+  async function handleDeleteSequence(id) {
+    if (!confirm('Delete this sequence and all its data?')) return;
+    try {
+      await deleteEmailSequence(id);
+      if (editingSeq?.id === id) setEditingSeq(null);
+      reloadSequences();
+    } catch (e) { setError(e.message); }
+  }
+  async function handleAddStep() {
+    if (!editingSeq) return;
+    try {
+      const nextOrder = (editingSeq.steps?.length || 0) + 1;
+      await saveSequenceStep({
+        sequence_id: editingSeq.id,
+        step_order: nextOrder,
+        subject: '',
+        html_body: '',
+        delay_amount: nextOrder === 1 ? 0 : 1,
+        delay_unit: 'days',
+      });
+      const d = await getEmailSequenceDetail(editingSeq.id);
+      setEditingSeq(d); reloadSequences();
+    } catch (e) { setError(e.message); }
+  }
+  async function handleSaveStep(step) {
+    if (!editingSeq) return;
+    try {
+      await saveSequenceStep({ ...step, sequence_id: editingSeq.id });
+      const d = await getEmailSequenceDetail(editingSeq.id);
+      setEditingSeq(d); reloadSequences();
+    } catch (e) { setError(e.message); }
+  }
+  async function handleDeleteStep(id) {
+    if (!confirm('Delete this step?')) return;
+    try {
+      await deleteSequenceStep(id);
+      const d = await getEmailSequenceDetail(editingSeq.id);
+      setEditingSeq(d); reloadSequences();
+    } catch (e) { setError(e.message); }
+  }
+  async function handleEnrollMatching() {
+    if (!editingSeq) return;
+    try {
+      const r = await enrollSequenceMatching(editingSeq.id);
+      alert(`Enrolled ${r.enrolled || 0} contact(s).`);
+      const d = await getEmailSequenceDetail(editingSeq.id);
+      setEditingSeq(d); reloadSequences();
+    } catch (e) { setError(e.message); }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // TAB: SEQUENCES
+  // ══════════════════════════════════════════════════════════════
+  function renderSequencesTab() {
+    let list = [...sequences];
+    if (seqFilter === 'active') list = list.filter(s => s.active);
+    else if (seqFilter === 'inactive') list = list.filter(s => !s.active);
+    if (seqSort === 'alpha') list.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    else if (seqSort === 'recent') list.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    else if (seqSort === 'subs') list.sort((a,b) => (b.subscribers||0) - (a.subscribers||0));
+
+    const pillSelect = {
+      background: '#fff', border: '1px solid #e5e7ef', borderRadius: 999,
+      padding: '6px 14px', fontSize: 13, color: '#1a1a2e', cursor: 'pointer',
+      fontFamily: 'Inter, sans-serif', outline: 'none', fontWeight: 500,
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#1a1a2e', letterSpacing: -0.5 }}>Sequences</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <select value={seqSort} onChange={e => setSeqSort(e.target.value)} style={pillSelect}>
+              <option value="alpha">Alphabetical</option>
+              <option value="recent">Most recent</option>
+              <option value="subs">Subscribers</option>
+            </select>
+            <select value={seqFilter} onChange={e => setSeqFilter(e.target.value)} style={pillSelect}>
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <div style={{ display: 'inline-flex', border: '1px solid #e5e7ef', borderRadius: 8, overflow: 'hidden' }}>
+              <button onClick={() => setSeqView('list')} style={{ padding: '7px 10px', background: seqView === 'list' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: '#5a5a6e' }} title="List view">☰</button>
+              <button onClick={() => setSeqView('grid')} style={{ padding: '7px 10px', background: seqView === 'grid' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: '#5a5a6e' }} title="Grid view">▦</button>
+            </div>
+            <button onClick={() => setNewSeqOpen(true)} style={{ ...btnPrimary, background: '#1a1a2e' }}>
+              <Plus size={14} /> New sequence
+            </button>
+          </div>
+        </div>
+
+        {/* Empty */}
+        {list.length === 0 ? (
+          <div style={{ ...cardStyle, textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+            <Zap size={36} strokeWidth={1} />
+            <div style={{ marginTop: 10, fontSize: 14 }}>No sequences yet. Create one to automate multi-email drips.</div>
+          </div>
+        ) : seqView === 'grid' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+            {list.map(s => <SequenceCard key={s.id} seq={s} onOpen={() => handleOpenSequence(s.id)} onDelete={() => handleDeleteSequence(s.id)} />)}
+          </div>
+        ) : (
+          <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#fafbfd', borderBottom: '1px solid #e5e7ef' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Name</th>
+                  <th style={{ textAlign: 'left', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Trigger</th>
+                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Emails</th>
+                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Subs</th>
+                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Open rate</th>
+                  <th style={{ textAlign: 'center', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Status</th>
+                  <th style={{ padding: '12px 16px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map(s => (
+                  <tr key={s.id} onClick={() => handleOpenSequence(s.id)} style={{ borderBottom: '1px solid #f0f0f5', cursor: 'pointer' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1a1a2e' }}>{s.name}</td>
+                    <td style={{ padding: '12px 10px', color: '#5a5a6e' }}>{s.trigger_tag ? <span style={{ background: '#f0f0f5', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>{s.trigger_tag}</span> : '—'}</td>
+                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#1a1a2e' }}>{s.steps_count || 0}</td>
+                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#1a1a2e', fontWeight: 600 }}>{s.subscribers || 0}</td>
+                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#5a5a6e' }}>{(s.open_rate || 0).toFixed(1)}%</td>
+                    <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                      <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: s.active ? '#e8f5e9' : '#f0f0f5', color: s.active ? '#22c55e' : '#8e8ea0' }}>
+                        {s.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => handleDeleteSequence(s.id)} style={{ ...btnDanger, padding: '5px 8px', fontSize: 11 }}><Trash2 size={12} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* New sequence modal */}
+        {newSeqOpen && (
+          <div onClick={() => !savingSeq && setNewSeqOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 460, width: '100%', padding: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>New sequence</div>
+                <button onClick={() => setNewSeqOpen(false)} style={btnSecondary}><X size={14} /></button>
+              </div>
+              <label style={labelStyle}>Name</label>
+              <input autoFocus style={inputStyle} placeholder="e.g. Welcome series" value={newSeqName} onChange={e => setNewSeqName(e.target.value)} />
+              <div style={{ height: 10 }} />
+              <label style={labelStyle}>Trigger tag (optional)</label>
+              <input style={inputStyle} placeholder="e.g. newsletter" value={newSeqTag} onChange={e => setNewSeqTag(e.target.value)} list="all-tags-seq" />
+              <datalist id="all-tags-seq">{allKnownTags.map(t => <option key={t} value={t} />)}</datalist>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>Contacts with this tag will be auto-enrolled when the sequence is active.</div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+                <button onClick={() => setNewSeqOpen(false)} style={btnSecondary}>Cancel</button>
+                <button onClick={handleCreateSequence} disabled={savingSeq || !newSeqName.trim()} style={{ ...btnPrimary, opacity: (savingSeq || !newSeqName.trim()) ? 0.6 : 1 }}>
+                  {savingSeq ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />} Create
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Editor modal */}
+        {editingSeq && (
+          <SequenceEditor
+            seq={editingSeq}
+            allTags={allKnownTags}
+            onClose={() => setEditingSeq(null)}
+            onUpdate={handleUpdateSequence}
+            onAddStep={handleAddStep}
+            onSaveStep={handleSaveStep}
+            onDeleteStep={handleDeleteStep}
+            onEnrollMatching={handleEnrollMatching}
+            onDelete={() => handleDeleteSequence(editingSeq.id)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
   // TAB: TAG CONTEXT
   // ══════════════════════════════════════════════════════════════
   function renderTagsTab() {
@@ -1936,6 +2175,266 @@ function TagContextRow({ tc, onUpdate, onDelete }) {
       </button>
       {tc.id && (
         <button onClick={() => onDelete(tc.id)} style={{ ...btnDanger, padding: '6px 10px', fontSize: 11 }}><Trash2 size={12} /></button>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SEQUENCE CARD
+// ══════════════════════════════════════════════════════════════
+function SequenceCard({ seq, onOpen, onDelete }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const emailsLabel = seq.steps_count === 1 ? '1 email' : `${seq.steps_count || 0} emails`;
+  const dayLabel = seq.total_days === 1 ? '1 day' : `${seq.total_days || 0} day`;
+  return (
+    <div onClick={onOpen} style={{
+      background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: 20,
+      cursor: 'pointer', transition: 'box-shadow 0.15s, transform 0.15s', position: 'relative',
+    }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(10,20,40,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Mail size={18} color="#1a1a2e" />
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', letterSpacing: -0.3 }}>{seq.name}</div>
+        </div>
+        <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+          <button onClick={() => setMenuOpen(o => !o)} style={{ background: 'transparent', border: 'none', padding: 4, cursor: 'pointer', color: '#8e8ea0', fontSize: 18, lineHeight: 1 }}>⋮</button>
+          {menuOpen && (
+            <div style={{ position: 'absolute', right: 0, top: 26, background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8, boxShadow: '0 4px 16px rgba(10,20,40,0.1)', zIndex: 5, minWidth: 140 }}>
+              <button onClick={() => { setMenuOpen(false); onOpen(); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: '#1a1a2e' }}>Edit</button>
+              <button onClick={() => { setMenuOpen(false); onDelete(); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ef4444' }}>Delete</button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 13, color: '#8e8ea0', fontStyle: 'italic', marginTop: 12 }}>
+        A {dayLabel} sequence with {emailsLabel}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 18 }}>
+        <MetricCol label="SUBSCRIBERS" value={seq.subscribers || 0} />
+        <MetricCol label="OPEN RATE" value={`${(seq.open_rate || 0).toFixed(seq.open_rate >= 10 ? 0 : 2)}%`} />
+        <MetricCol label="CLICK RATE" value={`${(seq.click_rate || 0).toFixed(seq.click_rate >= 10 ? 0 : 2)}%`} />
+        <MetricCol label="UNSUBSCRIBERS" value={seq.unsubscribers || 0} />
+      </div>
+      {!seq.active && (
+        <div style={{ position: 'absolute', top: 14, left: 14, background: '#f0f0f5', color: '#8e8ea0', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', padding: '2px 8px', borderRadius: 10, letterSpacing: 0.5 }}>
+          Inactive
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricCol({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 700, letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', marginTop: 4 }}>{value}</div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SEQUENCE EDITOR MODAL
+// ══════════════════════════════════════════════════════════════
+function SequenceEditor({ seq, allTags, onClose, onUpdate, onAddStep, onSaveStep, onDeleteStep, onEnrollMatching, onDelete }) {
+  const [name, setName] = useState(seq.name || '');
+  const [triggerTag, setTriggerTag] = useState(seq.trigger_tag || '');
+  const [sendDays, setSendDays] = useState(Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']);
+  const [active, setActive] = useState(!!seq.active);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setName(seq.name || '');
+    setTriggerTag(seq.trigger_tag || '');
+    setSendDays(Array.isArray(seq.send_days) ? seq.send_days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']);
+    setActive(!!seq.active);
+    setDirty(false);
+  }, [seq.id]);
+
+  function toggleDay(d) {
+    const next = sendDays.includes(d) ? sendDays.filter(x => x !== d) : [...sendDays, d];
+    setSendDays(next); setDirty(true);
+  }
+
+  async function saveHeader() {
+    await onUpdate({ name, trigger_tag: triggerTag || null, send_days: sendDays, active });
+    setDirty(false);
+  }
+
+  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const lbl = { display: 'block', fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
+  const primary = { background: '#1a1a2e', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const secondary = { background: '#f8f9fc', border: '1px solid #e5e7ef', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 900, width: '100%', maxHeight: '92vh', overflow: 'auto', padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sequence</div>
+            <input value={name} onChange={e => { setName(e.target.value); setDirty(true); }}
+              style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', border: 'none', outline: 'none', width: '100%', padding: 0, fontFamily: 'Inter, sans-serif', marginTop: 2 }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#5a5a6e', cursor: 'pointer', fontWeight: 600 }}>
+              <span>Active</span>
+              <span onClick={() => { setActive(a => !a); setDirty(true); }}
+                style={{ display: 'inline-block', width: 38, height: 22, background: active ? '#1a1a2e' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background 0.15s' }}>
+                <span style={{ position: 'absolute', top: 2, left: active ? 18 : 2, width: 18, height: 18, background: '#fff', borderRadius: 9, transition: 'left 0.15s' }}/>
+              </span>
+            </label>
+            <button onClick={onClose} style={secondary}><X size={14} /></button>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 18 }}>
+          <MetricBox label="SUBSCRIBERS" value={seq.subscribers || 0} />
+          <MetricBox label="OPEN RATE" value={`${(seq.open_rate || 0).toFixed(2)}%`} />
+          <MetricBox label="CLICK RATE" value={`${(seq.click_rate || 0).toFixed(2)}%`} />
+          <MetricBox label="UNSUBSCRIBERS" value={seq.unsubscribers || 0} />
+          <MetricBox label="TOTAL SENT" value={seq.total_sent || 0} />
+        </div>
+
+        {/* Settings */}
+        <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 10, padding: 16, marginBottom: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>Sequence behavior</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+            <div>
+              <label style={lbl}>Trigger tag</label>
+              <input list="seq-tags" style={inp} placeholder="e.g. newsletter" value={triggerTag} onChange={e => { setTriggerTag(e.target.value); setDirty(true); }} />
+              <datalist id="seq-tags">{(allTags||[]).map(t => <option key={t} value={t} />)}</datalist>
+              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>Contacts with this tag are auto-enrolled.</div>
+            </div>
+            <div>
+              <label style={lbl}>Allowed send days</label>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => {
+                  const on = sendDays.includes(d);
+                  return (
+                    <button key={d} onClick={() => toggleDay(d)} style={{
+                      padding: '6px 10px', borderRadius: 8, border: '1px solid ' + (on ? '#1a1a2e' : '#e5e7ef'),
+                      background: on ? '#1a1a2e' : '#fff', color: on ? '#fff' : '#8e8ea0',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}>{d}</button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+            <button disabled={!dirty} onClick={saveHeader} style={{ ...primary, opacity: dirty ? 1 : 0.5 }}>
+              <Check size={14} /> Save settings
+            </button>
+            <button onClick={onEnrollMatching} style={secondary}>
+              <Users size={14} /> Enroll matching contacts
+            </button>
+            <div style={{ flex: 1 }} />
+            <button onClick={onDelete} style={{ background: '#fff', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Trash2 size={14} /> Delete sequence
+            </button>
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Emails in this sequence</div>
+          <button onClick={onAddStep} style={primary}><Plus size={14} /> Add email</button>
+        </div>
+        {(seq.steps || []).length === 0 ? (
+          <div style={{ border: '1px dashed #e5e7ef', borderRadius: 10, padding: 28, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>
+            No emails yet. Click "Add email" to create the first one.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {(seq.steps || []).map((step, i) => (
+              <StepEditor key={step.id} step={step} index={i} onSave={onSaveStep} onDelete={() => onDeleteStep(step.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetricBox({ label, value }) {
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 10, padding: 12 }}>
+      <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 700, letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginTop: 4 }}>{value}</div>
+    </div>
+  );
+}
+
+function StepEditor({ step, index, onSave, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
+  const [subject, setSubject] = useState(step.subject || '');
+  const [preview, setPreview] = useState(step.preview_text || '');
+  const [body, setBody] = useState(step.html_body || '');
+  const [amount, setAmount] = useState(step.delay_amount ?? 1);
+  const [unit, setUnit] = useState(step.delay_unit || 'days');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSubject(step.subject || '');
+    setPreview(step.preview_text || '');
+    setBody(step.html_body || '');
+    setAmount(step.delay_amount ?? 1);
+    setUnit(step.delay_unit || 'days');
+  }, [step.id]);
+
+  async function save() {
+    setSaving(true);
+    await onSave({ id: step.id, step_order: step.step_order, subject, preview_text: preview, html_body: body, delay_amount: parseInt(amount) || 0, delay_unit: unit });
+    setSaving(false);
+  }
+
+  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box' };
+  const primary = { background: '#1a1a2e', color: '#fff', borderRadius: 8, border: 'none', padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }} onClick={() => setExpanded(e => !e)}>
+        <div style={{ width: 28, height: 28, borderRadius: 14, background: '#1a1a2e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{index + 1}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {subject || <span style={{ color: '#b0b0c0', fontStyle: 'italic' }}>Untitled email</span>}
+          </div>
+          <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>
+            {index === 0 && amount === 0 ? 'Sends immediately after enrollment' : `Sends ${amount} ${unit} after ${index === 0 ? 'enrollment' : 'previous email'}`}
+          </div>
+        </div>
+        <ChevronDown size={16} color="#8e8ea0" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </div>
+      {expanded && (
+        <div style={{ padding: 14, borderTop: '1px solid #f0f0f5', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: '#5a5a6e', fontWeight: 600 }}>Send email</span>
+            <input type="number" min="0" style={{ ...inp, width: 80 }} value={amount} onChange={e => setAmount(e.target.value)} />
+            <select style={{ ...inp, width: 110 }} value={unit} onChange={e => setUnit(e.target.value)}>
+              <option value="minutes">minutes</option>
+              <option value="hours">hours</option>
+              <option value="days">days</option>
+            </select>
+            <span style={{ fontSize: 12, color: '#5a5a6e' }}>after {index === 0 ? 'enrollment' : 'last email'}</span>
+          </div>
+          <input style={inp} placeholder="Subject line" value={subject} onChange={e => setSubject(e.target.value)} />
+          <input style={inp} placeholder="Preview text (optional)" value={preview} onChange={e => setPreview(e.target.value)} />
+          <textarea style={{ ...inp, minHeight: 200, fontFamily: 'Inter, sans-serif', resize: 'vertical' }} placeholder="Email body (HTML supported). Use {{name}} and {{discount_code}} as merge tags." value={body} onChange={e => setBody(e.target.value)} />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => onDelete()} style={{ background: '#fff', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              <Trash2 size={12} />
+            </button>
+            <button onClick={save} disabled={saving} style={{ ...primary, opacity: saving ? 0.6 : 1 }}>
+              {saving ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={12} />} Save
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
