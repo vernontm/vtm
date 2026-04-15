@@ -61,6 +61,103 @@ const DYNAMIC_VARS = [
 
 const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Click-to-open multi-select for tags. Keeps a comma-separated string in `value`
+// so existing call sites (newTags state) don't need to change.
+function TagSelect({ value, onChange, options = [], placeholder = 'Select tags...' }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef(null);
+  const selected = (value || '').split(',').map(t => t.trim()).filter(Boolean);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const toggle = (tag) => {
+    const next = selected.includes(tag) ? selected.filter(t => t !== tag) : [...selected, tag];
+    onChange(next.join(', '));
+  };
+  const removeSelected = (tag) => onChange(selected.filter(t => t !== tag).join(', '));
+  const addCustom = () => {
+    const t = query.trim();
+    if (!t) return;
+    if (!selected.includes(t)) onChange([...selected, t].join(', '));
+    setQuery('');
+  };
+
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()) && !selected.includes(o));
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          minHeight: 36, padding: '5px 30px 5px 8px', borderRadius: 8, border: '1px solid #e5e7ef',
+          background: '#fff', cursor: 'pointer', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+          fontSize: 13, position: 'relative',
+        }}
+      >
+        {selected.length === 0 && (
+          <span style={{ color: '#b0b0c0', padding: '3px 2px' }}>{placeholder}</span>
+        )}
+        {selected.map(tag => (
+          <span key={tag} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 12, background: '#eef2ff', color: '#4a6cf7',
+            fontSize: 11, fontWeight: 600,
+          }}>
+            {tag}
+            <span role="button" onClick={(e) => { e.stopPropagation(); removeSelected(tag); }} style={{ cursor: 'pointer', opacity: 0.7 }}>×</span>
+          </span>
+        ))}
+        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0', fontSize: 10 }}>▾</span>
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 40,
+          background: '#fff', border: '1px solid #e5e7ef', borderRadius: 10,
+          boxShadow: '0 8px 20px rgba(10,20,40,0.08)', maxHeight: 260, overflow: 'auto',
+        }}>
+          <div style={{ padding: 8, borderBottom: '1px solid #f0f0f5', position: 'sticky', top: 0, background: '#fff' }}>
+            <input
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+              placeholder="Search or create tag..."
+              style={{ width: '100%', padding: '6px 8px', border: '1px solid #e5e7ef', borderRadius: 6, fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          {filtered.length === 0 && !query && (
+            <div style={{ padding: 10, fontSize: 12, color: '#8e8ea0', textAlign: 'center' }}>No more tags</div>
+          )}
+          {filtered.map(tag => (
+            <div key={tag} onClick={() => toggle(tag)} style={{
+              padding: '8px 12px', fontSize: 13, cursor: 'pointer', display: 'flex',
+              justifyContent: 'space-between', alignItems: 'center',
+            }} onMouseEnter={e => e.currentTarget.style.background = '#f8f9fc'}
+               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <span>{tag}</span>
+            </div>
+          ))}
+          {query && !options.some(o => o.toLowerCase() === query.toLowerCase()) && (
+            <div onClick={addCustom} style={{
+              padding: '8px 12px', fontSize: 13, cursor: 'pointer', color: '#4a6cf7', fontWeight: 600,
+              borderTop: '1px solid #f0f0f5',
+            }}>
+              + Create "{query.trim()}"
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Small helper: append a dynamic variable to a text state
 function VarButtons({ onInsert }) {
   return (
@@ -811,27 +908,9 @@ export default function EmailMarketing() {
               <label style={labelStyle}>Name</label>
               <input style={inputStyle} placeholder="First Last" value={newName} onChange={e => setNewName(e.target.value)} />
             </div>
-            <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ flex: 1, minWidth: 180 }}>
               <label style={labelStyle}>Tags</label>
-              <input style={inputStyle} placeholder="newsletter, vip" value={newTags} onChange={e => setNewTags(e.target.value)} />
-              {allKnownTags.length > 0 && (
-                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 4 }}>
-                  {allKnownTags.map(tag => {
-                    const isSelected = newTags.split(',').map(t => t.trim()).includes(tag);
-                    return (
-                      <button key={tag} type="button" onClick={() => {
-                        const current = newTags.split(',').map(t => t.trim()).filter(Boolean);
-                        if (isSelected) setNewTags(current.filter(t => t !== tag).join(', '));
-                        else setNewTags([...current, tag].join(', '));
-                      }} style={{
-                        padding: '2px 7px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                        background: isSelected ? '#4a6cf7' : '#f0f0f5',
-                        color: isSelected ? '#fff' : '#5a5a6e', border: 'none',
-                      }}>{tag}</button>
-                    );
-                  })}
-                </div>
-              )}
+              <TagSelect value={newTags} onChange={setNewTags} options={allKnownTags} placeholder="Click to choose tags..." />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
