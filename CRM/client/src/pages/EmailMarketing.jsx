@@ -2705,7 +2705,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
     setSaving(false);
   }
 
-  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box' };
+  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', background: '#ffffff', color: '#1a1a2e' };
   const primary = { background: '#1a1a2e', color: '#fff', borderRadius: 8, border: 'none', padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
