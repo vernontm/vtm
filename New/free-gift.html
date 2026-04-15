@@ -228,6 +228,119 @@
         }
         .success a.btn:hover { transform: translateY(-1px); }
 
+        /* UPSELL CARD */
+        .upsell {
+            margin-top: 22px;
+            padding: 20px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(255,155,38,0.08), rgba(238,76,39,0.06));
+            border: 1px solid rgba(255,155,38,0.22);
+            text-align: left;
+        }
+        .upsell-head {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 6px;
+        }
+        .upsell-head .lock {
+            width: 32px; height: 32px; border-radius: 10px;
+            background: rgba(255,155,38,0.15);
+            color: var(--orange);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .upsell-head h4 {
+            font-family: var(--font-display);
+            font-size: 1rem; font-weight: 800;
+            margin: 0;
+        }
+        .upsell p {
+            font-size: 0.85rem; color: var(--muted); line-height: 1.55;
+            margin-bottom: 14px;
+        }
+        .upsell-form { display: flex; flex-direction: column; gap: 10px; }
+        .upsell-form input {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.9rem; font-weight: 300;
+            padding: 12px 14px;
+            border-radius: 10px;
+            outline: none;
+            transition: border 0.2s, background 0.2s;
+        }
+        .upsell-form input:focus {
+            border-color: rgba(255,155,38,0.45);
+            background: #232327;
+        }
+        .upsell-form button {
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            color: #fff;
+            font-family: var(--font-body); font-size: 0.9rem; font-weight: 700;
+            border: none; border-radius: 10px;
+            padding: 12px 16px; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            box-shadow: 0 6px 16px rgba(255,155,38,0.22);
+            transition: transform 0.15s;
+        }
+        .upsell-form button:hover:not(:disabled) { transform: translateY(-1px); }
+        .upsell-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .upsell-note {
+            font-size: 0.72rem; color: var(--muted);
+            text-align: center; margin-top: 8px;
+        }
+
+        /* VIDEO UNLOCK STATE */
+        .videos-unlocked {
+            margin-top: 22px;
+            padding: 20px;
+            border-radius: 14px;
+            background: rgba(255,155,38,0.06);
+            border: 1px solid rgba(255,155,38,0.3);
+            text-align: left;
+        }
+        .videos-unlocked-head {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 12px;
+        }
+        .videos-unlocked-head .check {
+            width: 32px; height: 32px; border-radius: 10px;
+            background: var(--orange); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .videos-unlocked-head h4 {
+            font-family: var(--font-display);
+            font-size: 1rem; font-weight: 800;
+            margin: 0;
+        }
+        .video-list { display: flex; flex-direction: column; gap: 8px; }
+        .video-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text); text-decoration: none;
+            transition: border 0.2s, transform 0.15s, background 0.2s;
+        }
+        .video-item:hover {
+            border-color: rgba(255,155,38,0.4);
+            background: #26262a;
+            transform: translateX(2px);
+        }
+        .video-item .thumb {
+            width: 38px; height: 38px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            color: #fff; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .video-item .meta { flex: 1; min-width: 0; }
+        .video-item .title { font-size: 0.88rem; font-weight: 700; }
+        .video-item .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+        .video-item .arrow { color: var(--muted); flex-shrink: 0; }
+
         /* GIFTS */
         .gifts {
             padding: 20px 24px 80px;
@@ -379,8 +492,71 @@
                         </svg>
                     </div>
                     <h3>You're in! 🎉</h3>
-                    <p>Check your inbox in the next minute for Step 1. While you wait, grab the PDF workbook below.</p>
-                    <a class="btn" href="#gifts">See what's inside ↓</a>
+                    <p>Check your inbox in the next minute for Step 1. While you wait, there's <strong style="color: var(--orange);">one more thing</strong> you can unlock.</p>
+
+                    <!-- Phone upsell -->
+                    <div class="upsell" id="upsellCard">
+                        <div class="upsell-head">
+                            <div class="lock">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0110 0v4"></path>
+                                </svg>
+                            </div>
+                            <h4>Unlock the video walkthroughs</h4>
+                        </div>
+                        <p>Drop your phone number and I'll unlock 5 short video walkthroughs — me building the CRM on screen, step by step. (Phone is only used if you get stuck; I'll text you the replies, not spam you.)</p>
+                        <form id="phoneForm" class="upsell-form" novalidate>
+                            <input type="tel" id="phoneInput" placeholder="(555) 123-4567" autocomplete="tel" required />
+                            <button type="submit" id="phoneBtn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0110 0v4"></path>
+                                </svg>
+                                Unlock videos
+                            </button>
+                        </form>
+                        <p class="upsell-note">No weird telemarketer stuff. Unsubscribe from texts anytime by replying STOP.</p>
+                    </div>
+
+                    <!-- Unlocked videos -->
+                    <div class="videos-unlocked" id="videosUnlocked" style="display:none;">
+                        <div class="videos-unlocked-head">
+                            <div class="check">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <h4>Videos unlocked</h4>
+                        </div>
+                        <div class="video-list">
+                            <a class="video-item" href="#video-1" target="_blank" rel="noopener">
+                                <div class="thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                                <div class="meta"><div class="title">Day 1 · Build Your Foundation</div><div class="sub">Me walking through account setup · ~6 min</div></div>
+                                <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </a>
+                            <a class="video-item" href="#video-2" target="_blank" rel="noopener">
+                                <div class="thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                                <div class="meta"><div class="title">Day 2 · Your Code's Home</div><div class="sub">GitHub + Vercel + Supabase live setup · ~8 min</div></div>
+                                <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </a>
+                            <a class="video-item" href="#video-3" target="_blank" rel="noopener">
+                                <div class="thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                                <div class="meta"><div class="title">Day 3 · Your CRM Comes Alive</div><div class="sub">Leads + contacts table built on camera · ~10 min</div></div>
+                                <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </a>
+                            <a class="video-item" href="#video-4" target="_blank" rel="noopener">
+                                <div class="thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                                <div class="meta"><div class="title">Day 4 · Gmail & Calendar</div><div class="sub">OAuth integration in under 10 min</div></div>
+                                <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </a>
+                            <a class="video-item" href="#video-5" target="_blank" rel="noopener">
+                                <div class="thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                                <div class="meta"><div class="title">Day 5 · Go Live</div><div class="sub">Deploy to Vercel + domain hookup · ~8 min</div></div>
+                                <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -504,11 +680,13 @@
             });
         });
 
-        // Form submit
+        // Email submit
         const form = document.getElementById('giftForm');
         const submitBtn = document.getElementById('submitBtn');
         const formView = document.getElementById('formView');
         const successView = document.getElementById('successView');
+
+        let submittedEmail = '';
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -534,14 +712,54 @@
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.error || 'Something went wrong');
 
+                submittedEmail = email;
                 formView.style.display = 'none';
                 successView.style.display = 'block';
-                // GTM / analytics hook
                 if (window.dataLayer) window.dataLayer.push({ event: 'lead_magnet_signup', email });
             } catch (err) {
                 alert('Hmm, that didn\'t work: ' + err.message + '. Try again?');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Send me the gift →';
+            }
+        });
+
+        // Phone upsell submit
+        const phoneForm = document.getElementById('phoneForm');
+        const phoneBtn = document.getElementById('phoneBtn');
+        const upsellCard = document.getElementById('upsellCard');
+        const videosUnlocked = document.getElementById('videosUnlocked');
+
+        phoneForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('phoneInput').value.trim();
+            const digits = phone.replace(/\D/g, '');
+            if (digits.length < 7) {
+                alert('Please enter a valid phone number.');
+                return;
+            }
+            phoneBtn.disabled = true;
+            phoneBtn.innerHTML = 'Unlocking…';
+
+            try {
+                const res = await fetch('/api/crm/lead-magnet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'add-phone',
+                        email: submittedEmail,
+                        phone,
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+                upsellCard.style.display = 'none';
+                videosUnlocked.style.display = 'block';
+                if (window.dataLayer) window.dataLayer.push({ event: 'lead_magnet_phone_unlock', email: submittedEmail });
+            } catch (err) {
+                alert('Hmm, that didn\'t work: ' + err.message + '. Try again?');
+                phoneBtn.disabled = false;
+                phoneBtn.innerHTML = 'Unlock videos';
             }
         });
     </script>

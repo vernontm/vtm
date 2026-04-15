@@ -1,10 +1,10 @@
 const { setCors, supaFetch, SUPABASE_URL } = require('../_lib/supabase.js');
 
 // Public (no-auth) lead magnet endpoint.
-// POST { email, name?, sequence_id, tags? }
-// - Upserts a contact in crm_email_contacts (client_id taken from the sequence)
-// - Enrolls the contact in the given sequence if not already enrolled
-// - Returns { ok: true, contact_id, enrolled, already_enrolled }
+// POST { email, name?, phone?, sequence_id, tags?, action? }
+// - action omitted / 'signup' — upsert contact + enroll in sequence
+// - action 'add-phone' — adds a phone number to the contact (video upsell)
+//   Returns { ok: true, unlocked: true } so the client can reveal videos.
 
 function nextSendAt(fromDate, step, sendDays) {
   const amount = step?.delay_amount || 0;
@@ -30,10 +30,31 @@ module.exports = async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const email = (body.email || '').trim().toLowerCase();
     const name = (body.name || '').trim();
+    const phone = (body.phone || '').trim();
     const sequence_id = body.sequence_id;
+    const action = body.action || 'signup';
     const extraTags = Array.isArray(body.tags) ? body.tags : [];
 
     if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+
+    // ── action: add-phone — patch existing contact w/ phone, tag unlocked ──
+    if (action === 'add-phone') {
+      if (!phone || phone.replace(/\D/g, '').length < 7) {
+        return res.status(400).json({ error: 'Valid phone required' });
+      }
+      // Find contact by email (any client)
+      const existing = await supaFetch(`crm_email_contacts?email=eq.${encodeURIComponent(email)}&select=id,tags&limit=1`);
+      if (!existing || !existing.length) return res.status(404).json({ error: 'Contact not found — submit email first' });
+      const c = existing[0];
+      const tags = Array.from(new Set([...(c.tags || []), 'video-unlocked', 'phone-given']));
+      await supaFetch(`crm_email_contacts?id=eq.${c.id}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ phone, tags }),
+      });
+      return res.json({ ok: true, unlocked: true, contact_id: c.id });
+    }
+
     if (!sequence_id) return res.status(400).json({ error: 'sequence_id required' });
 
     // Load sequence to get client_id + first step + send_days
