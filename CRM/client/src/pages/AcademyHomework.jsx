@@ -134,7 +134,7 @@ export default function AcademyHomework() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>{s.student_name}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}><span className="private-value">{s.student_name}</span></span>
                 <span style={{
                   padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                   background: statusColor(s.status) + '18', color: statusColor(s.status),

@@ -533,7 +533,7 @@ export default function Meetings() {
                                           <div style={{ width: 18, height: 18, borderRadius: '50%', background: AVATAR_COLORS[i % AVATAR_COLORS.length] + '30', border: `1px solid ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: AVATAR_COLORS[i % AVATAR_COLORS.length], flexShrink: 0 }}>
                                             {(p.name || p.email)[0].toUpperCase()}
                                           </div>
-                                          {p.name !== p.email && p.name ? `${p.name} (${p.email})` : p.email}
+                                          <span className="private-value">{p.name !== p.email && p.name ? `${p.name} (${p.email})` : p.email}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -542,7 +542,7 @@ export default function Meetings() {
                                     <div style={{ marginTop: 10, borderTop: '1px solid #e5e7ef', paddingTop: 8 }}>
                                       <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 5 }}>Linked Leads</div>
                                       {linkedLeads.map(lead => (
-                                        <div key={lead.id} style={{ fontSize: 11, color: '#4a6cf7', padding: '1px 0' }}>
+                                        <div key={lead.id} className="private-value" style={{ fontSize: 11, color: '#4a6cf7', padding: '1px 0' }}>
                                           {lead.name || lead.email}
                                         </div>
                                       ))}

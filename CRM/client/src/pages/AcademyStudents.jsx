@@ -145,8 +145,8 @@ export default function AcademyStudents() {
               <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#7a7f9a', padding: 32 }}>No students found</td></tr>
             ) : filtered.map(s => (
               <tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => viewStudent(s)}>
-                <td style={{ ...tdStyle, fontWeight: 600 }}>{s.full_name}</td>
-                <td style={tdStyle}>{s.email}</td>
+                <td style={{ ...tdStyle, fontWeight: 600 }}><span className="private-value">{s.full_name}</span></td>
+                <td style={tdStyle}><span className="private-value">{s.email}</span></td>
                 <td style={tdStyle}><StatusBadge status={s.subscription_status} /></td>
                 <td style={tdStyle}>{formatDate(s.created_at)}</td>
                 <td style={{ ...tdStyle, minWidth: 120 }}><ProgressBar value={s.completed_lessons} /></td>
@@ -178,7 +178,7 @@ export default function AcademyStudents() {
                     {(selectedStudent.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{selectedStudent.full_name}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}><span className="private-value">{selectedStudent.full_name}</span></div>
                     <StatusBadge status={selectedStudent.subscription_status} />
                   </div>
                 </div>

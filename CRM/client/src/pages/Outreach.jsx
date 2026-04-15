@@ -806,7 +806,7 @@ export default function Outreach() {
                 {(c.name || '?')[0].toUpperCase()}
               </div>
               <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
-                <div style={{
+                <div className="private-value" style={{
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   fontSize: 12, lineHeight: 1.3,
                 }}>
@@ -1370,8 +1370,8 @@ export default function Outreach() {
                                     <input type="checkbox" checked={selectedLeads.has(lead.id)}
                                       onChange={() => toggleLeadSelect(lead.id)} style={{ accentColor: '#4a6cf7' }} />
                                   </td>
-                                  <td style={{ padding: '10px', fontWeight: 600, color: '#1a1a2e' }}>{lead.name}</td>
-                                  <td style={{ padding: '10px', color: '#4a6cf7', fontSize: 12 }}>{lead.email}</td>
+                                  <td className="private-value" style={{ padding: '10px', fontWeight: 600, color: '#1a1a2e' }}>{lead.name}</td>
+                                  <td className="private-value" style={{ padding: '10px', color: '#4a6cf7', fontSize: 12 }}>{lead.email}</td>
                                   <td style={{ padding: '10px' }}>
                                     <div style={{ display: 'flex', gap: 6 }}>
                                       {lead.instagram && <span style={{ fontSize: 11, color: '#E1306C' }} title={lead.instagram}>IG</span>}
@@ -1476,8 +1476,8 @@ export default function Outreach() {
                             <div className="queue-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                               <div style={{ flex: 1 }}>
                                 <div className="queue-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                                  <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>{item.to_name}</span>
-                                  <span style={{ fontSize: 12, color: '#4a6cf7' }}>{item.to_email}</span>
+                                  <span className="private-value" style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>{item.to_name}</span>
+                                  <span className="private-value" style={{ fontSize: 12, color: '#4a6cf7' }}>{item.to_email}</span>
                                   <StatusPill status={item.status} />
                                 </div>
                                 {editingQueueId === item.id ? (

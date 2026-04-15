@@ -134,12 +134,12 @@ export default function AcademyCommunity() {
         <div key={post.id} style={{ ...cardStyle, borderLeft: post.pinned ? '3px solid #f59e0b' : undefined, opacity: actionLoading === post.id ? 0.6 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: 12, flex: 1 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#4a6cf7', flexShrink: 0 }}>
+              <div className="private-value" style={{ width: 38, height: 38, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#4a6cf7', flexShrink: 0 }}>
                 {getInitials(post.author_name)}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{post.author_name}</span>
+                  <span className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{post.author_name}</span>
                   <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatDate(post.created_at)}</span>
                   {post.pinned && (
                     <span style={{ padding: '2px 8px', borderRadius: 5, fontSize: 10, fontWeight: 600, background: '#f59e0b18', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 3 }}>

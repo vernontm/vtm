@@ -1,40 +1,4 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
-const { wrapEmailHtml } = require('../_lib/email-html.js');
-
-// Send welcome email via Resend
-async function sendWelcomeEmail(config, template, contact) {
-  if (!config?.resend_api_key || !template) return null;
-
-  const rawBody = (template.html_body || '')
-    .replace(/\{\{name\}\}/g, contact.name || 'there')
-    .replace(/\{\{email\}\}/g, contact.email)
-    .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
-  const subject = (template.subject || '')
-    .replace(/\{\{name\}\}/g, contact.name || 'there')
-    .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
-  const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name });
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.resend_api_key}`,
-    },
-    body: JSON.stringify({
-      from: config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email,
-      to: [contact.email],
-      subject,
-      html,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('Welcome email failed:', err);
-    return null;
-  }
-  return res.json();
-}
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -66,16 +30,9 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'client_id and contacts array required' });
       }
 
-      // Load config and welcome template
-      const configs = await supaFetch(`crm_email_config?client_id=eq.${client_id}`);
-      const config = configs?.[0];
-      const templates = await supaFetch(`crm_email_templates?client_id=eq.${client_id}&template_type=eq.welcome&limit=1`);
-      const welcomeTemplate = templates?.[0];
-
-      // Load auto-trigger campaigns for this client
-      const autoCampaigns = await supaFetch(
-        `crm_email_campaigns?client_id=eq.${client_id}&auto_trigger_enabled=eq.true`
-      );
+      // Onboarding is handled exclusively by email sequences (see email-cron.js).
+      // No welcome template or auto-trigger campaign sending here — sequences are
+      // the single source of truth for onboarding flows.
 
       const results = [];
       for (const c of contacts) {
@@ -103,42 +60,6 @@ module.exports = async function handler(req, res) {
           });
           const contact = rows?.[0];
           results.push(contact);
-
-          // Send welcome email if not already welcomed
-          if (contact && !contact.welcomed_at && welcomeTemplate && config) {
-            const sent = await sendWelcomeEmail(config, welcomeTemplate, contact);
-            if (sent) {
-              await supaFetch(`crm_email_contacts?id=eq.${contact.id}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ welcomed_at: new Date().toISOString() }),
-              });
-            }
-          }
-
-          // Auto-trigger campaigns matching contact's tags
-          if (contact && config && (autoCampaigns?.length)) {
-            const contactTags = contact.tags || [];
-            for (const camp of autoCampaigns) {
-              if (!camp.trigger_on_tag) continue;
-              if (!contactTags.includes(camp.trigger_on_tag)) continue;
-              // Check not already sent to this contact for this campaign
-              const existing = await supaFetch(
-                `crm_email_sends?campaign_id=eq.${camp.id}&contact_id=eq.${contact.id}&limit=1`
-              );
-              if (existing?.length) continue;
-              await sendWelcomeEmail(config, { subject: camp.subject, html_body: camp.html_body }, contact);
-              await supaFetch('crm_email_sends', {
-                method: 'POST',
-                body: JSON.stringify([{
-                  campaign_id: camp.id,
-                  contact_id: contact.id,
-                  email: contact.email,
-                  status: 'sent',
-                  sent_at: new Date().toISOString(),
-                }]),
-              });
-            }
-          }
         } catch (e) {
           console.error(`Failed to add contact ${c.email}:`, e.message);
           results.push({ email: c.email, error: e.message });

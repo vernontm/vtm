@@ -145,7 +145,7 @@ export default function AcademyDashboard() {
                     <Users size={14} color="#4a6cf7" />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{e.student_name || e.name || 'Unknown Student'}</div>
+                    <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{e.student_name || e.name || 'Unknown Student'}</div>
                     <div style={{ fontSize: 11, color: '#7a7f9a' }}>{e.course_title || e.course || 'Unknown Course'}</div>
                   </div>
                 </div>

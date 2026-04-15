@@ -887,7 +887,7 @@ export default function EmailMarketing() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Send History</div>
-                <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2 }}>{viewSendsContact.email}</div>
+                <div className="private-value" style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2 }}>{viewSendsContact.email}</div>
               </div>
               <button onClick={() => setViewSendsContact(null)} style={btnSecondary}><X size={14} /></button>
             </div>
@@ -1292,8 +1292,8 @@ export default function EmailMarketing() {
                   <tbody>
                     {bulkPreview.slice(0, 100).map((p, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f0f0f5' }}>
-                        <td style={{ padding: '6px 10px', color: '#1a1a2e' }}>{p.email}</td>
-                        <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{p.name || '-'}</td>
+                        <td className="private-value" style={{ padding: '6px 10px', color: '#1a1a2e' }}>{p.email}</td>
+                        <td className="private-value" style={{ padding: '6px 10px', color: '#5a5a6e' }}>{p.name || '-'}</td>
                         <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{(p.tags || []).join(', ') || '-'}</td>
                         <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{[p.city, p.state, p.country].filter(Boolean).join(', ') || '-'}</td>
                       </tr>
@@ -1366,8 +1366,8 @@ export default function EmailMarketing() {
                     return (
                       <React.Fragment key={c.id}>
                         <tr style={{ borderBottom: isEditing ? 'none' : '1px solid #f0f0f5', cursor: 'pointer' }} onClick={() => !isEditing && handleViewSends(c)}>
-                          <td style={{ padding: '10px 10px', fontWeight: 600, color: '#1a1a2e' }}>{c.email}</td>
-                          <td style={{ padding: '10px 10px', color: '#5a5a6e' }}>{c.name || '-'}</td>
+                          <td className="private-value" style={{ padding: '10px 10px', fontWeight: 600, color: '#1a1a2e' }}>{c.email}</td>
+                          <td className="private-value" style={{ padding: '10px 10px', color: '#5a5a6e' }}>{c.name || '-'}</td>
                           <td style={{ padding: '10px 10px' }}>
                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                               {(c.tags || []).map((tag, i) => (
@@ -2486,7 +2486,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
     setDirty(false);
   }
 
-  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', width: '100%', boxSizing: 'border-box', background: '#ffffff', color: '#1a1a2e' };
   const lbl = { display: 'block', fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
   const primary = { background: '#1a1a2e', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
   const secondary = { background: '#f8f9fc', border: '1px solid #e5e7ef', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };

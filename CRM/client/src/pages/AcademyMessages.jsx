@@ -177,7 +177,7 @@ export default function AcademyMessages() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{t.student_name || t.full_name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }} className="private-value">{t.student_name || t.full_name}</span>
                     <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatTime(t.latest_at || t.last_message_at || t.updated_at)}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -202,7 +202,7 @@ export default function AcademyMessages() {
           ) : (
             <>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>{selectedThread.student_name || selectedThread.full_name}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }} className="private-value">{selectedThread.student_name || selectedThread.full_name}</span>
               </div>
 
               <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>

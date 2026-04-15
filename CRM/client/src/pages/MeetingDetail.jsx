@@ -563,15 +563,15 @@ export default function MeetingDetail() {
                             {initial}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
+                            <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
                               {p.name && p.name !== p.email ? p.name : p.email}
                             </div>
                             {p.name && p.name !== p.email && (
-                              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{p.email}</div>
+                              <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{p.email}</div>
                             )}
                           </div>
                           {linkedLead && (
-                            <span style={{ fontSize: 11, background: '#4a6cf718', color: '#4a6cf7', padding: '2px 8px', borderRadius: 8, border: '1px solid #4a6cf740' }}>
+                            <span className="private-value" style={{ fontSize: 11, background: '#4a6cf718', color: '#4a6cf7', padding: '2px 8px', borderRadius: 8, border: '1px solid #4a6cf740' }}>
                               {linkedLead.name}
                             </span>
                           )}

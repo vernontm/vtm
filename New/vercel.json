@@ -65,6 +65,7 @@
     { "source": "/about", "destination": "/about.html" },
     { "source": "/portfolio/pickapaint", "destination": "/pickapaint.html" },
     { "source": "/portfolio", "destination": "/portfolio.html" },
+    { "source": "/free-gift", "destination": "/free-gift.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
