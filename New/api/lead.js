@@ -14,11 +14,43 @@ export default async function handler(req, res) {
 
   const CRM_URL = process.env.CRM_SUPABASE_URL || process.env.SUPABASE_URL;
   const CRM_KEY = process.env.CRM_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  // VTM's own email list client ID (the "Ray" client in crm_clients)
+  const VTM_EMAIL_CLIENT_ID = process.env.VTM_EMAIL_CLIENT_ID || '27231196-0aac-45f6-ad3c-427bf09310ae';
 
-  const results = { supabase: null, zapier: null };
+  const results = { supabase: null, emailList: null, zapier: null };
 
-  // 1. Save to CRM Supabase (crm_leads table) — upsert by email to avoid duplicates
+  const hasPhone = !!(lead.phone || '').trim();
+
+  // 1. Always add to VTM email list (crm_email_contacts) with "warm lead" tag
+  if (lead.email) {
+    try {
+      await fetch(`${CRM_URL}/rest/v1/crm_email_contacts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CRM_KEY,
+          'Authorization': `Bearer ${CRM_KEY}`,
+          'Prefer': 'return=minimal,resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          client_id: VTM_EMAIL_CLIENT_ID,
+          email: lead.email.toLowerCase().trim(),
+          name: lead.name || '',
+          tags: ['warm lead'],
+          status: 'active',
+          signed_up_at: new Date().toISOString(),
+        }),
+      });
+      results.emailList = 'added';
+    } catch (err) {
+      console.error('Email list add failed:', err);
+      results.emailList = 'error';
+    }
+  }
+
+  // 2. Save to crm_leads ONLY if a phone number was provided (admin needs to call them)
   let isNewLead = true;
+  if (hasPhone) {
   try {
     const leadRow = {
       name: lead.name || '',
@@ -111,9 +143,12 @@ export default async function handler(req, res) {
     console.error('Supabase save failed:', err);
     results.supabase = 'error';
   }
+  } else {
+    results.supabase = 'skipped (no phone)';
+  }
 
-  // 2. Only send to Zapier on final summary (not progressive saves)
-  // Progressive saves (source: vtm-chat-progress) go to Supabase only
+  // 4. Only send to Zapier on final summary (not progressive saves)
+  // Progressive saves (source: vtm-chat-progress) skip Zapier
   // Final summary (source: vtm-chat) triggers Zapier for email automation
   const isProgressiveSave = (lead.source || '').includes('progress');
 
@@ -169,7 +204,7 @@ export default async function handler(req, res) {
     results.zapier = 'skipped (progressive save)';
   }
 
-  // 3. Auto-draft email + schedule follow-up (only on final submission with email)
+  // 5. Auto-draft email + schedule follow-up (only on final submission with email)
   if (!isProgressiveSave && lead.email) {
     try {
       const firstName = (lead.name || '').split(' ')[0] || 'there';
