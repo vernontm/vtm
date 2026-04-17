@@ -105,7 +105,7 @@ function PlatformChip({ value, onChange }) {
   );
 }
 
-const EMPTY = { name: '', status: 'Warm', company: '', email: '', phone: '', lead_source: '', notes: '' };
+const EMPTY = { name: '', status: 'Warm', company: '', email: '', phone: '', tiktok_username: '', ig_username: '', lead_source: '', notes: '' };
 
 /* Summarize goal from multiple fields into a concise string */
 function summarizeGoal(lead) {
@@ -140,10 +140,12 @@ const DETAIL_SECTIONS = [
   {
     title: 'Contact Info',
     fields: [
-      { key: 'name',          label: 'Name' },
-      { key: 'email',         label: 'Email' },
-      { key: 'phone',         label: 'Phone' },
-      { key: 'company',       label: 'Business' },
+      { key: 'name',             label: 'Name' },
+      { key: 'email',            label: 'Email' },
+      { key: 'phone',            label: 'Phone' },
+      { key: 'tiktok_username',  label: 'TikTok' },
+      { key: 'ig_username',      label: 'Instagram' },
+      { key: 'company',          label: 'Business' },
     ],
   },
   {
@@ -846,6 +848,16 @@ export default function Leads() {
             <div className="form-group">
               <label className="form-label">Phone</label>
               <input className="form-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 555 000 0000" />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="form-group">
+              <label className="form-label">TikTok Username</label>
+              <input className="form-input" value={form.tiktok_username || ''} onChange={e => setForm(f => ({ ...f, tiktok_username: e.target.value.replace(/^@/, '') }))} placeholder="@username" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Instagram Username</label>
+              <input className="form-input" value={form.ig_username || ''} onChange={e => setForm(f => ({ ...f, ig_username: e.target.value.replace(/^@/, '') }))} placeholder="@username" />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
