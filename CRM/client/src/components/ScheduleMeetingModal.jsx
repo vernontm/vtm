@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, X, Plus, Check, Loader, Video, Clock, Users, Search } from 'lucide-react';
 import { createMeeting, checkMeetingAvailability, getContacts, getLeads, getGmailContacts, getCommLog } from '../api';
 
-export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle, initialAttendees }) {
+export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle, initialAttendees, initialLeadName }) {
+  // Normalise initial attendees — ensure email is lowercase
+  const seedAttendees = (initialAttendees || []).map(a => ({ ...a, email: a.email?.trim().toLowerCase() })).filter(a => a.email);
   const [title, setTitle]                   = useState(initialTitle || '');
   const [date, setDate]                     = useState('');
   const [time, setTime]                     = useState('');
   const [duration, setDuration]             = useState(30);
   const [attendeeInput, setAttendeeInput]   = useState('');
-  const [attendees, setAttendees]           = useState(initialAttendees || []);
+  const [attendees, setAttendees]           = useState(seedAttendees);
   const [description, setDescription]       = useState('');
   const [addMeetLink, setAddMeetLink]       = useState(true);
   const [reminder, setReminder]             = useState(10);
@@ -24,6 +26,19 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
   const [contactResults, setContactResults] = useState([]);
   const [showContactDropdown, setShowContactDropdown] = useState(false);
   const attendeeRef = useRef(null);
+
+  // On mount: auto-fill title + description for pre-seeded attendee
+  useEffect(() => {
+    if (seedAttendees.length > 0) {
+      const first = seedAttendees[0];
+      const name = first.name || initialLeadName || first.email.split('@')[0];
+      // Auto-fill title if not already set
+      if (!title) setTitle(`VernonTM 30 Minute Call w/ ${name}`);
+      // Auto-fill description from comm history
+      if (first.email) autoFillDescription(first.email, name);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load contacts on mount
   useEffect(() => {

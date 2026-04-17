@@ -1569,7 +1569,8 @@ export default function Leads() {
 
       {scheduleLead && (
         <ScheduleMeetingModal
-          initialTitle={`Demo Call with ${scheduleLead.name || 'Lead'}`}
+          initialTitle={`VernonTM 30 Minute Call w/ ${scheduleLead.name || 'Lead'}`}
+          initialLeadName={scheduleLead.name || ''}
           initialAttendees={scheduleLead.email ? [{ name: scheduleLead.name || '', email: scheduleLead.email }] : []}
           onClose={() => setScheduleLead(null)}
           onComplete={async (result) => {
