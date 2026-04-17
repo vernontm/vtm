@@ -532,3 +532,11 @@ export const getMyTeamRecord  = ()           => request('/team?action=me');
 export const inviteTeamMember = (data)       => request('/team', { method: 'POST', body: JSON.stringify(data) });
 export const updateTeamMember = (id, data)   => request(`/team?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const removeTeamMember = (id)         => request(`/team?id=${id}`, { method: 'DELETE' });
+
+// Training
+export const getTrainingVideos    = ()            => request('/training');
+export const getTrainingUploadUrl = (filename)    => request('/training?action=upload-url', { method: 'POST', body: JSON.stringify({ filename }) });
+export const createTrainingVideo  = (data)        => request('/training?action=create', { method: 'POST', body: JSON.stringify(data) });
+export const updateTrainingVideo  = (id, data)    => request(`/training?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteTrainingVideo  = (id)          => request(`/training?id=${id}`, { method: 'DELETE' });
+export const saveTrainingProgress = (data)        => request('/training?action=progress', { method: 'POST', body: JSON.stringify(data) });

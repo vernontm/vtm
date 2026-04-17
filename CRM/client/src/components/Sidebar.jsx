@@ -5,7 +5,7 @@ import {
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
   Eye, EyeOff, FileText, CreditCard, FolderOpen, Zap, Film,
   GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2, UserCog,
-  X,
+  Video, X,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -214,6 +214,19 @@ export default function Sidebar() {
                   <span>{label}</span>
                 </NavLink>
               ))}
+            </>
+          )}
+
+          {/* Training — visible to all (admins can view, owners can manage) */}
+          {hasPermission('training') && (
+            <>
+              <div style={{ padding: '12px 16px 8px', fontSize: 10, fontWeight: 600, color: '#505068', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>
+                Training
+              </div>
+              <NavLink to="/training" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                <Video size={15} />
+                <span>Training Videos</span>
+              </NavLink>
             </>
           )}
 

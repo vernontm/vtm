@@ -25,6 +25,7 @@ const ALL_PAGES = [
   { slug: 'quick-notes',        label: 'Quick Notes',         group: 'Tools' },
   { slug: 'notifications',      label: 'Notifications',       group: 'Tools' },
   { slug: 'settings',           label: 'Settings',            group: 'Tools' },
+  { slug: 'training',           label: 'Training Videos',     group: 'Tools' },
   // Academy
   { slug: 'academy',                  label: 'Academy Dashboard',  group: 'Academy' },
   { slug: 'academy-courses',          label: 'Courses',            group: 'Academy' },
@@ -528,7 +529,7 @@ export default function Team() {
       'email-marketing': '/email-marketing', 'email': '/email',
       'meetings': '/meetings', 'invoices': '/invoices',
       'subscriptions': '/subscriptions', 'quick-notes': '/quick-notes',
-      'notifications': '/notifications', 'settings': '/settings',
+      'notifications': '/notifications', 'settings': '/settings', 'training': '/training',
       'academy': '/academy', 'academy-courses': '/academy/courses',
       'academy-students': '/academy/students', 'academy-homework': '/academy/homework',
       'academy-messages': '/academy/messages', 'academy-community': '/academy/community',
