@@ -182,6 +182,7 @@ export const checkMeetingAvailability = (emails, s, e) =>
 export const getMeetingFreeSlots      = (date, duration) =>
   request(`/meetings?action=free-slots&date=${date}${duration ? `&duration=${duration}` : ''}`);
 export const getMeetingLeadLinks      = ()             => request('/meetings?action=lead-links');
+export const getMeetingStats          = ()             => request('/meetings?action=stats');
 export const createMeetingLeadLink    = (data)         => request('/meetings?action=lead-link', { method: 'POST', body: JSON.stringify(data) });
 export const deleteMeetingLeadLink    = (id)           => request(`/meetings?id=${id}&action=lead-link`, { method: 'DELETE' });
 export const getMeetingDetail         = (eventId)      => request(`/meetings?id=${eventId}&action=detail`);

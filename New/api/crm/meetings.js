@@ -37,6 +37,14 @@ export default async function handler(req, res) {
         const rows = await supaFetch(`crm_meetings?start_time=lt.${now}&order=start_time.desc&limit=50`);
         return res.json((rows || []).map(normalize));
       }
+      if (action === 'stats') {
+        const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const rows = await supaFetch(`crm_meetings?select=created_at&created_at=gte.${since30d}`);
+        const now = Date.now();
+        const meets7d  = (rows || []).filter(r => now - new Date(r.created_at).getTime() <= 7  * 24 * 60 * 60 * 1000).length;
+        const meets30d = (rows || []).length;
+        return res.json({ meets_7d: meets7d, meets_30d: meets30d });
+      }
       if (action === 'lead-links') {
         return res.json(await supaFetch('crm_meeting_lead_links?order=created_at.desc'));
       }

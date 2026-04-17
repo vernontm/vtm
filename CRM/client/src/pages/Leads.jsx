@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, createCommLog } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -1246,11 +1246,15 @@ export default function Leads() {
 
   const [recordingCounts, setRecordingCounts] = useState({});
   const [recordingStats, setRecordingStats]   = useState({ calls_24h: 0, calls_7d: 0, calls_30d: 0 });
+  const [meetingStats,   setMeetingStats]     = useState({ meets_7d: 0, meets_30d: 0 });
   const [scheduleLead, setScheduleLead] = useState(null); // lead to schedule meeting for
   useEffect(() => {
     getLeadRecordingCounts().then(c => setRecordingCounts(c || {})).catch(() => {});
     getRecordingStats().then(s => setRecordingStats(s || { calls_24h: 0, calls_7d: 0, calls_30d: 0 })).catch(() => {});
   }, [recStatus]); // refresh after each recording finishes
+  useEffect(() => {
+    getMeetingStats().then(s => setMeetingStats(s || { meets_7d: 0, meets_30d: 0 })).catch(() => {});
+  }, []);
 
   return (
     <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
@@ -1283,17 +1287,13 @@ export default function Leads() {
 
       {/* ── Stats bar ───────────────────────────────────────────────────────── */}
       {(() => {
-        const now = Date.now();
-        const meetings = allCommLog.filter(c => c.channel === 'meeting');
-        const meetsThisWeek = meetings.filter(c => now - new Date(c.created_at).getTime() <= 7 * 24 * 60 * 60 * 1000).length;
-        const meets30d      = meetings.filter(c => now - new Date(c.created_at).getTime() <= 30 * 24 * 60 * 60 * 1000).length;
         const won = leads.filter(l => l.status === 'Won').length;
         const stats = [
-          { label: 'Calls (24h)',      value: recordingStats.calls_24h, icon: '📞', color: '#0369A1', bg: '#E0F2FE' },
-          { label: 'Calls (7d)',       value: recordingStats.calls_7d,  icon: '📞', color: '#0F766E', bg: '#CCFBF1' },
-          { label: 'Calls (30d)',      value: recordingStats.calls_30d, icon: '📞', color: '#6D28D9', bg: '#EDE9FE' },
-          { label: 'Meets This Week',  value: meetsThisWeek,           icon: '📅', color: '#1D4ED8', bg: '#DBEAFE' },
-          { label: 'Meets (30d)',      value: meets30d,                 icon: '📅', color: '#0C4A6E', bg: '#BAE6FD' },
+          { label: 'Calls (24h)',      value: recordingStats.calls_24h,  icon: '📞', color: '#0369A1', bg: '#E0F2FE' },
+          { label: 'Calls (7d)',       value: recordingStats.calls_7d,   icon: '📞', color: '#0F766E', bg: '#CCFBF1' },
+          { label: 'Calls (30d)',      value: recordingStats.calls_30d,  icon: '📞', color: '#6D28D9', bg: '#EDE9FE' },
+          { label: 'Meets This Week',  value: meetingStats.meets_7d,     icon: '📅', color: '#1D4ED8', bg: '#DBEAFE' },
+          { label: 'Meets (30d)',      value: meetingStats.meets_30d,    icon: '📅', color: '#0C4A6E', bg: '#BAE6FD' },
           { label: 'Leads Won',        value: won,                      icon: '🏆', color: '#047857', bg: '#D1FAE5' },
         ];
         return (
@@ -1712,6 +1712,8 @@ export default function Leads() {
             setScheduleLead(null);
             // Refresh comm log so new meeting shows in timeline
             getCommLog().then(logs => setAllCommLog(logs || [])).catch(() => {});
+            // Refresh meeting stats
+            getMeetingStats().then(s => setMeetingStats(s || { meets_7d: 0, meets_30d: 0 })).catch(() => {});
           }}
         />
       )}
