@@ -32,8 +32,108 @@ const FILTER_TABS = ['All Leads', ...LEAD_STATUSES];
 
 const EMPTY = {
   name: '', status: 'New', company: '', email: '', phone: '',
-  tiktok_username: '', ig_username: '', lead_source: '', notes: '',
+  tiktok_username: '', ig_username: '', lead_source: '', notes: '', product_need: '',
 };
+
+// ─── Product Need options & chip ──────────────────────────────────────────────
+const PRODUCT_NEEDS = [
+  'No Website',
+  'Needs New Website',
+  'Needs Website Refresh',
+  'Needs Content Creation',
+  'Needs Social Media Help',
+  'Needs SEO',
+  'Needs Branding',
+  'Needs Video Production',
+  'Needs Email Marketing',
+  'Needs Photography',
+  'Other',
+];
+
+const PRODUCT_NEED_STYLES = {
+  'No Website':              { bg: '#ff5c5c20', fg: '#dc2626', icon: '🚫' },
+  'Needs New Website':       { bg: '#4a6cf720', fg: '#4a6cf7', icon: '🌐' },
+  'Needs Website Refresh':   { bg: '#6366f120', fg: '#4f46e5', icon: '🔄' },
+  'Needs Content Creation':  { bg: '#f59e0b20', fg: '#d97706', icon: '✍️' },
+  'Needs Social Media Help': { bg: '#ec489920', fg: '#be185d', icon: '📱' },
+  'Needs SEO':               { bg: '#10b98120', fg: '#059669', icon: '🔍' },
+  'Needs Branding':          { bg: '#8b5cf620', fg: '#7c3aed', icon: '🎨' },
+  'Needs Video Production':  { bg: '#ef444420', fg: '#dc2626', icon: '🎬' },
+  'Needs Email Marketing':   { bg: '#06b6d420', fg: '#0e7490', icon: '📧' },
+  'Needs Photography':       { bg: '#84cc1620', fg: '#65a30d', icon: '📷' },
+  'Other':                   { bg: '#8e8ea020', fg: '#8e8ea0', icon: '•' },
+};
+
+function ProductNeedChip({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const style = PRODUCT_NEED_STYLES[value] || null;
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: value ? '3px 9px' : '3px 8px', borderRadius: 10,
+          fontSize: 11, fontWeight: 600,
+          background: value ? style.bg : '#f0f2f8',
+          color: value ? style.fg : '#8e8ea0',
+          border: value ? 'none' : '1px dashed #c0c0c8',
+          cursor: 'pointer', lineHeight: 1.4, maxWidth: 150,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}
+      >
+        {value ? <><span style={{ fontSize: 10 }}>{style.icon}</span> {value}</> : '+ Need'}
+      </button>
+      {open && (
+        <>
+          <div onClick={e => { e.stopPropagation(); setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 51,
+              background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 200,
+              maxHeight: 320, overflowY: 'auto',
+            }}
+          >
+            {PRODUCT_NEEDS.map(s => {
+              const st = PRODUCT_NEED_STYLES[s] || PRODUCT_NEED_STYLES['Other'];
+              return (
+                <button
+                  key={s}
+                  onClick={() => { onChange(s); setOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                    borderRadius: 5, fontSize: 12, fontWeight: 500, width: '100%',
+                    background: value === s ? st.bg : 'transparent',
+                    color: value === s ? st.fg : '#1a1a2e',
+                    border: 'none', cursor: 'pointer', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = '#f5f7fa'; }}
+                  onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{ fontSize: 11 }}>{st.icon}</span> {s}
+                </button>
+              );
+            })}
+            {value && (
+              <button
+                onClick={() => { onChange(''); setOpen(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                  borderRadius: 5, fontSize: 12, color: '#ff5c5c', background: 'transparent',
+                  border: 'none', cursor: 'pointer', width: '100%', borderTop: '1px solid #e5e7ef', marginTop: 2,
+                }}
+              >
+                <X size={11} /> Clear
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 // ─── Platform chip (unchanged) ────────────────────────────────────────────────
 const LEAD_SOURCES = [
@@ -253,6 +353,7 @@ const DETAIL_SECTIONS = [
   {
     title: 'Pipeline',
     fields: [
+      { key: 'product_need',       label: 'Product / Need' },
       { key: 'problem',           label: 'Problem' },
       { key: 'current_situation',  label: 'Current State' },
       { key: 'financial_goal',     label: 'Goal' },
@@ -968,10 +1069,10 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
 
 // ─── CSV export ───────────────────────────────────────────────────────────────
 function exportCSV(leads) {
-  const headers = ['Name', 'Company', 'Phone', 'Email', 'Lead Source', 'Status', 'TikTok', 'Instagram', 'Budget', 'Notes', 'Created'];
+  const headers = ['Name', 'Company', 'Phone', 'Email', 'Lead Source', 'Product Need', 'Status', 'TikTok', 'Instagram', 'Budget', 'Notes', 'Created'];
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const rows = leads.map(l => [
-    l.name, l.company, l.phone, l.email, l.lead_source, l.status,
+    l.name, l.company, l.phone, l.email, l.lead_source, l.product_need, l.status,
     l.tiktok_username, l.ig_username, l.budget, l.notes,
     l.created_at ? new Date(l.created_at).toISOString().slice(0, 10) : '',
   ].map(esc).join(','));
@@ -1323,15 +1424,16 @@ export default function Leads() {
               <th style={{ minWidth: 150 }}>Phone Number</th>
               <th style={{ minWidth: 200 }}>Email</th>
               <th style={{ minWidth: 130 }}>Lead Source</th>
+              <th style={{ minWidth: 160 }}>Product Need</th>
               <th style={{ minWidth: 130 }}>Lead Status</th>
               <th style={{ minWidth: 100 }}>Last Contact</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
             ) : paged.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>
                 No leads in this view. {activeTab === 'All Leads' && 'Click "New Lead" to add one.'}
               </td></tr>
             ) : paged.map(lead => (
@@ -1413,6 +1515,12 @@ export default function Leads() {
                   <PlatformChip
                     value={lead.lead_source || ''}
                     onChange={(val) => handleFieldSave(lead.id, 'lead_source', val)}
+                  />
+                </td>
+                <td onClick={e => e.stopPropagation()}>
+                  <ProductNeedChip
+                    value={lead.product_need || ''}
+                    onChange={(val) => handleFieldSave(lead.id, 'product_need', val)}
                   />
                 </td>
                 <td onClick={e => e.stopPropagation()}>
@@ -1633,6 +1741,13 @@ export default function Leads() {
                 {LEAD_SOURCES.map(s => <option key={s}>{s || '— Select —'}</option>)}
               </select>
             </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Product / Service Need</label>
+            <select className="form-select" value={form.product_need || ''} onChange={e => setForm(f => ({ ...f, product_need: e.target.value }))}>
+              <option value="">— Select —</option>
+              {PRODUCT_NEEDS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div className="form-group">
