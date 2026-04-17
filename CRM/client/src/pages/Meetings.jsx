@@ -40,28 +40,106 @@ function formatDuration(min) {
   return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
 }
 
-// ── Participant Avatars ────────────────────────────────────────────────────────
-function ParticipantAvatars({ participants = [], max = 4 }) {
+// ── Lead status colour helper ──────────────────────────────────────────────────
+const LEAD_STATUS_COLORS = {
+  'New':            { bg: '#4a6cf722', fg: '#4a6cf7' },
+  'Contacted':      { bg: '#fdab3d22', fg: '#fdab3d' },
+  'Call Scheduled': { bg: '#784bd122', fg: '#784bd1' },
+  'Called':         { bg: '#CCFBF1',   fg: '#0F766E' },
+  'Won':            { bg: '#00d1d122', fg: '#00a8a8' },
+  'Not Interested': { bg: '#ff5c5c22', fg: '#ff5c5c' },
+  'Follow Up':      { bg: '#fdab3d22', fg: '#d97706' },
+};
+
+// ── Participant Avatars with hover card ────────────────────────────────────────
+function ParticipantAvatars({ participants = [], max = 4, allLeads = [] }) {
+  const [hoveredIdx, setHoveredIdx] = useState(null);
   const shown = participants.slice(0, max);
   const extra = participants.length - max;
+
+  function findLead(p) {
+    if (!p.email) return null;
+    return allLeads.find(l => l.email?.toLowerCase() === p.email.toLowerCase()) || null;
+  }
+
   return (
     <div style={{ display: 'flex' }}>
       {shown.map((p, i) => {
-        const initial = (p.name || p.email || '?')[0].toUpperCase();
-        const color   = AVATAR_COLORS[i % AVATAR_COLORS.length];
+        const initial     = (p.name || p.email || '?')[0].toUpperCase();
+        const color       = AVATAR_COLORS[i % AVATAR_COLORS.length];
+        const matchedLead = findLead(p);
+        const statusStyle = matchedLead?.status ? (LEAD_STATUS_COLORS[matchedLead.status] || { bg: '#e5e7ef', fg: '#8e8ea0' }) : null;
         return (
           <div
             key={i}
-            title={p.name || p.email}
-            style={{
+            style={{ position: 'relative', marginLeft: i > 0 ? -6 : 0, zIndex: hoveredIdx === i ? 50 : shown.length - i }}
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+          >
+            <div style={{
               width: 26, height: 26, borderRadius: '50%',
               background: color + '25', border: `2px solid ${color}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 700, color,
-              marginLeft: i > 0 ? -6 : 0, zIndex: shown.length - i, position: 'relative',
-            }}
-          >
-            {initial}
+              fontSize: 10, fontWeight: 700, color, cursor: 'default',
+            }}>
+              {initial}
+            </div>
+
+            {/* Hover card */}
+            {hoveredIdx === i && (
+              <div style={{
+                position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+                background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 10, padding: '10px 13px',
+                minWidth: 190, zIndex: 9999, boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
+                pointerEvents: 'none', whiteSpace: 'nowrap',
+              }}>
+                {/* Arrow */}
+                <div style={{
+                  position: 'absolute', bottom: -5, left: '50%',
+                  width: 8, height: 8, background: '#ffffff', border: '1px solid #e5e7ef',
+                  borderTop: 'none', borderLeft: 'none',
+                  transform: 'translateX(-50%) rotate(45deg)',
+                }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: '50%',
+                    background: color + '25', border: `2px solid ${color}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 700, color, flexShrink: 0,
+                  }}>
+                    {initial}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.3 }}>
+                      {p.name && p.name !== p.email ? p.name : (p.email || '?')}
+                    </div>
+                    {p.name && p.name !== p.email && p.email && (
+                      <div style={{ fontSize: 11, color: '#8e8ea0' }}>{p.email}</div>
+                    )}
+                  </div>
+                </div>
+                {matchedLead && (
+                  <div style={{ borderTop: '1px solid #f0f0f5', paddingTop: 7, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {matchedLead.phone && (
+                      <div style={{ fontSize: 11, color: '#8e8ea0' }}>📞 {matchedLead.phone}</div>
+                    )}
+                    {matchedLead.company && (
+                      <div style={{ fontSize: 11, color: '#8e8ea0' }}>🏢 {matchedLead.company}</div>
+                    )}
+                    {matchedLead.status && (
+                      <div style={{ marginTop: 2 }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8,
+                          background: statusStyle.bg, color: statusStyle.fg,
+                        }}>
+                          {matchedLead.status}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
@@ -367,12 +445,17 @@ export default function Meetings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {upcomingEvents.map(event => (
-                    <tr key={event.google_event_id} style={{ transition: 'background 0.1s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#ffffff'}
+                  {upcomingEvents.map(event => {
+                    const linkedLeads = getLinkedLeads(event.google_event_id);
+                    return (
+                    <tr
+                      key={event.google_event_id}
+                      onClick={() => navigate(`/meetings/${event.google_event_id}`)}
+                      style={{ transition: 'background 0.1s', cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f5f7fa'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <td style={{ ...tdStyle, fontWeight: 600, color: '#1a1a2e', maxWidth: 220 }}>
+                      <td style={{ ...tdStyle, fontWeight: 600, color: '#1a1a2e', maxWidth: 240 }}>
                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {event.title}
                         </div>
@@ -381,13 +464,35 @@ export default function Meetings() {
                             {event.description}
                           </div>
                         )}
+                        {/* Linked leads */}
+                        {linkedLeads.length > 0 && (
+                          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                            {linkedLeads.map(lead => {
+                              const sc = LEAD_STATUS_COLORS[lead.status] || { bg: '#e5e7ef', fg: '#8e8ea0' };
+                              return (
+                                <span
+                                  key={lead.id}
+                                  onClick={e => { e.stopPropagation(); navigate(`/leads?highlight=${lead.id}`); }}
+                                  title={lead.email || ''}
+                                  style={{
+                                    fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 8,
+                                    background: sc.bg, color: sc.fg, cursor: 'pointer',
+                                    border: `1px solid ${sc.fg}33`,
+                                  }}
+                                >
+                                  {lead.name || lead.email || 'Lead'}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </td>
-                      <td style={tdStyle}>
-                        <ParticipantAvatars participants={event.participants || []} />
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
+                        <ParticipantAvatars participants={event.participants || []} allLeads={leads} />
                       </td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDateTime(event.start_time)}</td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDuration(event.duration_minutes)}</td>
-                      <td style={tdStyle}>
+                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
                         {event.meet_link ? (
                           <button
                             onClick={() => window.open(event.meet_link, '_blank')}
@@ -400,7 +505,7 @@ export default function Meetings() {
                           <span style={{ color: '#e5e7ef', fontSize: 16 }}>—</span>
                         )}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                      <td style={{ ...tdStyle, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => { setEditingEvent(event); setShowScheduleModal(true); }}
@@ -421,7 +526,8 @@ export default function Meetings() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -478,7 +584,7 @@ export default function Meetings() {
                             </div>
                           </td>
                           <td style={tdStyle}>
-                            <ParticipantAvatars participants={event.participants || []} />
+                            <ParticipantAvatars participants={event.participants || []} allLeads={leads} />
                           </td>
                           <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDate(event.start_time)}</td>
                           <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDuration(event.duration_minutes)}</td>
