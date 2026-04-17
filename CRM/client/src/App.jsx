@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { RefreshProvider, useRefresh } from './context/RefreshContext';
 import { PrivacyProvider, usePrivacy } from './context/PrivacyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { RecorderProvider } from './context/RecorderContext';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
+import RecordingBar from './components/RecordingBar';
 import Login from './pages/Login';
 import Leads from './pages/Leads';
 import Contacts from './pages/Contacts';
@@ -62,6 +64,7 @@ function AppLayout() {
         {/* Sidebar overlay */}
         <div className={`sidebar-overlay${sidebarOpen ? ' sidebar-open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
+        <RecordingBar />
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <main key={refreshKey} className="app-main" style={{ flex: 1, overflow: 'auto' }}>
@@ -122,7 +125,9 @@ function AuthGate() {
   return (
     <RefreshProvider>
       <PrivacyProvider>
-        <AppLayout />
+        <RecorderProvider>
+          <AppLayout />
+        </RecorderProvider>
       </PrivacyProvider>
     </RefreshProvider>
   );

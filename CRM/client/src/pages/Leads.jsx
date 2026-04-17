@@ -3,9 +3,10 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check, PhoneCall,
   ThumbsUp, ThumbsDown, Send, Clock, Download, SlidersHorizontal,
-  ChevronLeft, ChevronRight, MessageSquare, StickyNote,
+  ChevronLeft, ChevronRight, MessageSquare, Mic, MicOff,
 } from 'lucide-react';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog } from '../api';
+import { useRecorder } from '../context/RecorderContext';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import SelectionBar from '../components/SelectionBar';
@@ -284,7 +285,7 @@ function EditableField({ fieldKey, value, onChange }) {
   return <input value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle} />;
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, lastFollowUp, convos }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, lastFollowUp, convos, recordings }) {
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
@@ -410,6 +411,49 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
             </div>
           ))}
 
+          {/* Recordings */}
+          {recordings && recordings.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Mic size={11} /> Recordings
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {recordings.map(r => {
+                  const mins = Math.floor((r.duration_seconds || 0) / 60);
+                  const secs = (r.duration_seconds || 0) % 60;
+                  const dur = r.duration_seconds ? `${mins}:${String(secs).padStart(2,'0')}` : null;
+                  return (
+                    <div key={r.id} style={{ padding: '10px 12px', background: '#f5f7fa', borderRadius: 8, border: '1px solid #e5e7ef' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: r.transcript ? 8 : 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#C00000', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Mic size={10} /> Call
+                          </span>
+                          {dur && <span style={{ fontSize: 10, color: '#8e8ea0' }}>{dur}</span>}
+                          <span style={{ fontSize: 10, color: '#8e8ea0' }}>
+                            {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <span style={{
+                          fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
+                          background: r.transcript_status === 'done' ? '#DCFCE7' : r.transcript_status === 'error' ? '#FEE2E2' : '#FEF3C7',
+                          color: r.transcript_status === 'done' ? '#15803D' : r.transcript_status === 'error' ? '#B91C1C' : '#B45309',
+                        }}>
+                          {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
+                        </span>
+                      </div>
+                      {r.transcript && (
+                        <p style={{ fontSize: 12, color: '#1a1a2e', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                          {r.transcript}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Conversations */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -487,6 +531,7 @@ function exportCSV(leads) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Leads() {
+  const { startRecording, stopRecording, isRecordingLead, status: recStatus } = useRecorder();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
@@ -636,6 +681,12 @@ export default function Leads() {
     return allCommLog.filter(l => l.lead_id === detailLead.id);
   }, [detailLead, allCommLog]);
 
+  const [detailRecordings, setDetailRecordings] = useState([]);
+  useEffect(() => {
+    if (!detailLead) { setDetailRecordings([]); return; }
+    getLeadRecordings(detailLead.id).then(r => setDetailRecordings(r || [])).catch(() => {});
+  }, [detailLead, recStatus]); // re-fetch when recording finishes
+
   return (
     <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       <div className="page-header">
@@ -765,6 +816,7 @@ export default function Leads() {
                   onChange={toggleAllOnPage}
                 />
               </th>
+              <th style={{ width: 40 }} title="Record call"></th>
               <th style={{ minWidth: 220 }}>Name</th>
               <th style={{ minWidth: 150 }}>Phone Number</th>
               <th style={{ minWidth: 200 }}>Email</th>
@@ -775,9 +827,9 @@ export default function Leads() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
             ) : paged.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>
                 No leads in this view. {activeTab === 'All Leads' && 'Click "New Lead" to add one.'}
               </td></tr>
             ) : paged.map(lead => (
@@ -797,6 +849,32 @@ export default function Leads() {
               >
                 <td onClick={e => e.stopPropagation()}>
                   <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
+                </td>
+                <td onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+                  {(() => {
+                    const active = isRecordingLead(lead.id);
+                    return (
+                      <button
+                        title={active ? 'Stop recording' : 'Record call'}
+                        onClick={() => active ? stopRecording() : startRecording(lead.id, lead.name)}
+                        disabled={recStatus === 'saving' || recStatus === 'requesting'}
+                        style={{
+                          width: 28, height: 28, borderRadius: '50%', border: 'none',
+                          cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
+                          background: active ? '#FEE2E2' : '#f0f2f8',
+                          color: active ? '#C00000' : '#8e8ea0',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.15s',
+                          boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
+                          animation: active ? 'recPulse 1.2s infinite' : 'none',
+                        }}
+                        onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#C00000'; } }}
+                        onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#f0f2f8'; e.currentTarget.style.color = '#8e8ea0'; } }}
+                      >
+                        {active ? <MicOff size={12} /> : <Mic size={12} />}
+                      </button>
+                    );
+                  })()}
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -966,6 +1044,7 @@ export default function Leads() {
           onEmail={handleEmail}
           lastFollowUp={lastFollowUps[detailLead.id]}
           convos={detailConvos}
+          recordings={detailRecordings}
         />
       )}
 

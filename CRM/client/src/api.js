@@ -517,3 +517,7 @@ export const deleteLessonContent = (id) => academyRequest(`/admin-lessons?action
 
 // Transcribe video/audio and auto-generate description
 export const transcribeLessonMedia = (contentId, lessonId) => academyRequest('/transcribe', { method: 'POST', body: JSON.stringify({ content_id: contentId, lesson_id: lessonId }) });
+
+// Lead Recordings
+export const getLeadRecordings = (leadId) => request(`/recordings?lead_id=${leadId}`);
+export const deleteRecording   = (id)     => request(`/recordings?id=${id}`, { method: 'DELETE' });
