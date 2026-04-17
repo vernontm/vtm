@@ -540,3 +540,9 @@ export const createTrainingVideo  = (data)        => request('/training?action=c
 export const updateTrainingVideo  = (id, data)    => request(`/training?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const deleteTrainingVideo  = (id)          => request(`/training?id=${id}`, { method: 'DELETE' });
 export const saveTrainingProgress = (data)        => request('/training?action=progress', { method: 'POST', body: JSON.stringify(data) });
+
+// Call Scripts
+export const getScripts    = ()          => request('/scripts');
+export const createScript  = (data)      => request('/scripts', { method: 'POST', body: JSON.stringify(data) });
+export const updateScript  = (id, data)  => request(`/scripts?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteScript  = (id)        => request(`/scripts?id=${id}`, { method: 'DELETE' });

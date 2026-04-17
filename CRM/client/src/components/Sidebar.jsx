@@ -217,16 +217,24 @@ export default function Sidebar() {
             </>
           )}
 
-          {/* Training — visible to all (admins can view, owners can manage) */}
-          {hasPermission('training') && (
+          {/* Training — visible to all with permission */}
+          {(hasPermission('training') || hasPermission('scripts')) && (
             <>
               <div style={{ padding: '12px 16px 8px', fontSize: 10, fontWeight: 600, color: '#505068', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>
                 Training
               </div>
-              <NavLink to="/training" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                <Video size={15} />
-                <span>Training Videos</span>
-              </NavLink>
+              {hasPermission('training') && (
+                <NavLink to="/training" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <Video size={15} />
+                  <span>Training Videos</span>
+                </NavLink>
+              )}
+              {hasPermission('scripts') && (
+                <NavLink to="/scripts" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <FileText size={15} />
+                  <span>Call Scripts</span>
+                </NavLink>
+              )}
             </>
           )}
 
