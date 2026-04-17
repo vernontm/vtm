@@ -209,8 +209,19 @@ module.exports = async function handler(req, res) {
   const { id, lead_id } = req.query;
 
   try {
-    // GET — list recordings for a lead
+    // GET — list recordings for a lead, or counts for all leads
     if (req.method === 'GET') {
+      // ?action=counts — return { lead_id: count } map for all leads
+      if (req.query.action === 'counts') {
+        const rows = await supaFetch(
+          `crm_lead_recordings?select=lead_id&order=lead_id.asc`
+        );
+        const counts = {};
+        for (const r of (rows || [])) {
+          counts[r.lead_id] = (counts[r.lead_id] || 0) + 1;
+        }
+        return res.json(counts);
+      }
       if (!lead_id) return res.status(400).json({ error: 'lead_id required' });
       const rows = await supaFetch(
         `crm_lead_recordings?lead_id=eq.${lead_id}&order=created_at.desc`

@@ -519,5 +519,6 @@ export const deleteLessonContent = (id) => academyRequest(`/admin-lessons?action
 export const transcribeLessonMedia = (contentId, lessonId) => academyRequest('/transcribe', { method: 'POST', body: JSON.stringify({ content_id: contentId, lesson_id: lessonId }) });
 
 // Lead Recordings
-export const getLeadRecordings = (leadId) => request(`/recordings?lead_id=${leadId}`);
-export const deleteRecording   = (id)     => request(`/recordings?id=${id}`, { method: 'DELETE' });
+export const getLeadRecordings      = (leadId) => request(`/recordings?lead_id=${leadId}`);
+export const getLeadRecordingCounts = ()       => request(`/recordings?action=counts`);
+export const deleteRecording        = (id)     => request(`/recordings?id=${id}`, { method: 'DELETE' });

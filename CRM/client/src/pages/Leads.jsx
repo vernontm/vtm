@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import SelectionBar from '../components/SelectionBar';
@@ -917,6 +917,11 @@ export default function Leads() {
     getLeadRecordings(detailLead.id).then(r => setDetailRecordings(r || [])).catch(() => {});
   }, [detailLead, recStatus]); // re-fetch when recording finishes
 
+  const [recordingCounts, setRecordingCounts] = useState({});
+  useEffect(() => {
+    getLeadRecordingCounts().then(c => setRecordingCounts(c || {})).catch(() => {});
+  }, [recStatus]); // refresh after each recording finishes
+
   return (
     <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
       <div className="page-header">
@@ -1083,26 +1088,38 @@ export default function Leads() {
                 <td onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
                   {(() => {
                     const active = isRecordingLead(lead.id);
+                    const count = recordingCounts[lead.id] || 0;
                     return (
-                      <button
-                        title={active ? 'Stop recording' : 'Record call'}
-                        onClick={() => active ? stopRecording() : startRecording(lead.id, lead.name)}
-                        disabled={recStatus === 'saving' || recStatus === 'requesting'}
-                        style={{
-                          width: 28, height: 28, borderRadius: '50%', border: 'none',
-                          cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
-                          background: active ? '#FEE2E2' : '#f0f2f8',
-                          color: active ? '#C00000' : '#8e8ea0',
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
-                          boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
-                          animation: active ? 'recPulse 1.2s infinite' : 'none',
-                        }}
-                        onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#C00000'; } }}
-                        onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#f0f2f8'; e.currentTarget.style.color = '#8e8ea0'; } }}
-                      >
-                        {active ? <MicOff size={12} /> : <Mic size={12} />}
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <button
+                          title={active ? 'Stop recording' : `Record call${count ? ` (${count} recorded)` : ''}`}
+                          onClick={() => active ? stopRecording() : startRecording(lead.id, lead.name)}
+                          disabled={recStatus === 'saving' || recStatus === 'requesting'}
+                          style={{
+                            width: 28, height: 28, borderRadius: '50%', border: 'none',
+                            cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
+                            background: active ? '#FEE2E2' : '#f0f2f8',
+                            color: active ? '#C00000' : '#8e8ea0',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                            boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
+                            animation: active ? 'recPulse 1.2s infinite' : 'none',
+                          }}
+                          onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#C00000'; } }}
+                          onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#f0f2f8'; e.currentTarget.style.color = '#8e8ea0'; } }}
+                        >
+                          {active ? <MicOff size={12} /> : <Mic size={12} />}
+                        </button>
+                        {count > 0 && (
+                          <span style={{
+                            fontSize: 9, fontWeight: 700, color: '#8e8ea0',
+                            background: '#f0f2f8', borderRadius: 6,
+                            padding: '0px 4px', lineHeight: '14px',
+                          }}>
+                            {count}
+                          </span>
+                        )}
+                      </div>
                     );
                   })()}
                 </td>
