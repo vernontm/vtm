@@ -14,7 +14,7 @@ import {
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
   Trash2, Check, X, Eye, RefreshCw, Loader, Sparkles, Calendar,
-  Upload, Download, Clock, Film, Image, Mic, Send, FileText,
+  Upload, Download, Clock, Film, Image, Send, FileText,
   Play, ChevronLeft, ChevronRight, Copy, GripVertical, Settings,
   AlertCircle, CheckCircle2, Clock3, Filter,
   MessageCircle, MessageSquare, Zap, BarChart2, Bot, Pause, Square,
@@ -103,8 +103,6 @@ export default function ContentScheduler() {
   const [slideEditIndex, setSlideEditIndex] = useState(null); // slide index being edited
   const [slideEditPrompt, setSlideEditPrompt] = useState('');
   const [uploadProgress, setUploadProgress] = useState({}); // { scriptId: percent }
-  const [chatInput, setChatInput] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [dragOverId, setDragOverId] = useState(null);
   const [savingClient, setSavingClient] = useState(false);
   const [processingBible, setProcessingBible] = useState(false);
@@ -220,10 +218,7 @@ export default function ContentScheduler() {
   const [clientForm, setClientForm] = useState(emptyClientForm);
 
   const fileInputRef = useRef(null);
-  const scriptUploadRef = useRef(null);
   const bulkUploadRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const listeningRef = useRef(false);
 
   // Bulk upload state
   const [bulkUploads, setBulkUploads] = useState([]); // [{ id, name, status, progress, error }]
@@ -278,40 +273,6 @@ export default function ContentScheduler() {
     setLoading(false);
   }
 
-  // ── Speech recognition ──
-  useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const r = new SR();
-    r.continuous = true;
-    r.interimResults = false;
-    r.lang = 'en-US';
-    r.onresult = (e) => {
-      const last = e.results[e.results.length - 1];
-      if (last.isFinal) setChatInput(prev => (prev ? prev + ' ' : '') + last[0].transcript);
-    };
-    r.onend = () => { if (listeningRef.current) { try { r.start(); } catch (e) {} } };
-    r.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        listeningRef.current = false; setIsListening(false);
-      } else if (e.error === 'network' || e.error === 'audio-capture' || e.error === 'no-speech') {
-        if (listeningRef.current) { setTimeout(() => { if (listeningRef.current) { try { r.start(); } catch (err) {} } }, 1000); }
-      } else if (e.error !== 'aborted') {
-        listeningRef.current = false; setIsListening(false);
-      }
-    };
-    recognitionRef.current = r;
-  }, []);
-
-  function toggleMic() {
-    if (!recognitionRef.current) return;
-    if (listeningRef.current) {
-      listeningRef.current = false; recognitionRef.current.stop(); setIsListening(false);
-    } else {
-      listeningRef.current = true; setIsListening(true);
-      try { recognitionRef.current.start(); } catch (e) {}
-    }
-  }
 
   // ── Media upload ──
   async function handleMediaDrop(e, script) {
@@ -555,52 +516,6 @@ export default function ContentScheduler() {
     return () => clearInterval(interval);
   }, [scripts]);
 
-  // ── Chat/Command handler ──
-  async function handleCommand() {
-    const cmd = chatInput.trim().toLowerCase();
-    if (!cmd || !client) return;
-    setChatInput('');
-
-    if (cmd.includes('generate caption') || cmd.includes('create caption')) {
-      setActionLoading('captions');
-      try {
-        const scriptIds = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
-        const result = await generateCaptions({ client_id: client.id, script_ids: scriptIds });
-        await loadClientData(client.id);
-        alert(`Generated captions for ${result.updated} scripts`);
-      } catch (e) { alert('Failed: ' + e.message); }
-      setActionLoading('');
-    } else if (cmd.includes('auto schedule') || cmd.includes('schedule all')) {
-      setActionLoading('schedule');
-      try {
-        if (!scheduleConfig) {
-          await saveScheduleConfig({ client_id: client.id, time_slots: schedTimeslots, timezone: schedTimezone });
-        }
-        const result = await autoScheduleContent({ client_id: client.id });
-        await loadClientData(client.id);
-        alert(`Scheduled ${result.scheduled} scripts`);
-      } catch (e) { alert('Failed: ' + e.message); }
-      setActionLoading('');
-    } else if (cmd.includes('upload') || cmd.includes('import script')) {
-      scriptUploadRef.current?.click();
-    } else if (cmd.includes('export')) {
-      if (selectedScripts.size === 0) { selectAll(); }
-      setTimeout(() => exportCSV(), 100);
-    } else {
-      // Treat as a pasted script -- create a new row with it
-      const rawText = chatInput.trim();
-      try {
-        await createContentScript([{
-          client_id: client.id,
-          title: rawText.split('\n')[0].slice(0, 80) || 'New Script',
-          full_script: rawText,
-          status: 'draft',
-          sort_order: scripts.length + 1,
-        }]);
-        await loadClientData(client.id);
-      } catch (err) { alert('Failed to add script: ' + err.message); }
-    }
-  }
 
   // ── Content Generator handler ──
   async function handleGenerate(overridePrompt) {
@@ -731,46 +646,6 @@ export default function ContentScheduler() {
     setGenResults(prev => prev.map((r, i) => i === index ? { ...r, rejected: true, approved: false } : r));
   }
 
-  // ── Script file upload ──
-  async function handleScriptUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file || !client) return;
-    e.target.value = '';
-
-    setActionLoading('parsing');
-    try {
-      const isPdf = file.type === 'application/pdf';
-      const isImage = file.type.startsWith('image/');
-
-      if (isPdf || isImage) {
-        // Send as base64 for Claude native processing
-        const base64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve(ev.target.result.split(',')[1]);
-          reader.readAsDataURL(file);
-        });
-        const result = await parseScripts({
-          client_id: client.id,
-          file_base64: base64,
-          media_type: file.type,
-          file_name: file.name,
-        });
-        await loadClientData(client.id);
-        alert(`Parsed ${Array.isArray(result) ? result.length : 0} scripts`);
-      } else {
-        // Text files
-        const text = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve(ev.target.result);
-          reader.readAsText(file);
-        });
-        const result = await parseScripts({ client_id: client.id, text });
-        await loadClientData(client.id);
-        alert(`Parsed ${Array.isArray(result) ? result.length : 0} scripts`);
-      }
-    } catch (err) { alert('Parse failed: ' + err.message); }
-    setActionLoading('');
-  }
 
   // ── Bulk video upload ──
   async function handleBulkUpload(e) {
@@ -1213,48 +1088,6 @@ export default function ContentScheduler() {
           {/* ════════════════════════════════════════════════════════════════ */}
           {client && activeSection === 'content' && (
             <>
-              {/* Command Input */}
-              <div style={{ ...cardStyle, padding: 0 }}>
-                <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="file" ref={scriptUploadRef} accept=".txt,.pdf,.docx" onChange={handleScriptUpload} style={{ display: 'none' }} />
-                  <button onClick={() => scriptUploadRef.current?.click()} style={{ ...btnGhost, flexShrink: 0 }}>
-                    <Upload size={14} /> Upload Scripts
-                  </button>
-                  <textarea
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommand(); } }}
-                    placeholder="Paste a script to add it, or type: generate captions, auto schedule, export..."
-                    rows={1}
-                    style={{ ...inputStyle, border: 'none', background: 'transparent', resize: 'none', minHeight: 20, maxHeight: 120, overflow: 'auto', lineHeight: '20px' }}
-                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
-                  />
-                  <button onClick={toggleMic} style={{
-                    width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7ef',
-                    background: isListening ? 'rgba(255,60,60,0.1)' : '#f8f9fc',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: isListening ? '#ef4444' : '#8e8ea0', flexShrink: 0,
-                  }}>
-                    <Mic size={16} />
-                  </button>
-                  <button onClick={handleCommand} disabled={!chatInput.trim()} style={{
-                    width: 36, height: 36, borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: chatInput.trim() ? 1 : 0.4, flexShrink: 0,
-                  }}>
-                    <Send size={15} style={{ color: '#fff' }} />
-                  </button>
-                </div>
-                {actionLoading && (
-                  <div style={{ padding: '8px 20px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#4a6cf7' }}>
-                    <Loader size={14} className="spin" />
-                    {actionLoading === 'parsing' && 'Parsing scripts...'}
-                    {actionLoading === 'captions' && 'Generating captions...'}
-                    {actionLoading === 'schedule' && 'Auto-scheduling...'}
-                  </div>
-                )}
-              </div>
 
               {/* Bulk Video Upload */}
               <div
