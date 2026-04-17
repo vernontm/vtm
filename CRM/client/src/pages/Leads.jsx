@@ -66,7 +66,7 @@ const PRODUCT_NEED_STYLES = {
 
 function ProductNeedChip({ value, onChange }) {
   const [open, setOpen] = useState(false);
-  const style = PRODUCT_NEED_STYLES[value] || null;
+  const style = (value ? (PRODUCT_NEED_STYLES[value] || PRODUCT_NEED_STYLES['Other']) : null);
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button
