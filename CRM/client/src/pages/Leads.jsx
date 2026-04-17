@@ -362,7 +362,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
         type: 'recording',
         date: r.created_at,
         title: `Call recorded${r.duration_seconds ? ` · ${Math.floor(r.duration_seconds/60)}:${String(r.duration_seconds%60).padStart(2,'0')}` : ''}`,
-        body: r.summary?.summary || null,
+        body: null,
         interestLevel: r.summary?.interest_level || null,
         recording: r,
       });
@@ -419,11 +419,15 @@ function ActivityTimeline({ lead, convos, recordings }) {
                     <div style={{ fontSize: 10, color: '#8e8ea0', marginBottom: ev.body ? 4 : 0 }}>
                       {fmtDateTime(ev.date)}
                     </div>
-                    {ev.body && (
+                    {ev.recording ? (
+                      <div style={{ marginTop: 6 }}>
+                        <RecordingCard recording={ev.recording} />
+                      </div>
+                    ) : ev.body ? (
                       <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5, marginTop: 2 }}>
                         {ev.body.length > 160 ? ev.body.slice(0, 160) + '…' : ev.body}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
