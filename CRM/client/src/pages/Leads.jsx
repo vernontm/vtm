@@ -426,32 +426,121 @@ function RecordingCard({ recording: r }) {
         style={{ display: 'none' }}
       />
 
+      {/* AI Summary */}
+      {r.summary && (
+        <div style={{ marginTop: 10, borderTop: '1px solid #e5e7ef', paddingTop: 10 }}>
+          {/* Interest + sentiment row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+            {r.summary.interest_level && (() => {
+              const iMap = {
+                hot:           { bg: '#FEE2E2', fg: '#B91C1C', label: '🔥 Hot' },
+                warm:          { bg: '#FEF3C7', fg: '#B45309', label: '☀️ Warm' },
+                cold:          { bg: '#E0F2FE', fg: '#0369A1', label: '❄️ Cold' },
+                not_interested:{ bg: '#F3F4F6', fg: '#6B7280', label: '👎 Not Interested' },
+              };
+              const s = iMap[r.summary.interest_level] || iMap.warm;
+              return (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 8, background: s.bg, color: s.fg }}>
+                  {s.label}
+                </span>
+              );
+            })()}
+            {r.summary.sentiment && (() => {
+              const sMap = {
+                positive: { bg: '#DCFCE7', fg: '#15803D', label: '😊 Positive' },
+                neutral:  { bg: '#F3F4F6', fg: '#6B7280', label: '😐 Neutral' },
+                negative: { bg: '#FEE2E2', fg: '#B91C1C', label: '😟 Negative' },
+              };
+              const s = sMap[r.summary.sentiment] || sMap.neutral;
+              return (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 8, background: s.bg, color: s.fg }}>
+                  {s.label}
+                </span>
+              );
+            })()}
+          </div>
+
+          {/* Summary text */}
+          {r.summary.summary && (
+            <p style={{ fontSize: 12, color: '#1a1a2e', margin: '0 0 8px', lineHeight: 1.6, fontWeight: 500 }}>
+              {r.summary.summary}
+            </p>
+          )}
+
+          {/* Interest reason */}
+          {r.summary.interest_reason && (
+            <p style={{ fontSize: 11, color: '#8e8ea0', margin: '0 0 8px', lineHeight: 1.5, fontStyle: 'italic' }}>
+              {r.summary.interest_reason}
+            </p>
+          )}
+
+          {/* Pain points */}
+          {r.summary.pain_points?.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Pain Points</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {r.summary.pain_points.map((p, i) => (
+                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#FEF3C7', color: '#B45309' }}>{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Next steps */}
+          {r.summary.next_steps?.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Next Steps</div>
+              <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {r.summary.next_steps.map((s, i) => (
+                  <li key={i} style={{ fontSize: 11, color: '#1a1a2e', lineHeight: 1.5 }}>{s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Topics */}
+          {r.summary.topics?.length > 0 && (
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Topics</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {r.summary.topics.map((t, i) => (
+                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#EEF4FF', color: '#4a6cf7' }}>{t}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Transcript */}
       {r.transcript && (
-        <div style={{ marginTop: 10, borderTop: '1px solid #e5e7ef', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {r.transcript.split('\n').filter(l => l.trim()).map((line, i) => {
-            const match = line.match(/^(Speaker \d+):\s*(.*)$/);
-            if (match) {
-              const speakerNum = parseInt(match[1].replace('Speaker ', ''), 10);
-              const colors = ['#4a6cf7', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
-              const color = colors[(speakerNum - 1) % colors.length];
-              return (
-                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, color, background: `${color}15`,
-                    padding: '2px 7px', borderRadius: 6, flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap',
-                  }}>
-                    {match[1]}
-                  </span>
-                  <span style={{ fontSize: 12, color: '#1a1a2e', lineHeight: 1.6 }}>{match[2]}</span>
-                </div>
-              );
-            }
-            return (
-              <p key={i} style={{ fontSize: 12, color: '#1a1a2e', margin: 0, lineHeight: 1.6 }}>{line}</p>
-            );
-          })}
-        </div>
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', cursor: 'pointer', userSelect: 'none', borderTop: '1px solid #e5e7ef', paddingTop: 8 }}>
+            Full Transcript
+          </summary>
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {r.transcript.split('\n').filter(l => l.trim()).map((line, i) => {
+              const match = line.match(/^(Speaker \d+):\s*(.*)$/);
+              if (match) {
+                const speakerNum = parseInt(match[1].replace('Speaker ', ''), 10);
+                const colors = ['#4a6cf7', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+                const color = colors[(speakerNum - 1) % colors.length];
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color, background: `${color}15`,
+                      padding: '2px 7px', borderRadius: 6, flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap',
+                    }}>
+                      {match[1]}
+                    </span>
+                    <span style={{ fontSize: 12, color: '#1a1a2e', lineHeight: 1.6 }}>{match[2]}</span>
+                  </div>
+                );
+              }
+              return <p key={i} style={{ fontSize: 12, color: '#1a1a2e', margin: 0, lineHeight: 1.6 }}>{line}</p>;
+            })}
+          </div>
+        </details>
       )}
     </div>
   );

@@ -1,6 +1,63 @@
 const { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const ANTHROPIC_API_KEY  = process.env.ANTHROPIC_API_KEY;
+
+// ── Claude call analysis ───────────────────────────────────────────────────
+async function analyzeCall(transcript, leadName) {
+  if (!ANTHROPIC_API_KEY || !transcript?.trim()) return null;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: `You are a sales CRM assistant. Analyze this call transcript and return a JSON object only — no markdown, no explanation, just raw JSON.
+
+Lead name: ${leadName || 'Unknown'}
+
+Transcript:
+${transcript}
+
+Return this exact JSON structure:
+{
+  "summary": "2-3 sentence plain-English summary of the call",
+  "interest_level": "hot" | "warm" | "cold" | "not_interested",
+  "interest_reason": "one sentence explaining why",
+  "pain_points": ["array", "of", "key", "pain", "points", "mentioned"],
+  "next_steps": ["array", "of", "recommended", "follow-up", "actions"],
+  "sentiment": "positive" | "neutral" | "negative",
+  "topics": ["array", "of", "main", "topics", "discussed"],
+  "call_outcome": "one sentence on how the call ended"
+}`,
+      }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Claude analysis failed: ${res.status} ${err}`);
+  }
+
+  const data = await res.json();
+  const text = data.content?.[0]?.text || '';
+
+  try {
+    // Strip any accidental markdown fences
+    const clean = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(clean);
+  } catch {
+    // Return raw text as summary if JSON parse fails
+    return { summary: text, interest_level: 'warm', sentiment: 'neutral' };
+  }
+}
 
 // ── Build multipart body (no external deps) ────────────────────────────────
 function buildMultipart(fields, fileField) {
@@ -236,29 +293,43 @@ module.exports = async function handler(req, res) {
           `recording.${cleanExt}`
         );
 
-        // 4. Save transcript + mark done
+        // 4. Analyze with Claude
+        let summary = null;
+        try {
+          summary = await analyzeCall(transcript, lead_name);
+        } catch (aiErr) {
+          console.warn('Claude analysis skipped:', aiErr.message);
+        }
+
+        // 5. Save transcript + summary + mark done
         await supaFetch(`crm_lead_recordings?id=eq.${recording.id}`, {
           method: 'PATCH',
           headers: { 'Prefer': 'return=minimal' },
           body: JSON.stringify({
             transcript,
             transcript_status: 'done',
+            summary,
             ...(audioIsolated ? { audio_cleaned: true } : {}),
           }),
         });
 
-        // 5. Log to communication log
+        // 6. Log to communication log
         const mins = Math.floor((duration_seconds || 0) / 60);
         const secs = (duration_seconds || 0) % 60;
         const durStr = duration_seconds ? ` (${mins}:${String(secs).padStart(2, '0')})` : '';
+        const interestLabel = summary?.interest_level
+          ? ` · ${summary.interest_level.replace('_', ' ').toUpperCase()}`
+          : '';
         await supaFetch('crm_communication_log', {
           method: 'POST',
           headers: { 'Prefer': 'return=minimal' },
           body: JSON.stringify([{
             lead_id: lid,
             channel: 'call',
-            subject: `Call recording${durStr}${audioIsolated ? ' 🎙 cleaned' : ''}`,
-            body: transcript || '(Transcription unavailable)',
+            subject: `Call recording${durStr}${interestLabel}`,
+            body: summary?.summary
+              ? `${summary.summary}\n\n${transcript}`
+              : transcript || '(Transcription unavailable)',
             direction: 'outbound',
           }]),
         });
