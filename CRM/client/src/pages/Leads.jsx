@@ -3,11 +3,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check,
   ThumbsUp, ThumbsDown, Send, Clock, Download, Calendar as CalendarIcon,
-  ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square,
+  ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square, ListPlus,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -920,7 +920,7 @@ function RecordingCard({ recording: rawR }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, lastFollowUp, convos, recordings }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings }) {
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
@@ -1002,6 +1002,19 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                 >
                   <CalendarIcon size={12} /> Schedule Meeting
                 </button>
+                {lead.email && (
+                  <button
+                    onClick={() => onAddToList(lead)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, border: '1px solid #e5e7ef',
+                      background: '#f0f2f8', color: '#1a1a2e',
+                    }}
+                  >
+                    <ListPlus size={12} /> Add to Email List
+                  </button>
+                )}
                 {lastFollowUp && (
                   <span style={{ fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Clock size={11} /> Last: {formatFollowUp(lastFollowUp)}
@@ -1086,6 +1099,119 @@ function exportCSV(leads) {
   URL.revokeObjectURL(url);
 }
 
+// ─── Email List Modal ─────────────────────────────────────────────────────────
+function EmailListModal({ lead, onClose, onSuccess }) {
+  const [clients,    setClients]   = useState([]);
+  const [clientId,   setClientId]  = useState('');
+  const [tags,       setTags]      = useState('');
+  const [saving,     setSaving]    = useState(false);
+  const [error,      setError]     = useState('');
+
+  useEffect(() => {
+    getClients().then(data => {
+      const list = Array.isArray(data) ? data : (data?.clients || []);
+      setClients(list);
+      if (list.length === 1) setClientId(list[0].id);
+    }).catch(() => {});
+  }, []);
+
+  async function handleAdd() {
+    if (!clientId) return setError('Please select an email list');
+    if (!lead.email) return setError('This lead has no email address');
+    setSaving(true);
+    setError('');
+    try {
+      const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
+      await addEmailContacts({
+        client_id: clientId,
+        contacts: [{ name: lead.name || '', email: lead.email, tags: tagList }],
+      });
+      onSuccess();
+    } catch (e) {
+      setError(e.message || 'Failed to add to list');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputStyle = {
+    width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
+    color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef',
+    outline: 'none', boxSizing: 'border-box',
+  };
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ListPlus size={16} color="#4a6cf7" />
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Add to Email List</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={17} /></button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Lead info */}
+          <div style={{ background: '#f5f7fa', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{lead.name || 'Unnamed'}</div>
+              <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 1 }}>{lead.email || <span style={{ color: '#ff5c5c' }}>No email on file</span>}</div>
+            </div>
+          </div>
+
+          {error && (
+            <div style={{ background: '#fff1f0', border: '1px solid #ff5c5c40', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#ff5c5c' }}>
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Select Email List *</label>
+            <select style={inputStyle} value={clientId} onChange={e => setClientId(e.target.value)}>
+              <option value="">— Choose a list —</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>{c.business_name || c.name || c.id}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>
+              Tags <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional, comma-separated)</span>
+            </label>
+            <input
+              style={inputStyle}
+              value={tags}
+              onChange={e => setTags(e.target.value)}
+              placeholder="e.g. lead, crm, warm"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '0 20px 18px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#fff', color: '#6b7280', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+            Cancel
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={saving || !lead.email}
+            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 13, fontWeight: 700, cursor: (saving || !lead.email) ? 'not-allowed' : 'pointer', opacity: (saving || !lead.email) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {saving ? 'Adding…' : <><ListPlus size={13} /> Add to List</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Leads() {
   const { startRecording, stopRecording, isRecordingLead, status: recStatus } = useRecorder();
@@ -1107,6 +1233,9 @@ export default function Leads() {
   const [lastFollowUps, setLastFollowUps] = useState({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [emailListLead, setEmailListLead] = useState(null);
+  const [toast, setToast] = useState('');
+  function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3500); }
 
   const load = async () => {
     try {
@@ -1588,6 +1717,15 @@ export default function Leads() {
                           <UserPlus size={14} />
                         </button>
                       )}
+                      {lead.email && (
+                        <button title="Add to Email List" onClick={() => setEmailListLead(lead)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#4a6cf7'; e.currentTarget.style.background = '#4a6cf710'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
+                        >
+                          <ListPlus size={14} />
+                        </button>
+                      )}
                       <button title="Delete" onClick={() => openDelete(lead)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                         <Trash2 size={14} />
@@ -1665,6 +1803,7 @@ export default function Leads() {
           statuses={LEAD_STATUSES}
           onEmail={handleEmail}
           onSchedule={(lead) => { setScheduleLead(lead); }}
+          onAddToList={(lead) => setEmailListLead(lead)}
           lastFollowUp={lastFollowUps[detailLead.id]}
           convos={detailConvos}
           recordings={detailRecordings}
@@ -1786,6 +1925,28 @@ export default function Leads() {
         <Modal title="Move to Contacts" onClose={() => setModal(null)} onSubmit={handleConvert} submitLabel="Convert to Contact">
           <p style={{ color: '#8e8ea0' }}>Move <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong> to Contacts?</p>
         </Modal>
+      )}
+
+      {emailListLead && (
+        <EmailListModal
+          lead={emailListLead}
+          onClose={() => setEmailListLead(null)}
+          onSuccess={() => {
+            setEmailListLead(null);
+            showToast(`${emailListLead.name || 'Lead'} added to email list ✓`);
+          }}
+        />
+      )}
+
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
+          background: '#fff', border: '1px solid #4a6cf7', color: '#1a1a2e',
+          padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+        }}>
+          <Check size={14} color="#4a6cf7" /> {toast}
+        </div>
       )}
     </div>
   );
