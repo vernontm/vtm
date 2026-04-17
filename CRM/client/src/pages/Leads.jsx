@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
-  Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check, PhoneCall,
-  ThumbsUp, ThumbsDown, Send, Clock, Download, SlidersHorizontal,
+  Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check,
+  ThumbsUp, ThumbsDown, Send, Clock, Download, Calendar as CalendarIcon,
   ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
@@ -755,23 +755,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <StatusPill value={draft.status} onChange={handleStatus} />
-                <button
-                  onClick={handleCallToggle}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '4px 11px', borderRadius: 12, cursor: 'pointer',
-                    fontSize: 11, fontWeight: 600, border: 'none',
-                    background: draft.call_completed ? '#4a6cf725' : '#e5e7ef40',
-                    color: draft.call_completed ? '#4a6cf7' : '#8e8ea0',
-                  }}
-                >
-                  {draft.call_completed
-                    ? <><Check size={11} /> Call Completed</>
-                    : <><PhoneCall size={11} /> Call Pending</>
-                  }
-                </button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {lead.email && (
                   <button
                     onClick={() => onEmail(lead)}
@@ -785,16 +770,25 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                     <Send size={12} /> Email
                   </button>
                 )}
-                {lead.phone && (
-                  <a href={`tel:${lead.phone}`} style={{
+                <button
+                  onClick={() => {
+                    const name = encodeURIComponent(`Demo Call with ${lead.name || 'Lead'}`);
+                    const details = encodeURIComponent('CRM Demo Call — scheduled via Vernon Tech & Media CRM');
+                    const guests = lead.email ? `&add=${encodeURIComponent(lead.email)}` : '';
+                    window.open(
+                      `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${name}&details=${details}${guests}&crm=meet`,
+                      '_blank'
+                    );
+                  }}
+                  style={{
                     display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
-                    fontSize: 12, fontWeight: 600,
-                    background: '#f0f2f8', color: '#1a1a2e', border: '1px solid #e5e7ef',
-                  }}>
-                    <Phone size={12} /> Call
-                  </a>
-                )}
+                    padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                    fontSize: 12, fontWeight: 600, border: '1px solid #e5e7ef',
+                    background: '#f0f2f8', color: '#1a1a2e',
+                  }}
+                >
+                  <CalendarIcon size={12} /> Schedule Meeting
+                </button>
                 {lastFollowUp && (
                   <span style={{ fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Clock size={11} /> Last: {formatFollowUp(lastFollowUp)}
@@ -813,7 +807,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
             <CollapsibleSection
               key={section.title}
               title={section.title}
-              defaultOpen={section.title !== 'Pipeline'}
+              defaultOpen={section.title !== 'Pipeline' && section.title !== 'Notes'}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {section.fields.map(({ key, label }) => (
