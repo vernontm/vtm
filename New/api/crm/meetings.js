@@ -1,6 +1,22 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import { getGmailAuth } from '../_lib/gmail.js';
 
+// Normalize a crm_meetings row to the shape the frontend expects
+function normalize(m) {
+  if (!m) return m;
+  const attendees = (() => {
+    if (!m.attendees) return [];
+    if (Array.isArray(m.attendees)) return m.attendees;
+    try { return JSON.parse(m.attendees); } catch { return []; }
+  })();
+  return {
+    ...m,
+    google_event_id: m.google_event_id || m.id,
+    title:           m.title || m.summary || '',
+    participants:    m.participants || attendees,
+  };
+}
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -13,11 +29,13 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       if (action === 'upcoming') {
         const now = new Date().toISOString();
-        return res.json(await supaFetch(`crm_meetings?start_time=gte.${now}&order=start_time.asc`));
+        const rows = await supaFetch(`crm_meetings?start_time=gte.${now}&order=start_time.asc`);
+        return res.json((rows || []).map(normalize));
       }
       if (action === 'past') {
         const now = new Date().toISOString();
-        return res.json(await supaFetch(`crm_meetings?start_time=lt.${now}&order=start_time.desc&limit=50`));
+        const rows = await supaFetch(`crm_meetings?start_time=lt.${now}&order=start_time.desc&limit=50`);
+        return res.json((rows || []).map(normalize));
       }
       if (action === 'lead-links') {
         return res.json(await supaFetch('crm_meeting_lead_links?order=created_at.desc'));
@@ -25,13 +43,14 @@ export default async function handler(req, res) {
       if (action === 'detail' && id) {
         const [meeting] = await supaFetch(`crm_meetings?id=eq.${id}`);
         if (!meeting) return res.status(404).json({ error: 'Not found' });
-        const [summary] = await supaFetch(`crm_meeting_summaries?meeting_id=eq.${id}&order=created_at.desc&limit=1`);
-        const chatHistory = await supaFetch(`crm_meeting_chat_history?meeting_id=eq.${id}&order=created_at.asc`);
-        const leadLinks = await supaFetch(`crm_meeting_lead_links?meeting_id=eq.${id}`);
-        return res.json({ ...meeting, summary: summary || null, chatHistory, leadLinks });
+        const [summary] = await supaFetch(`crm_meeting_summaries?meeting_id=eq.${id}&order=created_at.desc&limit=1`).catch(() => [null]);
+        const chatHistory = await supaFetch(`crm_meeting_chat_history?meeting_id=eq.${id}&order=created_at.asc`).catch(() => []);
+        const leadLinks = await supaFetch(`crm_meeting_lead_links?meeting_id=eq.${id}`).catch(() => []);
+        return res.json({ ...normalize(meeting), summary: summary || null, chatHistory, leadLinks });
       }
       // Default: all meetings
-      return res.json(await supaFetch('crm_meetings?order=start_time.desc'));
+      const rows = await supaFetch('crm_meetings?order=start_time.desc');
+      return res.json((rows || []).map(normalize));
     }
 
     // POST actions
@@ -107,12 +126,12 @@ export default async function handler(req, res) {
         });
         const saved = (dbResult || [])[0] || row;
 
-        return res.status(201).json({
+        return res.status(201).json(normalize({
           ...saved,
           title:        summary,
           meet_link:    meetLink,
           participants: attendees.map(email => ({ email })),
-        });
+        }));
       }
       if (action === 'lead-link') {
         const result = await supaFetch('crm_meeting_lead_links', { method: 'POST', body: JSON.stringify(req.body) });
