@@ -234,6 +234,14 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                 </div>
               </div>
 
+              {/* CST timezone warning */}
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'#fef3c7', border:'1px solid #fde68a' }}>
+                <Clock size={13} color="#d97706" style={{ flexShrink:0 }} />
+                <span style={{ fontSize:12, color:'#92400e', fontWeight:500 }}>
+                  All calls are scheduled in <strong>Central Standard Time (CST)</strong>. Make sure the time above reflects CST.
+                </span>
+              </div>
+
               {/* Attendees with contact search */}
               <div ref={attendeeRef}>
                 <label style={{ ...labelStyle, display:'flex', alignItems:'center', gap:6 }}>
