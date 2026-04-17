@@ -366,6 +366,11 @@ function RecordingCard({ recording: r }) {
           <span style={{ fontSize: 10, color: '#8e8ea0' }}>
             {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
+          {r.audio_cleaned && (
+            <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, background: '#EDE9FE', color: '#6D28D9' }}>
+              ✨ Cleaned
+            </span>
+          )}
         </div>
         <span style={{
           fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
