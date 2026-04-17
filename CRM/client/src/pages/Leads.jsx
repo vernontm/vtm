@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check, PhoneCall,
   ThumbsUp, ThumbsDown, Send, Clock, Download, SlidersHorizontal,
-  ChevronLeft, ChevronRight, MessageSquare, Mic, MicOff,
+  ChevronLeft, ChevronRight, MessageSquare, Mic, MicOff, Play, Pause, Square,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
+import { supabase } from '../lib/supabase';
 import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -285,6 +286,151 @@ function EditableField({ fieldKey, value, onChange }) {
   return <input value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle} />;
 }
 
+// ─── Recording audio player card ─────────────────────────────────────────────
+function RecordingCard({ recording: r }) {
+  const audioRef = useRef(null);
+  const [url, setUrl]           = useState(null);
+  const [loading, setLoading]   = useState(false);
+  const [playing, setPlaying]   = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(r.duration_seconds || 0);
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+
+  const loadAndPlay = async () => {
+    if (!url) {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.storage
+          .from('lead-recordings')
+          .createSignedUrl(r.storage_path, 3600);
+        if (error) throw error;
+        setUrl(data.signedUrl);
+      } catch (e) {
+        alert(`Could not load audio: ${e.message}`);
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+    }
+    // Play after url is set — handled via useEffect below
+    setPlaying(true);
+  };
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !url) return;
+    if (playing) {
+      el.play().catch(() => setPlaying(false));
+    } else {
+      el.pause();
+    }
+  }, [playing, url]);
+
+  const handleToggle = () => {
+    if (!url) { loadAndPlay(); return; }
+    setPlaying(p => !p);
+  };
+
+  const handleStop = () => {
+    const el = audioRef.current;
+    if (el) { el.pause(); el.currentTime = 0; }
+    setPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const handleSeek = (e) => {
+    const el = audioRef.current;
+    if (!el || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    el.currentTime = pct * duration;
+    setCurrentTime(pct * duration);
+  };
+
+  const progress = duration > 0 ? currentTime / duration : 0;
+
+  return (
+    <div style={{ padding: '10px 12px', background: '#f5f7fa', borderRadius: 8, border: '1px solid #e5e7ef' }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#C00000', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Mic size={10} /> Call
+          </span>
+          {r.duration_seconds > 0 && <span style={{ fontSize: 10, color: '#8e8ea0' }}>{fmt(r.duration_seconds)}</span>}
+          <span style={{ fontSize: 10, color: '#8e8ea0' }}>
+            {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
+        </div>
+        <span style={{
+          fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
+          background: r.transcript_status === 'done' ? '#DCFCE7' : r.transcript_status === 'error' ? '#FEE2E2' : '#FEF3C7',
+          color: r.transcript_status === 'done' ? '#15803D' : r.transcript_status === 'error' ? '#B91C1C' : '#B45309',
+        }}>
+          {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
+        </span>
+      </div>
+
+      {/* Player */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          style={{
+            width: 30, height: 30, borderRadius: '50%', border: 'none', cursor: loading ? 'wait' : 'pointer',
+            background: '#4a6cf7', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}
+        >
+          {loading ? <span style={{ fontSize: 8 }}>…</span> : playing ? <Pause size={12} /> : <Play size={12} />}
+        </button>
+
+        {/* Seek bar */}
+        <div
+          onClick={handleSeek}
+          style={{ flex: 1, height: 4, background: '#e5e7ef', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
+        >
+          <div style={{ width: `${progress * 100}%`, height: '100%', background: '#4a6cf7', borderRadius: 2, transition: 'width 0.1s' }} />
+        </div>
+
+        <span style={{ fontSize: 10, color: '#8e8ea0', fontVariantNumeric: 'tabular-nums', minWidth: 36 }}>
+          {fmt(currentTime)}{duration > 0 ? ` / ${fmt(duration)}` : ''}
+        </span>
+
+        <button
+          onClick={handleStop}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 2, display: 'flex', alignItems: 'center' }}
+          title="Stop"
+        >
+          <Square size={10} />
+        </button>
+      </div>
+
+      {/* Hidden audio element */}
+      <audio
+        ref={audioRef}
+        src={url || undefined}
+        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration || r.duration_seconds || 0)}
+        onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+        style={{ display: 'none' }}
+      />
+
+      {/* Transcript */}
+      {r.transcript && (
+        <p style={{ fontSize: 12, color: '#1a1a2e', margin: '10px 0 0', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderTop: '1px solid #e5e7ef', paddingTop: 8 }}>
+          {r.transcript}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, lastFollowUp, convos, recordings }) {
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
@@ -417,39 +563,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
               <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Mic size={11} /> Recordings
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {recordings.map(r => {
-                  const mins = Math.floor((r.duration_seconds || 0) / 60);
-                  const secs = (r.duration_seconds || 0) % 60;
-                  const dur = r.duration_seconds ? `${mins}:${String(secs).padStart(2,'0')}` : null;
-                  return (
-                    <div key={r.id} style={{ padding: '10px 12px', background: '#f5f7fa', borderRadius: 8, border: '1px solid #e5e7ef' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: r.transcript ? 8 : 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: '#C00000', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Mic size={10} /> Call
-                          </span>
-                          {dur && <span style={{ fontSize: 10, color: '#8e8ea0' }}>{dur}</span>}
-                          <span style={{ fontSize: 10, color: '#8e8ea0' }}>
-                            {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </span>
-                        </div>
-                        <span style={{
-                          fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
-                          background: r.transcript_status === 'done' ? '#DCFCE7' : r.transcript_status === 'error' ? '#FEE2E2' : '#FEF3C7',
-                          color: r.transcript_status === 'done' ? '#15803D' : r.transcript_status === 'error' ? '#B91C1C' : '#B45309',
-                        }}>
-                          {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
-                        </span>
-                      </div>
-                      {r.transcript && (
-                        <p style={{ fontSize: 12, color: '#1a1a2e', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                          {r.transcript}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recordings.map(r => <RecordingCard key={r.id} recording={r} />)}
               </div>
             </div>
           )}
