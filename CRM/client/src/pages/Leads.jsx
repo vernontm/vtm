@@ -1182,14 +1182,18 @@ export default function Leads() {
 
       {/* ── Stats bar ───────────────────────────────────────────────────────── */}
       {(() => {
-        const meetsScheduled = allCommLog.filter(c => c.channel === 'meeting').length;
+        const now = Date.now();
+        const meetings = allCommLog.filter(c => c.channel === 'meeting');
+        const meetsThisWeek = meetings.filter(c => now - new Date(c.created_at).getTime() <= 7 * 24 * 60 * 60 * 1000).length;
+        const meets30d      = meetings.filter(c => now - new Date(c.created_at).getTime() <= 30 * 24 * 60 * 60 * 1000).length;
         const won = leads.filter(l => l.status === 'Won').length;
         const stats = [
-          { label: 'Calls (24h)',  value: recordingStats.calls_24h,  icon: '📞', color: '#0369A1', bg: '#E0F2FE' },
-          { label: 'Calls (7d)',   value: recordingStats.calls_7d,   icon: '📞', color: '#0F766E', bg: '#CCFBF1' },
-          { label: 'Calls (30d)', value: recordingStats.calls_30d,  icon: '📞', color: '#6D28D9', bg: '#EDE9FE' },
-          { label: 'Meets Scheduled', value: meetsScheduled,       icon: '📅', color: '#1D4ED8', bg: '#DBEAFE' },
-          { label: 'Leads Won',   value: won,                       icon: '🏆', color: '#047857', bg: '#D1FAE5' },
+          { label: 'Calls (24h)',      value: recordingStats.calls_24h, icon: '📞', color: '#0369A1', bg: '#E0F2FE' },
+          { label: 'Calls (7d)',       value: recordingStats.calls_7d,  icon: '📞', color: '#0F766E', bg: '#CCFBF1' },
+          { label: 'Calls (30d)',      value: recordingStats.calls_30d, icon: '📞', color: '#6D28D9', bg: '#EDE9FE' },
+          { label: 'Meets This Week',  value: meetsThisWeek,           icon: '📅', color: '#1D4ED8', bg: '#DBEAFE' },
+          { label: 'Meets (30d)',      value: meets30d,                 icon: '📅', color: '#0C4A6E', bg: '#BAE6FD' },
+          { label: 'Leads Won',        value: won,                      icon: '🏆', color: '#047857', bg: '#D1FAE5' },
         ];
         return (
           <div style={{ padding: '12px 20px', background: '#fff', borderBottom: '1px solid #f0f2f8', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
