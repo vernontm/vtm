@@ -47,7 +47,7 @@ export default async function handler(req, res) {
         const safeName = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const uploadRes = await fetch(
           `${SUPABASE_URL}/storage/v1/object/sign/upload/training-videos/${safeName}`,
-          { method: 'POST', headers: { 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' } }
+          { method: 'POST', headers: { 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: '{}' }
         );
         if (!uploadRes.ok) {
           const err = await uploadRes.text();
