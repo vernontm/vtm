@@ -46,7 +46,7 @@ export default async function handler(req, res) {
         const [summary] = await supaFetch(`crm_meeting_summaries?meeting_id=eq.${id}&order=created_at.desc&limit=1`).catch(() => [null]);
         const chatHistory = await supaFetch(`crm_meeting_chat_history?meeting_id=eq.${id}&order=created_at.asc`).catch(() => []);
         const leadLinks = await supaFetch(`crm_meeting_lead_links?meeting_id=eq.${id}`).catch(() => []);
-        return res.json({ ...normalize(meeting), summary: summary || null, chatHistory, leadLinks });
+        return res.json({ meeting: normalize(meeting), summary: summary || null, chat: chatHistory, linkedLeads: leadLinks });
       }
       // Default: all meetings
       const rows = await supaFetch('crm_meetings?order=start_time.desc');

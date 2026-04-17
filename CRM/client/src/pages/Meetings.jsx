@@ -85,19 +85,19 @@ function ParticipantAvatars({ participants = [], max = 4, allLeads = [] }) {
               {initial}
             </div>
 
-            {/* Hover card */}
+            {/* Hover card — appears below to avoid clipping */}
             {hoveredIdx === i && (
               <div style={{
-                position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+                position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
                 background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 10, padding: '10px 13px',
                 minWidth: 190, zIndex: 9999, boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
                 pointerEvents: 'none', whiteSpace: 'nowrap',
               }}>
                 {/* Arrow */}
                 <div style={{
-                  position: 'absolute', bottom: -5, left: '50%',
+                  position: 'absolute', top: -5, left: '50%',
                   width: 8, height: 8, background: '#ffffff', border: '1px solid #e5e7ef',
-                  borderTop: 'none', borderLeft: 'none',
+                  borderBottom: 'none', borderRight: 'none',
                   transform: 'translateX(-50%) rotate(45deg)',
                 }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -415,7 +415,7 @@ export default function Meetings() {
       </div>
 
       {/* Content panel */}
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderTop: 'none', borderRadius: '0 0 12px 12px' }}>
 
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: '#8e8ea0', gap: 10 }}>
@@ -432,7 +432,7 @@ export default function Meetings() {
               <div style={{ fontSize: 13 }}>Click "Schedule Meeting" to create one.</div>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -543,7 +543,7 @@ export default function Meetings() {
               <div style={{ fontSize: 13 }}>Meetings from the last 30 days will appear here.</div>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
