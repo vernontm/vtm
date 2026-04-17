@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, createCommLog } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, createCommLog } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -1144,9 +1144,11 @@ export default function Leads() {
   }, [detailLead, recStatus]); // re-fetch when recording finishes
 
   const [recordingCounts, setRecordingCounts] = useState({});
+  const [recordingStats, setRecordingStats]   = useState({ calls_24h: 0, calls_7d: 0, calls_30d: 0 });
   const [scheduleLead, setScheduleLead] = useState(null); // lead to schedule meeting for
   useEffect(() => {
     getLeadRecordingCounts().then(c => setRecordingCounts(c || {})).catch(() => {});
+    getRecordingStats().then(s => setRecordingStats(s || { calls_24h: 0, calls_7d: 0, calls_30d: 0 })).catch(() => {});
   }, [recStatus]); // refresh after each recording finishes
 
   return (
@@ -1177,6 +1179,40 @@ export default function Leads() {
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Lead</button>
         </div>
       </div>
+
+      {/* ── Stats bar ───────────────────────────────────────────────────────── */}
+      {(() => {
+        const meetsScheduled = allCommLog.filter(c => c.channel === 'meeting').length;
+        const won = leads.filter(l => l.status === 'Won').length;
+        const stats = [
+          { label: 'Calls (24h)',  value: recordingStats.calls_24h,  icon: '📞', color: '#0369A1', bg: '#E0F2FE' },
+          { label: 'Calls (7d)',   value: recordingStats.calls_7d,   icon: '📞', color: '#0F766E', bg: '#CCFBF1' },
+          { label: 'Calls (30d)', value: recordingStats.calls_30d,  icon: '📞', color: '#6D28D9', bg: '#EDE9FE' },
+          { label: 'Meets Scheduled', value: meetsScheduled,       icon: '📅', color: '#1D4ED8', bg: '#DBEAFE' },
+          { label: 'Leads Won',   value: won,                       icon: '🏆', color: '#047857', bg: '#D1FAE5' },
+        ];
+        return (
+          <div style={{ padding: '12px 20px', background: '#fff', borderBottom: '1px solid #f0f2f8', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {stats.map(s => (
+              <div key={s.label} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 16px', borderRadius: 10, background: s.bg,
+                minWidth: 120, flex: '1 1 auto', maxWidth: 180,
+              }}>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{s.icon}</span>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+                    {s.value}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: s.color, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>
+                    {s.label}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Filter tabs */}
       <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', borderBottom: '1px solid #e5e7ef', background: '#ffffff' }}>

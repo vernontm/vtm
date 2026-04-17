@@ -222,6 +222,24 @@ module.exports = async function handler(req, res) {
         }
         return res.json(counts);
       }
+
+      // ?action=stats — return call counts per time window (distinct leads)
+      if (req.query.action === 'stats') {
+        const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const rows = await supaFetch(
+          `crm_lead_recordings?select=lead_id,created_at&created_at=gte.${since30d}&order=created_at.desc`
+        );
+        const now = Date.now();
+        const seen24h = new Set(), seen7d = new Set(), seen30d = new Set();
+        for (const r of (rows || [])) {
+          const age = now - new Date(r.created_at).getTime();
+          seen30d.add(r.lead_id);
+          if (age <= 7  * 24 * 60 * 60 * 1000) seen7d.add(r.lead_id);
+          if (age <= 1  * 24 * 60 * 60 * 1000) seen24h.add(r.lead_id);
+        }
+        return res.json({ calls_24h: seen24h.size, calls_7d: seen7d.size, calls_30d: seen30d.size });
+      }
+
       if (!lead_id) return res.status(400).json({ error: 'lead_id required' });
       const rows = await supaFetch(
         `crm_lead_recordings?lead_id=eq.${lead_id}&order=created_at.desc`
