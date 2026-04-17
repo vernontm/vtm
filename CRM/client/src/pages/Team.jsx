@@ -10,7 +10,6 @@ const ALL_PAGES = [
   { slug: 'leads',              label: 'Leads',               group: 'Workspace' },
   { slug: 'contacts',           label: 'Contacts',            group: 'Workspace' },
   { slug: 'projects',           label: 'Projects',            group: 'Workspace' },
-  { slug: 'todos',              label: 'Todo Board',          group: 'Workspace' },
   { slug: 'blog',               label: 'Blog',                group: 'Workspace' },
   { slug: 'portfolio',          label: 'Portfolio',           group: 'Workspace' },
   { slug: 'content-scheduler',  label: 'Content Scheduler',   group: 'Workspace' },
@@ -522,7 +521,7 @@ export default function Team() {
     const firstPage = ALL_PAGES.find(p => perms.includes(p.slug));
     const slugToRoute = {
       'dashboard': '/dashboard', 'leads': '/leads', 'contacts': '/contacts',
-      'projects': '/projects', 'todos': '/todos', 'blog': '/blog',
+      'projects': '/projects', 'blog': '/blog',
       'portfolio': '/portfolio', 'outreach': '/outreach',
       'content-scheduler': '/content-scheduler', 'youtube': '/youtube',
       'email-marketing': '/email-marketing', 'email': '/email',

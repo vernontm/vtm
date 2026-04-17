@@ -3,13 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Plus, Search, Trash2, ChevronDown, ChevronRight,
   DollarSign, CreditCard, RefreshCw, ExternalLink, Send,
-  FileText, X, Loader, Check, ClipboardList,
+  FileText, X, Loader, Check,
 } from 'lucide-react';
 import {
   getDeals, createDeal, updateDeal, deleteDeal,
   getContacts, getInvoices, createInvoice, refreshInvoice,
   getManualInvoices, createManualInvoice, updateManualInvoice,
-  getTodos, createTodo, updateTodo, deleteTodo,
 } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -634,159 +633,6 @@ function buildInvoiceHTML({ invoice_number, invoice_date, due_date, bill_to_name
 </html>`;
 }
 
-// ── Deal Tasks Panel ──────────────────────────────────────────────────────────
-const TASK_STATUS_STYLE = {
-  'Not Started':   { background: 'rgba(74,72,69,0.35)',   color: '#8e8ea0' },
-  'Working on it': { background: 'rgba(253,171,61,0.15)', color: '#fdab3d' },
-  'Done':          { background: 'rgba(74,108,247,0.12)', color: '#4a6cf7' },
-  'Stuck':         { background: 'rgba(255,92,92,0.15)',  color: '#ff5c5c' },
-  'In Review':     { background: 'rgba(91,156,246,0.15)', color: '#5b9cf6' },
-};
-const TASK_STATUSES = ['Not Started', 'Working on it', 'Done', 'Stuck', 'In Review'];
-
-function DealTasksPanel({ dealId, todos, onToggle, onDelete, onAdd, onStatusChange }) {
-  const [inputVal, setInputVal] = useState('');
-  const [adding, setAdding]     = useState(false);
-  const [statusOpen, setStatusOpen] = useState(null); // todoId
-
-  function submit() {
-    if (!inputVal.trim()) { setAdding(false); return; }
-    onAdd(inputVal.trim());
-    setInputVal('');
-    setAdding(false);
-  }
-
-  const done = todos.filter(t => t.completed).length;
-
-  return (
-    <div style={{ padding: '10px 16px 14px 12px', background: '#0d0d0b', borderTop: '1px solid #f0f2f8' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <ClipboardList size={13} style={{ color: '#4a6cf7' }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Inter, sans-serif' }}>
-          Tasks
-        </span>
-        {todos.length > 0 && (
-          <span style={{ fontSize: 11, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>
-            {done}/{todos.length} done
-          </span>
-        )}
-      </div>
-
-      {/* Task rows */}
-      {todos.map(todo => (
-        <div key={todo.id} style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '5px 6px', borderRadius: 6, marginBottom: 2,
-        }}
-          onMouseEnter={e => e.currentTarget.style.background = '#ffffff'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          {/* Checkbox */}
-          <button
-            onClick={() => onToggle(todo)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}
-          >
-            {todo.completed
-              ? <div style={{ width: 14, height: 14, borderRadius: 3, background: '#4a6cf7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Check size={10} color="#f5f7fa" strokeWidth={3} />
-                </div>
-              : <div style={{ width: 14, height: 14, borderRadius: 3, border: '1.5px solid #3a3a38' }} />
-            }
-          </button>
-
-          {/* Title */}
-          <span style={{
-            flex: 1, fontSize: 13, color: todo.completed ? '#8e8ea0' : '#1a1a2e',
-            textDecoration: todo.completed ? 'line-through' : 'none',
-            fontFamily: 'Inter, sans-serif',
-          }}>
-            {todo.title}
-          </span>
-
-          {/* Status badge (mini dropdown) */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setStatusOpen(statusOpen === todo.id ? null : todo.id)}
-              style={{
-                ...(TASK_STATUS_STYLE[todo.status] || TASK_STATUS_STYLE['Not Started']),
-                border: 'none', cursor: 'pointer', borderRadius: 4,
-                fontSize: 10, fontWeight: 600, padding: '2px 7px',
-                fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap',
-              }}
-            >
-              {todo.status || 'Not Started'}
-            </button>
-            {statusOpen === todo.id && (
-              <div style={{
-                position: 'absolute', top: '100%', right: 0, zIndex: 200, marginTop: 4,
-                background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8, padding: 4, minWidth: 140,
-              }}>
-                {TASK_STATUSES.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => { onStatusChange(todo.id, s); setStatusOpen(null); }}
-                    style={{
-                      display: 'block', width: '100%', textAlign: 'left', border: 'none',
-                      background: 'none', cursor: 'pointer', padding: '5px 8px', borderRadius: 5,
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#e5e7ef'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                  >
-                    <span style={{ ...(TASK_STATUS_STYLE[s] || {}), borderRadius: 4, padding: '2px 7px', fontSize: 10, fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>{s}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Delete */}
-          <button
-            onClick={() => onDelete(todo.id)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d8dbe6', padding: 0, display: 'flex', transition: 'color 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
-            onMouseLeave={e => e.currentTarget.style.color = '#d8dbe6'}
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
-      ))}
-
-      {/* Add task */}
-      {adding ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 6px' }}>
-          <div style={{ width: 14, height: 14, borderRadius: 3, border: '1.5px solid #3a3a38', flexShrink: 0 }} />
-          <input
-            autoFocus
-            value={inputVal}
-            onChange={e => setInputVal(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') { setAdding(false); setInputVal(''); } }}
-            onBlur={submit}
-            placeholder="Task name…"
-            style={{
-              flex: 1, background: 'none', border: 'none', borderBottom: '1px solid rgba(74,108,247,0.35)',
-              outline: 'none', color: '#1a1a2e', fontSize: 13, fontFamily: 'Inter, sans-serif', padding: '2px 0',
-            }}
-          />
-        </div>
-      ) : (
-        <button
-          onClick={() => setAdding(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
-            cursor: 'pointer', color: '#8e8ea0', fontSize: 12, padding: '5px 6px', fontFamily: 'Inter, sans-serif',
-            transition: 'color 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.color = '#4a6cf7'}
-          onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
-        >
-          <Plus size={12} /> Add Task
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ── Main Deals Component ──────────────────────────────────────────────────────
 const EMPTY = {
   name: '', stage: 'New', value: '', amount_paid: '', contact_id: '', company: '', notes: '',
@@ -799,8 +645,6 @@ export default function Deals() {
   const [deals,          setDeals]          = useState([]);
   const [contacts,       setContacts]       = useState([]);
   const [invoices,       setInvoices]       = useState([]);
-  const [allTodos,       setAllTodos]       = useState([]);
-  const [expandedTasks,  setExpandedTasks]  = useState(new Set());
   const [hoveredDeal,    setHoveredDeal]    = useState(null);
   const [quickAddDeal,   setQuickAddDeal]   = useState(null);
   const [quickAddVal,    setQuickAddVal]    = useState('');
@@ -815,35 +659,14 @@ export default function Deals() {
 
   const load = async () => {
     try {
-      const [d, c, inv, todos] = await Promise.all([getDeals(), getContacts(), getInvoices(), getTodos()]);
+      const [d, c, inv] = await Promise.all([getDeals(), getContacts(), getInvoices()]);
       setDeals(d.filter(x => !x.archived));
       setContacts(c);
       setInvoices(inv);
-      setAllTodos(todos);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
-
-  const getDealTodos = (dealId) => allTodos.filter(t => t.deal_id === dealId);
-  const toggleTasks  = (dealId) => setExpandedTasks(prev => { const n = new Set(prev); n.has(dealId) ? n.delete(dealId) : n.add(dealId); return n; });
-
-  const handleAddDealTask = async (dealId, title) => {
-    const todo = await createTodo({ deal_id: dealId, group_id: null, title });
-    setAllTodos(t => [...t, todo]);
-  };
-  const handleToggleDealTask = async (todo) => {
-    await updateTodo(todo.id, { completed: !todo.completed });
-    setAllTodos(t => t.map(x => x.id === todo.id ? { ...x, completed: !x.completed } : x));
-  };
-  const handleDeleteDealTask = async (id) => {
-    await deleteTodo(id);
-    setAllTodos(t => t.filter(x => x.id !== id));
-  };
-  const handleDealTaskStatus = async (id, status) => {
-    await updateTodo(id, { status });
-    setAllTodos(t => t.map(x => x.id === id ? { ...x, status } : x));
-  };
 
   const filtered = useMemo(() =>
     deals.filter(d => !search ||
@@ -1068,25 +891,6 @@ export default function Deals() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <button
-                          onClick={() => toggleTasks(deal.id)}
-                          title="Toggle tasks"
-                          style={{
-                            background: expandedTasks.has(deal.id) ? 'rgba(74,108,247,0.1)' : 'none',
-                            border: expandedTasks.has(deal.id) ? '1px solid rgba(74,108,247,0.3)' : '1px solid transparent',
-                            borderRadius: 6, cursor: 'pointer', color: expandedTasks.has(deal.id) ? '#4a6cf7' : '#8e8ea0',
-                            padding: '3px 6px', display: 'flex', alignItems: 'center', gap: 3, transition: 'all 0.15s',
-                          }}
-                          onMouseEnter={e => { if (!expandedTasks.has(deal.id)) { e.currentTarget.style.color = '#1a1a2e'; e.currentTarget.style.borderColor = '#e5e7ef'; } }}
-                          onMouseLeave={e => { if (!expandedTasks.has(deal.id)) { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.borderColor = 'transparent'; } }}
-                        >
-                          <ClipboardList size={13} />
-                          {getDealTodos(deal.id).length > 0 && (
-                            <span style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>
-                              {getDealTodos(deal.id).filter(t => t.completed).length}/{getDealTodos(deal.id).length}
-                            </span>
-                          )}
-                        </button>
                         <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => openDelete(deal)}>
                           <Trash2 size={14} />
                         </button>
@@ -1101,20 +905,6 @@ export default function Deals() {
                       <InlineEdit value={deal.company} onSave={val => handleFieldSave(deal.id, 'company', val)} placeholder="Company" privacy="name" />
                     </td>
                   </tr>
-                  {expandedTasks.has(deal.id) && (
-                    <tr>
-                      <td colSpan={11} style={{ padding: 0 }}>
-                        <DealTasksPanel
-                          dealId={deal.id}
-                          todos={getDealTodos(deal.id)}
-                          onToggle={handleToggleDealTask}
-                          onDelete={handleDeleteDealTask}
-                          onAdd={(title) => handleAddDealTask(deal.id, title)}
-                          onStatusChange={handleDealTaskStatus}
-                        />
-                      </td>
-                    </tr>
-                  )}
                   </React.Fragment>
                 ))}
                 {!collapsed[label] && items.length > 0 && (

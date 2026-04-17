@@ -21,7 +21,6 @@ const nav = [
   { to: '/leads',              icon: Star,            label: 'Leads',             slug: 'leads' },
   { to: '/contacts',           icon: Users,           label: 'Contacts',          slug: 'contacts' },
   { to: '/projects',           icon: Briefcase,       label: 'Projects',          slug: 'projects' },
-  { to: '/todos',              icon: CheckSquare,     label: 'Todo Board',        slug: 'todos' },
   { to: '/blog',               icon: FileText,        label: 'Blog',              slug: 'blog' },
   { to: '/portfolio',          icon: FolderOpen,      label: 'Portfolio',         slug: 'portfolio' },
   { to: '/content-scheduler',  icon: Film,            label: 'Content',           slug: 'content-scheduler' },

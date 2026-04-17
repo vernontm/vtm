@@ -13,7 +13,6 @@ const PAGE_CONTEXTS = {
   '/content-scheduler': { label: 'Content',        type: 'content' },
   '/meetings':          { label: 'Meetings',       type: 'general' },
   '/invoices':          { label: 'Invoices',       type: 'general' },
-  '/todos':             { label: 'Todos',          type: 'general' },
   '/blog':              { label: 'Blog',           type: 'general' },
   '/subscriptions':     { label: 'Subscriptions',  type: 'general' },
   '/portfolio':         { label: 'Portfolio',      type: 'general' },

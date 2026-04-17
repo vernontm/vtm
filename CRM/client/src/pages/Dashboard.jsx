@@ -7,7 +7,7 @@ import {
 import { Link } from 'react-router-dom';
 import {
   getDashboardStats, getUpcomingMeetings, getEmailQueue,
-  getTodos, getLeads, getProjects, getAcademyStats,
+  getLeads, getProjects, getAcademyStats,
 } from '../api';
 
 function timeAgo(iso) {
@@ -81,7 +81,6 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [meetings, setMeetings] = useState([]);
   const [drafts, setDrafts] = useState([]);
-  const [todos, setTodos] = useState([]);
   const [recentLeads, setRecentLeads] = useState([]);
   const [projects, setProjects] = useState([]);
   const [academyStats, setAcademyStats] = useState(null);
@@ -89,11 +88,10 @@ export default function Dashboard() {
   async function load() {
     setLoading(true);
     try {
-      const [statsData, meetingsData, emailData, todoData, leadsData, projectsData, academyData] = await Promise.allSettled([
+      const [statsData, meetingsData, emailData, leadsData, projectsData, academyData] = await Promise.allSettled([
         getDashboardStats(),
         getUpcomingMeetings(),
         getEmailQueue(),
-        getTodos(),
         getLeads(),
         getProjects(),
         getAcademyStats(),
@@ -102,8 +100,6 @@ export default function Dashboard() {
       setMeetings(meetingsData.status === 'fulfilled' ? (meetingsData.value || []).slice(0, 5) : []);
       const allEmails = emailData.status === 'fulfilled' ? (emailData.value || []) : [];
       setDrafts(allEmails.filter(e => (e.status === 'draft' || e.status === 'pending') && e.auto_generated));
-      const allTodos = todoData.status === 'fulfilled' ? (todoData.value || []) : [];
-      setTodos(allTodos.filter(t => !t.done).slice(0, 8));
       const allLeads = leadsData.status === 'fulfilled' ? (leadsData.value || []) : [];
       setRecentLeads(allLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6));
       const allProjects = projectsData.status === 'fulfilled' ? (projectsData.value || []) : [];
@@ -397,34 +393,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Todos */}
-      <Card style={{ marginBottom: 20 }}>
-        <CardHeader icon={CheckSquare} title="Tasks Due" color="#22c55e" linkTo="/todos" />
-        {todos.length === 0 ? (
-          <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>No pending tasks</div>
-        ) : (
-          <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
-            {todos.map(t => (
-              <div key={t.id} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 0', borderBottom: '1px solid #f0f2f8',
-              }}>
-                <div style={{
-                  width: 18, height: 18, borderRadius: 4, border: '2px solid #e5e7ef', flexShrink: 0,
-                }} />
-                <span style={{ fontSize: 13, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {t.text || t.title}
-                </span>
-                {t.due_date && (
-                  <span style={{ fontSize: 10, color: new Date(t.due_date) < new Date() ? '#ff5c5c' : '#8e8ea0', flexShrink: 0 }}>
-                    {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
 
       {/* ── Academy Overview ── */}
       {academyStats && (

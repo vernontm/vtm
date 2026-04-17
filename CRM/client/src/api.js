@@ -245,15 +245,6 @@ export async function uploadBlogFile(file) {
   return res.json();
 }
 
-// Todos
-export const getTodoGroups   = ()       => request('/todos?type=groups');
-export const createTodoGroup = (data)   => request('/todos?type=groups', { method: 'POST', body: JSON.stringify(data) });
-export const updateTodoGroup = (id, data) => request(`/todos?type=groups&id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteTodoGroup = (id)     => request(`/todos?type=groups&id=${id}`, { method: 'DELETE' });
-export const getTodos        = ()       => request('/todos');
-export const createTodo      = (data)   => request('/todos', { method: 'POST', body: JSON.stringify(data) });
-export const updateTodo      = (id, data) => request(`/todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteTodo      = (id)     => request(`/todos?id=${id}`, { method: 'DELETE' });
 
 // Email Marketing Clients (used for Add to Email List on Leads page)
 export const getClients = () => request('/clients');

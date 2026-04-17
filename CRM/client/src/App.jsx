@@ -19,7 +19,6 @@ import MeetingDetail from './pages/MeetingDetail';
 import Notifications from './pages/Notifications';
 import Invoices from './pages/Invoices';
 import QuickNotes from './pages/QuickNotes';
-import Todos from './pages/Todos';
 import Blog from './pages/Blog';
 import EmailPage from './pages/Email';
 import Subscriptions from './pages/Subscriptions';
@@ -81,7 +80,6 @@ function AppLayout() {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/invoices" element={<Invoices />} />
               <Route path="/quick-notes" element={<QuickNotes />} />
-              <Route path="/todos" element={<Todos />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/email" element={<EmailPage />} />
               <Route path="/subscriptions" element={<Subscriptions />} />
