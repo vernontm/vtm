@@ -23,6 +23,25 @@ export default async function handler(req, res) {
       return res.json({ success: true });
     }
 
+    // POST — create a new log entry
+    if (req.method === 'POST') {
+      const { lead_id: lid, channel, subject, body: bodyText, direction } = req.body || {};
+      if (!lid || !channel) return res.status(400).json({ error: 'lead_id and channel required' });
+      const row = {
+        lead_id: lid,
+        channel,
+        subject: subject || null,
+        body: bodyText || null,
+        direction: direction || 'outbound',
+      };
+      const result = await supaFetch('crm_communication_log', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify([row]),
+      });
+      return res.json((result || [])[0] || { ok: true });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('CRM communication-log error:', err);

@@ -115,6 +115,7 @@ export const getBatchProgress    = (jobId) => request(`/email-generate?action=pr
 // Communication Log
 export const getCommLog        = (lead_id) => request(`/communication-log${lead_id ? '?lead_id=' + lead_id : ''}`);
 export const markReplyReceived = (id) => request(`/communication-log?id=${id}&action=reply`, { method: 'PUT' });
+export const createCommLog     = (data) => request('/communication-log', { method: 'POST', body: JSON.stringify(data) });
 
 // Gmail Inbox
 export const getGmailInbox = (params = {}) => {

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, createCommLog } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -316,6 +316,7 @@ const ACTIVITY_ICONS = {
   call:      { icon: '📞', color: '#C00000', bg: '#FEE2E2' },
   email:     { icon: '✉️',  color: '#4a6cf7', bg: '#EEF4FF' },
   recording: { icon: '🎙️', color: '#7C3AED', bg: '#EDE9FE' },
+  meeting:   { icon: '📅', color: '#0369A1', bg: '#E0F2FE' },
   note:      { icon: '📝', color: '#B45309', bg: '#FEF3C7' },
   status:    { icon: '🔄', color: '#0369A1', bg: '#E0F2FE' },
   created:   { icon: '✅', color: '#15803D', bg: '#DCFCE7' },
@@ -347,13 +348,26 @@ function ActivityTimeline({ lead, convos, recordings }) {
 
     // Comm log entries
     (convos || []).forEach(c => {
-      const type = c.channel === 'call' ? 'call' : c.channel === 'email' ? 'email' : 'note';
+      const type = c.channel === 'call' ? 'call'
+        : c.channel === 'email' ? 'email'
+        : c.channel === 'meeting' ? 'meeting'
+        : 'note';
+      // For meetings, body is stored as JSON with __meetingMeta flag
+      let metadata = null;
+      let displayBody = c.body;
+      if (type === 'meeting' && c.body) {
+        try {
+          const parsed = JSON.parse(c.body);
+          if (parsed?.__meetingMeta) { metadata = parsed; displayBody = null; }
+        } catch {}
+      }
       list.push({
         id: `convo-${c.id}`,
         type,
         date: c.created_at,
-        title: c.subject || (type === 'call' ? 'Phone call' : type === 'email' ? 'Email sent' : 'Note'),
-        body: c.body,
+        title: c.subject || (type === 'call' ? 'Phone call' : type === 'meeting' ? 'Meeting scheduled' : type === 'email' ? 'Email sent' : 'Note'),
+        body: displayBody,
+        metadata,
       });
     });
 
@@ -438,6 +452,37 @@ function ActivityTimeline({ lead, convos, recordings }) {
                         {/* Full player + detail card */}
                         <RecordingCard recording={ev.recording} />
                       </div>
+                    ) : ev.type === 'meeting' ? (
+                      <div style={{ marginTop: 4, padding: '10px 12px', background: '#EFF6FF', borderRadius: 8, border: '1px solid #BFDBFE' }}>
+                        {/* Meeting details */}
+                        {ev.metadata?.start_time && (
+                          <div style={{ fontSize: 11, color: '#1E40AF', marginBottom: 4, fontWeight: 600 }}>
+                            📅 {new Date(ev.metadata.start_time).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                            {ev.metadata.duration_minutes ? ` · ${ev.metadata.duration_minutes}min` : ''}
+                          </div>
+                        )}
+                        {ev.metadata?.attendees?.length > 0 && (
+                          <div style={{ fontSize: 11, color: '#374151', marginBottom: ev.metadata?.meet_link ? 6 : 0 }}>
+                            <span style={{ color: '#8e8ea0' }}>Attendees: </span>
+                            {ev.metadata.attendees.join(', ')}
+                          </div>
+                        )}
+                        {ev.metadata?.meet_link && (
+                          <a
+                            href={ev.metadata.meet_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: 11, color: '#4a6cf7', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, textDecoration: 'none' }}
+                          >
+                            🎥 Join Google Meet ↗
+                          </a>
+                        )}
+                        {ev.body && !ev.metadata?.meet_link && (
+                          <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5 }}>
+                            {ev.body.length > 200 ? ev.body.slice(0, 200) + '…' : ev.body}
+                          </div>
+                        )}
+                      </div>
                     ) : ev.body ? (
                       <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5, marginTop: 2 }}>
                         {ev.body.length > 160 ? ev.body.slice(0, 160) + '…' : ev.body}
@@ -463,11 +508,35 @@ function RecordingCard({ recording: rawR }) {
     return { ...rawR, summary };
   }, [rawR]);
   const audioRef = useRef(null);
-  const [url, setUrl]           = useState(null);
-  const [loading, setLoading]   = useState(false);
-  const [playing, setPlaying]   = useState(false);
+  const [url, setUrl]             = useState(null);
+  const [loading, setLoading]     = useState(false);
+  const [playing, setPlaying]     = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(r.duration_seconds || 0);
+  const [duration, setDuration]   = useState(r.duration_seconds || 0);
+  const [summary, setSummary]     = useState(r.summary || null);
+  const [summarizing, setSummarizing] = useState(false);
+
+  const handleSummarize = async () => {
+    setSummarizing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/crm/recordings?action=summarize&id=${r.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ lead_name: r.lead_name }),
+      });
+      const data = await res.json();
+      if (data.summary) setSummary(data.summary);
+      else if (!res.ok) throw new Error(data.error || 'Failed');
+    } catch (e) {
+      alert(`AI summary failed: ${e.message}`);
+    } finally {
+      setSummarizing(false);
+    }
+  };
 
   const fmt = (s) => {
     const m = Math.floor(s / 60);
@@ -546,13 +615,42 @@ function RecordingCard({ recording: rawR }) {
             </span>
           )}
         </div>
-        <span style={{
-          fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
-          background: r.transcript_status === 'done' ? '#DCFCE7' : r.transcript_status === 'error' ? '#FEE2E2' : '#FEF3C7',
-          color: r.transcript_status === 'done' ? '#15803D' : r.transcript_status === 'error' ? '#B91C1C' : '#B45309',
-        }}>
-          {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {r.transcript_status === 'done' && !summary && (
+            <button
+              onClick={handleSummarize}
+              disabled={summarizing}
+              style={{
+                fontSize: 10, padding: '3px 9px', borderRadius: 8, fontWeight: 700, border: 'none',
+                background: summarizing ? '#e5e7ef' : '#4a6cf7', color: summarizing ? '#8e8ea0' : '#fff',
+                cursor: summarizing ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+              }}
+            >
+              {summarizing ? '…Analyzing' : '✨ Analyze'}
+            </button>
+          )}
+          {summary && (
+            <button
+              onClick={handleSummarize}
+              disabled={summarizing}
+              title="Re-analyze with AI"
+              style={{
+                fontSize: 10, padding: '3px 8px', borderRadius: 8, fontWeight: 700, border: '1px solid #e5e7ef',
+                background: summarizing ? '#e5e7ef' : '#f5f7fa', color: summarizing ? '#8e8ea0' : '#8e8ea0',
+                cursor: summarizing ? 'wait' : 'pointer',
+              }}
+            >
+              {summarizing ? '…' : '↺'}
+            </button>
+          )}
+          <span style={{
+            fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
+            background: r.transcript_status === 'done' ? '#DCFCE7' : r.transcript_status === 'error' ? '#FEE2E2' : '#FEF3C7',
+            color: r.transcript_status === 'done' ? '#15803D' : r.transcript_status === 'error' ? '#B91C1C' : '#B45309',
+          }}>
+            {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
+          </span>
+        </div>
       </div>
 
       {/* Player */}
@@ -601,31 +699,31 @@ function RecordingCard({ recording: rawR }) {
       />
 
       {/* AI Summary */}
-      {r.summary && (
+      {summary && (
         <div style={{ marginTop: 10, borderTop: '1px solid #e5e7ef', paddingTop: 10 }}>
           {/* Interest + sentiment row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-            {r.summary.interest_level && (() => {
+            {summary.interest_level && (() => {
               const iMap = {
                 hot:           { bg: '#FEE2E2', fg: '#B91C1C', label: '🔥 Hot' },
                 warm:          { bg: '#FEF3C7', fg: '#B45309', label: '☀️ Warm' },
                 cold:          { bg: '#E0F2FE', fg: '#0369A1', label: '❄️ Cold' },
                 not_interested:{ bg: '#F3F4F6', fg: '#6B7280', label: '👎 Not Interested' },
               };
-              const s = iMap[r.summary.interest_level] || iMap.warm;
+              const s = iMap[summary.interest_level] || iMap.warm;
               return (
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 8, background: s.bg, color: s.fg }}>
                   {s.label}
                 </span>
               );
             })()}
-            {r.summary.sentiment && (() => {
+            {summary.sentiment && (() => {
               const sMap = {
                 positive: { bg: '#DCFCE7', fg: '#15803D', label: '😊 Positive' },
                 neutral:  { bg: '#F3F4F6', fg: '#6B7280', label: '😐 Neutral' },
                 negative: { bg: '#FEE2E2', fg: '#B91C1C', label: '😟 Negative' },
               };
-              const s = sMap[r.summary.sentiment] || sMap.neutral;
+              const s = sMap[summary.sentiment] || sMap.neutral;
               return (
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 8, background: s.bg, color: s.fg }}>
                   {s.label}
@@ -635,25 +733,25 @@ function RecordingCard({ recording: rawR }) {
           </div>
 
           {/* Summary text */}
-          {r.summary.summary && (
+          {summary.summary && (
             <p style={{ fontSize: 12, color: '#1a1a2e', margin: '0 0 8px', lineHeight: 1.6, fontWeight: 500 }}>
-              {r.summary.summary}
+              {summary.summary}
             </p>
           )}
 
           {/* Interest reason */}
-          {r.summary.interest_reason && (
+          {summary.interest_reason && (
             <p style={{ fontSize: 11, color: '#8e8ea0', margin: '0 0 8px', lineHeight: 1.5, fontStyle: 'italic' }}>
-              {r.summary.interest_reason}
+              {summary.interest_reason}
             </p>
           )}
 
           {/* Pain points */}
-          {r.summary.pain_points?.length > 0 && (
+          {summary.pain_points?.length > 0 && (
             <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Pain Points</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {r.summary.pain_points.map((p, i) => (
+                {summary.pain_points.map((p, i) => (
                   <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#FEF3C7', color: '#B45309' }}>{p}</span>
                 ))}
               </div>
@@ -661,11 +759,11 @@ function RecordingCard({ recording: rawR }) {
           )}
 
           {/* Next steps */}
-          {r.summary.next_steps?.length > 0 && (
+          {summary.next_steps?.length > 0 && (
             <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Next Steps</div>
               <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {r.summary.next_steps.map((s, i) => (
+                {summary.next_steps.map((s, i) => (
                   <li key={i} style={{ fontSize: 11, color: '#1a1a2e', lineHeight: 1.5 }}>{s}</li>
                 ))}
               </ul>
@@ -673,11 +771,11 @@ function RecordingCard({ recording: rawR }) {
           )}
 
           {/* Topics */}
-          {r.summary.topics?.length > 0 && (
+          {summary.topics?.length > 0 && (
             <div style={{ marginBottom: 6 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Topics</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {r.summary.topics.map((t, i) => (
+                {summary.topics.map((t, i) => (
                   <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#EEF4FF', color: '#4a6cf7' }}>{t}</span>
                 ))}
               </div>
@@ -1433,10 +1531,37 @@ export default function Leads() {
           initialTitle={`Demo Call with ${scheduleLead.name || 'Lead'}`}
           initialAttendees={scheduleLead.email ? [{ name: scheduleLead.name || '', email: scheduleLead.email }] : []}
           onClose={() => setScheduleLead(null)}
-          onComplete={() => {
+          onComplete={async (result) => {
+            const lid = scheduleLead.id;
             // Auto-update lead status to Call Scheduled
-            handleFieldSave(scheduleLead.id, 'status', 'Call Scheduled');
+            handleFieldSave(lid, 'status', 'Call Scheduled');
+            // Log meeting to activity timeline
+            try {
+              const startISO = result?.start_time;
+              const endISO   = result?.end_time;
+              const durationMins = (startISO && endISO)
+                ? Math.round((new Date(endISO) - new Date(startISO)) / 60000)
+                : null;
+              const meetMeta = {
+                __meetingMeta: true,
+                meet_link:        result?.meet_link || null,
+                start_time:       startISO || null,
+                duration_minutes: durationMins,
+                attendees:        (result?.participants || []).map(p => p.email).filter(Boolean),
+              };
+              await createCommLog({
+                lead_id: lid,
+                channel: 'meeting',
+                subject: result?.title || result?.summary || 'Google Meet scheduled',
+                body: JSON.stringify(meetMeta),
+                direction: 'outbound',
+              });
+            } catch (e) {
+              console.warn('Failed to log meeting to activity:', e.message);
+            }
             setScheduleLead(null);
+            // Refresh comm log so new meeting shows in timeline
+            getCommLog().then(logs => setAllCommLog(logs || [])).catch(() => {});
           }}
         />
       )}

@@ -231,6 +231,59 @@ module.exports = async function handler(req, res) {
 
     // POST — save + clean + transcribe a recording
     if (req.method === 'POST') {
+
+      // ── Manual re-analyze action ─────────────────────────────────────────────
+      if (req.query.action === 'summarize') {
+        const recId = req.query.id;
+        const { lead_name } = req.body || {};
+        if (!recId) return res.status(400).json({ error: 'id required' });
+
+        const rows = await supaFetch(`crm_lead_recordings?id=eq.${recId}&select=id,lead_id,transcript,duration_seconds`);
+        const rec = rows?.[0];
+        if (!rec) return res.status(404).json({ error: 'Recording not found' });
+        if (!rec.transcript?.trim()) return res.status(400).json({ error: 'No transcript to analyze' });
+
+        const summary = await analyzeCall(rec.transcript, lead_name);
+        if (!summary) return res.status(500).json({ error: 'AI analysis returned nothing' });
+
+        // Save summary back to recording
+        await supaFetch(`crm_lead_recordings?id=eq.${recId}`, {
+          method: 'PATCH',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ summary }),
+        });
+
+        // Append to lead notes
+        if (summary.summary && rec.lead_id) {
+          try {
+            const leadRows = await supaFetch(`crm_leads?id=eq.${rec.lead_id}&select=notes`);
+            const existingNotes = leadRows?.[0]?.notes || '';
+            const callDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const dur = rec.duration_seconds;
+            const mins = Math.floor((dur || 0) / 60);
+            const secs = (dur || 0) % 60;
+            const durStr = dur ? ` (${mins}:${String(secs).padStart(2,'0')})` : '';
+            const interestStr = summary.interest_level ? ` — ${summary.interest_level.replace('_',' ').toUpperCase()}` : '';
+            const noteEntry = [
+              `📞 Call ${callDate}${durStr}${interestStr} [re-analyzed]`,
+              summary.summary,
+              summary.next_steps?.length ? `Next steps: ${summary.next_steps.join('; ')}` : '',
+              summary.pain_points?.length ? `Pain points: ${summary.pain_points.join('; ')}` : '',
+            ].filter(Boolean).join('\n');
+            const updatedNotes = existingNotes ? `${existingNotes}\n\n---\n${noteEntry}` : noteEntry;
+            await supaFetch(`crm_leads?id=eq.${rec.lead_id}`, {
+              method: 'PATCH',
+              headers: { 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ notes: updatedNotes }),
+            });
+          } catch (notesErr) {
+            console.warn('Failed to update lead notes:', notesErr.message);
+          }
+        }
+
+        return res.json({ ok: true, summary });
+      }
+
       const { lead_id: body_lead_id, storage_path, duration_seconds, lead_name } = req.body || {};
       const lid = body_lead_id;
       if (!lid || !storage_path) {
