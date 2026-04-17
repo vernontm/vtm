@@ -1,4 +1,5 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { getGmailAuth } from '../_lib/gmail.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -40,9 +41,78 @@ export default async function handler(req, res) {
         return res.json({ message: 'Calendar sync will be available after Google OAuth setup', synced: 0 });
       }
       if (action === 'create') {
-        // Calendar event creation placeholder - Phase 4
-        const result = await supaFetch('crm_meetings', { method: 'POST', body: JSON.stringify(req.body) });
-        return res.status(201).json(result[0] || result);
+        const { summary, start, end, attendees = [], description = '', addMeetLink = true, reminderMinutes = 10 } = req.body;
+        if (!summary || !start || !end) return res.status(400).json({ error: 'summary, start, and end are required' });
+
+        // ── Create Google Calendar event ───────────────────────────────────────
+        let gcalEvent = null;
+        try {
+          const { accessToken } = await getGmailAuth();
+          const eventBody = {
+            summary,
+            description,
+            start: { dateTime: start, timeZone: 'UTC' },
+            end:   { dateTime: end,   timeZone: 'UTC' },
+            attendees: attendees.map(email => ({ email })),
+            reminders: { useDefault: false, overrides: [{ method: 'email', minutes: reminderMinutes }, { method: 'popup', minutes: reminderMinutes }] },
+          };
+          if (addMeetLink) {
+            eventBody.conferenceData = {
+              createRequest: {
+                requestId: `vtm-${Date.now()}`,
+                conferenceSolutionKey: { type: 'hangoutsMeet' },
+              },
+            };
+          }
+          const calRes = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events${addMeetLink ? '?conferenceDataVersion=1' : ''}`,
+            {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(eventBody),
+            }
+          );
+          if (!calRes.ok) {
+            const err = await calRes.text();
+            throw new Error(`Google Calendar API error ${calRes.status}: ${err}`);
+          }
+          gcalEvent = await calRes.json();
+        } catch (calErr) {
+          console.warn('Google Calendar create failed:', calErr.message);
+        }
+
+        // ── Save to crm_meetings ───────────────────────────────────────────────
+        const startMs  = new Date(start).getTime();
+        const endMs    = new Date(end).getTime();
+        const durationMins = Math.round((endMs - startMs) / 60000);
+        const meetLink = gcalEvent?.hangoutLink || gcalEvent?.conferenceData?.entryPoints?.[0]?.uri || '';
+
+        const row = {
+          id:               gcalEvent?.id || `vtm-${Date.now()}`,
+          summary,
+          start_time:       start,
+          end_time:         end,
+          duration_minutes: durationMins,
+          description,
+          meet_link:        meetLink,
+          attendees:        JSON.stringify(attendees.map(email => ({ email }))),
+          html_link:        gcalEvent?.htmlLink || '',
+          status:           gcalEvent?.status || 'confirmed',
+        };
+
+        const dbResult = await supaFetch('crm_meetings', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify(row),
+        });
+        const saved = (dbResult || [])[0] || row;
+
+        return res.status(201).json({
+          ...saved,
+          title:        summary,
+          meet_link:    meetLink,
+          participants: attendees.map(email => ({ email })),
+        });
       }
       if (action === 'lead-link') {
         const result = await supaFetch('crm_meeting_lead_links', { method: 'POST', body: JSON.stringify(req.body) });
