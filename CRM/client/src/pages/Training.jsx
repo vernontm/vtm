@@ -344,7 +344,12 @@ function VideoFormModal({ existing, onClose, onSave }) {
         onSave(created);
       }
     } catch (e) {
-      setError(e.message);
+      const msg = e.message || '';
+      if (msg.includes('413') || msg.toLowerCase().includes('too large') || msg.toLowerCase().includes('exceeded')) {
+        setError('File too large — direct uploads are limited to 50 MB. Upload your video to YouTube (unlisted) or Vimeo and paste the link instead.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setUploading(false);
       setUploadPct(0);
@@ -404,48 +409,62 @@ function VideoFormModal({ existing, onClose, onSave }) {
 
           {!isEdit && (
             <>
-              {/* File upload */}
+              {/* URL input — primary recommended option */}
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Upload Video File</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>
+                  YouTube / Vimeo / Direct URL <span style={{ fontWeight: 400, color: '#9ca3af' }}>(recommended)</span>
+                </label>
+                <input
+                  style={inputStyle}
+                  value={urlInput}
+                  onChange={e => { setUrlInput(e.target.value); setFile(null); }}
+                  placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                  autoFocus
+                />
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 5, lineHeight: 1.5 }}>
+                  💡 Upload the video to YouTube (unlisted) or Vimeo, then paste the link here. This gives the best playback experience and no file size limits.
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
+                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>OR UPLOAD A SMALL FILE</span>
+                <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
+              </div>
+
+              {/* File upload — secondary, small files only */}
+              <div>
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="video/*"
+                  accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
                   style={{ display: 'none' }}
                   onChange={e => { setFile(e.target.files[0] || null); setUrlInput(''); }}
                 />
                 <button
                   onClick={() => fileRef.current.click()}
                   style={{
-                    width: '100%', padding: '28px 16px', borderRadius: 10, border: '2px dashed #d1d5db',
+                    width: '100%', padding: '18px 16px', borderRadius: 10, border: '2px dashed #d1d5db',
                     background: file ? '#4a6cf710' : '#f9fafb', cursor: 'pointer', display: 'flex',
-                    flexDirection: 'column', alignItems: 'center', gap: 8, color: '#6b7280',
+                    flexDirection: 'column', alignItems: 'center', gap: 6, color: '#6b7280',
                     borderColor: file ? '#4a6cf7' : '#d1d5db', transition: 'all 0.15s',
                   }}
                 >
-                  <Upload size={22} color={file ? '#4a6cf7' : '#9ca3af'} />
+                  <Upload size={20} color={file ? '#4a6cf7' : '#9ca3af'} />
                   <span style={{ fontSize: 13, fontWeight: 600, color: file ? '#4a6cf7' : '#374151' }}>
                     {file ? file.name : 'Click to choose a video file'}
                   </span>
-                  <span style={{ fontSize: 11, color: '#9ca3af' }}>MP4, WebM, MOV up to 5 GB</span>
+                  {file && (
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                      {(file.size / 1024 / 1024).toFixed(1)} MB
+                    </span>
+                  )}
                 </button>
-              </div>
-
-              {/* Divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
-                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>OR PASTE A URL</span>
-                <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>YouTube / Vimeo / Direct URL</label>
-                <input
-                  style={inputStyle}
-                  value={urlInput}
-                  onChange={e => { setUrlInput(e.target.value); setFile(null); }}
-                  placeholder="https://youtube.com/watch?v=... or direct video URL"
-                />
+                <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 5, display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+                  <span style={{ flexShrink: 0 }}>⚠️</span>
+                  <span>Direct uploads are limited to <strong>50 MB</strong>. For longer videos use a YouTube or Vimeo link above.</span>
+                </div>
               </div>
             </>
           )}
