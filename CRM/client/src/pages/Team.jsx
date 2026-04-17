@@ -517,7 +517,25 @@ export default function Team() {
 
   function handleViewAs(member) {
     setViewingAs(member);
-    navigate('/dashboard');
+    // Navigate to first permitted page, not always dashboard
+    const perms = member.permissions || [];
+    const firstPage = ALL_PAGES.find(p => perms.includes(p.slug));
+    const slugToRoute = {
+      'dashboard': '/dashboard', 'leads': '/leads', 'contacts': '/contacts',
+      'projects': '/projects', 'todos': '/todos', 'blog': '/blog',
+      'portfolio': '/portfolio', 'outreach': '/outreach',
+      'content-scheduler': '/content-scheduler', 'youtube': '/youtube',
+      'email-marketing': '/email-marketing', 'email': '/email',
+      'meetings': '/meetings', 'invoices': '/invoices',
+      'subscriptions': '/subscriptions', 'quick-notes': '/quick-notes',
+      'notifications': '/notifications', 'settings': '/settings',
+      'academy': '/academy', 'academy-courses': '/academy/courses',
+      'academy-students': '/academy/students', 'academy-homework': '/academy/homework',
+      'academy-messages': '/academy/messages', 'academy-community': '/academy/community',
+      'academy-recommendations': '/academy/recommendations', 'academy-settings': '/academy/settings',
+    };
+    const dest = firstPage ? (slugToRoute[firstPage.slug] || '/dashboard') : '/dashboard';
+    navigate(dest);
   }
 
   // ── Loading / access guard ────────────────────────────────────────────────
