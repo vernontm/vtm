@@ -4,6 +4,7 @@ import { RefreshProvider, useRefresh } from './context/RefreshContext';
 import { PrivacyProvider, usePrivacy } from './context/PrivacyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RecorderProvider } from './context/RecorderContext';
+import { TeamProvider } from './context/TeamContext';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import RecordingBar from './components/RecordingBar';
@@ -40,6 +41,7 @@ import AcademyMessages from './pages/AcademyMessages';
 import AcademyCommunity from './pages/AcademyCommunity';
 import AcademyRecommendations from './pages/AcademyRecommendations';
 import AcademySettings from './pages/AcademySettings';
+import Team from './pages/Team';
 
 export const MobileContext = createContext({ sidebarOpen: false, setSidebarOpen: () => {} });
 export const useMobile = () => useContext(MobileContext);
@@ -100,6 +102,7 @@ function AppLayout() {
               <Route path="/academy/community" element={<AcademyCommunity />} />
               <Route path="/academy/recommendations" element={<AcademyRecommendations />} />
               <Route path="/academy/settings" element={<AcademySettings />} />
+              <Route path="/team" element={<Team />} />
             </Routes>
           </main>
           <GlobalAgent />
@@ -125,9 +128,11 @@ function AuthGate() {
   return (
     <RefreshProvider>
       <PrivacyProvider>
-        <RecorderProvider>
-          <AppLayout />
-        </RecorderProvider>
+        <TeamProvider>
+          <RecorderProvider>
+            <AppLayout />
+          </RecorderProvider>
+        </TeamProvider>
       </PrivacyProvider>
     </RefreshProvider>
   );

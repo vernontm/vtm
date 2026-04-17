@@ -523,3 +523,11 @@ export const transcribeLessonMedia = (contentId, lessonId) => academyRequest('/t
 export const getLeadRecordings      = (leadId) => request(`/recordings?lead_id=${leadId}`);
 export const getLeadRecordingCounts = ()       => request(`/recordings?action=counts`);
 export const deleteRecording        = (id)     => request(`/recordings?id=${id}`, { method: 'DELETE' });
+
+
+// Team & Access
+export const getTeamMembers   = ()           => request('/team');
+export const getMyTeamRecord  = ()           => request('/team?action=me');
+export const inviteTeamMember = (data)       => request('/team', { method: 'POST', body: JSON.stringify(data) });
+export const updateTeamMember = (id, data)   => request(`/team?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const removeTeamMember = (id)         => request(`/team?id=${id}`, { method: 'DELETE' });
