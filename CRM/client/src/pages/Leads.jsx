@@ -18,20 +18,20 @@ const LEAD_SOURCES = [
 
 // Platform tag styling — colored chips for quick visual scanning
 const PLATFORM_STYLES = {
-  'Email':        { bg: '#4a6cf720', fg: '#4a6cf7', icon: '✉️' },
-  'TikTok':       { bg: '#00000015', fg: '#1a1a2e', icon: '🎵' },
-  'Instagram':    { bg: '#E1306C20', fg: '#E1306C', icon: '📸' },
-  'YouTube':      { bg: '#FF000020', fg: '#D00000', icon: '▶️' },
-  'Threads':      { bg: '#00000015', fg: '#1a1a2e', icon: '@' },
-  'Facebook':     { bg: '#1877F220', fg: '#1877F2', icon: 'f' },
-  'X / Twitter':  { bg: '#00000015', fg: '#1a1a2e', icon: '𝕏' },
-  'LinkedIn':     { bg: '#0A66C220', fg: '#0A66C2', icon: 'in' },
-  'Website':      { bg: '#10B98120', fg: '#059669', icon: '🌐' },
-  'Referral':     { bg: '#F59E0B20', fg: '#B45309', icon: '🤝' },
-  'Cold Outreach':{ bg: '#8B5CF620', fg: '#6D28D9', icon: '❄️' },
-  'Podcast':      { bg: '#EC489920', fg: '#BE185D', icon: '🎙️' },
-  'Event':        { bg: '#06B6D420', fg: '#0E7490', icon: '🎪' },
-  'Other':        { bg: '#8e8ea020', fg: '#8e8ea0', icon: '•' },
+  'Email':        { bg: '#4a6cf720', fg: '#4a6cf7', icon: '✉️' },   // indigo
+  'TikTok':       { bg: '#FF004F20', fg: '#E60048', icon: '🎵' },   // tiktok red-pink
+  'Instagram':    { bg: '#E1306C20', fg: '#E1306C', icon: '📸' },   // instagram pink
+  'YouTube':      { bg: '#FF000020', fg: '#D00000', icon: '▶️' },   // youtube red
+  'Threads':      { bg: '#1a1a2e20', fg: '#1a1a2e', icon: '@' },    // threads black
+  'Facebook':     { bg: '#1877F220', fg: '#1877F2', icon: 'f' },    // facebook blue
+  'X / Twitter':  { bg: '#71767B20', fg: '#4B5563', icon: '𝕏' },   // x slate-gray
+  'LinkedIn':     { bg: '#0A66C220', fg: '#0A66C2', icon: 'in' },   // linkedin blue
+  'Website':      { bg: '#10B98120', fg: '#059669', icon: '🌐' },   // emerald
+  'Referral':     { bg: '#F59E0B20', fg: '#B45309', icon: '🤝' },   // amber
+  'Cold Outreach':{ bg: '#8B5CF620', fg: '#6D28D9', icon: '❄️' },   // violet
+  'Podcast':      { bg: '#EC489920', fg: '#BE185D', icon: '🎙️' },   // pink
+  'Event':        { bg: '#06B6D420', fg: '#0E7490', icon: '🎪' },   // cyan
+  'Other':        { bg: '#8e8ea020', fg: '#8e8ea0', icon: '•' },    // gray
 };
 
 function PlatformChip({ value, onChange }) {
@@ -598,13 +598,13 @@ export default function Leads() {
           <thead>
             <tr>
               <th style={{ width: 36 }}></th>
+              <th style={{ minWidth: 130 }}>Platform</th>
               <th style={{ minWidth: 160 }}>Name</th>
               <th style={{ minWidth: 160 }}>Email</th>
               <th style={{ minWidth: 120 }}>Phone</th>
               <th style={{ minWidth: 200 }}>Goal</th>
               <th style={{ minWidth: 100 }}>Budget</th>
               <th style={{ minWidth: 110 }}>Best Time</th>
-              <th style={{ minWidth: 130 }}>Platform</th>
               <th style={{ minWidth: 90 }}>Last Email</th>
             </tr>
           </thead>
@@ -643,6 +643,12 @@ export default function Leads() {
                     <td onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
                     </td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <PlatformChip
+                        value={lead.lead_source || ''}
+                        onChange={(val) => handleFieldSave(lead.id, 'lead_source', val)}
+                      />
+                    </td>
                     <td style={{ fontWeight: 500 }}>
                       <CopyCell value={lead.name}>
                         <span className="private-value" style={{ fontSize: 13, color: '#1a1a2e' }}>{lead.name || '—'}</span>
@@ -670,12 +676,6 @@ export default function Leads() {
                     </td>
                     <td>
                       <Trunc value={lead.best_time || lead.time_available} max={18} />
-                    </td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <PlatformChip
-                        value={lead.lead_source || ''}
-                        onChange={(val) => handleFieldSave(lead.id, 'lead_source', val)}
-                      />
                     </td>
                     <td>
                       {lastFollowUps[lead.id] ? (
