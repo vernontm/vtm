@@ -280,17 +280,51 @@ function PlayerModal({ video, onClose, onProgressSave }) {
   );
 }
 
+// ── Thumbnail helpers ──────────────────────────────────────────────────────────
+function getYouTubeThumbnail(url) {
+  const match = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
+  return match ? `https://img.youtube.com/vi/${match[1]}/maxresdefault.jpg` : null;
+}
+
+async function getVimeoThumbnail(url) {
+  const match = url.match(/vimeo\.com\/(\d+)/);
+  if (!match) return null;
+  try {
+    const res = await fetch(`https://vimeo.com/api/v2/video/${match[1]}.json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data[0]?.thumbnail_large || data[0]?.thumbnail_medium || null;
+  } catch { return null; }
+}
+
 // ── Upload / Edit Modal ────────────────────────────────────────────────────────
 function VideoFormModal({ existing, onClose, onSave }) {
   const [title,        setTitle]       = useState(existing?.title || '');
   const [description,  setDesc]        = useState(existing?.description || '');
   const [category,     setCategory]    = useState(existing?.category || 'General');
   const [urlInput,     setUrlInput]    = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState(existing?.thumbnail_url || '');
+  const [autoThumb,    setAutoThumb]   = useState(existing?.thumbnail_url || '');
   const [file,         setFile]        = useState(null);
   const [uploading,    setUploading]   = useState(false);
   const [uploadPct,    setUploadPct]   = useState(0);
   const [error,        setError]       = useState('');
   const fileRef = useRef();
+
+  // Auto-fetch thumbnail when URL changes
+  async function handleUrlChange(val) {
+    setUrlInput(val);
+    setFile(null);
+    if (!val.trim()) { setAutoThumb(''); return; }
+    const yt = getYouTubeThumbnail(val);
+    if (yt) { setAutoThumb(yt); return; }
+    if (/vimeo\.com/.test(val)) {
+      const vt = await getVimeoThumbnail(val);
+      if (vt) setAutoThumb(vt);
+    }
+  }
+
+  const previewThumb = thumbnailUrl.trim() || autoThumb;
 
   const isEdit = !!existing;
 
@@ -340,7 +374,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
           return setError('Please select a file or enter a URL');
         }
 
-        const created = await createTrainingVideo({ title, description, category, video_url: videoUrl });
+        const created = await createTrainingVideo({ title, description, category, video_url: videoUrl, thumbnail_url: previewThumb || undefined });
         onSave(created);
       }
     } catch (e) {
@@ -417,12 +451,37 @@ function VideoFormModal({ existing, onClose, onSave }) {
                 <input
                   style={inputStyle}
                   value={urlInput}
-                  onChange={e => { setUrlInput(e.target.value); setFile(null); }}
+                  onChange={e => handleUrlChange(e.target.value)}
                   placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
                   autoFocus
                 />
                 <div style={{ fontSize: 11, color: '#6b7280', marginTop: 5, lineHeight: 1.5 }}>
                   💡 Upload the video to YouTube (unlisted) or Vimeo, then paste the link here. This gives the best playback experience and no file size limits.
+                </div>
+
+                {/* Thumbnail preview */}
+                {previewThumb && (
+                  <div style={{ marginTop: 10 }}>
+                    <img
+                      src={previewThumb}
+                      alt="Thumbnail preview"
+                      style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7ef', display: 'block' }}
+                      onError={e => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+
+                {/* Manual thumbnail URL override */}
+                <div style={{ marginTop: 10 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: 4 }}>
+                    Custom thumbnail URL <span style={{ fontWeight: 400 }}>(optional — overrides auto-detected)</span>
+                  </label>
+                  <input
+                    style={{ ...inputStyle, fontSize: 12 }}
+                    value={thumbnailUrl}
+                    onChange={e => setThumbnailUrl(e.target.value)}
+                    placeholder="https://example.com/thumb.jpg"
+                  />
                 </div>
               </div>
 

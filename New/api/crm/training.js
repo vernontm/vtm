@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
       // Create video record after upload
       if (action === 'create') {
-        const { title, description = '', category = 'General', video_url, duration_seconds = 0 } = req.body;
+        const { title, description = '', category = 'General', video_url, thumbnail_url = null, duration_seconds = 0 } = req.body;
         if (!title) return res.status(400).json({ error: 'title required' });
         const url = video_url;
         if (!url) return res.status(400).json({ error: 'video_url required' });
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
         const result = await supaFetch('crm_training_videos', {
           method: 'POST',
           headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify({ title, description, category, video_url: url, duration_seconds, position }),
+          body: JSON.stringify({ title, description, category, video_url: url, thumbnail_url, duration_seconds, position }),
         });
         return res.status(201).json(result[0] || result);
       }
