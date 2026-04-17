@@ -26,6 +26,7 @@
     }
   ],
   "functions": {
+    "api/crm/recordings.js": { "maxDuration": 300, "memory": 1024 },
     "api/crm/bulk-upload.js": { "maxDuration": 300, "memory": 1024 },
     "api/crm/carousel-generator.js": { "maxDuration": 300 },
     "api/crm/bulk-agent.js": { "maxDuration": 300 },
