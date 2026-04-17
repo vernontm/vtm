@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   getContentClients, getContentClient, createContentClient, updateContentClient, deleteContentClient,
@@ -6,6 +6,10 @@ import {
   getScheduleConfig, saveScheduleConfig,
   parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
   processBulkUpload, generateCarousel, regenerateSlide, editSlide, saveCarouselTemplates, approveAndSchedule,
+  publishToSocial, getUploadPostStatus, getIGComments, replyIGComment, publicReplyIGComment,
+  sendIGDM, getIGConversations, startAutoDM, getAutoDMStatus, getAutoDMLogs,
+  pauseAutoDM, resumeAutoDM, stopAutoDM, deleteAutoDM,
+  getUploadPostAnalytics, getTotalImpressions,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -13,6 +17,8 @@ import {
   Upload, Download, Clock, Film, Image, Mic, Send, FileText,
   Play, ChevronLeft, ChevronRight, Copy, GripVertical, Settings,
   AlertCircle, CheckCircle2, Clock3, Filter,
+  MessageCircle, MessageSquare, Zap, BarChart2, Bot, Pause, Square,
+  ExternalLink,
 } from 'lucide-react';
 import EditPostModal from '../components/EditPostModal';
 
@@ -24,6 +30,24 @@ const STATUS_COLORS = {
   exported: { bg: '#f3e8ff', text: '#a855f7', label: 'Exported' },
   posted: { bg: '#e8f5e9', text: '#16a34a', label: 'Posted' },
 };
+
+const PUBLISH_STATUS = {
+  publishing: { bg: '#dbeafe', text: '#2563eb', label: 'Publishing…', icon: '⏳' },
+  scheduled:  { bg: '#e8f5e9', text: '#16a34a', label: 'Scheduled',   icon: '📅' },
+  completed:  { bg: '#dcfce7', text: '#15803d', label: 'Published',   icon: '✅' },
+  failed:     { bg: '#fee2e2', text: '#dc2626', label: 'Failed',      icon: '❌' },
+};
+
+const ALL_PLATFORMS = [
+  { key: 'tiktok',     label: 'TikTok',     color: '#000' },
+  { key: 'instagram',  label: 'Instagram',  color: '#E1306C' },
+  { key: 'facebook',   label: 'Facebook',   color: '#1877F2' },
+  { key: 'threads',    label: 'Threads',    color: '#1a1a1a' },
+  { key: 'youtube',    label: 'YouTube',    color: '#FF0000' },
+  { key: 'linkedin',   label: 'LinkedIn',   color: '#0A66C2' },
+  { key: 'x',          label: 'X',          color: '#000' },
+  { key: 'pinterest',  label: 'Pinterest',  color: '#E60023' },
+];
 
 function StatusPill({ status, onClick }) {
   const s = STATUS_COLORS[status] || STATUS_COLORS.draft;
@@ -44,11 +68,13 @@ function StatusPill({ status, onClick }) {
 }
 
 const SIDEBAR_SECTIONS = [
-  { key: 'content', label: 'Content', Icon: Film },
-  { key: 'generator', label: 'Generator', Icon: Sparkles },
-  { key: 'carousel', label: 'Carousel', Icon: Image },
-  { key: 'exported', label: 'Exported', Icon: Download },
-  { key: 'docs', label: 'Docs', Icon: FileText },
+  { key: 'content',    label: 'Content',    Icon: Film },
+  { key: 'generator',  label: 'Generator',  Icon: Sparkles },
+  { key: 'carousel',   label: 'Carousel',   Icon: Image },
+  { key: 'exported',   label: 'Exported',   Icon: Download },
+  { key: 'engagement', label: 'Engage',     Icon: MessageCircle },
+  { key: 'analytics',  label: 'Analytics',  Icon: BarChart2 },
+  { key: 'docs',       label: 'Docs',       Icon: FileText },
 ];
 
 export default function ContentScheduler() {
@@ -88,6 +114,36 @@ export default function ContentScheduler() {
   const [postsTab, setPostsTab] = useState('queued'); // queued | unscheduled | error | delivered | pending_review
   const [postsSearch, setPostsSearch] = useState('');
   const [editingPost, setEditingPost] = useState(null); // script obj for modal
+
+  // Publish state
+  const [publishingId, setPublishingId] = useState(null); // script id being published
+  const [publishModal, setPublishModal] = useState(null); // script to publish
+  const [publishPlatforms, setPublishPlatforms] = useState([]);
+  const [publishScheduleDate, setPublishScheduleDate] = useState('');
+  const [publishLoading, setPublishLoading] = useState(false);
+
+  // Engagement state
+  const [engageTab, setEngageTab] = useState('comments'); // comments | dms | autodms
+  const [igPostUrl, setIgPostUrl] = useState('');
+  const [igComments, setIgComments] = useState([]);
+  const [igCommentsLoading, setIgCommentsLoading] = useState(false);
+  const [replyText, setReplyText] = useState({});
+  const [dmRecipient, setDmRecipient] = useState('');
+  const [dmMessage, setDmMessage] = useState('');
+  const [dmConversations, setDmConversations] = useState([]);
+  const [dmLoading, setDmLoading] = useState(false);
+  const [autoDMMonitors, setAutoDMMonitors] = useState([]);
+  const [autoDMLoading, setAutoDMLoading] = useState(false);
+  const [autoDMPostUrl, setAutoDMPostUrl] = useState('');
+  const [autoDMKeywords, setAutoDMKeywords] = useState('');
+  const [autoDMLogs, setAutoDMLogs] = useState({});
+
+  // Analytics state
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('last_month');
+  const [analyticsPlatforms, setAnalyticsPlatforms] = useState('instagram,tiktok');
+  const [impressionsData, setImpressionsData] = useState(null);
 
   // Generator state
   const [genMessages, setGenMessages] = useState([]);
@@ -157,7 +213,8 @@ export default function ContentScheduler() {
   const emptyClientForm = {
     business_name: '', owner_name: '', industry: '', website_url: '',
     instagram_handle: '', tiktok_handle: '', facebook_handle: '', threads_handle: '', youtube_handle: '', linkedin_handle: '',
-    instagram_id: '', tiktok_id: '', facebook_id: '', threads_id: '', youtube_id: '', linkedin_id: '',
+    uploadpost_user: '', uploadpost_platforms: ['tiktok', 'instagram'],
+    autodm_reply_message: '',
     brand_bible: '', target_audience: '', preferred_tone: 'friendly', notes: '',
   };
   const [clientForm, setClientForm] = useState(emptyClientForm);
@@ -445,6 +502,58 @@ export default function ContentScheduler() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  // ── Publish to Upload-Post ──
+  async function handlePublish(script, platforms, scheduledDate) {
+    if (!client?.uploadpost_user) { alert('Set an Upload-Post username in client settings first.'); return; }
+    setPublishLoading(true);
+    try {
+      const mediaUrls = script.media_urls || [];
+      const mediaType = mediaUrls.length > 0
+        ? (script.media_type || (mediaUrls[0]?.match(/\.(mp4|mov|webm)/i) ? 'video' : 'photo'))
+        : 'text';
+
+      await publishToSocial({
+        script_id: script.id,
+        client_id: client.id,
+        user: client.uploadpost_user,
+        platforms,
+        title: script.title,
+        caption: script.caption,
+        hashtags: script.hashtags,
+        description: script.description,
+        media_urls: mediaUrls,
+        media_type: mediaType,
+        scheduled_date: scheduledDate || undefined,
+        timezone: schedTimezone || 'America/Chicago',
+        first_comment: script.first_comment,
+        tiktok_privacy: 'PUBLIC_TO_EVERYONE',
+        youtube_privacy: 'public',
+      });
+      await loadClientData(client.id);
+      setPublishModal(null);
+    } catch (e) {
+      alert('Publish failed: ' + (e.message || 'Unknown error'));
+    }
+    setPublishLoading(false);
+  }
+
+  // ── Poll publish status for in-progress scripts ──
+  useEffect(() => {
+    const inProgress = scripts.filter(s => s.publish_status === 'publishing');
+    if (!inProgress.length) return;
+    const interval = setInterval(async () => {
+      for (const s of inProgress) {
+        if (!s.uploadpost_request_id) continue;
+        try {
+          await getUploadPostStatus(s.uploadpost_request_id);
+          // Status auto-updates in DB via API; reload
+        } catch {}
+      }
+      await loadClientData(client?.id);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [scripts]);
 
   // ── Chat/Command handler ──
   async function handleCommand() {
@@ -799,12 +908,9 @@ export default function ContentScheduler() {
       threads_handle: client.threads_handle || '',
       youtube_handle: client.youtube_handle || '',
       linkedin_handle: client.linkedin_handle || '',
-      instagram_id: client.instagram_id || '',
-      tiktok_id: client.tiktok_id || '',
-      facebook_id: client.facebook_id || '',
-      threads_id: client.threads_id || '',
-      youtube_id: client.youtube_id || '',
-      linkedin_id: client.linkedin_id || '',
+      uploadpost_user: client.uploadpost_user || '',
+      uploadpost_platforms: client.uploadpost_platforms || ['tiktok', 'instagram'],
+      autodm_reply_message: client.autodm_reply_message || '',
       brand_bible: client.brand_bible || '',
       target_audience: client.target_audience || '',
       preferred_tone: client.preferred_tone || 'friendly',
@@ -1352,6 +1458,19 @@ export default function ContentScheduler() {
                   }}>
                     <Calendar size={13} /> Auto Schedule
                   </button>}
+                  {scripts.length > 0 && client?.uploadpost_user && <button
+                    style={{ ...btnPrimary, opacity: selectedScripts.size > 0 ? 1 : 0.4, background: '#16a34a', borderColor: '#16a34a' }}
+                    onClick={() => {
+                      if (!selectedScripts.size) return;
+                      const first = scripts.find(s => selectedScripts.has(s.id));
+                      if (first) {
+                        setPublishModal({ _bulk: true, ids: Array.from(selectedScripts) });
+                        setPublishPlatforms(client.uploadpost_platforms || ['tiktok', 'instagram']);
+                        setPublishScheduleDate('');
+                      }
+                    }} disabled={selectedScripts.size === 0}>
+                    <Send size={14} /> Publish Selected
+                  </button>}
                   {scripts.length > 0 && <button style={{ ...btnPrimary, opacity: selectedScripts.size > 0 ? 1 : 0.4 }}
                     onClick={exportCSV} disabled={selectedScripts.size === 0}>
                     <Download size={14} /> Export CSV
@@ -1667,14 +1786,27 @@ export default function ContentScheduler() {
                               </td>
 
                               {/* Status */}
-                              <td style={{ padding: 10 }}><StatusPill status={script.status} onClick={async () => {
-                                await updateContentScript(script.id, { status: script.scheduled_datetime ? 'scheduled' : 'caption_ready' });
-                                loadClientData(client.id);
-                              }} /></td>
+                              <td style={{ padding: 10 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  <StatusPill status={script.status} onClick={async () => {
+                                    await updateContentScript(script.id, { status: script.scheduled_datetime ? 'scheduled' : 'caption_ready' });
+                                    loadClientData(client.id);
+                                  }} />
+                                  {script.publish_status && (() => {
+                                    const ps = PUBLISH_STATUS[script.publish_status];
+                                    return ps ? (
+                                      <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600,
+                                        background: ps.bg, color: ps.text, whiteSpace: 'nowrap' }}>
+                                        {ps.icon} {ps.label}
+                                      </span>
+                                    ) : null;
+                                  })()}
+                                </div>
+                              </td>
 
                               {/* Actions */}
                               <td style={{ padding: 10 }}>
-                                <div style={{ display: 'flex', gap: 4 }}>
+                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                   <button onClick={() => setEditingPost(script)}
                                     style={{ ...btnGhost, padding: '4px 6px', color: '#4a6cf7' }} title="Edit post">
                                     <Edit3 size={12} />
@@ -1687,6 +1819,16 @@ export default function ContentScheduler() {
                                   }} style={{ ...btnGhost, padding: '4px 6px' }} title="Regenerate caption">
                                     <Sparkles size={12} />
                                   </button>
+                                  {client?.uploadpost_user && (
+                                    <button onClick={() => {
+                                      setPublishModal(script);
+                                      setPublishPlatforms(client.uploadpost_platforms || ['tiktok', 'instagram']);
+                                      setPublishScheduleDate(script.scheduled_datetime
+                                        ? new Date(script.scheduled_datetime).toISOString().slice(0, 16) : '');
+                                    }} style={{ ...btnGhost, padding: '4px 6px', color: '#16a34a' }} title="Publish / Schedule">
+                                      <Send size={12} />
+                                    </button>
+                                  )}
                                   <button onClick={async () => {
                                     if (confirm('Delete this script?')) {
                                       await deleteContentScript(script.id);
@@ -2422,8 +2564,465 @@ export default function ContentScheduler() {
               ))}
             </div>
           )}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ ENGAGEMENT SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {client && activeSection === 'engagement' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                {[
+                  { key: 'comments', label: 'IG Comments', Icon: MessageCircle },
+                  { key: 'dms', label: 'IG DMs', Icon: MessageSquare },
+                  { key: 'autodms', label: 'AutoDMs', Icon: Bot },
+                ].map(({ key, label, Icon }) => (
+                  <button key={key} onClick={() => setEngageTab(key)} style={{
+                    ...btnGhost, padding: '6px 14px', fontSize: 12,
+                    background: engageTab === key ? '#4a6cf7' : 'transparent',
+                    color: engageTab === key ? '#fff' : '#8e8ea0',
+                    border: `1px solid ${engageTab === key ? '#4a6cf7' : '#e5e7ef'}`,
+                  }}>
+                    <Icon size={13} /> {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* IG Comments */}
+              {engageTab === 'comments' && (
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Instagram Comments</h3>
+                  {!client.uploadpost_user ? (
+                    <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                        <input style={{ ...inputStyle, flex: 1 }} placeholder="Instagram post URL"
+                          value={igPostUrl} onChange={e => setIgPostUrl(e.target.value)} />
+                        <button style={btnPrimary} disabled={igCommentsLoading || !igPostUrl}
+                          onClick={async () => {
+                            setIgCommentsLoading(true);
+                            try {
+                              const data = await getIGComments(client.uploadpost_user, igPostUrl);
+                              setIgComments(data.comments || data || []);
+                            } catch (e) { alert('Failed: ' + e.message); }
+                            setIgCommentsLoading(false);
+                          }}>
+                          {igCommentsLoading ? <Loader size={13} className="spin" /> : <RefreshCw size={13} />} Load
+                        </button>
+                      </div>
+                      {igComments.length === 0 && !igCommentsLoading && (
+                        <p style={{ color: '#8e8ea0', fontSize: 13 }}>Enter a post URL and click Load to see comments.</p>
+                      )}
+                      {igComments.map((c, i) => (
+                        <div key={c.id || i} style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f5' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <span style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>@{c.username || c.from?.username || 'unknown'}</span>
+                            <span style={{ fontSize: 11, color: '#8e8ea0' }}>{c.timestamp ? new Date(c.timestamp).toLocaleDateString() : ''}</span>
+                          </div>
+                          <p style={{ margin: '0 0 8px', fontSize: 13, color: '#444' }}>{c.text}</p>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input style={{ ...inputStyle, flex: 1, fontSize: 12, padding: '6px 10px' }}
+                              placeholder="Reply privately (DM)..."
+                              value={replyText[`priv_${c.id}`] || ''}
+                              onChange={e => setReplyText({ ...replyText, [`priv_${c.id}`]: e.target.value })} />
+                            <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }}
+                              onClick={async () => {
+                                try {
+                                  await replyIGComment({ user: client.uploadpost_user, comment_id: c.id, message: replyText[`priv_${c.id}`] });
+                                  setReplyText({ ...replyText, [`priv_${c.id}`]: '' });
+                                } catch (e) { alert('Failed: ' + e.message); }
+                              }}>
+                              <MessageSquare size={11} /> DM Reply
+                            </button>
+                            <input style={{ ...inputStyle, flex: 1, fontSize: 12, padding: '6px 10px' }}
+                              placeholder="Reply publicly..."
+                              value={replyText[`pub_${c.id}`] || ''}
+                              onChange={e => setReplyText({ ...replyText, [`pub_${c.id}`]: e.target.value })} />
+                            <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }}
+                              onClick={async () => {
+                                try {
+                                  await publicReplyIGComment({ user: client.uploadpost_user, comment_id: c.id, message: replyText[`pub_${c.id}`] });
+                                  setReplyText({ ...replyText, [`pub_${c.id}`]: '' });
+                                } catch (e) { alert('Failed: ' + e.message); }
+                              }}>
+                              <MessageCircle size={11} /> Public Reply
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* IG DMs */}
+              {engageTab === 'dms' && (
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Instagram Direct Messages</h3>
+                  {!client.uploadpost_user ? (
+                    <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
+                  ) : (
+                    <>
+                      {/* Send DM */}
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 8 }}>Send DM</div>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                          <input style={{ ...inputStyle, flex: 1 }} placeholder="Recipient user ID or username"
+                            value={dmRecipient} onChange={e => setDmRecipient(e.target.value)} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input style={{ ...inputStyle, flex: 1 }} placeholder="Message"
+                            value={dmMessage} onChange={e => setDmMessage(e.target.value)} />
+                          <button style={btnPrimary} disabled={!dmRecipient || !dmMessage}
+                            onClick={async () => {
+                              try {
+                                await sendIGDM({ user: client.uploadpost_user, recipient_id: dmRecipient, message: dmMessage });
+                                setDmMessage('');
+                                alert('DM sent!');
+                              } catch (e) { alert('Failed: ' + e.message); }
+                            }}>
+                            <Send size={13} /> Send
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Conversations */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0' }}>Conversations</div>
+                        <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }} disabled={dmLoading}
+                          onClick={async () => {
+                            setDmLoading(true);
+                            try {
+                              const data = await getIGConversations(client.uploadpost_user);
+                              setDmConversations(data.conversations || data || []);
+                            } catch (e) { alert('Failed: ' + e.message); }
+                            setDmLoading(false);
+                          }}>
+                          {dmLoading ? <Loader size={11} className="spin" /> : <RefreshCw size={11} />} Refresh
+                        </button>
+                      </div>
+                      {dmConversations.length === 0 && !dmLoading && (
+                        <p style={{ color: '#8e8ea0', fontSize: 13 }}>Click Refresh to load conversations.</p>
+                      )}
+                      {dmConversations.map((conv, i) => (
+                        <div key={conv.id || i} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f5' }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>@{conv.username || conv.participants?.[0]?.username || 'Unknown'}</div>
+                          <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2 }}>{conv.last_message || conv.snippet || ''}</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* AutoDMs */}
+              {engageTab === 'autodms' && (
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>AutoDM Monitors</h3>
+                  <p style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14 }}>
+                    Automatically DM anyone who comments on a post. Limit: 2 active monitors, 500 DMs/day. Monitors expire after 15 days.
+                  </p>
+                  {!client.uploadpost_user ? (
+                    <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
+                  ) : (
+                    <>
+                      {/* Start New Monitor */}
+                      <div style={{ background: '#f8f9fc', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', marginBottom: 10 }}>Start New Monitor</div>
+                        <input style={{ ...inputStyle, marginBottom: 8 }} placeholder="Post URL to monitor"
+                          value={autoDMPostUrl} onChange={e => setAutoDMPostUrl(e.target.value)} />
+                        <input style={{ ...inputStyle, marginBottom: 8 }} placeholder="Trigger keywords (comma-separated, optional — e.g. LINK, INFO)"
+                          value={autoDMKeywords} onChange={e => setAutoDMKeywords(e.target.value)} />
+                        <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', marginBottom: 8 }}
+                          placeholder={client.autodm_reply_message || "Reply message when someone comments..."}
+                          value={client.autodm_reply_message || ''}
+                          readOnly />
+                        <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 8 }}>
+                          Reply message is set in client settings. Edit it there to change.
+                        </div>
+                        <button style={btnPrimary} disabled={autoDMLoading || !autoDMPostUrl || !client.autodm_reply_message}
+                          onClick={async () => {
+                            setAutoDMLoading(true);
+                            try {
+                              const keywords = autoDMKeywords.split(',').map(k => k.trim()).filter(Boolean);
+                              await startAutoDM({
+                                user: client.uploadpost_user,
+                                post_url: autoDMPostUrl,
+                                reply_message: client.autodm_reply_message,
+                                trigger_keywords: keywords.length ? keywords : undefined,
+                              });
+                              setAutoDMPostUrl('');
+                              setAutoDMKeywords('');
+                              // Refresh status
+                              const statusData = await getAutoDMStatus();
+                              setAutoDMMonitors(statusData.monitors || statusData || []);
+                              alert('AutoDM monitor started!');
+                            } catch (e) { alert('Failed: ' + e.message); }
+                            setAutoDMLoading(false);
+                          }}>
+                          {autoDMLoading ? <Loader size={13} className="spin" /> : <Zap size={13} />} Start Monitor
+                        </button>
+                      </div>
+
+                      {/* Active Monitors */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0' }}>Active Monitors</div>
+                        <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }} disabled={autoDMLoading}
+                          onClick={async () => {
+                            setAutoDMLoading(true);
+                            try {
+                              const data = await getAutoDMStatus();
+                              setAutoDMMonitors(data.monitors || data || []);
+                            } catch (e) { alert('Failed: ' + e.message); }
+                            setAutoDMLoading(false);
+                          }}>
+                          {autoDMLoading ? <Loader size={11} className="spin" /> : <RefreshCw size={11} />} Refresh
+                        </button>
+                      </div>
+                      {autoDMMonitors.length === 0 && (
+                        <p style={{ color: '#8e8ea0', fontSize: 13 }}>No monitors found. Click Refresh to load.</p>
+                      )}
+                      {autoDMMonitors.map((m, i) => (
+                        <div key={m.id || m.monitor_id || i} style={{ padding: '12px', background: '#f8f9fc', borderRadius: 8, marginBottom: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>{m.post_url || 'Monitor ' + (i + 1)}</div>
+                              <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+                                Status: <strong>{m.status || 'unknown'}</strong>
+                                {m.dms_sent !== undefined && ` · ${m.dms_sent} DMs sent`}
+                                {m.expires_at && ` · Expires ${new Date(m.expires_at).toLocaleDateString()}`}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              {m.status === 'active' && (
+                                <button style={{ ...btnGhost, padding: '3px 8px', fontSize: 11 }}
+                                  onClick={async () => {
+                                    try { await pauseAutoDM(m.id || m.monitor_id); const data = await getAutoDMStatus(); setAutoDMMonitors(data.monitors || data || []); }
+                                    catch (e) { alert('Failed: ' + e.message); }
+                                  }}>
+                                  <Pause size={11} /> Pause
+                                </button>
+                              )}
+                              {m.status === 'paused' && (
+                                <button style={{ ...btnGhost, padding: '3px 8px', fontSize: 11 }}
+                                  onClick={async () => {
+                                    try { await resumeAutoDM(m.id || m.monitor_id); const data = await getAutoDMStatus(); setAutoDMMonitors(data.monitors || data || []); }
+                                    catch (e) { alert('Failed: ' + e.message); }
+                                  }}>
+                                  <Play size={11} /> Resume
+                                </button>
+                              )}
+                              <button style={{ ...btnGhost, padding: '3px 8px', fontSize: 11, color: '#ef4444' }}
+                                onClick={async () => {
+                                  if (confirm('Stop and delete this monitor?')) {
+                                    try {
+                                      await stopAutoDM(m.id || m.monitor_id);
+                                      await deleteAutoDM(m.id || m.monitor_id);
+                                      const data = await getAutoDMStatus();
+                                      setAutoDMMonitors(data.monitors || data || []);
+                                    } catch (e) { alert('Failed: ' + e.message); }
+                                  }
+                                }}>
+                                <Square size={11} /> Stop
+                              </button>
+                            </div>
+                          </div>
+                          {/* Logs */}
+                          <button style={{ ...btnGhost, fontSize: 10, padding: '2px 8px', marginTop: 4 }}
+                            onClick={async () => {
+                              try {
+                                const data = await getAutoDMLogs(m.id || m.monitor_id);
+                                setAutoDMLogs({ ...autoDMLogs, [m.id || m.monitor_id]: data.logs || data || [] });
+                              } catch (e) { alert('Failed: ' + e.message); }
+                            }}>
+                            View Logs
+                          </button>
+                          {autoDMLogs[m.id || m.monitor_id] && (
+                            <div style={{ marginTop: 8, maxHeight: 120, overflowY: 'auto', fontSize: 11, color: '#555' }}>
+                              {(autoDMLogs[m.id || m.monitor_id] || []).map((log, li) => (
+                                <div key={li} style={{ padding: '2px 0', borderBottom: '1px solid #f0f0f5' }}>
+                                  <span style={{ color: '#8e8ea0' }}>{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</span>
+                                  {' · '}{log.username ? `@${log.username}` : ''} {log.message || log.action || JSON.stringify(log)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ══ ANALYTICS SECTION ══ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {client && activeSection === 'analytics' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20 }}>
+              {!client.uploadpost_user ? (
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use analytics.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Controls */}
+                  <div style={{ ...cardStyle, padding: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select style={{ ...inputStyle, width: 'auto' }} value={analyticsPeriod} onChange={e => setAnalyticsPeriod(e.target.value)}>
+                      <option value="last_7_days">Last 7 days</option>
+                      <option value="last_month">Last 30 days</option>
+                      <option value="last_3_months">Last 3 months</option>
+                      <option value="last_year">Last year</option>
+                    </select>
+                    <select style={{ ...inputStyle, width: 'auto' }} value={analyticsPlatforms} onChange={e => setAnalyticsPlatforms(e.target.value)}>
+                      <option value="instagram,tiktok">Instagram + TikTok</option>
+                      <option value="instagram">Instagram only</option>
+                      <option value="tiktok">TikTok only</option>
+                      <option value="instagram,tiktok,youtube">Instagram + TikTok + YouTube</option>
+                      <option value="instagram,tiktok,facebook,youtube,linkedin">All platforms</option>
+                    </select>
+                    <button style={btnPrimary} disabled={analyticsLoading}
+                      onClick={async () => {
+                        setAnalyticsLoading(true);
+                        try {
+                          const [analytics, impressions] = await Promise.all([
+                            getUploadPostAnalytics(client.uploadpost_user, analyticsPlatforms, analyticsPeriod),
+                            getTotalImpressions(client.uploadpost_user, analyticsPeriod),
+                          ]);
+                          setAnalyticsData(analytics);
+                          setImpressionsData(impressions);
+                        } catch (e) { alert('Failed: ' + e.message); }
+                        setAnalyticsLoading(false);
+                      }}>
+                      {analyticsLoading ? <Loader size={13} className="spin" /> : <BarChart2 size={13} />} Load Analytics
+                    </button>
+                  </div>
+
+                  {/* Total Impressions */}
+                  {impressionsData && (
+                    <div style={{ ...cardStyle, padding: 20 }}>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Total Impressions</h3>
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        <div style={{ background: '#f8f9fc', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 28, fontWeight: 800, color: '#4a6cf7' }}>
+                            {(impressionsData.total_impressions || impressionsData.impressions || 0).toLocaleString()}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>Total Impressions</div>
+                        </div>
+                        {impressionsData.breakdown && Object.entries(impressionsData.breakdown).map(([platform, val]) => (
+                          <div key={platform} style={{ background: '#f8f9fc', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
+                            <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e' }}>{Number(val).toLocaleString()}</div>
+                            <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2, textTransform: 'capitalize' }}>{platform}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Platform Analytics */}
+                  {analyticsData && (
+                    <div style={{ ...cardStyle, padding: 20 }}>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Platform Analytics</h3>
+                      {Object.entries(analyticsData).map(([platform, data]) => (
+                        <div key={platform} style={{ marginBottom: 20 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#4a6cf7', textTransform: 'capitalize', marginBottom: 10 }}>{platform}</div>
+                          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                            {[
+                              ['Followers', data?.followers || data?.follower_count],
+                              ['Posts', data?.posts || data?.media_count],
+                              ['Likes', data?.likes || data?.total_likes],
+                              ['Comments', data?.comments || data?.total_comments],
+                              ['Reach', data?.reach],
+                              ['Impressions', data?.impressions],
+                              ['Engagement Rate', data?.engagement_rate ? `${(data.engagement_rate * 100).toFixed(2)}%` : null],
+                              ['Views', data?.views || data?.video_views],
+                            ].filter(([, v]) => v !== undefined && v !== null).map(([label, val]) => (
+                              <div key={label} style={{ background: '#f8f9fc', borderRadius: 8, padding: '10px 14px', minWidth: 80, textAlign: 'center' }}>
+                                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>{typeof val === 'number' ? val.toLocaleString() : val}</div>
+                                <div style={{ fontSize: 10, color: '#8e8ea0', marginTop: 2 }}>{label}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!analyticsData && !impressionsData && !analyticsLoading && (
+                    <div style={{ ...cardStyle, padding: 20, textAlign: 'center', color: '#8e8ea0' }}>
+                      <BarChart2 size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
+                      <p style={{ fontSize: 13 }}>Select a period and click Load Analytics to view data.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
+
+      {/* ── Publish Modal ── */}
+      {publishModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => !publishLoading && setPublishModal(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 24, width: 480, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+                {publishModal._bulk ? `Publish ${publishModal.ids?.length} Posts` : `Publish: ${publishModal.title || 'Post'}`}
+              </h3>
+              <button onClick={() => !publishLoading && setPublishModal(null)} style={{ ...btnGhost, padding: '4px 8px' }}><X size={16} /></button>
+            </div>
+
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 8 }}>Platforms</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {ALL_PLATFORMS.map(p => {
+                const checked = publishPlatforms.includes(p.key);
+                return (
+                  <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                    background: checked ? '#18181b' : '#f8f9fc', border: `1.5px solid ${checked ? p.color : '#e5e7ef'}`,
+                    borderRadius: 6, padding: '4px 10px', fontSize: 12, color: checked ? '#fff' : '#555', userSelect: 'none' }}>
+                    <input type="checkbox" checked={checked} style={{ display: 'none' }}
+                      onChange={() => {
+                        setPublishPlatforms(checked ? publishPlatforms.filter(x => x !== p.key) : [...publishPlatforms, p.key]);
+                      }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: checked ? p.color : '#ccc', display: 'inline-block' }} />
+                    {p.label}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Schedule Date (optional)</div>
+            <input type="datetime-local" style={{ ...inputStyle, marginBottom: 16 }}
+              value={publishScheduleDate} onChange={e => setPublishScheduleDate(e.target.value)} />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button style={btnGhost} onClick={() => !publishLoading && setPublishModal(null)} disabled={publishLoading}>Cancel</button>
+              <button style={{ ...btnPrimary, background: '#16a34a', borderColor: '#16a34a' }}
+                disabled={publishLoading || !publishPlatforms.length}
+                onClick={async () => {
+                  if (publishModal._bulk) {
+                    // Bulk publish
+                    setPublishLoading(true);
+                    const bulkScripts = scripts.filter(s => publishModal.ids.includes(s.id));
+                    for (const s of bulkScripts) {
+                      try { await handlePublish(s, publishPlatforms, publishScheduleDate); }
+                      catch {}
+                    }
+                    await loadClientData(client.id);
+                    setPublishModal(null);
+                    setPublishLoading(false);
+                  } else {
+                    await handlePublish(publishModal, publishPlatforms, publishScheduleDate);
+                  }
+                }}>
+                {publishLoading ? <><Loader size={13} className="spin" /> Publishing...</> : <><Send size={13} /> {publishScheduleDate ? 'Schedule' : 'Publish Now'}</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Media Preview Modal ── */}
       {/* Edit Post Modal (Publer-style) */}
@@ -2743,22 +3342,39 @@ export default function ContentScheduler() {
                 onChange={e => setClientForm({ ...clientForm, linkedin_handle: e.target.value })} />
             </div>
 
-            {/* SocialPilot Account IDs */}
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>SocialPilot Account IDs</div>
-            <div className="cs-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-              <input style={inputStyle} placeholder="Instagram ID" value={clientForm.instagram_id}
-                onChange={e => setClientForm({ ...clientForm, instagram_id: e.target.value })} />
-              <input style={inputStyle} placeholder="TikTok ID" value={clientForm.tiktok_id}
-                onChange={e => setClientForm({ ...clientForm, tiktok_id: e.target.value })} />
-              <input style={inputStyle} placeholder="Facebook ID" value={clientForm.facebook_id}
-                onChange={e => setClientForm({ ...clientForm, facebook_id: e.target.value })} />
-              <input style={inputStyle} placeholder="Threads ID" value={clientForm.threads_id}
-                onChange={e => setClientForm({ ...clientForm, threads_id: e.target.value })} />
-              <input style={inputStyle} placeholder="YouTube ID" value={clientForm.youtube_id}
-                onChange={e => setClientForm({ ...clientForm, youtube_id: e.target.value })} />
-              <input style={inputStyle} placeholder="LinkedIn ID" value={clientForm.linkedin_id}
-                onChange={e => setClientForm({ ...clientForm, linkedin_id: e.target.value })} />
+            {/* Upload-Post Publishing */}
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Upload-Post Publishing</div>
+            <input style={{ ...inputStyle, marginBottom: 10 }} placeholder="Upload-Post username (e.g. rayvaughnceo)"
+              value={clientForm.uploadpost_user}
+              onChange={e => setClientForm({ ...clientForm, uploadpost_user: e.target.value })} />
+
+            <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Default Platforms</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {ALL_PLATFORMS.map(p => {
+                const checked = (clientForm.uploadpost_platforms || []).includes(p.key);
+                return (
+                  <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                    background: checked ? '#18181b' : '#0f0f13', border: `1px solid ${checked ? p.color : '#2a2a3a'}`,
+                    borderRadius: 6, padding: '4px 10px', fontSize: 12, color: checked ? '#fff' : '#8e8ea0', userSelect: 'none' }}>
+                    <input type="checkbox" checked={checked} style={{ display: 'none' }}
+                      onChange={() => {
+                        const current = clientForm.uploadpost_platforms || [];
+                        const next = checked ? current.filter(x => x !== p.key) : [...current, p.key];
+                        setClientForm({ ...clientForm, uploadpost_platforms: next });
+                      }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: checked ? p.color : '#555', display: 'inline-block' }} />
+                    {p.label}
+                  </label>
+                );
+              })}
             </div>
+
+            {/* AutoDM Reply Message */}
+            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>AutoDM Reply Message</div>
+            <textarea style={{ ...inputStyle, minHeight: 72, resize: 'vertical', marginBottom: 16 }}
+              placeholder="Auto-reply when someone comments on a post (e.g. Comment LINK and I'll DM you!)"
+              value={clientForm.autodm_reply_message}
+              onChange={e => setClientForm({ ...clientForm, autodm_reply_message: e.target.value })} />
 
             {/* Brand Bible */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>

@@ -527,6 +527,30 @@ export const getRecordingStats      = ()       => request(`/recordings?action=st
 export const deleteRecording        = (id)     => request(`/recordings?id=${id}`, { method: 'DELETE' });
 
 
+// ─── Upload-Post API ──────────────────────────────────────────────────────────
+export const getUploadPostProfiles       = ()           => request('/uploadpost?action=profiles');
+export const publishToSocial             = (data)       => request('/uploadpost?action=publish', { method: 'POST', body: JSON.stringify(data) });
+export const getUploadPostStatus         = (request_id) => request(`/uploadpost?action=status&request_id=${request_id}`);
+// Instagram Comments
+export const getIGComments               = (user, post_url) => request(`/uploadpost?action=comments&user=${encodeURIComponent(user)}&post_url=${encodeURIComponent(post_url)}`);
+export const replyIGComment              = (data)       => request('/uploadpost?action=comments-reply', { method: 'POST', body: JSON.stringify(data) });
+export const publicReplyIGComment        = (data)       => request('/uploadpost?action=comments-public-reply', { method: 'POST', body: JSON.stringify(data) });
+// Instagram DMs
+export const sendIGDM                    = (data)       => request('/uploadpost?action=dm-send', { method: 'POST', body: JSON.stringify(data) });
+export const getIGConversations          = (user)       => request(`/uploadpost?action=dm-conversations&user=${encodeURIComponent(user)}`);
+// AutoDM Monitors
+export const startAutoDM                 = (data)       => request('/uploadpost?action=autodm-start', { method: 'POST', body: JSON.stringify(data) });
+export const getAutoDMStatus             = ()           => request('/uploadpost?action=autodm-status');
+export const getAutoDMLogs               = (monitor_id) => request(`/uploadpost?action=autodm-logs&monitor_id=${monitor_id}`);
+export const pauseAutoDM                 = (monitor_id) => request('/uploadpost?action=autodm-pause', { method: 'POST', body: JSON.stringify({ monitor_id }) });
+export const resumeAutoDM                = (monitor_id) => request('/uploadpost?action=autodm-resume', { method: 'POST', body: JSON.stringify({ monitor_id }) });
+export const stopAutoDM                  = (monitor_id) => request('/uploadpost?action=autodm-stop', { method: 'POST', body: JSON.stringify({ monitor_id }) });
+export const deleteAutoDM                = (monitor_id) => request('/uploadpost?action=autodm-delete', { method: 'POST', body: JSON.stringify({ monitor_id }) });
+// Analytics
+export const getUploadPostAnalytics      = (user, platforms, period) => request(`/uploadpost?action=analytics&user=${encodeURIComponent(user)}&platforms=${platforms || 'instagram,tiktok'}&period=${period || 'last_month'}`);
+export const getTotalImpressions         = (user, period) => request(`/uploadpost?action=total-impressions&user=${encodeURIComponent(user)}&period=${period || 'last_month'}&breakdown=true`);
+export const getPostAnalytics            = (request_id)  => request(`/uploadpost?action=post-analytics&request_id=${request_id}`);
+
 // Team & Access
 export const getTeamMembers   = ()           => request('/team');
 export const getMyTeamRecord  = ()           => request('/team?action=me');
