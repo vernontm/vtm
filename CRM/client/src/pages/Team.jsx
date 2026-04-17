@@ -13,9 +13,7 @@ const ALL_PAGES = [
   { slug: 'todos',              label: 'Todo Board',          group: 'Workspace' },
   { slug: 'blog',               label: 'Blog',                group: 'Workspace' },
   { slug: 'portfolio',          label: 'Portfolio',           group: 'Workspace' },
-  { slug: 'outreach',           label: 'Outreach',            group: 'Workspace' },
   { slug: 'content-scheduler',  label: 'Content Scheduler',   group: 'Workspace' },
-  { slug: 'youtube',            label: 'YouTube Studio',      group: 'Workspace' },
   { slug: 'email-marketing',    label: 'Email Marketing',     group: 'Workspace' },
   // Tools
   { slug: 'email',              label: 'Email',               group: 'Tools' },

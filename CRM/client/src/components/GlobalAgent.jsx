@@ -11,7 +11,6 @@ const PAGE_CONTEXTS = {
   '/projects':          { label: 'Projects',      type: 'general' },
   '/email':             { label: 'Email',          type: 'email' },
   '/content-scheduler': { label: 'Content',        type: 'content' },
-  '/outreach':          { label: 'Outreach',       type: 'general' },
   '/meetings':          { label: 'Meetings',       type: 'general' },
   '/invoices':          { label: 'Invoices',       type: 'general' },
   '/todos':             { label: 'Todos',          type: 'general' },
@@ -21,7 +20,6 @@ const PAGE_CONTEXTS = {
   '/quick-notes':       { label: 'Notes',          type: 'general' },
   '/settings':          { label: 'Settings',       type: 'general' },
   '/notifications':     { label: 'Notifications',  type: 'general' },
-  '/youtube':           { label: 'YouTube',         type: 'youtube' },
 };
 
 const PLACEHOLDERS = {

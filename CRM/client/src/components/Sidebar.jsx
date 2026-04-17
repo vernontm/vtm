@@ -24,9 +24,7 @@ const nav = [
   { to: '/todos',              icon: CheckSquare,     label: 'Todo Board',        slug: 'todos' },
   { to: '/blog',               icon: FileText,        label: 'Blog',              slug: 'blog' },
   { to: '/portfolio',          icon: FolderOpen,      label: 'Portfolio',         slug: 'portfolio' },
-  { to: '/outreach',           icon: Zap,             label: 'Outreach',          slug: 'outreach' },
   { to: '/content-scheduler',  icon: Film,            label: 'Content',           slug: 'content-scheduler' },
-  { to: '/youtube',            icon: Film,            label: 'YouTube Studio',    slug: 'youtube' },
   { to: '/email-marketing',    icon: Mail,            label: 'Email Marketing',   slug: 'email-marketing' },
 ];
 
