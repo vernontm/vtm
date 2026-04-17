@@ -16,7 +16,7 @@ import BulkImport from '../components/BulkImport';
 import CopyCell from '../components/CopyCell';
 
 // ─── Lead Statuses ────────────────────────────────────────────────────────────
-const LEAD_STATUSES = ['New', 'Interested', 'Not Interested', 'Follow Up', 'Call Scheduled', 'Won'];
+const LEAD_STATUSES = ['New', 'Interested', 'Not Interested', 'Follow Up', 'Call Scheduled', 'Called', 'Won'];
 
 const STATUS_STYLES = {
   'New':            { bg: '#E0F2FE', fg: '#0369A1' }, // sky blue
@@ -24,6 +24,7 @@ const STATUS_STYLES = {
   'Not Interested': { bg: '#FEE2E2', fg: '#B91C1C' }, // red
   'Follow Up':      { bg: '#FEF3C7', fg: '#B45309' }, // amber
   'Call Scheduled': { bg: '#EDE9FE', fg: '#6D28D9' }, // violet
+  'Called':         { bg: '#CCFBF1', fg: '#0F766E' }, // teal
   'Won':            { bg: '#D1FAE5', fg: '#047857' }, // emerald
 };
 

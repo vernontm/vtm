@@ -304,6 +304,21 @@ module.exports = async function handler(req, res) {
       const recording = (insertRes || [])[0];
       if (!recording?.id) return res.status(500).json({ error: 'Failed to save recording' });
 
+      // Auto-set lead status to "Called" (skip if already Won or Not Interested)
+      try {
+        const leadRows = await supaFetch(`crm_leads?id=eq.${lid}&select=status`);
+        const currentStatus = leadRows?.[0]?.status;
+        if (currentStatus !== 'Won' && currentStatus !== 'Not Interested') {
+          await supaFetch(`crm_leads?id=eq.${lid}`, {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ status: 'Called' }),
+          });
+        }
+      } catch (statusErr) {
+        console.warn('Failed to update lead status to Called:', statusErr.message);
+      }
+
       // Respond immediately — process async
       res.json({ ok: true, id: recording.id, transcript_status: 'processing' });
 
