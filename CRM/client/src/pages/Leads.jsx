@@ -10,7 +10,100 @@ import BulkImport from '../components/BulkImport';
 import CopyCell from '../components/CopyCell';
 
 const LEAD_STATUSES = ['Warm', 'Hot', 'Unqualified'];
-const LEAD_SOURCES = ['', 'Website', 'Referral', 'Cold Outreach', 'LinkedIn', 'Email Campaign', 'Social Media', 'Other'];
+const LEAD_SOURCES = [
+  '', 'Website', 'Referral', 'Cold Outreach',
+  'Email', 'TikTok', 'Instagram', 'YouTube', 'Threads', 'Facebook', 'X / Twitter', 'LinkedIn',
+  'Podcast', 'Event', 'Other',
+];
+
+// Platform tag styling — colored chips for quick visual scanning
+const PLATFORM_STYLES = {
+  'Email':        { bg: '#4a6cf720', fg: '#4a6cf7', icon: '✉️' },
+  'TikTok':       { bg: '#00000015', fg: '#1a1a2e', icon: '🎵' },
+  'Instagram':    { bg: '#E1306C20', fg: '#E1306C', icon: '📸' },
+  'YouTube':      { bg: '#FF000020', fg: '#D00000', icon: '▶️' },
+  'Threads':      { bg: '#00000015', fg: '#1a1a2e', icon: '@' },
+  'Facebook':     { bg: '#1877F220', fg: '#1877F2', icon: 'f' },
+  'X / Twitter':  { bg: '#00000015', fg: '#1a1a2e', icon: '𝕏' },
+  'LinkedIn':     { bg: '#0A66C220', fg: '#0A66C2', icon: 'in' },
+  'Website':      { bg: '#10B98120', fg: '#059669', icon: '🌐' },
+  'Referral':     { bg: '#F59E0B20', fg: '#B45309', icon: '🤝' },
+  'Cold Outreach':{ bg: '#8B5CF620', fg: '#6D28D9', icon: '❄️' },
+  'Podcast':      { bg: '#EC489920', fg: '#BE185D', icon: '🎙️' },
+  'Event':        { bg: '#06B6D420', fg: '#0E7490', icon: '🎪' },
+  'Other':        { bg: '#8e8ea020', fg: '#8e8ea0', icon: '•' },
+};
+
+function PlatformChip({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const style = PLATFORM_STYLES[value] || PLATFORM_STYLES['Other'];
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: value ? '3px 9px' : '3px 8px',
+          borderRadius: 10, fontSize: 11, fontWeight: 600,
+          background: value ? style.bg : '#f0f2f8',
+          color: value ? style.fg : '#8e8ea0',
+          border: value ? 'none' : '1px dashed #c0c0c8',
+          cursor: 'pointer', lineHeight: 1.4, maxWidth: 120,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}
+      >
+        {value ? <><span style={{ fontSize: 10 }}>{style.icon}</span> {value}</> : '+ Platform'}
+      </button>
+      {open && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 51,
+              background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 160,
+              display: 'grid', gap: 2, maxHeight: 320, overflowY: 'auto',
+            }}
+          >
+            {LEAD_SOURCES.filter(s => s).map(s => {
+              const st = PLATFORM_STYLES[s] || PLATFORM_STYLES['Other'];
+              return (
+                <button
+                  key={s}
+                  onClick={() => { onChange(s); setOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                    borderRadius: 5, fontSize: 12, fontWeight: 500,
+                    background: value === s ? st.bg : 'transparent',
+                    color: value === s ? st.fg : '#1a1a2e',
+                    border: 'none', cursor: 'pointer', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = '#f5f7fa'; }}
+                  onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{ fontSize: 11 }}>{st.icon}</span> {s}
+                </button>
+              );
+            })}
+            {value && (
+              <button
+                onClick={() => { onChange(''); setOpen(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                  borderRadius: 5, fontSize: 12, color: '#ff5c5c', background: 'transparent',
+                  border: 'none', cursor: 'pointer', textAlign: 'left', borderTop: '1px solid #e5e7ef', marginTop: 2,
+                }}
+              >
+                <X size={11} /> Clear
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const EMPTY = { name: '', status: 'Warm', company: '', email: '', phone: '', lead_source: '', notes: '' };
 
@@ -473,12 +566,20 @@ export default function Leads() {
                       <span>{lead.best_time || lead.time_available}</span>
                     </div>
                   )}
-                  {lead.lead_source && (
-                    <div className="mobile-card-row" style={{ padding: 0 }}>
-                      <span className="mobile-card-label">Source</span>
-                      <span>{lead.lead_source}</span>
-                    </div>
-                  )}
+                  {lead.lead_source && (() => {
+                    const st = PLATFORM_STYLES[lead.lead_source] || PLATFORM_STYLES['Other'];
+                    return (
+                      <div className="mobile-card-row" style={{ padding: 0 }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600,
+                          background: st.bg, color: st.fg,
+                        }}>
+                          <span style={{ fontSize: 9 }}>{st.icon}</span> {lead.lead_source}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 {lastFollowUps[lead.id] && (
                   <div className="mobile-card-row" style={{ fontSize: 11, color: '#b0b0c0', marginTop: 2 }}>
@@ -503,7 +604,7 @@ export default function Leads() {
               <th style={{ minWidth: 200 }}>Goal</th>
               <th style={{ minWidth: 100 }}>Budget</th>
               <th style={{ minWidth: 110 }}>Best Time</th>
-              <th style={{ minWidth: 100 }}>Source</th>
+              <th style={{ minWidth: 130 }}>Platform</th>
               <th style={{ minWidth: 90 }}>Last Email</th>
             </tr>
           </thead>
@@ -570,8 +671,11 @@ export default function Leads() {
                     <td>
                       <Trunc value={lead.best_time || lead.time_available} max={18} />
                     </td>
-                    <td>
-                      <Trunc value={lead.lead_source} max={16} />
+                    <td onClick={e => e.stopPropagation()}>
+                      <PlatformChip
+                        value={lead.lead_source || ''}
+                        onChange={(val) => handleFieldSave(lead.id, 'lead_source', val)}
+                      />
                     </td>
                     <td>
                       {lastFollowUps[lead.id] ? (
