@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check, PhoneCall,
   ThumbsUp, ThumbsDown, Send, Clock, Download, SlidersHorizontal,
-  ChevronLeft, ChevronRight, MessageSquare, Mic, MicOff, Play, Pause, Square,
+  ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
@@ -286,7 +286,156 @@ function EditableField({ fieldKey, value, onChange }) {
   return <input value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle} />;
 }
 
-// ─── Recording audio player card ─────────────────────────────────────────────
+// ─── Collapsible section ──────────────────────────────────────────────────────
+function CollapsibleSection({ title, defaultOpen = true, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ borderTop: '1px solid #f0f2f8' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: '10px 0', gap: 8,
+        }}
+      >
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {title}
+        </span>
+        <ChevronDown size={13} style={{ color: '#8e8ea0', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }} />
+      </button>
+      {open && <div style={{ paddingBottom: 12 }}>{children}</div>}
+    </div>
+  );
+}
+
+// ─── Activity Timeline ────────────────────────────────────────────────────────
+const ACTIVITY_ICONS = {
+  call:      { icon: '📞', color: '#C00000', bg: '#FEE2E2' },
+  email:     { icon: '✉️',  color: '#4a6cf7', bg: '#EEF4FF' },
+  recording: { icon: '🎙️', color: '#7C3AED', bg: '#EDE9FE' },
+  note:      { icon: '📝', color: '#B45309', bg: '#FEF3C7' },
+  status:    { icon: '🔄', color: '#0369A1', bg: '#E0F2FE' },
+  created:   { icon: '✅', color: '#15803D', bg: '#DCFCE7' },
+  default:   { icon: '💬', color: '#6B7280', bg: '#F3F4F6' },
+};
+
+function fmtDateTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function ActivityTimeline({ lead, convos, recordings }) {
+  // Build unified event list
+  const events = useMemo(() => {
+    const list = [];
+
+    // Lead created
+    if (lead.created_at) {
+      list.push({
+        id: 'created',
+        type: 'created',
+        date: lead.created_at,
+        title: 'Lead created',
+        body: null,
+      });
+    }
+
+    // Comm log entries
+    (convos || []).forEach(c => {
+      const type = c.channel === 'call' ? 'call' : c.channel === 'email' ? 'email' : 'note';
+      list.push({
+        id: `convo-${c.id}`,
+        type,
+        date: c.created_at,
+        title: c.subject || (type === 'call' ? 'Phone call' : type === 'email' ? 'Email sent' : 'Note'),
+        body: c.body,
+      });
+    });
+
+    // Recordings
+    (recordings || []).forEach(r => {
+      list.push({
+        id: `rec-${r.id}`,
+        type: 'recording',
+        date: r.created_at,
+        title: `Call recorded${r.duration_seconds ? ` · ${Math.floor(r.duration_seconds/60)}:${String(r.duration_seconds%60).padStart(2,'0')}` : ''}`,
+        body: r.summary?.summary || null,
+        interestLevel: r.summary?.interest_level || null,
+        recording: r,
+      });
+    });
+
+    return list.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [lead, convos, recordings]);
+
+  const INTEREST_STYLES = {
+    hot:            { bg: '#FEE2E2', fg: '#B91C1C', label: '🔥 Hot' },
+    warm:           { bg: '#FEF3C7', fg: '#B45309', label: '☀️ Warm' },
+    cold:           { bg: '#E0F2FE', fg: '#0369A1', label: '❄️ Cold' },
+    not_interested: { bg: '#F3F4F6', fg: '#6B7280', label: '👎 Not interested' },
+  };
+
+  return (
+    <CollapsibleSection title="Activity" defaultOpen={true}>
+      {events.length === 0 ? (
+        <div style={{ fontSize: 12, color: '#c0c0c0', fontStyle: 'italic' }}>No activity yet.</div>
+      ) : (
+        <div style={{ position: 'relative', paddingLeft: 20 }}>
+          {/* Vertical line */}
+          <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, background: '#e5e7ef', borderRadius: 1 }} />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {events.map((ev, idx) => {
+              const style = ACTIVITY_ICONS[ev.type] || ACTIVITY_ICONS.default;
+              const isLast = idx === events.length - 1;
+              return (
+                <div key={ev.id} style={{ display: 'flex', gap: 12, paddingBottom: isLast ? 0 : 16, position: 'relative' }}>
+                  {/* Dot */}
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                    background: style.bg, border: `2px solid ${style.color}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 8, marginTop: 2, position: 'relative', zIndex: 1,
+                  }}>
+                    <span>{style.icon}</span>
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>{ev.title}</span>
+                      {ev.interestLevel && INTEREST_STYLES[ev.interestLevel] && (
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 6,
+                          background: INTEREST_STYLES[ev.interestLevel].bg,
+                          color: INTEREST_STYLES[ev.interestLevel].fg, whiteSpace: 'nowrap', flexShrink: 0,
+                        }}>
+                          {INTEREST_STYLES[ev.interestLevel].label}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#8e8ea0', marginBottom: ev.body ? 4 : 0 }}>
+                      {fmtDateTime(ev.date)}
+                    </div>
+                    {ev.body && (
+                      <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5, marginTop: 2 }}>
+                        {ev.body.length > 160 ? ev.body.slice(0, 160) + '…' : ev.body}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </CollapsibleSection>
+  );
+}
+
+// ─── Recording audio player card ──────────────────────────────────────────────
 function RecordingCard({ recording: r }) {
   const audioRef = useRef(null);
   const [url, setUrl]           = useState(null);
@@ -655,12 +804,13 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
           </div>
         </div>
 
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20, flex: 1 }}>
           {DETAIL_SECTIONS.map(section => (
-            <div key={section.title}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-                {section.title}
-              </div>
+            <CollapsibleSection
+              key={section.title}
+              title={section.title}
+              defaultOpen={section.title !== 'Pipeline'}
+            >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {section.fields.map(({ key, label }) => (
                   <div key={key} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, alignItems: 'flex-start' }}>
@@ -669,45 +819,11 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                   </div>
                 ))}
               </div>
-            </div>
+            </CollapsibleSection>
           ))}
 
-          {/* Recordings */}
-          {recordings && recordings.length > 0 && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Mic size={11} /> Recordings
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {recordings.map(r => <RecordingCard key={r.id} recording={r} />)}
-              </div>
-            </div>
-          )}
-
-          {/* Conversations */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MessageSquare size={11} /> Conversations
-            </div>
-            {convos && convos.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {convos.slice(0, 10).map(c => (
-                  <div key={c.id} style={{ padding: '8px 10px', background: '#f5f7fa', borderRadius: 6, border: '1px solid #e5e7ef' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#4a6cf7', textTransform: 'capitalize' }}>
-                        {c.channel || c.type || 'Note'}
-                      </span>
-                      <span style={{ fontSize: 10, color: '#8e8ea0' }}>{formatFollowUp(c.created_at)}</span>
-                    </div>
-                    {c.subject && <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>{c.subject}</div>}
-                    {c.body && <div style={{ fontSize: 12, color: '#8e8ea0', lineHeight: 1.4 }}>{c.body.slice(0, 200)}{c.body.length > 200 ? '…' : ''}</div>}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: 12, color: '#c0c0c0', fontStyle: 'italic' }}>No conversations logged yet.</div>
-            )}
-          </div>
+          {/* Activity Timeline */}
+          <ActivityTimeline lead={lead} convos={convos} recordings={recordings} />
         </div>
 
         <div style={{
