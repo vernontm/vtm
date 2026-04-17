@@ -3,7 +3,8 @@ import {
   PlayCircle, Upload, Edit2, Trash2, Check, X, Loader,
   BookOpen, Clock, ChevronLeft, Plus, Video, Search, Lock,
 } from 'lucide-react';
-import { getTrainingVideos, getTrainingUploadUrl, createTrainingVideo, updateTrainingVideo, deleteTrainingVideo, saveTrainingProgress } from '../api';
+import { getTrainingVideos, createTrainingVideo, updateTrainingVideo, deleteTrainingVideo, saveTrainingProgress } from '../api';
+import { supabase } from '../lib/supabase';
 import { useTeam } from '../context/TeamContext';
 
 const CATEGORIES = ['General', 'Onboarding', 'Tools', 'Processes', 'Sales', 'Other'];
@@ -303,30 +304,43 @@ function VideoFormModal({ existing, onClose, onSave }) {
         onSave(updated);
       } else {
         let videoUrl = null;
-        let path = null;
 
         if (file) {
-          // Upload file via signed URL
-          const { signedUrl, publicUrl, path: p } = await getTrainingUploadUrl(file.name);
-          // Upload with XMLHttpRequest for progress
+          // Upload directly to Supabase Storage from the browser
+          const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+          // Track progress via XMLHttpRequest directly to Supabase Storage
+          const { data: { session } } = await supabase.auth.getSession();
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const token = session?.access_token;
+
           await new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.upload.onprogress = e => { if (e.lengthComputable) setUploadPct(Math.round(e.loaded / e.total * 100)); };
-            xhr.onload  = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-            xhr.onerror = () => reject(new Error('Upload failed'));
-            xhr.open('PUT', signedUrl);
+            xhr.upload.onprogress = e => {
+              if (e.lengthComputable) setUploadPct(Math.round(e.loaded / e.total * 100));
+            };
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) resolve();
+              else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
+            };
+            xhr.onerror = () => reject(new Error('Upload failed — check your connection'));
+            xhr.open('POST', `${supabaseUrl}/storage/v1/object/training-videos/${safeName}`);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.setRequestHeader('x-upsert', 'true');
             xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
             xhr.send(file);
           });
-          videoUrl = publicUrl;
-          path = p;
+
+          videoUrl = `${supabaseUrl}/storage/v1/object/public/training-videos/${safeName}`;
+
         } else if (urlInput.trim()) {
           videoUrl = urlInput.trim();
         } else {
+          setUploading(false);
           return setError('Please select a file or enter a URL');
         }
 
-        const created = await createTrainingVideo({ title, description, category, video_url: videoUrl, path });
+        const created = await createTrainingVideo({ title, description, category, video_url: videoUrl });
         onSave(created);
       }
     } catch (e) {

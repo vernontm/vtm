@@ -40,33 +40,12 @@ export default async function handler(req, res) {
     // ── POST ──────────────────────────────────────────────────────────────────
     if (req.method === 'POST') {
 
-      // Get a signed upload URL for direct-to-storage upload
-      if (action === 'upload-url') {
-        const { filename } = req.body;
-        if (!filename) return res.status(400).json({ error: 'filename required' });
-        const safeName = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const uploadRes = await fetch(
-          `${SUPABASE_URL}/storage/v1/object/sign/upload/training-videos/${safeName}`,
-          { method: 'POST', headers: { 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 3600 }) }
-        );
-        if (!uploadRes.ok) {
-          const err = await uploadRes.text();
-          throw new Error(`Storage sign error: ${err}`);
-        }
-        const { signedURL } = await uploadRes.json();
-        return res.json({
-          signedUrl: signedURL,
-          path: safeName,
-          publicUrl: `${SUPABASE_URL}/storage/v1/object/public/training-videos/${safeName}`,
-        });
-      }
-
       // Create video record after upload
       if (action === 'create') {
-        const { title, description = '', category = 'General', path, video_url, duration_seconds = 0 } = req.body;
+        const { title, description = '', category = 'General', video_url, duration_seconds = 0 } = req.body;
         if (!title) return res.status(400).json({ error: 'title required' });
-        const url = video_url || (path ? `${SUPABASE_URL}/storage/v1/object/public/training-videos/${path}` : null);
-        if (!url) return res.status(400).json({ error: 'path or video_url required' });
+        const url = video_url;
+        if (!url) return res.status(400).json({ error: 'video_url required' });
 
         // Set position to end of list
         const existing = await supaFetch('crm_training_videos?select=position&order=position.desc&limit=1').catch(() => []);
