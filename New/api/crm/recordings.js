@@ -51,10 +51,10 @@ async function isolateAudio(fileBuffer) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-// ── ElevenLabs speech-to-text ──────────────────────────────────────────────
+// ── ElevenLabs speech-to-text with speaker diarization ────────────────────
 async function transcribeAudio(fileBuffer, mimeType = 'audio/mpeg', filename = 'recording.mp3') {
   const { body, contentType } = buildMultipart(
-    { model_id: 'scribe_v1' },
+    { model_id: 'scribe_v1', diarize: 'true' },
     { name: 'file', filename, mimeType, buffer: fileBuffer }
   );
 
@@ -73,7 +73,52 @@ async function transcribeAudio(fileBuffer, mimeType = 'audio/mpeg', filename = '
   }
 
   const data = await res.json();
+
+  // If diarization returned word-level speaker data, format into labeled turns
+  if (data.words && data.words.length > 0 && data.words.some(w => w.speaker_id != null)) {
+    return formatDiarizedTranscript(data.words);
+  }
+
+  // Fallback: segments with speaker labels
+  if (data.utterances && data.utterances.length > 0) {
+    return data.utterances
+      .map(u => `Speaker ${(u.speaker || 0) + 1}: ${u.text.trim()}`)
+      .join('\n');
+  }
+
   return data.text || '';
+}
+
+// ── Format word-level diarization into readable turns ─────────────────────
+function formatDiarizedTranscript(words) {
+  const lines = [];
+  let currentSpeaker = null;
+  let currentText = [];
+
+  for (const w of words) {
+    const speaker = w.speaker_id ?? w.speaker ?? null;
+    const text = w.text || w.word || '';
+    if (!text.trim()) continue;
+
+    if (speaker !== currentSpeaker) {
+      if (currentText.length > 0) {
+        const label = currentSpeaker != null ? `Speaker ${currentSpeaker + 1}` : 'Speaker';
+        lines.push(`${label}: ${currentText.join(' ').trim()}`);
+      }
+      currentSpeaker = speaker;
+      currentText = [text];
+    } else {
+      currentText.push(text);
+    }
+  }
+
+  // Flush last turn
+  if (currentText.length > 0) {
+    const label = currentSpeaker != null ? `Speaker ${currentSpeaker + 1}` : 'Speaker';
+    lines.push(`${label}: ${currentText.join(' ').trim()}`);
+  }
+
+  return lines.join('\n');
 }
 
 // ── Upload buffer back to Supabase storage ─────────────────────────────────

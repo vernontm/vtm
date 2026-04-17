@@ -428,9 +428,30 @@ function RecordingCard({ recording: r }) {
 
       {/* Transcript */}
       {r.transcript && (
-        <p style={{ fontSize: 12, color: '#1a1a2e', margin: '10px 0 0', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderTop: '1px solid #e5e7ef', paddingTop: 8 }}>
-          {r.transcript}
-        </p>
+        <div style={{ marginTop: 10, borderTop: '1px solid #e5e7ef', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {r.transcript.split('\n').filter(l => l.trim()).map((line, i) => {
+            const match = line.match(/^(Speaker \d+):\s*(.*)$/);
+            if (match) {
+              const speakerNum = parseInt(match[1].replace('Speaker ', ''), 10);
+              const colors = ['#4a6cf7', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+              const color = colors[(speakerNum - 1) % colors.length];
+              return (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color, background: `${color}15`,
+                    padding: '2px 7px', borderRadius: 6, flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap',
+                  }}>
+                    {match[1]}
+                  </span>
+                  <span style={{ fontSize: 12, color: '#1a1a2e', lineHeight: 1.6 }}>{match[2]}</span>
+                </div>
+              );
+            }
+            return (
+              <p key={i} style={{ fontSize: 12, color: '#1a1a2e', margin: 0, lineHeight: 1.6 }}>{line}</p>
+            );
+          })}
+        </div>
       )}
     </div>
   );
