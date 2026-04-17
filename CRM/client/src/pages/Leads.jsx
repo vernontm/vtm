@@ -420,7 +420,20 @@ function ActivityTimeline({ lead, convos, recordings }) {
                       {fmtDateTime(ev.date)}
                     </div>
                     {ev.recording ? (
-                      <div style={{ marginTop: 6 }}>
+                      <div style={{ marginTop: 4 }}>
+                        {/* Summary preview — always visible */}
+                        {(() => {
+                          const s = typeof ev.recording.summary === 'string'
+                            ? (() => { try { return JSON.parse(ev.recording.summary); } catch { return null; } })()
+                            : ev.recording.summary;
+                          if (!s?.summary) return null;
+                          return (
+                            <p style={{ fontSize: 11, color: '#4B5563', lineHeight: 1.5, margin: '0 0 8px' }}>
+                              {s.summary}
+                            </p>
+                          );
+                        })()}
+                        {/* Full player + detail card */}
                         <RecordingCard recording={ev.recording} />
                       </div>
                     ) : ev.body ? (
@@ -440,7 +453,13 @@ function ActivityTimeline({ lead, convos, recordings }) {
 }
 
 // ─── Recording audio player card ──────────────────────────────────────────────
-function RecordingCard({ recording: r }) {
+function RecordingCard({ recording: rawR }) {
+  // Supabase jsonb can occasionally arrive as a string — parse defensively
+  const r = useMemo(() => {
+    if (!rawR) return rawR;
+    const summary = typeof rawR.summary === 'string' ? (() => { try { return JSON.parse(rawR.summary); } catch { return null; } })() : rawR.summary;
+    return { ...rawR, summary };
+  }, [rawR]);
   const audioRef = useRef(null);
   const [url, setUrl]           = useState(null);
   const [loading, setLoading]   = useState(false);

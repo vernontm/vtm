@@ -324,6 +324,40 @@ module.exports = async function handler(req, res) {
           }),
         });
 
+        // 5.5 Append summary to lead notes field
+        if (summary?.summary) {
+          try {
+            // Fetch current notes
+            const leadRows = await supaFetch(`crm_leads?id=eq.${lid}&select=notes`);
+            const existingNotes = leadRows?.[0]?.notes || '';
+
+            const callDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const mins = Math.floor((duration_seconds || 0) / 60);
+            const secs = (duration_seconds || 0) % 60;
+            const durStr = duration_seconds ? ` (${mins}:${String(secs).padStart(2,'0')})` : '';
+            const interestStr = summary.interest_level ? ` — ${summary.interest_level.replace('_',' ').toUpperCase()}` : '';
+
+            const noteEntry = [
+              `📞 Call ${callDate}${durStr}${interestStr}`,
+              summary.summary,
+              summary.next_steps?.length ? `Next steps: ${summary.next_steps.join('; ')}` : '',
+              summary.pain_points?.length ? `Pain points: ${summary.pain_points.join('; ')}` : '',
+            ].filter(Boolean).join('\n');
+
+            const updatedNotes = existingNotes
+              ? `${existingNotes}\n\n---\n${noteEntry}`
+              : noteEntry;
+
+            await supaFetch(`crm_leads?id=eq.${lid}`, {
+              method: 'PATCH',
+              headers: { 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ notes: updatedNotes }),
+            });
+          } catch (notesErr) {
+            console.warn('Failed to update lead notes:', notesErr.message);
+          }
+        }
+
         // 6. Log to communication log
         const mins = Math.floor((duration_seconds || 0) / 60);
         const secs = (duration_seconds || 0) % 60;
