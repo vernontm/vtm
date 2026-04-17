@@ -8,6 +8,7 @@ import {
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
 import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts } from '../api';
+import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import SelectionBar from '../components/SelectionBar';
@@ -718,7 +719,7 @@ function RecordingCard({ recording: rawR }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, lastFollowUp, convos, recordings }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, lastFollowUp, convos, recordings }) {
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
@@ -790,15 +791,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                   </button>
                 )}
                 <button
-                  onClick={() => {
-                    const name = encodeURIComponent(`Demo Call with ${lead.name || 'Lead'}`);
-                    const details = encodeURIComponent('CRM Demo Call — scheduled via Vernon Tech & Media CRM');
-                    const guests = lead.email ? `&add=${encodeURIComponent(lead.email)}` : '';
-                    window.open(
-                      `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${name}&details=${details}${guests}&crm=meet`,
-                      '_blank'
-                    );
-                  }}
+                  onClick={() => onSchedule(lead)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
@@ -1051,6 +1044,7 @@ export default function Leads() {
   }, [detailLead, recStatus]); // re-fetch when recording finishes
 
   const [recordingCounts, setRecordingCounts] = useState({});
+  const [scheduleLead, setScheduleLead] = useState(null); // lead to schedule meeting for
   useEffect(() => {
     getLeadRecordingCounts().then(c => setRecordingCounts(c || {})).catch(() => {});
   }, [recStatus]); // refresh after each recording finishes
@@ -1422,6 +1416,7 @@ export default function Leads() {
           onSaveAll={handleSaveAllFields}
           statuses={LEAD_STATUSES}
           onEmail={handleEmail}
+          onSchedule={(lead) => { setScheduleLead(lead); }}
           lastFollowUp={lastFollowUps[detailLead.id]}
           convos={detailConvos}
           recordings={detailRecordings}
@@ -1430,6 +1425,15 @@ export default function Leads() {
 
       {showImport && (
         <BulkImport onClose={() => setShowImport(false)} onImported={() => { load(); setShowImport(false); }} />
+      )}
+
+      {scheduleLead && (
+        <ScheduleMeetingModal
+          initialTitle={`Demo Call with ${scheduleLead.name || 'Lead'}`}
+          initialAttendees={scheduleLead.email ? [{ name: scheduleLead.name || '', email: scheduleLead.email }] : []}
+          onClose={() => setScheduleLead(null)}
+          onComplete={() => setScheduleLead(null)}
+        />
       )}
 
       {modal === 'add' && (

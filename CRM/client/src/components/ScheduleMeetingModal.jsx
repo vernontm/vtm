@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, X, Plus, Check, Loader, Video, Clock, Users, Search } from 'lucide-react';
 import { createMeeting, checkMeetingAvailability, getContacts, getLeads, getGmailContacts, getCommLog } from '../api';
 
-export default function ScheduleMeetingModal({ onClose, onComplete }) {
-  const [title, setTitle]                   = useState('');
+export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle, initialAttendees }) {
+  const [title, setTitle]                   = useState(initialTitle || '');
   const [date, setDate]                     = useState('');
   const [time, setTime]                     = useState('');
   const [duration, setDuration]             = useState(30);
   const [attendeeInput, setAttendeeInput]   = useState('');
-  const [attendees, setAttendees]           = useState([]);
+  const [attendees, setAttendees]           = useState(initialAttendees || []);
   const [description, setDescription]       = useState('');
   const [addMeetLink, setAddMeetLink]       = useState(true);
   const [reminder, setReminder]             = useState(10);
