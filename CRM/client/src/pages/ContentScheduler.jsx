@@ -766,7 +766,13 @@ export default function ContentScheduler() {
       }
     }
 
-    // Refresh the scripts list
+    // Refresh the scripts list then auto-schedule everything in one pass
+    if (!scheduleConfig) {
+      await saveScheduleConfig({ client_id: client.id, time_slots: schedTimeslots, timezone: schedTimezone });
+    }
+    try {
+      await autoScheduleContent({ client_id: client.id });
+    } catch {}
     await loadClientData(client.id);
   }
 
