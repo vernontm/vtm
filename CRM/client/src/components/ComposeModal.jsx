@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, PenLine, Search, Loader, RefreshCw, MessageSquare, Send, Zap } from 'lucide-react';
-import { getLeads, createQueueItem, updateQueueItem, syncLeadGmail, generateSingleEmail } from '../api';
+import { getLeads, createQueueItem, updateQueueItem, syncLeadGmail, generateSingleEmail, getLabelDefs } from '../api';
 
 const SEGMENT_COLORS = { hot: '#fdab3d', warm: '#ff9b26', cold: '#4a4845' };
 const EMAIL_TYPE_OPTIONS = [
@@ -41,13 +41,18 @@ export default function ComposeModal({ onClose, onComplete }) {
   const [body, setBody]                 = useState('');
   const [context, setContext]           = useState('');
 
+  // ── Labels ─────────────────────────────────────────────────────────────────
+  const [labelDefs, setLabelDefs]       = useState([]);
+  const [selectedLabels, setSelectedLabels] = useState(['Leads']);
+
   // ── Save state ─────────────────────────────────────────────────────────────
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState('');
 
-  // ── Load leads on mount ────────────────────────────────────────────────────
+  // ── Load leads + label defs on mount ──────────────────────────────────────
   useEffect(() => {
     getLeads().then(setLeads).catch(() => {});
+    getLabelDefs().then(l => setLabelDefs(l || [])).catch(() => {});
   }, []);
 
   // ── Close suggestions on outside click ────────────────────────────────────
@@ -156,6 +161,7 @@ export default function ComposeModal({ onClose, onComplete }) {
           body:                   body.trim(),
           email_type:             emailType,
           reasoning:              context.trim() || '',
+          labels:                 selectedLabels,
           status:                 'draft',
         });
       } else {
@@ -173,6 +179,7 @@ export default function ComposeModal({ onClose, onComplete }) {
           confidence_score:           100,
           personalization_hooks_used: [],
           suggested_next_action:      '',
+          labels:                     selectedLabels,
           status:                     'draft',
         });
       }
@@ -447,6 +454,38 @@ export default function ComposeModal({ onClose, onComplete }) {
               {EMAIL_TYPE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
+
+          {/* ── Labels ───────────────────────────────────────────────────────── */}
+          {labelDefs.length > 0 && (
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+                Labels
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {labelDefs.map(l => {
+                  const on = selectedLabels.includes(l.name);
+                  return (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => setSelectedLabels(prev => on ? prev.filter(x => x !== l.name) : [...prev, l.name])}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        background: on ? (l.color || '#4a6cf7') + '22' : '#f5f7fa',
+                        border: `1.5px solid ${on ? (l.color || '#4a6cf7') : '#e5e7ef'}`,
+                        color: on ? (l.color || '#4a6cf7') : '#4a4845',
+                      }}
+                    >
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: l.color || '#4a6cf7', flexShrink: 0 }} />
+                      {l.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Subject ──────────────────────────────────────────────────────── */}
           <div>
