@@ -1059,30 +1059,6 @@ export default function ContentScheduler() {
                 <div><span style={{ color: '#8e8ea0' }}>Website:</span> {client.website_url || '-'}</div>
               </div>
 
-              {/* Platform handles & IDs */}
-              <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Social Accounts</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                {[
-                  { label: 'IG', handle: client.instagram_handle, id: client.instagram_id, color: '#E1306C' },
-                  { label: 'TT', handle: client.tiktok_handle, id: client.tiktok_id, color: '#000' },
-                  { label: 'FB', handle: client.facebook_handle, id: client.facebook_id, color: '#1877F2' },
-                  { label: 'Threads', handle: client.threads_handle, id: client.threads_id, color: '#000' },
-                  { label: 'YT', handle: client.youtube_handle, id: client.youtube_id, color: '#FF0000' },
-                  { label: 'LI', handle: client.linkedin_handle, id: client.linkedin_id, color: '#0A66C2' },
-                ].filter(p => p.handle || p.id).map((p, i) => (
-                  <span key={i} style={{
-                    padding: '4px 10px', borderRadius: 10, fontSize: 11, fontWeight: 600,
-                    background: '#f0f0f5', color: p.color, display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
-                    {p.label}: {p.handle || '-'}
-                    {p.id && <span style={{ color: '#8e8ea0', fontWeight: 400 }}>(ID: {p.id})</span>}
-                  </span>
-                ))}
-                {![client.instagram_handle, client.tiktok_handle, client.facebook_handle, client.threads_handle].some(Boolean) && (
-                  <span style={{ fontSize: 12, color: '#ccc' }}>No accounts added yet</span>
-                )}
-              </div>
-
               {client.brand_bible && (
                 <div style={{ padding: 12, background: '#f8f9fc', borderRadius: 10, fontSize: 12, color: '#555', maxHeight: 100, overflow: 'auto' }}>
                   <strong style={{ color: '#1a1a2e' }}>Brand Bible:</strong> {client.brand_bible.slice(0, 300)}{client.brand_bible.length > 300 ? '...' : ''}
