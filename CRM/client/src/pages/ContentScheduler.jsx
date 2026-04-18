@@ -3058,9 +3058,15 @@ export default function ContentScheduler() {
             <input type="datetime-local" style={{ ...inputStyle, marginBottom: 16 }}
               value={publishScheduleDate} onChange={e => setPublishScheduleDate(e.target.value)} />
 
-            {/* Cover frame picker — single video posts only */}
-            {!publishModal._bulk && (() => {
-              const videoUrl = (publishModal.media_urls || [])[0];
+            {/* Cover frame picker — any single video post (direct or 1-item bulk) */}
+            {(() => {
+              let videoUrl = null;
+              if (!publishModal._bulk) {
+                videoUrl = (publishModal.media_urls || [])[0];
+              } else if (publishModal.ids?.length === 1) {
+                const s = scripts.find(x => x.id === publishModal.ids[0]);
+                videoUrl = s?.media_urls?.[0];
+              }
               const isVideo = videoUrl && /\.(mp4|mov|webm)/i.test(videoUrl);
               return isVideo ? (
                 <div style={{ marginBottom: 16 }}>
