@@ -63,17 +63,20 @@ export default async function handler(req, res) {
       const fullCaption = [caption, hashtags].filter(Boolean).join('\n\n');
       const mediaUrl    = (media_urls || [])[0] || null;
 
-      // title is only meaningful for YouTube/LinkedIn — all other platforms (TikTok, Instagram, etc.)
-      // use description as the caption; sending title there causes it to appear instead of the caption
+      // title is only meaningful for YouTube/LinkedIn
       const titlePlatforms = ['youtube', 'linkedin'];
       const needsTitle = (platforms || []).some(p => titlePlatforms.includes(p));
+      const hasTikTok = (platforms || []).includes('tiktok');
 
       // Build multipart/form-data body
       const form = new URLSearchParams();
       form.append('user', user);
       (platforms || []).forEach(p => form.append('platform[]', p));
       if (needsTitle && title) form.append('title', title);
+      // description is used by Instagram, Facebook, LinkedIn, YouTube, Pinterest — but NOT TikTok
       if (fullCaption)         form.append('description', fullCaption);
+      // TikTok ignores description entirely; it uses tiktok_title for the caption (max 2200 chars)
+      if (hasTikTok && fullCaption) form.append('tiktok_title', fullCaption.slice(0, 2200));
       if (scheduled_date) form.append('scheduled_date', scheduled_date);
       if (timezone)       form.append('timezone', timezone);
       if (first_comment)  form.append('first_comment', first_comment);
