@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem, sequenceAgent } from '../api';
+import { useUi } from '../context/UiContext';
 
 /* ── page context config ────────────────────────────────────────── */
 const PAGE_CONTEXTS = {
@@ -104,6 +105,8 @@ export default function GlobalAgent() {
   const location = useLocation();
   const navigate = useNavigate();
   const ctx = getContext(location.pathname);
+  const { leadPanelOpen } = useUi();
+  if (leadPanelOpen) return null;
 
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState('');

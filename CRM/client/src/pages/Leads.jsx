@@ -6,8 +6,9 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square, ListPlus,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
+import { useUi } from '../context/UiContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -927,7 +928,112 @@ function RecordingCard({ recording: rawR }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings }) {
+// ─── Call Script Widget ───────────────────────────────────────────────────────
+function CallScriptWidget({ lead, scripts }) {
+  const [copied, setCopied] = useState(false);
+
+  const script = scripts.find(s => s.service === lead.product_need);
+
+  function substituteTags(text, l) {
+    const firstName = (l.name || '').split(' ')[0];
+    return text
+      .replace(/\[name\]/gi,       l.name         || '[name]')
+      .replace(/\[first_name\]/gi, firstName       || '[first_name]')
+      .replace(/\[company\]/gi,    l.company       || '[company]')
+      .replace(/\[title\]/gi,      l.title         || '[title]')
+      .replace(/\[phone\]/gi,      l.phone         || '[phone]')
+      .replace(/\[email\]/gi,      l.email         || '[email]')
+      .replace(/\[notes\]/gi,      l.notes         || '—')
+      .replace(/\[budget\]/gi,     l.budget        || '—')
+      .replace(/\[problem\]/gi,    l.problem       || '—')
+      .replace(/\[goal\]/gi,       l.financial_goal || '—')
+      .replace(/\[best_time\]/gi,  l.best_time     || '—');
+  }
+
+  function handleCopy() {
+    if (!script) return;
+    navigator.clipboard.writeText(substituteTags(script.content, lead)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  // Render script with highlighted [tags] and substituted values
+  function renderScript(text, l) {
+    const substituted = substituteTags(text, l);
+    // Re-highlight any remaining [placeholders] (ones not substituted, like [your_name])
+    const parts = substituted.split(/(\[[^\]]+\])/g);
+    return parts.map((part, i) =>
+      /^\[.+\]$/.test(part)
+        ? <mark key={i} style={{ background: '#fef3c7', color: '#92400e', borderRadius: 3, padding: '0 2px', fontWeight: 600 }}>{part}</mark>
+        : part
+    );
+  }
+
+  if (!lead.product_need) {
+    return (
+      <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 18px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+          📞 Call Script
+        </div>
+        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>
+          Assign a Product / Need to this lead to load the matching call script.
+        </div>
+      </div>
+    );
+  }
+
+  if (!script) {
+    return (
+      <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 18px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+          📞 Call Script
+        </div>
+        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>
+          No script found for "{lead.product_need}".
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 16px', borderBottom: '1px solid #e5e7ef',
+        background: '#fff',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ fontSize: 15 }}>📞</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{script.title}</span>
+        </div>
+        <button
+          onClick={handleCopy}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '5px 11px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            background: copied ? '#22c55e15' : '#f5f7fa',
+            border: `1px solid ${copied ? '#22c55e50' : '#e5e7ef'}`,
+            color: copied ? '#16a34a' : '#6b7280',
+            transition: 'all 0.15s',
+          }}
+        >
+          {copied ? '✓ Copied!' : '📋 Copy Script'}
+        </button>
+      </div>
+      <div style={{ padding: '14px 16px', maxHeight: 380, overflowY: 'auto' }}>
+        <pre style={{
+          margin: 0, fontSize: 12, color: '#374151', lineHeight: 1.8,
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit',
+        }}>
+          {renderScript(script.content, lead)}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, scripts }) {
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
@@ -1052,6 +1158,9 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
               </div>
             </CollapsibleSection>
           ))}
+
+          {/* Call Script */}
+          <CallScriptWidget lead={lead} scripts={scripts} />
 
           {/* Activity Timeline */}
           <ActivityTimeline lead={lead} convos={convos} recordings={recordings} />
@@ -1222,9 +1331,11 @@ function EmailListModal({ lead, onClose, onSuccess }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Leads() {
   const { startRecording, stopRecording, isRecordingLead, status: recStatus } = useRecorder();
+  const { setLeadPanelOpen } = useUi();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
+  const [scripts, setScripts] = useState([]);
   const [allCommLog, setAllCommLog] = useState([]);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [activeTab, setActiveTab] = useState('All Leads');
@@ -1295,6 +1406,7 @@ export default function Leads() {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => { getScripts().then(s => setScripts(s || [])).catch(() => {}); }, []);
 
   useEffect(() => {
     getCommLog().then(logs => {
@@ -1580,7 +1692,7 @@ export default function Leads() {
           const st = STATUS_STYLES[lead.status] || STATUS_STYLES['New'];
           const pst = PLATFORM_STYLES[lead.lead_source] || null;
           return (
-            <div key={lead.id} className="mobile-card" onClick={() => setDetailLead(lead)}>
+            <div key={lead.id} className="mobile-card" onClick={() => { setDetailLead(lead); setLeadPanelOpen(true); }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                 <Avatar name={lead.name} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1660,6 +1772,7 @@ export default function Leads() {
                 onClick={(e) => {
                   if (e.target.closest('input[type="checkbox"]') || e.target.closest('.lead-action-bar') || e.target.closest('button') || e.target.closest('a')) return;
                   setDetailLead(lead);
+                  setLeadPanelOpen(true);
                 }}
               >
                 <td onClick={e => e.stopPropagation()}>
@@ -1902,7 +2015,7 @@ export default function Leads() {
       {detailLead && (
         <LeadDetailPanel
           lead={detailLead}
-          onClose={() => setDetailLead(null)}
+          onClose={() => { setDetailLead(null); setLeadPanelOpen(false); }}
           onFieldSave={handleFieldSave}
           onSaveAll={handleSaveAllFields}
           statuses={LEAD_STATUSES}
@@ -1912,6 +2025,7 @@ export default function Leads() {
           lastFollowUp={lastFollowUps[detailLead.id]}
           convos={detailConvos}
           recordings={detailRecordings}
+          scripts={scripts}
         />
       )}
 

@@ -5,6 +5,7 @@ import { PrivacyProvider, usePrivacy } from './context/PrivacyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RecorderProvider } from './context/RecorderContext';
 import { TeamProvider } from './context/TeamContext';
+import { UiProvider } from './context/UiContext';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import RecordingBar from './components/RecordingBar';
@@ -128,7 +129,9 @@ function AuthGate() {
       <PrivacyProvider>
         <TeamProvider>
           <RecorderProvider>
-            <AppLayout />
+            <UiProvider>
+              <AppLayout />
+            </UiProvider>
           </RecorderProvider>
         </TeamProvider>
       </PrivacyProvider>
