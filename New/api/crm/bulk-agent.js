@@ -117,12 +117,19 @@ CAPABILITIES:
 3. "generate_captions" - Generate captions for existing scripts (placeholder).
 4. "upload_post" - Create ONE new post using an uploaded attachment as its media, auto-generate title/caption/hashtags/first_comment from the image, and schedule it at a specific time.
    params: {
-     attachment_index: number,           // which attachment (from list above) to use as media
-     schedule_at: "ISO datetime"         // e.g. "2026-04-14T19:45:00Z"   OR a relative like "+2m", "+30m", "+1h"
+     attachment_index: number,
+     schedule_at: "ISO datetime or relative like +2m, +30m, +1h",
      prompt: "optional extra instructions for caption generation"
+   }
+5. "update_post" - Rewrite/update the title, caption, and/or hashtags of an EXISTING post, identified by a snippet of its current content.
+   params: {
+     content_match: "partial text to find the post (title or caption snippet)",
+     fields: ["title", "caption", "hashtags", "first_comment"],  // which fields to rewrite
+     prompt: "optional extra instructions for the rewrite"
    }
 
 RULES:
+- If the user wants to rewrite, update, or change an existing post's caption/title/hashtags, choose "update_post".
 - If the user provides an image and says things like "upload this", "schedule this post", "post this for X in N minutes", choose "upload_post".
 - Pick the client whose business_name matches what the user said (case-insensitive substring).
 - If the user says "in 2 minutes" use schedule_at: "+2m". If they specify an absolute time, return ISO.
@@ -378,6 +385,63 @@ RULES:
           }
 
           results.push({ ...action, status: 'success', scheduled });
+
+        } else if (action.action === 'update_post') {
+          const { content_match, fields = ['title', 'caption', 'hashtags'], prompt: extraPrompt } = action.params || {};
+          if (!content_match) { results.push({ ...action, status: 'error', error: 'content_match required' }); continue; }
+
+          // Find the matching script
+          const allScripts = await supaFetch(`crm_content_scripts?client_id=eq.${action.client_id}&order=created_at.desc&limit=200`);
+          const needle = content_match.toLowerCase();
+          const script = (allScripts || []).find(s =>
+            (s.title || '').toLowerCase().includes(needle) ||
+            (s.caption || '').toLowerCase().includes(needle) ||
+            (s.full_script || '').toLowerCase().includes(needle)
+          );
+          if (!script) { results.push({ ...action, status: 'error', error: `No post found matching "${content_match}"` }); continue; }
+
+          // Fetch brand context
+          const clientRows = await supaFetch(`crm_content_clients?id=eq.${action.client_id}&limit=1`);
+          const client = clientRows?.[0];
+          const brandContext = client ? [
+            client.brand_bible ? `Brand Bible: ${client.brand_bible}` : '',
+            client.target_audience ? `Target Audience: ${client.target_audience}` : '',
+            client.preferred_tone ? `Tone: ${client.preferred_tone}` : '',
+            client.core_hashtags ? `Core Hashtags (always include first): ${client.core_hashtags}` : '',
+          ].filter(Boolean).join('\n') : '';
+
+          const rewriteSystem = `You are an expert social media content creator. NEVER use em dashes. TODAY'S DATE: ${new Date().toISOString().slice(0, 10)}.\n\nBRAND CONTEXT:\n${brandContext}\n\nReturn ONLY valid JSON, no markdown.`;
+          const rewritePrompt = `Rewrite the following fields for this existing social media post: ${fields.join(', ')}.
+${extraPrompt ? `Extra instructions: ${extraPrompt}` : ''}
+
+EXISTING POST:
+Title: ${script.title || ''}
+Caption: ${script.caption || ''}
+Hashtags: ${script.hashtags || ''}
+First Comment: ${script.first_comment || ''}
+
+Return JSON with only the requested fields: ${JSON.stringify(Object.fromEntries(fields.map(f => [f, '...'])))}`;
+
+          const rewriteRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2048, system: rewriteSystem, messages: [{ role: 'user', content: rewritePrompt }] }),
+          });
+          if (!rewriteRes.ok) throw new Error('Rewrite AI failed');
+          const rewriteData = await rewriteRes.json();
+          const rewriteRaw = rewriteData.content[0].text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+          let rewritten;
+          try { rewritten = JSON.parse(rewriteRaw); } catch { const m = rewriteRaw.match(/\{[\s\S]*\}/); rewritten = m ? JSON.parse(m[0]) : {}; }
+
+          // Patch only the requested fields
+          const patch = { updated_at: new Date().toISOString() };
+          if (rewritten.title        !== undefined) patch.title        = rewritten.title;
+          if (rewritten.caption      !== undefined) patch.caption      = rewritten.caption;
+          if (rewritten.hashtags     !== undefined) patch.hashtags     = rewritten.hashtags;
+          if (rewritten.first_comment !== undefined) patch.first_comment = rewritten.first_comment;
+
+          await supaFetch(`crm_content_scripts?id=eq.${script.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+          results.push({ ...action, status: 'success', script_id: script.id, updated_fields: Object.keys(patch).filter(k => k !== 'updated_at'), rewritten });
 
         } else {
           results.push({ ...action, status: 'skipped', reason: 'Unknown action' });
