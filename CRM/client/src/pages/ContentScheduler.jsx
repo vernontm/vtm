@@ -2670,8 +2670,63 @@ export default function ContentScheduler() {
                       {/* Start New Monitor */}
                       <div style={{ background: '#f8f9fc', borderRadius: 10, padding: 14, marginBottom: 16 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', marginBottom: 10 }}>Start New Monitor</div>
-                        <input style={{ ...inputStyle, marginBottom: 8 }} placeholder="Post URL to monitor"
-                          value={autoDMPostUrl} onChange={e => setAutoDMPostUrl(e.target.value)} />
+                        {/* Post picker — latest 10 delivered */}
+                        {(() => {
+                          const delivered = scripts
+                            .filter(s => ['posted', 'exported'].includes(s.status))
+                            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+                            .slice(0, 10);
+                          return (
+                            <div style={{ position: 'relative', marginBottom: 8 }}>
+                              <div style={{
+                                maxHeight: 200, overflowY: 'auto', borderRadius: 8,
+                                border: '1px solid #e5e7ef', background: '#fff',
+                              }}>
+                                {delivered.length === 0 && (
+                                  <div style={{ padding: '10px 12px', fontSize: 12, color: '#8e8ea0' }}>No delivered posts yet</div>
+                                )}
+                                {delivered.map(s => {
+                                  const thumb = s.media_urls?.[0];
+                                  const isSelected = autoDMPostUrl === (thumb || s.id);
+                                  return (
+                                    <div key={s.id} onClick={() => setAutoDMPostUrl(thumb || '')}
+                                      style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '8px 12px', cursor: 'pointer',
+                                        background: isSelected ? '#fff0e6' : 'transparent',
+                                        borderLeft: isSelected ? '3px solid #E8650A' : '3px solid transparent',
+                                        borderBottom: '1px solid #f5f5f8',
+                                      }}>
+                                      {thumb && (
+                                        <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: '#f0f0f5' }}>
+                                          {thumb.match(/\.(mp4|mov|webm)/i)
+                                            ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Play size={14} color="#8e8ea0" /></div>
+                                            : <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                                        </div>
+                                      )}
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {s.title || 'Untitled'}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: '#8e8ea0' }}>
+                                          {s.updated_at ? new Date(s.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                                        </div>
+                                      </div>
+                                      {isSelected && <Check size={12} color="#E8650A" />}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              {autoDMPostUrl && (
+                                <div style={{ marginTop: 6, fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <Check size={11} color="#16a34a" />
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Selected: {autoDMPostUrl}</span>
+                                  <button onClick={() => setAutoDMPostUrl('')} style={{ ...btnGhost, padding: '1px 4px', flexShrink: 0 }}><X size={10} /></button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                         <input style={{ ...inputStyle, marginBottom: 8 }} placeholder="Trigger keywords (comma-separated, optional — e.g. LINK, INFO)"
                           value={autoDMKeywords} onChange={e => setAutoDMKeywords(e.target.value)} />
                         <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', marginBottom: 8 }}
