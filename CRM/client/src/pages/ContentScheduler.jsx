@@ -109,7 +109,7 @@ export default function ContentScheduler() {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'day' | 'week' | 'month'
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [activeSection, setActiveSection] = useState('content');
-  const [postsTab, setPostsTab] = useState('queued'); // queued | unscheduled | error | delivered | pending_review
+  const [postsTab, setPostsTab] = useState('queued'); // queued | error | delivered
   const [postsSearch, setPostsSearch] = useState('');
   const [editingPost, setEditingPost] = useState(null); // script obj for modal
 
@@ -1179,23 +1179,17 @@ export default function ContentScheduler() {
 
               {/* ── Publer-style tabs + search ── */}
               {(() => {
-                const pendingReviewStatuses = ['caption_ready'];
-                const unscheduledStatuses = ['draft', 'media_uploaded'];
                 const deliveredStatuses = ['posted', 'exported'];
                 const errorStatuses = ['failed', 'error'];
                 const counts = {
-                  queued: scripts.filter(s => s.status === 'scheduled').length,
-                  unscheduled: scripts.filter(s => !s.scheduled_datetime && unscheduledStatuses.includes(s.status)).length,
+                  queued: scripts.filter(s => !deliveredStatuses.includes(s.status) && !errorStatuses.includes(s.status)).length,
                   error: scripts.filter(s => errorStatuses.includes(s.status)).length,
                   delivered: scripts.filter(s => deliveredStatuses.includes(s.status)).length,
-                  pending_review: scripts.filter(s => pendingReviewStatuses.includes(s.status)).length,
                 };
                 const tabs = [
                   { key: 'queued', label: 'Queued Posts' },
-                  { key: 'unscheduled', label: 'Unscheduled' },
                   { key: 'error', label: 'Error' },
                   { key: 'delivered', label: 'Delivered' },
-                  { key: 'pending_review', label: 'Pending Review' },
                 ];
                 return (
                   <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
@@ -1469,16 +1463,12 @@ export default function ContentScheduler() {
                         <tbody>
                           {(() => {
                             const q = postsSearch.trim().toLowerCase();
-                            const pendingReviewStatuses = ['caption_ready'];
-                            const unscheduledStatuses = ['draft', 'media_uploaded'];
                             const deliveredStatuses = ['posted', 'exported'];
                             const errorStatuses = ['failed', 'error'];
                             let list = scripts;
-                            if (postsTab === 'queued') list = list.filter(s => s.status === 'scheduled');
-                            else if (postsTab === 'unscheduled') list = list.filter(s => !s.scheduled_datetime && unscheduledStatuses.includes(s.status));
+                            if (postsTab === 'queued') list = list.filter(s => !deliveredStatuses.includes(s.status) && !errorStatuses.includes(s.status));
                             else if (postsTab === 'error') list = list.filter(s => errorStatuses.includes(s.status));
                             else if (postsTab === 'delivered') list = list.filter(s => deliveredStatuses.includes(s.status));
-                            else if (postsTab === 'pending_review') list = list.filter(s => pendingReviewStatuses.includes(s.status));
                             // Day/Week filters on top of tab
                             if (viewMode === 'day' || viewMode === 'week') {
                               const now = new Date();
