@@ -1458,6 +1458,8 @@ function EmailListModal({ lead, onClose, onSuccess }) {
 export default function Leads() {
   const { startRecording, stopRecording, isRecordingLead, status: recStatus } = useRecorder();
   const { setLeadPanelOpen } = useUi();
+  // Cleanup: reset leadPanelOpen whenever this page unmounts (navigating away)
+  useEffect(() => () => setLeadPanelOpen(false), [setLeadPanelOpen]);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
