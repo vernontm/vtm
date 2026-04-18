@@ -352,6 +352,7 @@ const DETAIL_SECTIONS = [
     fields: [
       { key: 'name',             label: 'Name' },
       { key: 'company',          label: 'Company' },
+      { key: 'title',            label: 'Industry / Title' },
       { key: 'email',            label: 'Email' },
       { key: 'phone',            label: 'Phone' },
       { key: 'tiktok_username',  label: 'TikTok' },
