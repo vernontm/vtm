@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 /**
  * InlineEdit — click any cell to edit in place.
@@ -22,6 +22,8 @@ export default function InlineEdit({
 }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value ?? '');
+  const [saved, setSaved] = useState(false);
+  const savedTimerRef = useRef(null);
   const inputRef = useRef(null);
 
   // Sync if external value changes (e.g. after save)
@@ -37,7 +39,12 @@ export default function InlineEdit({
   const commit = () => {
     setEditing(false);
     const trimmed = typeof val === 'string' ? val.trim() : val;
-    if (trimmed !== (value ?? '')) onSave(trimmed);
+    if (trimmed !== (value ?? '')) {
+      onSave(trimmed);
+      setSaved(true);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 1500);
+    }
   };
 
   const cancel = () => {
@@ -104,7 +111,9 @@ export default function InlineEdit({
       className={privacy ? 'private-value' : ''}
       style={{
         cursor: 'text',
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
         padding: '2px 6px',
         borderRadius: 4,
         minWidth: 32,
@@ -118,6 +127,11 @@ export default function InlineEdit({
       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
     >
       {display || placeholder}
+      {saved && (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, color: '#22c55e' }}>
+          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )}
     </span>
   );
 }

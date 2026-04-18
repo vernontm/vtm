@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Edit2, Trash2, Check, X, Copy, ChevronDown, ChevronRight, Loader, Search } from 'lucide-react';
 import { getScripts, createScript, updateScript, deleteScript } from '../api';
+import { copyToClipboard } from '../lib/clipboard';
 import { useTeam } from '../context/TeamContext';
 
 const CATEGORIES = ['General', 'Cold Call', 'Follow Up', 'Discovery', 'Closing', 'Objection Handling', 'Other'];
@@ -62,6 +63,7 @@ function ScriptForm({ initial, onSave, onCancel }) {
         <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Script *</label>
         <textarea
           style={{ ...inputStyle, resize: 'vertical', minHeight: 160, lineHeight: 1.65 }}
+          maxLength={10000}
           value={content}
           onChange={e => setContent(e.target.value)}
           placeholder="Write the full script here. Use [brackets] for variable parts like [Lead Name] or [Company]..."
@@ -94,10 +96,10 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
   const catStyle = CAT_COLORS[script.category] || CAT_COLORS.Other;
 
   function handleCopy() {
-    navigator.clipboard.writeText(script.content).then(() => {
+    copyToClipboard(script.content).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+    }).catch(() => {});
   }
 
   // Highlight [placeholders] in the script content

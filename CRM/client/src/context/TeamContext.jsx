@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 
 const TeamContext = createContext({
@@ -106,17 +106,19 @@ export function TeamProvider({ children }) {
     try { localStorage.removeItem(LS_KEY); } catch {}
   }, []);
 
+  const value = useMemo(() => ({
+    currentMember,
+    isOwner,
+    viewingAs,
+    effectivePermissions,
+    loading,
+    hasPermission,
+    setViewingAs,
+    clearViewingAs,
+  }), [currentMember, isOwner, viewingAs, effectivePermissions, loading, hasPermission, setViewingAs, clearViewingAs]);
+
   return (
-    <TeamContext.Provider value={{
-      currentMember,
-      isOwner,
-      viewingAs,
-      effectivePermissions,
-      loading,
-      hasPermission,
-      setViewingAs,
-      clearViewingAs,
-    }}>
+    <TeamContext.Provider value={value}>
       {children}
     </TeamContext.Provider>
   );

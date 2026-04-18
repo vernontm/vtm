@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { copyToClipboard } from '../lib/clipboard';
 import {
   getContentClients, getContentClient, createContentClient, updateContentClient, deleteContentClient,
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
@@ -572,6 +573,7 @@ export default function ContentScheduler() {
         first_comment: script.first_comment,
         tiktok_privacy: 'PUBLIC_TO_EVERYONE',
         youtube_privacy: 'public',
+        facebook_page_id: client?.facebook_id || undefined,
       });
       await loadClientData(client.id);
       setPublishModal(null);
@@ -3191,7 +3193,7 @@ export default function ContentScheduler() {
               )}
 
               {/* Copy URL */}
-              <button onClick={() => navigator.clipboard.writeText(showMediaModal.media_urls[carouselIndex])}
+              <button onClick={() => copyToClipboard(showMediaModal.media_urls[carouselIndex])}
                 style={{ ...btnGhost, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginLeft: 'auto' }}>
                 <Copy size={13} /> Copy URL
               </button>

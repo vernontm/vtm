@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem, sequenceAgent } from '../api';
+import { copyToClipboard } from '../lib/clipboard';
 import { useUi } from '../context/UiContext';
 
 /* ── page context config ────────────────────────────────────────── */
@@ -391,10 +392,10 @@ export default function GlobalAgent() {
                 {msg.role === 'assistant' && (
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(msg.content).then(() => {
+                      copyToClipboard(msg.content).then(() => {
                         setCopiedIdx(i);
                         setTimeout(() => setCopiedIdx(c => c === i ? null : c), 1500);
-                      });
+                      }).catch(() => {});
                     }}
                     style={{
                       alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer',

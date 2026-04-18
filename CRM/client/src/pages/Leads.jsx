@@ -9,6 +9,7 @@ import { useRecorder } from '../context/RecorderContext';
 import { useUi } from '../context/UiContext';
 import { supabase } from '../lib/supabase';
 import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts, personalizeScript } from '../api';
+import { copyToClipboard } from '../lib/clipboard';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -944,9 +945,9 @@ function ScriptBrowseRow({ script }) {
   }
 
   function handleCopy() {
-    navigator.clipboard.writeText(script.content).then(() => {
+    copyToClipboard(script.content).then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000);
-    });
+    }).catch(() => {});
   }
 
   return (
@@ -1018,10 +1019,10 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
 
   function handleCopy() {
     if (!displayText) return;
-    navigator.clipboard.writeText(displayText).then(() => {
+    copyToClipboard(displayText).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
-    });
+    }).catch(() => {});
   }
 
   async function handlePersonalize() {

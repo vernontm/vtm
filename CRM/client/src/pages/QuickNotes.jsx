@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pin, Plus, Trash2, Edit2, Check, X, Copy, ExternalLink, Search, StickyNote } from 'lucide-react';
 import { getQuickNotes, createQuickNote, updateQuickNote, deleteQuickNote } from '../api';
+import { copyToClipboard } from '../lib/clipboard';
 
 // ── Accent color palette ───────────────────────────────────────────────────────
 const COLORS = ['#4a6cf7', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#8e8ea0'];
@@ -61,7 +62,7 @@ function NoteCard({ note, onUpdate, onDelete }) {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(note.content);
+    await copyToClipboard(note.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };

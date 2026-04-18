@@ -174,6 +174,7 @@ export default function Settings() {
           <FormRow label="Services Offered" hint="What you sell / do">
             <textarea
               style={TEXTAREA_STYLE}
+              maxLength={2000}
               value={settings.services_offered || ''}
               onChange={e => set('services_offered', e.target.value)}
               placeholder="e.g. TikTok growth strategy, content creation, monetization coaching for creators…"
@@ -182,6 +183,7 @@ export default function Settings() {
           <FormRow label="Target Client" hint="Who is your ideal customer">
             <textarea
               style={{ ...TEXTAREA_STYLE, minHeight: 64 }}
+              maxLength={2000}
               value={settings.target_client || ''}
               onChange={e => set('target_client', e.target.value)}
               placeholder="e.g. Aspiring content creators looking to turn their following into income…"
@@ -206,6 +208,7 @@ export default function Settings() {
           <FormRow label="Signature" hint="Appended to every email">
             <textarea
               style={{ ...TEXTAREA_STYLE, minHeight: 100 }}
+              maxLength={2000}
               value={settings.email_signature || ''}
               onChange={e => set('email_signature', e.target.value)}
               placeholder={`Best,\nVernon\n\nVernon Tech & Media\nhttps://vernontm.com`}
@@ -335,6 +338,7 @@ export default function Settings() {
             <FormRow label="Footer text">
               <textarea
                 style={{ ...TEXTAREA_STYLE, minHeight: 60 }}
+                maxLength={500}
                 value={settings.unsubscribe_text || ''}
                 onChange={e => set('unsubscribe_text', e.target.value)}
               />

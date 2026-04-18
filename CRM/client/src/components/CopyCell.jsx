@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { copyToClipboard } from '../lib/clipboard';
 
 export default function CopyCell({ value, children, style }) {
   const [copied, setCopied] = useState(false);
@@ -9,10 +10,10 @@ export default function CopyCell({ value, children, style }) {
   const handleCopy = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    navigator.clipboard.writeText(value).then(() => {
+    copyToClipboard(value).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    });
+    }).catch(() => {});
   };
 
   return (

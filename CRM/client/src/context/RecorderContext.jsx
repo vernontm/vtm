@@ -13,6 +13,7 @@ export function RecorderProvider({ children }) {
   const chunksRef        = useRef([]);
   const timerRef         = useRef(null);
   const streamsRef       = useRef([]); // all MediaStream refs to stop on finish
+  const recordingRef     = useRef(null); // mirrors recording state for onstop closure
 
   const stopTimer = () => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -80,7 +81,9 @@ export function RecorderProvider({ children }) {
       mr.start(1000); // collect chunks every second
 
       mediaRecorderRef.current = mr;
-      setRecording({ leadId, leadName, startedAt: Date.now() });
+      const rec = { leadId, leadName, startedAt: Date.now() };
+      recordingRef.current = rec;
+      setRecording(rec);
       setStatus('recording');
       startTimer(0);
 
@@ -101,7 +104,7 @@ export function RecorderProvider({ children }) {
         stopTimer();
         setStatus('saving');
 
-        const currentRecording = recording;
+        const currentRecording = recordingRef.current; // use ref — avoids stale closure
         const durationSeconds = currentRecording
           ? Math.floor((Date.now() - currentRecording.startedAt) / 1000)
           : 0;
@@ -141,6 +144,7 @@ export function RecorderProvider({ children }) {
         cleanupStreams();
         chunksRef.current = [];
         mediaRecorderRef.current = null;
+        recordingRef.current = null;
         setRecording(null);
         setElapsed(0);
         setStatus('idle');
@@ -149,7 +153,7 @@ export function RecorderProvider({ children }) {
 
       mr.stop();
     });
-  }, [recording]);
+  }, []);
 
   const isRecordingLead = (leadId) => recording?.leadId === leadId && status === 'recording';
 

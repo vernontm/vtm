@@ -102,14 +102,17 @@ export default function ComposeModal({ onClose, onComplete }) {
   // ── Gmail sync ─────────────────────────────────────────────────────────────
   async function handleSync() {
     if (!selectedLead) return;
+    const lead = selectedLead; // capture before async — prevents stale closure if user changes lead mid-flight
     setSyncing(true);
     setSyncError('');
     setSyncResult(null);
     try {
-      const result = await syncLeadGmail(selectedLead.id);
-      setSyncResult(result);
+      const result = await syncLeadGmail(lead.id);
+      // Only apply result if user hasn't switched leads
+      if (selectedLead?.id === lead.id) setSyncResult(result);
     } catch (e) {
-      setSyncError(e.message || 'Gmail sync failed. Check that Gmail is connected in Settings.');
+      if (selectedLead?.id === lead.id)
+        setSyncError(e.message || 'Gmail sync failed. Check that Gmail is connected in Settings.');
     } finally {
       setSyncing(false);
     }

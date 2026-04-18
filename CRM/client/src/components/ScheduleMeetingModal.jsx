@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, X, Plus, Check, Loader, Video, Clock, Users, Search } from 'lucide-react';
 import { createMeeting, checkMeetingAvailability, getContacts, getLeads, getGmailContacts, getCommLog } from '../api';
+import { copyToClipboard } from '../lib/clipboard';
 
 export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle, initialAttendees, initialLeadName }) {
   // Normalise initial attendees — ensure email is lowercase
@@ -150,7 +151,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
 
   async function copyMeetLink() {
     if (!success?.meet_link) return;
-    await navigator.clipboard.writeText(success.meet_link);
+    await copyToClipboard(success.meet_link);
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   }
 
