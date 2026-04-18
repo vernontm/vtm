@@ -224,75 +224,98 @@ Return ONLY valid JSON, no markdown.`;
       const { client_id } = req.body;
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
 
-      // Fetch schedule config
-      const configs = await supaFetch(
-        `crm_auto_schedule_config?client_id=eq.${client_id}&limit=1`
-      );
+      const configs = await supaFetch(`crm_auto_schedule_config?client_id=eq.${client_id}&limit=1`);
       const config = configs && configs[0];
       if (!config || !config.time_slots || !config.time_slots.length) {
         return res.status(400).json({ error: 'No schedule config found. Open Schedule Settings first.' });
       }
 
-      // Fetch unscheduled scripts ordered by sort_order
       const scripts = await supaFetch(
         `crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=is.null&order=sort_order.asc`
       );
-
       if (!scripts || !scripts.length) {
         return res.json({ scheduled: 0, message: 'No unscheduled scripts found' });
       }
 
-      const { time_slots } = config;
-
-      // Get IANA timezone from config (e.g. "America/Chicago")
+      const slots = config.time_slots;
       const tz = config.timezone || 'America/Chicago';
 
-      // Get current local time in the client's timezone using reliable Intl formatting
-      const now = new Date();
-      const fmt = new Intl.DateTimeFormat('en-US', {
-        timeZone: tz,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', hour12: false,
-      });
-      const parts = {};
-      for (const p of fmt.formatToParts(now)) parts[p.type] = p.value;
-      const nowHHMM = `${parts.hour}:${parts.minute}`;
-      // Build a proper local date object for date arithmetic
-      let currentDate = new Date(
-        parseInt(parts.year), parseInt(parts.month) - 1, parseInt(parts.day)
+      // Get all already-scheduled datetimes to avoid collisions
+      const allScheduled = await supaFetch(
+        `crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=not.is.null&select=scheduled_datetime`
       );
 
-      console.log('Auto-schedule: tz =', tz, '| local time =', nowHHMM, '| local date =', currentDate.toISOString().slice(0, 10), '| slots =', time_slots);
-
-      // Find first available slot today (compare HH:MM)
-      let slotIndex = 0;
-      const slotsHHMM = time_slots.map(s => s.substring(0, 5));
-      const todayFirstSlot = slotsHHMM.findIndex(s => s > nowHHMM);
-      if (todayFirstSlot >= 0) {
-        slotIndex = todayFirstSlot;
-      } else {
-        // All today's slots have passed, start tomorrow
-        currentDate.setDate(currentDate.getDate() + 1);
-        slotIndex = 0;
+      // Helper: format a Date into local date parts for a given timezone
+      function localParts(date, timezone) {
+        const fmt = new Intl.DateTimeFormat('en-US', {
+          timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+        });
+        const p = {};
+        for (const part of fmt.formatToParts(date)) p[part.type] = part.value;
+        return p;
       }
 
+      // Helper: is a candidate slot taken by any existing scheduled script?
+      function isTaken(candidateStr, existingRows, timezone) {
+        return (existingRows || []).some(s => {
+          if (!s.scheduled_datetime) return false;
+          const p = localParts(new Date(s.scheduled_datetime), timezone);
+          return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}` === candidateStr;
+        });
+      }
+
+      const now = new Date();
+      const nowParts = localParts(now, tz);
+      const nowHHMM = `${nowParts.hour}:${nowParts.minute}`;
+
+      // Start from today's first future slot; if all passed, start tomorrow slot 0
+      const slotsHHMM = slots.map(s => s.substring(0, 5));
+      let slotIndex = slotsHHMM.findIndex(s => s > nowHHMM);
+      // Track current date as a UTC midnight Date, initialised from local date in tz
+      let currentDate = new Date(`${nowParts.year}-${nowParts.month}-${nowParts.day}T00:00:00Z`);
+      if (slotIndex < 0) {
+        slotIndex = 0;
+        currentDate = new Date(currentDate.getTime() + 86400000); // +1 day
+      }
+
+      // Build a fresh copy of already-taken rows so we can append as we assign
+      const takenRows = [...(allScheduled || [])];
       let scheduled = 0;
 
       for (const script of scripts) {
-        const slot = time_slots[slotIndex];
+        // Find the next slot not already taken (scan up to 90 days)
+        let found = null;
+        const maxAttempts = slots.length * 90;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const slot = slots[slotIndex];
+          const y = new Date(currentDate).getUTCFullYear();
+          const m = String(new Date(currentDate).getUTCMonth() + 1).padStart(2, '0');
+          const d = String(new Date(currentDate).getUTCDate()).padStart(2, '0');
+          const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
+          const candidate = `${y}-${m}-${d} ${timeStr} ${tz}`;
+          const candidateCheck = `${y}-${m}-${d}T${slot.substring(0, 5)}`;
 
-        // Build the scheduled datetime string WITH timezone
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const day = String(currentDate.getDate()).padStart(2, '0');
-        const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
-        // Use the IANA timezone name so Postgres resolves the correct offset
-        const scheduledDatetime = `${year}-${month}-${day} ${timeStr} ${tz}`;
+          if (!isTaken(candidateCheck, takenRows, tz)) {
+            found = candidate;
+            // Mark this slot as taken so the next script doesn't reuse it
+            takenRows.push({ scheduled_datetime: new Date(candidate).toISOString() });
+            break;
+          }
+
+          slotIndex++;
+          if (slotIndex >= slots.length) {
+            slotIndex = 0;
+            currentDate = new Date(currentDate.getTime() + 86400000);
+          }
+        }
+
+        if (!found) continue; // safety: skip if no slot found in 90 days
 
         await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
           method: 'PATCH',
           body: JSON.stringify({
-            scheduled_datetime: scheduledDatetime,
+            scheduled_datetime: found,
             status: 'scheduled',
             updated_at: new Date().toISOString(),
           }),
@@ -300,11 +323,9 @@ Return ONLY valid JSON, no markdown.`;
 
         scheduled++;
         slotIndex++;
-
-        // When all slots for the day are used, advance to next day
-        if (slotIndex >= time_slots.length) {
+        if (slotIndex >= slots.length) {
           slotIndex = 0;
-          currentDate.setDate(currentDate.getDate() + 1);
+          currentDate = new Date(currentDate.getTime() + 86400000);
         }
       }
 
