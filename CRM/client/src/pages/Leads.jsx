@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -1237,7 +1237,7 @@ export default function Leads() {
   const [allCommLog, setAllCommLog] = useState([]);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [activeTab, setActiveTab] = useState('All Leads');
-  const [activeSegment, setActiveSegment] = useState('inbound');
+  const [activeSegment, setActiveSegment] = useState('cold');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [selected, setSelected] = useState(null);
@@ -1253,6 +1253,45 @@ export default function Leads() {
   const [emailListLead, setEmailListLead] = useState(null);
   const [toast, setToast] = useState('');
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3500); }
+
+  // Processing tracker state
+  const [processingLeadIds, setProcessingLeadIds] = useState(new Set()); // lead IDs with in-flight recordings
+  const [processedNotifs, setProcessedNotifs] = useState([]); // [{id, leadId, leadName}] completed
+  const knownProcessingRef = useRef(new Map()); // recordingId → {leadId, leadName}
+
+  // Poll for processing recordings every 8s
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const rows = await getProcessingRecordings();
+        if (cancelled) return;
+        const currentIds = new Set(rows.map(r => r.id));
+        const prev = knownProcessingRef.current;
+
+        // Detect newly completed (was in prev, not in current)
+        const completed = [];
+        for (const [recId, info] of prev.entries()) {
+          if (!currentIds.has(recId)) completed.push({ id: recId, ...info });
+        }
+
+        // Update known map to current
+        const next = new Map();
+        for (const r of rows) next.set(r.id, { leadId: r.lead_id, leadName: r.lead_name });
+        knownProcessingRef.current = next;
+
+        setProcessingLeadIds(new Set(rows.map(r => r.lead_id)));
+        if (completed.length) {
+          setProcessedNotifs(n => [...n, ...completed.map(c => ({ ...c, ts: Date.now() }))]);
+          // Refresh recording counts so badge updates
+          getLeadRecordingCounts().then(counts => setRecordingCounts(counts || {})).catch(() => {});
+        }
+      } catch { /* silent */ }
+    }
+    poll();
+    const timer = setInterval(poll, 8000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
 
   const load = async () => {
     try {
@@ -1636,33 +1675,46 @@ export default function Leads() {
                   {(() => {
                     const active = isRecordingLead(lead.id);
                     const count = recordingCounts[lead.id] || 0;
+                    const processing = processingLeadIds.has(lead.id);
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <button
-                          title={active ? 'Stop recording' : `Record call${count ? ` (${count} recorded)` : ''}`}
-                          onClick={() => active ? stopRecording() : startRecording(lead.id, lead.name)}
-                          disabled={recStatus === 'saving' || recStatus === 'requesting'}
-                          style={{
-                            width: 28, height: 28, borderRadius: '50%', border: 'none',
-                            cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
-                            background: active ? '#FEE2E2' : '#f0f2f8',
-                            color: active ? '#C00000' : '#8e8ea0',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 0.15s',
-                            boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
-                            animation: active ? 'recPulse 1.2s infinite' : 'none',
-                          }}
-                          onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#C00000'; } }}
-                          onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#f0f2f8'; e.currentTarget.style.color = '#8e8ea0'; } }}
-                        >
-                          {active ? <MicOff size={12} /> : <Mic size={12} />}
-                        </button>
-                        {count > 0 && (
-                          <span style={{
-                            fontSize: 9, fontWeight: 700, color: '#8e8ea0',
-                            background: '#f0f2f8', borderRadius: 6,
-                            padding: '0px 4px', lineHeight: '14px',
-                          }}>
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            title={active ? 'Stop recording' : `Record call${count ? ` (${count} recorded)` : ''}`}
+                            onClick={() => active ? stopRecording() : startRecording(lead.id, lead.name)}
+                            disabled={recStatus === 'saving' || recStatus === 'requesting'}
+                            style={{
+                              width: 28, height: 28, borderRadius: '50%', border: 'none',
+                              cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
+                              background: active ? '#FEE2E2' : '#f0f2f8',
+                              color: active ? '#C00000' : '#8e8ea0',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              transition: 'all 0.15s',
+                              boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
+                              animation: active ? 'recPulse 1.2s infinite' : 'none',
+                            }}
+                            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#C00000'; } }}
+                            onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#f0f2f8'; e.currentTarget.style.color = '#8e8ea0'; } }}
+                          >
+                            {active ? <MicOff size={12} /> : <Mic size={12} />}
+                          </button>
+                          {processing && (
+                            <span title="Processing call..." style={{
+                              position: 'absolute', top: -3, right: -3,
+                              width: 9, height: 9, borderRadius: '50%',
+                              background: '#E8650A',
+                              boxShadow: '0 0 0 0 rgba(232,101,10,0.4)',
+                              animation: 'recPulse 1.2s infinite',
+                              display: 'block',
+                            }} />
+                          )}
+                        </div>
+                        {processing ? (
+                          <span style={{ fontSize: 9, fontWeight: 700, color: '#E8650A', background: '#FFF5F0', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
+                            AI…
+                          </span>
+                        ) : count > 0 && (
+                          <span style={{ fontSize: 9, fontWeight: 700, color: '#8e8ea0', background: '#f0f2f8', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
                             {count}
                           </span>
                         )}
@@ -2030,6 +2082,31 @@ export default function Leads() {
           <Check size={14} color="#4a6cf7" /> {toast}
         </div>
       )}
+
+      {/* ── Processing-complete notifications ────────────────────────────── */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
+        {processedNotifs.map(n => (
+          <div key={n.id} style={{
+            background: '#1a1a2e', color: '#fff', borderRadius: 10,
+            padding: '12px 16px', minWidth: 260, maxWidth: 340,
+            boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
+            display: 'flex', alignItems: 'flex-start', gap: 12,
+            animation: 'slideInRight 0.25s ease',
+          }}>
+            <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>✅</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>Call processed</div>
+              <div style={{ fontSize: 12, color: '#b0b0c0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.leadName || 'Lead'} — summary ready
+              </div>
+            </div>
+            <button onClick={() => setProcessedNotifs(ns => ns.filter(x => x.id !== n.id))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

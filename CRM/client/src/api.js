@@ -459,8 +459,9 @@ export const transcribeLessonMedia = (contentId, lessonId) => academyRequest('/t
 
 // Lead Recordings
 export const getLeadRecordings      = (leadId) => request(`/recordings?lead_id=${leadId}`);
-export const getLeadRecordingCounts = ()       => request(`/recordings?action=counts`);
-export const getRecordingStats      = ()       => request(`/recordings?action=stats`);
+export const getLeadRecordingCounts    = ()    => request(`/recordings?action=counts`);
+export const getRecordingStats         = ()    => request(`/recordings?action=stats`);
+export const getProcessingRecordings   = ()    => request(`/recordings?action=processing`);
 export const deleteRecording        = (id)     => request(`/recordings?id=${id}`, { method: 'DELETE' });
 
 

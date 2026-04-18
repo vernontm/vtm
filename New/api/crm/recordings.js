@@ -223,6 +223,14 @@ module.exports = async function handler(req, res) {
         return res.json(counts);
       }
 
+      // ?action=processing — return recordings currently being processed
+      if (req.query.action === 'processing') {
+        const rows = await supaFetch(
+          `crm_lead_recordings?transcript_status=eq.processing&select=id,lead_id,lead_name,created_at&order=created_at.desc`
+        );
+        return res.json(rows || []);
+      }
+
       // ?action=stats — return call counts per time window (distinct leads)
       if (req.query.action === 'stats') {
         const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
