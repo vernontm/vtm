@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Services & Packages — Vernon Tech & Media</title>
+    <meta name="description" content="Web development, AI content creation, and marketing automation packages built for businesses that want to grow with technology." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #ff9b26;
+            --orange-dark: #ee4c27;
+            --bg: #111112;
+            --surface: #1a1a1c;
+            --surface-2: #222226;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0f0f0;
+            --muted: #6b6b72;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.1) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.06) 0%, transparent 60%);
+            pointer-events: none; z-index: 0;
+        }
+        body::after {
+            content: ''; position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.4; pointer-events: none; z-index: 0;
+        }
+
+        .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* NAV */
+        nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; animation: fadeDown 0.6s ease both; position: relative; z-index: 101; }
+        .logo img { height: 46px; width: auto; display: block; }
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links a { font-size: 0.875rem; font-weight: 400; color: var(--muted); text-decoration: none; letter-spacing: 0.01em; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta { font-size: 0.85rem; font-weight: 600; color: #ffffff !important; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); border: none; padding: 8px 18px; border-radius: 100px; cursor: pointer; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 10px rgba(255,155,38,0.2); }
+        .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,155,38,0.3); }
+        .hamburger { width: 40px; height: 40px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; transition: all 0.2s; }
+        .hamburger:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+        .hamburger span { display: block; width: 18px; height: 1.5px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
+        .menu-overlay { position: fixed; inset: 0; background: rgba(10,10,12,0.97); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.35s, visibility 0.35s; }
+        .menu-overlay.open { opacity: 1; visibility: visible; }
+        .menu-overlay a { font-family: var(--font-display); font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 300; color: var(--text); text-decoration: none; padding: 16px 0; opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s, color 0.2s; }
+        .menu-overlay.open a { opacity: 1; transform: translateY(0); }
+        .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+        .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+        .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay.open a:nth-child(4) { transition-delay: 0.26s; }
+        .menu-overlay a:hover { color: var(--orange); }
+
+        /* HERO */
+        .hero { padding: 64px 24px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 760px; margin: 0 auto; width: 100%; }
+        .pill { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,155,38,0.08); border: 1px solid rgba(255,155,38,0.25); color: var(--orange); padding: 6px 14px; border-radius: 100px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 24px; animation: fadeUp 0.7s 0.05s ease both; }
+        .pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+        h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 5.5vw, 3.6rem); font-weight: 300; line-height: 1.08; letter-spacing: -0.03em; margin: 0 auto 20px; animation: fadeUp 0.7s 0.1s ease both; }
+        h1 .grad { background: linear-gradient(135deg, var(--orange), var(--orange-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+        .sub { font-size: 1.05rem; color: var(--muted); font-weight: 300; max-width: 540px; margin: 0 auto 48px; line-height: 1.6; animation: fadeUp 0.7s 0.2s ease both; }
+
+        /* PACKAGES GRID */
+        .packages { max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; animation: fadeUp 0.7s 0.3s ease both; }
+
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 32px 28px; display: flex; flex-direction: column;
+            position: relative; overflow: hidden; transition: border-color 0.3s, transform 0.3s;
+        }
+        .card:hover { transform: translateY(-4px); }
+        .card.featured { border-color: rgba(255,155,38,0.35); background: linear-gradient(160deg, rgba(255,155,38,0.06) 0%, var(--surface) 60%); }
+        .card.featured::before { content: 'Most Popular'; position: absolute; top: 16px; right: 16px; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 100px; }
+
+        .card-icon { font-size: 2rem; margin-bottom: 16px; }
+        .card-name { font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; margin-bottom: 6px; }
+        .card-tagline { font-size: 0.82rem; color: var(--muted); margin-bottom: 20px; line-height: 1.4; }
+        .card-price { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+        .card-price span { font-size: 0.85rem; font-weight: 300; color: var(--muted); }
+        .price-note { font-size: 0.75rem; color: var(--muted); margin-bottom: 24px; }
+
+        .divider { height: 1px; background: var(--border); margin-bottom: 20px; }
+
+        .features { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; margin-bottom: 28px; }
+        .features li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.88rem; color: var(--text); font-weight: 300; line-height: 1.4; }
+        .features li::before { content: '✓'; color: var(--orange); font-weight: 700; font-size: 0.8rem; flex-shrink: 0; margin-top: 1px; }
+
+        .card-btns { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+        .btn-primary { display: block; text-align: center; padding: 13px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 600; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s; box-shadow: 0 2px 12px rgba(255,155,38,0.25); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(255,155,38,0.4); }
+        .btn-secondary { display: block; text-align: center; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 500; background: transparent; color: var(--muted); border: 1px solid var(--border); cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,0.15); background: var(--surface-2); }
+
+        /* BOTTOM CTA STRIP */
+        .cta-strip { max-width: 700px; margin: 0 auto 80px; padding: 0 24px; text-align: center; animation: fadeUp 0.7s 0.4s ease both; }
+        .cta-strip p { font-size: 0.95rem; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+        .cta-strip a { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 12px; font-size: 0.9rem; font-weight: 600; background: var(--surface); border: 1px solid var(--border); color: var(--text); text-decoration: none; transition: all 0.2s; }
+        .cta-strip a:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+
+        /* INQUIRY MODAL */
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .modal-backdrop.open { opacity: 1; visibility: visible; }
+        .modal { background: var(--surface); border: 1px solid rgba(255,155,38,0.2); border-radius: 20px; padding: 36px 32px; width: 100%; max-width: 480px; position: relative; transform: translateY(20px); transition: transform 0.3s; }
+        .modal-backdrop.open .modal { transform: translateY(0); }
+        .modal-close { position: absolute; top: 16px; right: 16px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; color: var(--muted); font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .modal-close:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+        .modal-pkg { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,155,38,0.08); border: 1px solid rgba(255,155,38,0.2); color: var(--orange); padding: 4px 12px; border-radius: 100px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; }
+        .modal h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+        .modal p { font-size: 0.88rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+        .modal input, .modal textarea { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 0.9rem; color: var(--text); font-family: var(--font-body); margin-bottom: 12px; transition: border-color 0.2s; outline: none; resize: none; }
+        .modal input:focus, .modal textarea:focus { border-color: rgba(255,155,38,0.4); }
+        .modal input::placeholder, .modal textarea::placeholder { color: var(--muted); }
+        .modal-submit { width: 100%; padding: 13px; border-radius: 12px; font-size: 0.9rem; font-weight: 600; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 12px rgba(255,155,38,0.25); margin-top: 4px; }
+        .modal-submit:hover { box-shadow: 0 4px 20px rgba(255,155,38,0.4); }
+        .modal-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .modal-success { text-align: center; padding: 16px 0; }
+        .modal-success .check { font-size: 2.5rem; margin-bottom: 12px; }
+        .modal-success h3 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+        .modal-success p { font-size: 0.88rem; color: var(--muted); }
+
+        /* ANIMATIONS */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) { .packages { grid-template-columns: 1fr; max-width: 500px; } }
+        @media (max-width: 600px) { nav { padding: 20px 20px; } .nav-links a:not(.nav-cta) { display: none; } .hamburger { display: flex; } .hero { padding: 40px 20px 12px; } .packages { padding: 0 16px 60px; } }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- NAV -->
+    <nav>
+        <a href="/" class="logo"><img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" /></a>
+        <div class="nav-links">
+            <a href="/portfolio">Portfolio</a>
+            <a href="/about">About</a>
+            <a href="/services" style="color: var(--text);">Services</a>
+            <a href="/contact" class="nav-cta">Work With Us</a>
+            <button class="hamburger" id="menuToggle" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+    <div class="menu-overlay" id="menuOverlay">
+        <a href="/portfolio">Portfolio</a>
+        <a href="/about">About Us</a>
+        <a href="/services">Services</a>
+        <a href="/contact">Contact</a>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+        <div class="pill">What We Build</div>
+        <h1>Simple packages.<br><span class="grad">Real results.</span></h1>
+        <p class="sub">Pick the package that fits where you are. Every project is built with AI-assisted workflows so you get more for less — faster than traditional agencies.</p>
+    </div>
+
+    <!-- PACKAGES -->
+    <div class="packages">
+
+        <!-- DIGITAL PRESENCE -->
+        <div class="card">
+            <div class="card-icon">🌐</div>
+            <div class="card-name">Digital Presence</div>
+            <div class="card-tagline">Get online and look like you mean business</div>
+            <div class="card-price">$1,500 <span>– $3,000</span></div>
+            <div class="price-note">One-time project</div>
+            <div class="divider"></div>
+            <ul class="features">
+                <li>Custom website (5–7 pages)</li>
+                <li>Mobile-optimized & fast loading</li>
+                <li>On-page SEO setup</li>
+                <li>Google Business profile setup</li>
+                <li>Contact form & booking integration</li>
+                <li>1 month post-launch support</li>
+            </ul>
+            <div class="card-btns">
+                <button class="btn-primary" onclick="openInquiry('Digital Presence')">Send Inquiry</button>
+                <a href="/book-call" target="_blank" class="btn-secondary">Book a Call</a>
+            </div>
+        </div>
+
+        <!-- CONTENT ENGINE -->
+        <div class="card featured">
+            <div class="card-icon">🎬</div>
+            <div class="card-name">Content Engine</div>
+            <div class="card-tagline">Consistent content without burning out</div>
+            <div class="card-price">$500 <span>– $1,500<span style="font-size:0.75rem">/mo</span></span></div>
+            <div class="price-note">Monthly retainer</div>
+            <div class="divider"></div>
+            <ul class="features">
+                <li>AI-generated short-form scripts (TikTok / Reels / Shorts)</li>
+                <li>Custom branded intro & outro</li>
+                <li>Faceless content production or on-camera editing</li>
+                <li>Monthly content calendar</li>
+                <li>Captions & hashtag strategy</li>
+                <li>2 revision rounds per month</li>
+            </ul>
+            <div class="card-btns">
+                <button class="btn-primary" onclick="openInquiry('Content Engine')">Send Inquiry</button>
+                <a href="/book-call" target="_blank" class="btn-secondary">Book a Call</a>
+            </div>
+        </div>
+
+        <!-- GROWTH SYSTEM -->
+        <div class="card">
+            <div class="card-icon">🚀</div>
+            <div class="card-name">Growth System</div>
+            <div class="card-tagline">Automate your leads, follow-ups & pipeline</div>
+            <div class="card-price">$2,000 <span>– $5,000</span></div>
+            <div class="price-note">Setup + monthly retainer</div>
+            <div class="divider"></div>
+            <ul class="features">
+                <li>CRM setup & lead pipeline</li>
+                <li>Automated email sequences</li>
+                <li>AutoDM & social follow-up flows</li>
+                <li>Lead capture pages & forms</li>
+                <li>Monthly analytics & reporting</li>
+                <li>Ongoing optimization & support</li>
+            </ul>
+            <div class="card-btns">
+                <button class="btn-primary" onclick="openInquiry('Growth System')">Send Inquiry</button>
+                <a href="/book-call" target="_blank" class="btn-secondary">Book a Call</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- BOTTOM CTA -->
+    <div class="cta-strip">
+        <p>Not sure which package is right for you? Book a free 15-minute call and I'll tell you exactly what you need — no pressure, no pitch deck.</p>
+        <a href="/book-call" target="_blank">📅 &nbsp;Book a free call</a>
+    </div>
+
+</div>
+
+<!-- INQUIRY MODAL -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
+    <div class="modal">
+        <button class="modal-close" onclick="closeInquiry()">×</button>
+        <div id="modalContent">
+            <div class="modal-pkg" id="modalPkg">Digital Presence</div>
+            <h2>Let's talk about your project</h2>
+            <p>Fill this out and I'll get back to you within 24 hours with next steps.</p>
+            <input type="text" id="inqName" placeholder="Your name" autocomplete="name" />
+            <input type="email" id="inqEmail" placeholder="Email address" autocomplete="email" />
+            <input type="tel" id="inqPhone" placeholder="Phone number (optional)" autocomplete="tel" />
+            <textarea id="inqMessage" rows="3" placeholder="Tell me a bit about your business and what you're looking for…"></textarea>
+            <button class="modal-submit" id="inqSubmit" onclick="submitInquiry()">Send Inquiry →</button>
+        </div>
+        <div id="modalSuccess" class="modal-success" style="display:none;">
+            <div class="check">🎉</div>
+            <h3>Inquiry sent!</h3>
+            <p>I'll reach out within 24 hours. In the meantime, feel free to <a href="/book-call" target="_blank" style="color:var(--orange)">book a call</a> if you'd like to move faster.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Nav hamburger
+    const toggle = document.getElementById('menuToggle');
+    const overlay = document.getElementById('menuOverlay');
+    toggle?.addEventListener('click', () => {
+        toggle.classList.toggle('open');
+        overlay.classList.toggle('open');
+    });
+    overlay?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+        toggle.classList.remove('open');
+        overlay.classList.remove('open');
+    }));
+
+    // UTM capture
+    (function() {
+        const p = new URLSearchParams(window.location.search);
+        ['utm_source','utm_medium','utm_campaign'].forEach(k => {
+            if (p.get(k)) sessionStorage.setItem(k, p.get(k));
+        });
+    })();
+
+    // Modal
+    let currentPkg = '';
+    function openInquiry(pkg) {
+        currentPkg = pkg;
+        document.getElementById('modalPkg').textContent = pkg;
+        document.getElementById('modalContent').style.display = '';
+        document.getElementById('modalSuccess').style.display = 'none';
+        document.getElementById('inqName').value = '';
+        document.getElementById('inqEmail').value = '';
+        document.getElementById('inqPhone').value = '';
+        document.getElementById('inqMessage').value = '';
+        document.getElementById('modalBackdrop').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeInquiry() {
+        document.getElementById('modalBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    function handleBackdropClick(e) {
+        if (e.target === document.getElementById('modalBackdrop')) closeInquiry();
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInquiry(); });
+
+    async function submitInquiry() {
+        const name = document.getElementById('inqName').value.trim();
+        const email = document.getElementById('inqEmail').value.trim();
+        const phone = document.getElementById('inqPhone').value.trim();
+        const message = document.getElementById('inqMessage').value.trim();
+        if (!name || !email) { alert('Please enter your name and email.'); return; }
+
+        const btn = document.getElementById('inqSubmit');
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+
+        const sourceMap = { tiktok: 'TikTok', instagram: 'Instagram', youtube: 'YouTube', threads: 'Threads', email: 'Email' };
+        const utmSource = sessionStorage.getItem('utm_source') || '';
+        const leadSource = sourceMap[utmSource] || 'Website';
+
+        try {
+            await fetch('/api/lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name, email, phone,
+                    source: leadSource,
+                    notes: `Package interest: ${currentPkg}${message ? '\n\n' + message : ''}`,
+                    product_need: currentPkg,
+                }),
+            });
+            document.getElementById('modalContent').style.display = 'none';
+            document.getElementById('modalSuccess').style.display = '';
+        } catch {
+            btn.disabled = false;
+            btn.textContent = 'Send Inquiry →';
+            alert('Something went wrong. Please try again or email us directly.');
+        }
+    }
+</script>
+</body>
+</html>
