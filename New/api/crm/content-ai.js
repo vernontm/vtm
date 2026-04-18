@@ -240,66 +240,59 @@ Return ONLY valid JSON, no markdown.`;
       const slots = config.time_slots;
       const tz = config.timezone || 'America/Chicago';
 
-      // Get all already-scheduled datetimes to avoid collisions
-      const allScheduled = await supaFetch(
-        `crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=not.is.null&select=scheduled_datetime`
-      );
-
-      // Helper: format a Date into local date parts for a given timezone
-      function localParts(date, timezone) {
+      // Helper: local "YYYY-MM-DDTHH:MM" string for a Date in a given timezone
+      function localKey(date, timezone) {
         const fmt = new Intl.DateTimeFormat('en-US', {
           timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+          hour: '2-digit', minute: '2-digit', hour12: false,
         });
         const p = {};
         for (const part of fmt.formatToParts(date)) p[part.type] = part.value;
-        return p;
-      }
-
-      // Helper: is a candidate slot taken by any existing scheduled script?
-      function isTaken(candidateStr, existingRows, timezone) {
-        return (existingRows || []).some(s => {
-          if (!s.scheduled_datetime) return false;
-          const p = localParts(new Date(s.scheduled_datetime), timezone);
-          return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}` === candidateStr;
-        });
+        return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
       }
 
       const now = new Date();
-      const nowParts = localParts(now, tz);
-      const nowHHMM = `${nowParts.hour}:${nowParts.minute}`;
+      const nowKey = localKey(now, tz);
+      const nowHHMM = nowKey.slice(11, 16); // "HH:MM"
+
+      // Build Set of already-taken "YYYY-MM-DDTHH:MM" keys in the client's timezone
+      const allScheduled = await supaFetch(
+        `crm_content_scripts?client_id=eq.${client_id}&scheduled_datetime=not.is.null&select=scheduled_datetime`
+      );
+      const takenSet = new Set(
+        (allScheduled || [])
+          .filter(s => s.scheduled_datetime)
+          .map(s => localKey(new Date(s.scheduled_datetime), tz))
+      );
 
       // Start from today's first future slot; if all passed, start tomorrow slot 0
       const slotsHHMM = slots.map(s => s.substring(0, 5));
       let slotIndex = slotsHHMM.findIndex(s => s > nowHHMM);
-      // Track current date as a UTC midnight Date, initialised from local date in tz
-      let currentDate = new Date(`${nowParts.year}-${nowParts.month}-${nowParts.day}T00:00:00Z`);
+      const todayDateStr = nowKey.slice(0, 10); // "YYYY-MM-DD"
+      let currentDate = new Date(`${todayDateStr}T00:00:00Z`);
       if (slotIndex < 0) {
         slotIndex = 0;
-        currentDate = new Date(currentDate.getTime() + 86400000); // +1 day
+        currentDate = new Date(currentDate.getTime() + 86400000);
       }
 
-      // Build a fresh copy of already-taken rows so we can append as we assign
-      const takenRows = [...(allScheduled || [])];
       let scheduled = 0;
 
       for (const script of scripts) {
-        // Find the next slot not already taken (scan up to 90 days)
+        // Find the next open slot — scan up to 90 days out
         let found = null;
         const maxAttempts = slots.length * 90;
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          const slot = slots[slotIndex];
-          const y = new Date(currentDate).getUTCFullYear();
-          const m = String(new Date(currentDate).getUTCMonth() + 1).padStart(2, '0');
-          const d = String(new Date(currentDate).getUTCDate()).padStart(2, '0');
-          const timeStr = slot.length <= 5 ? `${slot}:00` : slot;
-          const candidate = `${y}-${m}-${d} ${timeStr} ${tz}`;
-          const candidateCheck = `${y}-${m}-${d}T${slot.substring(0, 5)}`;
+          const slotHHMM = slotsHHMM[slotIndex];
+          const y = currentDate.getUTCFullYear();
+          const m = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
+          const d = String(currentDate.getUTCDate()).padStart(2, '0');
+          const candidateKey = `${y}-${m}-${d}T${slotHHMM}`;
 
-          if (!isTaken(candidateCheck, takenRows, tz)) {
-            found = candidate;
-            // Mark this slot as taken so the next script doesn't reuse it
-            takenRows.push({ scheduled_datetime: new Date(candidate).toISOString() });
+          if (!takenSet.has(candidateKey)) {
+            const timeStr = slots[slotIndex].length <= 5
+              ? `${slots[slotIndex]}:00` : slots[slotIndex];
+            found = `${y}-${m}-${d} ${timeStr} ${tz}`;
+            takenSet.add(candidateKey); // reserve for subsequent scripts
             break;
           }
 
@@ -310,7 +303,7 @@ Return ONLY valid JSON, no markdown.`;
           }
         }
 
-        if (!found) continue; // safety: skip if no slot found in 90 days
+        if (!found) continue;
 
         await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
           method: 'PATCH',
