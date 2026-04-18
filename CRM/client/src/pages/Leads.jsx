@@ -51,33 +51,20 @@ const EMPTY = {
   segment: 'inbound', assigned_to: 'Ray',
 };
 
-// ─── Product Need options & chip ──────────────────────────────────────────────
+// ─── Package offerings ────────────────────────────────────────────────────────
 const PRODUCT_NEEDS = [
-  'No Website',
-  'Needs New Website',
-  'Needs Website Refresh',
-  'Needs Content Creation',
-  'Needs Social Media Help',
-  'Needs SEO',
-  'Needs Branding',
-  'Needs Video Production',
-  'Needs Email Marketing',
-  'Needs Photography',
-  'Other',
+  'Digital Presence',
+  'Content Engine',
+  'Growth System',
 ];
 
 const PRODUCT_NEED_STYLES = {
-  'No Website':              { bg: '#ff5c5c20', fg: '#dc2626', icon: '🚫' },
-  'Needs New Website':       { bg: '#4a6cf720', fg: '#4a6cf7', icon: '🌐' },
-  'Needs Website Refresh':   { bg: '#6366f120', fg: '#4f46e5', icon: '🔄' },
-  'Needs Content Creation':  { bg: '#f59e0b20', fg: '#d97706', icon: '✍️' },
-  'Needs Social Media Help': { bg: '#ec489920', fg: '#be185d', icon: '📱' },
-  'Needs SEO':               { bg: '#10b98120', fg: '#059669', icon: '🔍' },
-  'Needs Branding':          { bg: '#8b5cf620', fg: '#7c3aed', icon: '🎨' },
-  'Needs Video Production':  { bg: '#ef444420', fg: '#dc2626', icon: '🎬' },
-  'Needs Email Marketing':   { bg: '#06b6d420', fg: '#0e7490', icon: '📧' },
-  'Needs Photography':       { bg: '#84cc1620', fg: '#65a30d', icon: '📷' },
-  'Other':                   { bg: '#8e8ea020', fg: '#8e8ea0', icon: '•' },
+  'Digital Presence': { bg: '#4a6cf720', fg: '#4a6cf7', icon: '🌐',
+    subtitle: 'Website · App · Local SEO' },
+  'Content Engine':   { bg: '#f59e0b20', fg: '#d97706', icon: '🎬',
+    subtitle: 'AI Content · Reels · Intros/Outros' },
+  'Growth System':    { bg: '#10b98120', fg: '#059669', icon: '🚀',
+    subtitle: 'Automation · Email · CRM Flows' },
 };
 
 function ProductNeedChip({ value, onChange }) {
@@ -128,7 +115,11 @@ function ProductNeedChip({ value, onChange }) {
                   onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = '#f5f7fa'; }}
                   onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ fontSize: 11 }}>{st.icon}</span> {s}
+                  <span style={{ fontSize: 14 }}>{st.icon}</span>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{s}</div>
+                    {st.subtitle && <div style={{ fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{st.subtitle}</div>}
+                  </div>
                 </button>
               );
             })}
@@ -1275,9 +1266,12 @@ export default function Leads() {
           if (!currentIds.has(recId)) completed.push({ id: recId, ...info });
         }
 
-        // Update known map to current
+        // Update known map to current — resolve name from loaded leads
         const next = new Map();
-        for (const r of rows) next.set(r.id, { leadId: r.lead_id, leadName: r.lead_name });
+        for (const r of rows) {
+          const leadName = leads.find(l => l.id === r.lead_id)?.name || null;
+          next.set(r.id, { leadId: r.lead_id, leadName });
+        }
         knownProcessingRef.current = next;
 
         setProcessingLeadIds(new Set(rows.map(r => r.lead_id)));
@@ -1291,7 +1285,7 @@ export default function Leads() {
     poll();
     const timer = setInterval(poll, 8000);
     return () => { cancelled = true; clearInterval(timer); };
-  }, []);
+  }, [leads]);
 
   const load = async () => {
     try {
@@ -1485,7 +1479,7 @@ export default function Leads() {
         ].map(seg => {
           const active = activeSegment === seg.key;
           return (
-            <button key={seg.key} onClick={() => setActiveSegment(seg.key)} style={{
+            <button key={seg.key} onClick={() => { setActiveSegment(seg.key); load(); }} style={{
               flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
               background: active ? seg.bg : '#fafafa',
               borderBottom: active ? `3px solid ${seg.accent}` : '3px solid transparent',
