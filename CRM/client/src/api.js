@@ -511,7 +511,8 @@ export const deleteTrainingVideo  = (id)          => request(`/training?id=${id}
 export const saveTrainingProgress = (data)        => request('/training?action=progress', { method: 'POST', body: JSON.stringify(data) });
 
 // Call Scripts
-export const getScripts    = ()          => request('/scripts');
-export const createScript  = (data)      => request('/scripts', { method: 'POST', body: JSON.stringify(data) });
-export const updateScript  = (id, data)  => request(`/scripts?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-export const deleteScript  = (id)        => request(`/scripts?id=${id}`, { method: 'DELETE' });
+export const getScripts         = ()             => request('/scripts');
+export const createScript       = (data)         => request('/scripts', { method: 'POST', body: JSON.stringify(data) });
+export const updateScript       = (id, data)     => request(`/scripts?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteScript       = (id)           => request(`/scripts?id=${id}`, { method: 'DELETE' });
+export const personalizeScript  = (script, lead) => request('/personalize-script', { method: 'POST', body: JSON.stringify({ script, lead }) });

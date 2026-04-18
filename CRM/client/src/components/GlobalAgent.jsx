@@ -106,7 +106,7 @@ export default function GlobalAgent() {
   const navigate = useNavigate();
   const ctx = getContext(location.pathname);
   const { leadPanelOpen } = useUi();
-  if (leadPanelOpen) return null;
+  if (leadPanelOpen || location.pathname === '/leads') return null;
 
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState('');

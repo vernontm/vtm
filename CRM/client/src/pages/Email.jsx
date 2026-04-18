@@ -255,7 +255,7 @@ function LabelButton({ labelKey, active, onClick, size = 14 }) {
 
 /* ── Floating Compose Popup ──────────────────────────────────────────────── */
 
-function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, onSaveDraft, onClose, sending }) {
+function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, onSaveDraft, onClose, sending, labelDefs = [] }) {
   const [to, setTo] = useState(replyTo?.from?.email || replyTo?.to_email || '');
   const [subject, setSubject] = useState(replyTo ? `Re: ${(replyTo.subject||'').replace(/^Re:\s*/i,'')}` : '');
   const [body, setBody] = useState('');
@@ -263,12 +263,13 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
   const [showSchedule, setShowSchedule] = useState(false);
   const [customSchedule, setCustomSchedule] = useState('');
   const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const [selectedLabels, setSelectedLabels] = useState(() => labelDefs.some(l => l.name === 'Leads') ? ['Leads'] : []);
   const bodyRef = useRef(null);
   useEffect(() => { if (bodyRef.current && !minimized) bodyRef.current.focus(); }, [minimized]);
 
-  const handleSend = () => { if (!to || !subject) return; onSend({ to, subject, body }); };
-  const handleScheduleSelect = (iso) => { if (!to || !subject) return; onSchedule({ to, subject, body, scheduleDate: iso }); };
-  const handleCustomSchedule = () => { if (!to || !subject || !customSchedule) return; onSchedule({ to, subject, body, scheduleDate: new Date(customSchedule).toISOString() }); };
+  const handleSend = () => { if (!to || !subject) return; onSend({ to, subject, body, labels: selectedLabels }); };
+  const handleScheduleSelect = (iso) => { if (!to || !subject) return; onSchedule({ to, subject, body, scheduleDate: iso, labels: selectedLabels }); };
+  const handleCustomSchedule = () => { if (!to || !subject || !customSchedule) return; onSchedule({ to, subject, body, scheduleDate: new Date(customSchedule).toISOString(), labels: selectedLabels }); };
 
   return (
     <div className="compose-popup" style={{
@@ -306,6 +307,26 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
             <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject"
               style={{ flex:1, border:'none', outline:'none', fontSize:13, color:'#1a1a2e', background:'transparent' }} />
           </div>
+          {/* Labels */}
+          {labelDefs.length > 0 && (
+            <div style={{ display:'flex', alignItems:'center', borderBottom:'1px solid #f0f2f8', padding:'6px 16px', gap:8, flexWrap:'wrap' }}>
+              <span style={{ fontSize:11, color:'#8e8ea0', fontWeight:500, width:50, flexShrink:0 }}>Labels</span>
+              {labelDefs.map(l => {
+                const on = selectedLabels.includes(l.name);
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setSelectedLabels(prev => on ? prev.filter(x => x !== l.name) : [...prev, l.name])}
+                    style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', transition:'all 0.15s', background: on ? (l.color||'#4a6cf7')+'22' : '#f5f7fa', border:`1.5px solid ${on ? (l.color||'#4a6cf7') : '#e5e7ef'}`, color: on ? (l.color||'#4a6cf7') : '#8e8ea0' }}
+                  >
+                    <div style={{ width:6, height:6, borderRadius:'50%', background:l.color||'#4a6cf7', flexShrink:0 }} />
+                    {l.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {/* Custom schedule picker */}
           {showCustomPicker && (
             <div style={{ display:'flex', alignItems:'center', borderBottom:'1px solid #f0f2f8', padding:'7px 16px', background:'#f8f9fc', gap:8 }}>
@@ -555,17 +576,17 @@ export default function EmailPage() {
   const openCompose = () => { setComposeOpen(true); setSelected(null); };
   const openReply = () => { setComposeOpen(selected); };
 
-  const handleComposeSend = async ({ to, subject, body }) => {
+  const handleComposeSend = async ({ to, subject, body, labels }) => {
     if(!to||!subject) return; setSending(true);
-    try { const c = await createQueueItem({to_email:to,subject,body,status:'draft'}); await sendQueueItem(c.id); setComposeOpen(false); await load(); } catch(e) { alert('Send failed: '+e.message); } finally { setSending(false); }
+    try { const c = await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); await sendQueueItem(c.id); setComposeOpen(false); await load(); } catch(e) { alert('Send failed: '+e.message); } finally { setSending(false); }
   };
-  const handleComposeSchedule = async ({ to, subject, body, scheduleDate }) => {
+  const handleComposeSchedule = async ({ to, subject, body, scheduleDate, labels }) => {
     if(!to||!subject||!scheduleDate) return; setSending(true);
-    try { await createQueueItem({to_email:to,subject,body,status:'draft',follow_up_date:scheduleDate}); setComposeOpen(false); await load(); } catch(e) { alert('Schedule failed: '+e.message); } finally { setSending(false); }
+    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft',follow_up_date:scheduleDate}); setComposeOpen(false); await load(); } catch(e) { alert('Schedule failed: '+e.message); } finally { setSending(false); }
   };
-  const handleComposeDraft = async ({ to, subject, body }) => {
+  const handleComposeDraft = async ({ to, subject, body, labels }) => {
     if(!to&&!subject&&!body) return;
-    try { await createQueueItem({to_email:to,subject,body,status:'draft'}); setComposeOpen(false); await load(); } catch(e) { alert('Save failed: '+e.message); }
+    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); setComposeOpen(false); await load(); } catch(e) { alert('Save failed: '+e.message); }
   };
 
   /* ── display helpers ─────────────────────────────────────────────────── */
@@ -899,6 +920,7 @@ export default function EmailPage() {
           onSaveDraft={handleComposeDraft}
           onClose={() => setComposeOpen(false)}
           sending={sending}
+          labelDefs={customLabels}
         />
       )}
 

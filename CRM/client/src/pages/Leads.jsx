@@ -3,12 +3,12 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check,
   ThumbsUp, ThumbsDown, Send, Clock, Download, Calendar as CalendarIcon,
-  ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square, ListPlus,
+  ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square, ListPlus, Loader, FileText,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { useUi } from '../context/UiContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts, personalizeScript } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -928,41 +928,110 @@ function RecordingCard({ recording: rawR }) {
   );
 }
 
+// ─── Script Browse Row (used in floating modal) ────────────────────────────────
+function ScriptBrowseRow({ script }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function renderScript(text) {
+    const parts = text.split(/(\[[^\]]+\])/g);
+    return parts.map((part, i) =>
+      /^\[.+\]$/.test(part)
+        ? <mark key={i} style={{ background: '#fef3c7', color: '#92400e', borderRadius: 3, padding: '0 2px', fontWeight: 600 }}>{part}</mark>
+        : part
+    );
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(script.content).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div style={{ borderBottom: '1px solid #f0f2f8' }}>
+      <div
+        onClick={() => setExpanded(e => !e)}
+        style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: expanded ? '#f9fafb' : '#fff' }}
+        onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = '#f9fafb'; }}
+        onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = '#fff'; }}
+      >
+        <ChevronRight size={14} color="#8e8ea0" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
+        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', flex: 1 }}>📞 {script.title}</span>
+        {script.service && (
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#4a6cf720', color: '#4a6cf7' }}>{script.service}</span>
+        )}
+      </div>
+      {expanded && (
+        <div style={{ padding: '0 20px 16px 44px', background: '#f9fafb' }}>
+          <pre style={{ margin: 0, padding: '14px 16px', background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8, fontSize: 12, color: '#374151', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit' }}>
+            {renderScript(script.content)}
+          </pre>
+          <button
+            onClick={handleCopy}
+            style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, border: `1px solid ${copied ? '#22c55e40' : '#e5e7ef'}`, background: copied ? '#22c55e15' : '#fff', color: copied ? '#16a34a' : '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+          >
+            {copied ? <><Check size={12} /> Copied!</> : <>📋 Copy Script</>}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Call Script Widget ───────────────────────────────────────────────────────
 function CallScriptWidget({ lead, scripts }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied]         = useState(false);
+  const [aiScript, setAiScript]     = useState('');
+  const [aiLoading, setAiLoading]   = useState(false);
+  const [aiError, setAiError]       = useState('');
+  const [showAi, setShowAi]         = useState(false);
 
   const script = scripts.find(s => s.service === lead.product_need);
 
   function substituteTags(text, l) {
     const firstName = (l.name || '').split(' ')[0];
     return text
-      .replace(/\[name\]/gi,       l.name         || '[name]')
-      .replace(/\[first_name\]/gi, firstName       || '[first_name]')
-      .replace(/\[company\]/gi,    l.company       || '[company]')
-      .replace(/\[title\]/gi,      l.title         || '[title]')
-      .replace(/\[phone\]/gi,      l.phone         || '[phone]')
-      .replace(/\[email\]/gi,      l.email         || '[email]')
-      .replace(/\[notes\]/gi,      l.notes         || '—')
-      .replace(/\[budget\]/gi,     l.budget        || '—')
-      .replace(/\[problem\]/gi,    l.problem       || '—')
+      .replace(/\[name\]/gi,       l.name          || '[name]')
+      .replace(/\[first_name\]/gi, firstName        || '[first_name]')
+      .replace(/\[company\]/gi,    l.company        || '[company]')
+      .replace(/\[title\]/gi,      l.title          || '[title]')
+      .replace(/\[phone\]/gi,      l.phone          || '[phone]')
+      .replace(/\[email\]/gi,      l.email          || '[email]')
+      .replace(/\[notes\]/gi,      l.notes          || '—')
+      .replace(/\[budget\]/gi,     l.budget         || '—')
+      .replace(/\[problem\]/gi,    l.problem        || '—')
       .replace(/\[goal\]/gi,       l.financial_goal || '—')
-      .replace(/\[best_time\]/gi,  l.best_time     || '—');
+      .replace(/\[best_time\]/gi,  l.best_time      || '—');
   }
 
+  const displayText = showAi && aiScript ? aiScript : (script ? substituteTags(script.content, lead) : '');
+
   function handleCopy() {
-    if (!script) return;
-    navigator.clipboard.writeText(substituteTags(script.content, lead)).then(() => {
+    if (!displayText) return;
+    navigator.clipboard.writeText(displayText).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     });
   }
 
-  // Render script with highlighted [tags] and substituted values
-  function renderScript(text, l) {
-    const substituted = substituteTags(text, l);
-    // Re-highlight any remaining [placeholders] (ones not substituted, like [your_name])
-    const parts = substituted.split(/(\[[^\]]+\])/g);
+  async function handlePersonalize() {
+    if (!script) return;
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const result = await personalizeScript(substituteTags(script.content, lead), lead);
+      setAiScript(result.script);
+      setShowAi(true);
+    } catch (e) {
+      setAiError(e.message || 'AI personalization failed');
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function renderScript(text) {
+    const parts = text.split(/(\[[^\]]+\])/g);
     return parts.map((part, i) =>
       /^\[.+\]$/.test(part)
         ? <mark key={i} style={{ background: '#fef3c7', color: '#92400e', borderRadius: 3, padding: '0 2px', fontWeight: 600 }}>{part}</mark>
@@ -973,12 +1042,8 @@ function CallScriptWidget({ lead, scripts }) {
   if (!lead.product_need) {
     return (
       <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 18px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-          📞 Call Script
-        </div>
-        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>
-          Assign a Product / Need to this lead to load the matching call script.
-        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>📞 Call Script</div>
+        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>Assign a Product / Need to this lead to load the matching call script.</div>
       </div>
     );
   }
@@ -986,47 +1051,61 @@ function CallScriptWidget({ lead, scripts }) {
   if (!script) {
     return (
       <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 18px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-          📞 Call Script
-        </div>
-        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>
-          No script found for "{lead.product_need}".
-        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>📞 Call Script</div>
+        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>No script found for "{lead.product_need}".</div>
       </div>
     );
   }
 
   return (
     <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 16px', borderBottom: '1px solid #e5e7ef',
-        background: '#fff',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #e5e7ef', background: '#fff', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           <span style={{ fontSize: 15 }}>📞</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{script.title}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{script.title}</span>
         </div>
-        <button
-          onClick={handleCopy}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '5px 11px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-            background: copied ? '#22c55e15' : '#f5f7fa',
-            border: `1px solid ${copied ? '#22c55e50' : '#e5e7ef'}`,
-            color: copied ? '#16a34a' : '#6b7280',
-            transition: 'all 0.15s',
-          }}
-        >
-          {copied ? '✓ Copied!' : '📋 Copy Script'}
-        </button>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          {/* AI Personalize toggle */}
+          {aiScript && (
+            <button
+              onClick={() => setShowAi(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: showAi ? '#4a6cf720' : '#f5f7fa', border: `1px solid ${showAi ? '#4a6cf7' : '#e5e7ef'}`, color: showAi ? '#4a6cf7' : '#6b7280', transition: 'all 0.15s' }}
+            >
+              {showAi ? '⚡ AI' : '📄 Base'}
+            </button>
+          )}
+          <button
+            onClick={handlePersonalize}
+            disabled={aiLoading}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: aiLoading ? 'wait' : 'pointer', background: '#ff9b2618', border: '1px solid #ff9b2650', color: '#d97706', transition: 'all 0.15s', opacity: aiLoading ? 0.7 : 1 }}
+          >
+            {aiLoading ? <><Loader size={10} style={{ animation: 'spin 0.7s linear infinite' }} /> Personalizing…</> : '✨ AI Personalize'}
+          </button>
+          <button
+            onClick={handleCopy}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: copied ? '#22c55e15' : '#f5f7fa', border: `1px solid ${copied ? '#22c55e50' : '#e5e7ef'}`, color: copied ? '#16a34a' : '#6b7280', transition: 'all 0.15s' }}
+          >
+            {copied ? '✓ Copied!' : '📋 Copy'}
+          </button>
+        </div>
       </div>
-      <div style={{ padding: '14px 16px', maxHeight: 380, overflowY: 'auto' }}>
-        <pre style={{
-          margin: 0, fontSize: 12, color: '#374151', lineHeight: 1.8,
-          whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit',
-        }}>
-          {renderScript(script.content, lead)}
+
+      {/* AI mode badge */}
+      {showAi && aiScript && (
+        <div style={{ padding: '6px 16px', background: '#4a6cf710', borderBottom: '1px solid #4a6cf720', fontSize: 11, color: '#4a6cf7', fontWeight: 600 }}>
+          ⚡ AI-personalized for {lead.name || lead.company} — based on their notes & situation
+        </div>
+      )}
+
+      {aiError && (
+        <div style={{ padding: '8px 16px', background: '#ff5c5c10', borderBottom: '1px solid #ff5c5c30', fontSize: 11, color: '#ff5c5c' }}>{aiError}</div>
+      )}
+
+      {/* Script body */}
+      <div style={{ padding: '14px 16px', maxHeight: 400, overflowY: 'auto' }}>
+        <pre style={{ margin: 0, fontSize: 12, color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit' }}>
+          {renderScript(displayText)}
         </pre>
       </div>
     </div>
@@ -1336,6 +1415,7 @@ export default function Leads() {
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [scripts, setScripts] = useState([]);
+  const [scriptsModalOpen, setScriptsModalOpen] = useState(false);
   const [allCommLog, setAllCommLog] = useState([]);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [activeTab, setActiveTab] = useState('All Leads');
@@ -2191,8 +2271,45 @@ export default function Leads() {
         </div>
       )}
 
+      {/* ── Floating Scripts Button ──────────────────────────────────────── */}
+      {!detailLead && (
+        <button
+          onClick={() => setScriptsModalOpen(true)}
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 9000,
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '11px 18px', borderRadius: 30, fontWeight: 700, fontSize: 13,
+            background: '#1a1a2e', color: '#fff', border: 'none', cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+          }}
+        >
+          <FileText size={15} /> Call Scripts
+        </button>
+      )}
+
+      {/* ── Scripts Browse Modal ─────────────────────────────────────────── */}
+      {scriptsModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}>
+          <div onClick={() => setScriptsModalOpen(false)} style={{ position: 'absolute', inset: 0 }} />
+          <div style={{ position: 'relative', width: 520, maxHeight: '85vh', background: '#fff', borderRadius: '12px 12px 0 0', boxShadow: '0 -8px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10, background: '#1a1a2e' }}>
+              <FileText size={16} color="#ff9b26" />
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', flex: 1 }}>Call Scripts</span>
+              <button onClick={() => setScriptsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4 }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {scripts.length === 0 ? (
+                <div style={{ padding: 32, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>No scripts found.</div>
+              ) : scripts.map(s => <ScriptBrowseRow key={s.id} script={s} />)}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Processing-complete notifications ────────────────────────────── */}
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
+      <div style={{ position: 'fixed', bottom: 24, right: detailLead ? 24 : 140, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
         {processedNotifs.map(n => (
           <div key={n.id} style={{
             background: '#1a1a2e', color: '#fff', borderRadius: 10,
