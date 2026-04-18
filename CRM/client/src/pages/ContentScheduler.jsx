@@ -234,6 +234,14 @@ export default function ContentScheduler() {
     try {
       const data = await getContentClients();
       setClients(data || []);
+      // Auto-select the rayvaughnceo client on first load
+      const defaultClient = (data || []).find(c =>
+        c.uploadpost_user === 'rayvaughnceo' || c.business_name?.toLowerCase().includes('rayvaughn')
+      );
+      if (defaultClient) {
+        setSelectedClientId(defaultClient.id);
+        setSidebarCollapsed(true);
+      }
     } catch (e) { console.error(e); }
   }
 
