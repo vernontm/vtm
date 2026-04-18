@@ -106,7 +106,7 @@ export default function GlobalAgent() {
   const navigate = useNavigate();
   const ctx = getContext(location.pathname);
   const { leadPanelOpen } = useUi();
-  if (leadPanelOpen || location.pathname === '/leads') return null;
+  const hidden = leadPanelOpen || location.pathname === '/leads';
 
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState('');
@@ -336,6 +336,8 @@ export default function GlobalAgent() {
   const clearChat = () => { setMessages([]); setDraft(null); setInput(''); };
 
   const quickBtns = QUICK_BUTTONS[ctx.type] || QUICK_BUTTONS.general;
+
+  if (hidden) return null;
 
   return (
     <div style={{
