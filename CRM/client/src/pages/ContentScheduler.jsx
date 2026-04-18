@@ -10,6 +10,8 @@ import {
   sendIGDM, getIGConversations, startAutoDM, getAutoDMStatus, getAutoDMLogs,
   pauseAutoDM, resumeAutoDM, stopAutoDM, deleteAutoDM,
   getUploadPostAnalytics, getTotalImpressions,
+  saveAnalyticsSnapshot, getAnalyticsHistory,
+  getMonitors, startMonitor, stopMonitor,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -140,9 +142,15 @@ export default function ContentScheduler() {
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState('last_month');
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('last_7_days');
   const [analyticsPlatforms, setAnalyticsPlatforms] = useState('instagram,tiktok');
   const [impressionsData, setImpressionsData] = useState(null);
+  const [analyticsHistory, setAnalyticsHistory] = useState([]);
+  const [compareMode, setCompareMode] = useState(false);
+
+  // AutoDM monitors state
+  const [monitors, setMonitors] = useState([]);
+  const [monitorLoading, setMonitorLoading] = useState(null); // script id being toggled
 
   // Generator state
   const [genMessages, setGenMessages] = useState([]);
@@ -278,10 +286,58 @@ export default function ContentScheduler() {
       } else {
         setCarouselTemplates({ cover: '', content: '', cta: '' });
       }
+      // Load monitors
+      getMonitors(clientId).then(rows => setMonitors(rows || [])).catch(() => {});
     } catch (e) { console.error(e); }
     setLoading(false);
   }
 
+  // ── Auto-load analytics when section opens ──
+  useEffect(() => {
+    if (activeSection !== 'analytics' || !client) return;
+    loadAnalytics();
+  }, [activeSection, client?.id, analyticsPeriod, analyticsPlatforms]);
+
+  async function loadAnalytics() {
+    if (!client) return;
+    setAnalyticsLoading(true);
+    try {
+      const upUser = client.uploadpost_user || 'rayvaughnceo';
+      // Save fresh snapshot and load history in parallel
+      const [snapshot, history] = await Promise.all([
+        saveAnalyticsSnapshot({ client_id: client.id, user: upUser, platforms: analyticsPlatforms, period: analyticsPeriod }),
+        getAnalyticsHistory(client.id, analyticsPeriod, analyticsPlatforms),
+      ]);
+      if (snapshot?.analytics_data) setAnalyticsData(snapshot.analytics_data);
+      if (snapshot?.impressions_data) setImpressionsData(snapshot.impressions_data);
+      setAnalyticsHistory(history || []);
+    } catch (e) { console.error('Analytics load failed:', e); }
+    setAnalyticsLoading(false);
+  }
+
+  // ── Auto-replace expired monitors with newest delivered posts ──
+  useEffect(() => {
+    if (!client || !monitors.length) return;
+    const active = monitors.filter(m => m.status === 'active');
+    const needed = 2 - active.length;
+    if (needed <= 0) return;
+    // Find newest delivered posts not already monitored
+    const monitoredScriptIds = new Set(monitors.filter(m => m.status === 'active').map(m => m.script_id));
+    const delivered = scripts
+      .filter(s => ['posted', 'exported'].includes(s.status) && s.media_urls?.[0] && !monitoredScriptIds.has(s.id))
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+      .slice(0, needed);
+    if (!delivered.length) return;
+    for (const script of delivered) {
+      startMonitor({
+        client_id: client.id,
+        script_id: script.id,
+        user: client.uploadpost_user || 'rayvaughnceo',
+        post_url: script.media_urls[0],
+        reply_message: client.autodm_reply_message || '',
+      }).then(() => getMonitors(client.id).then(rows => setMonitors(rows || []))).catch(() => {});
+    }
+  }, [monitors.map(m => m.id + m.status).join(',')]);
 
   // ── Media upload ──
   async function handleMediaDrop(e, script) {
@@ -1682,6 +1738,39 @@ export default function ContentScheduler() {
                                       <Send size={12} />
                                     </button>
                                   )}
+                                  {/* AutoDM toggle — only on delivered posts */}
+                                  {['posted', 'exported'].includes(script.status) && script.media_urls?.[0] && (() => {
+                                    const monitor = monitors.find(m => m.script_id === script.id && m.status === 'active');
+                                    const isLoading = monitorLoading === script.id;
+                                    return (
+                                      <button
+                                        disabled={isLoading}
+                                        title={monitor ? `AutoDM active — expires ${new Date(monitor.expires_at).toLocaleDateString()}` : 'Start AutoDM monitor'}
+                                        onClick={async () => {
+                                          setMonitorLoading(script.id);
+                                          try {
+                                            if (monitor) {
+                                              await stopMonitor({ db_id: monitor.id, monitor_id: monitor.monitor_id });
+                                            } else {
+                                              await startMonitor({
+                                                client_id: client.id,
+                                                script_id: script.id,
+                                                user: client.uploadpost_user || 'rayvaughnceo',
+                                                post_url: script.media_urls[0],
+                                                reply_message: client.autodm_reply_message || '',
+                                              });
+                                            }
+                                            const rows = await getMonitors(client.id);
+                                            setMonitors(rows || []);
+                                          } catch (e) { alert('AutoDM error: ' + e.message); }
+                                          setMonitorLoading(null);
+                                        }}
+                                        style={{ ...btnGhost, padding: '4px 6px', color: monitor ? '#E8650A' : '#8e8ea0' }}
+                                      >
+                                        {isLoading ? <Loader size={12} className="spin" /> : <Zap size={12} />}
+                                      </button>
+                                    );
+                                  })()}
                                   <button onClick={async () => {
                                     if (confirm('Delete this script?')) {
                                       await deleteContentScript(script.id);
@@ -2731,32 +2820,24 @@ export default function ContentScheduler() {
                       <option value="instagram,tiktok">Instagram + TikTok</option>
                       <option value="instagram">Instagram only</option>
                       <option value="tiktok">TikTok only</option>
-                      <option value="instagram,tiktok,youtube">Instagram + TikTok + YouTube</option>
+                      <option value="instagram,tiktok,youtube">IG + TikTok + YouTube</option>
                       <option value="instagram,tiktok,facebook,youtube,linkedin">All platforms</option>
                     </select>
-                    <button style={btnPrimary} disabled={analyticsLoading}
-                      onClick={async () => {
-                        setAnalyticsLoading(true);
-                        try {
-                          const [analytics, impressions] = await Promise.all([
-                            getUploadPostAnalytics(client.uploadpost_user, analyticsPlatforms, analyticsPeriod),
-                            getTotalImpressions(client.uploadpost_user, analyticsPeriod),
-                          ]);
-                          setAnalyticsData(analytics);
-                          setImpressionsData(impressions);
-                        } catch (e) { alert('Failed: ' + e.message); }
-                        setAnalyticsLoading(false);
-                      }}>
-                      {analyticsLoading ? <Loader size={13} className="spin" /> : <BarChart2 size={13} />} Load Analytics
+                    <button style={btnGhost} onClick={() => setCompareMode(v => !v)}>
+                      {compareMode ? 'Hide History' : 'Compare Periods'}
                     </button>
+                    <button style={btnGhost} disabled={analyticsLoading} onClick={loadAnalytics}>
+                      {analyticsLoading ? <Loader size={13} className="spin" /> : <RefreshCw size={13} />} Refresh
+                    </button>
+                    {analyticsLoading && <span style={{ fontSize: 12, color: '#8e8ea0' }}>Loading…</span>}
                   </div>
 
                   {/* Total Impressions */}
                   {impressionsData && (
                     <div style={{ ...cardStyle, padding: 20 }}>
-                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Total Impressions</h3>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Total Impressions — {analyticsPeriod.replace(/_/g, ' ')}</h3>
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                        <div style={{ background: '#f8f9fc', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
+                        <div style={{ background: '#f0f4ff', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
                           <div style={{ fontSize: 28, fontWeight: 800, color: '#4a6cf7' }}>
                             {(impressionsData.total_impressions || impressionsData.impressions || 0).toLocaleString()}
                           </div>
@@ -2801,10 +2882,50 @@ export default function ContentScheduler() {
                     </div>
                   )}
 
+                  {/* History / Compare */}
+                  {compareMode && analyticsHistory.length > 0 && (
+                    <div style={{ ...cardStyle, padding: 20 }}>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Snapshot History</h3>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid #eef0f5' }}>
+                              <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Date</th>
+                              <th style={{ textAlign: 'right', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Total Impressions</th>
+                              {['instagram', 'tiktok', 'youtube', 'facebook'].filter(p => analyticsPlatforms.includes(p)).map(p => (
+                                <th key={p} style={{ textAlign: 'right', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600, textTransform: 'capitalize' }}>{p}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {analyticsHistory.map((row, i) => {
+                              const imp = row.impressions_data;
+                              const total = imp?.total_impressions || imp?.impressions || 0;
+                              return (
+                                <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f8', background: i === 0 ? '#f0f4ff' : 'transparent' }}>
+                                  <td style={{ padding: '7px 10px', fontWeight: i === 0 ? 700 : 400 }}>
+                                    {new Date(row.snapshot_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    {i === 0 && <span style={{ marginLeft: 6, fontSize: 10, color: '#4a6cf7', fontWeight: 700 }}>Latest</span>}
+                                  </td>
+                                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700 }}>{Number(total).toLocaleString()}</td>
+                                  {['instagram', 'tiktok', 'youtube', 'facebook'].filter(p => analyticsPlatforms.includes(p)).map(p => (
+                                    <td key={p} style={{ padding: '7px 10px', textAlign: 'right' }}>
+                                      {Number(imp?.breakdown?.[p] || 0).toLocaleString()}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
                   {!analyticsData && !impressionsData && !analyticsLoading && (
                     <div style={{ ...cardStyle, padding: 20, textAlign: 'center', color: '#8e8ea0' }}>
                       <BarChart2 size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
-                      <p style={{ fontSize: 13 }}>Select a period and click Load Analytics to view data.</p>
+                      <p style={{ fontSize: 13 }}>Analytics load automatically when you open this section.</p>
                     </div>
                   )}
                 </>

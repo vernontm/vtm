@@ -487,6 +487,11 @@ export const deleteAutoDM                = (monitor_id) => request('/uploadpost?
 export const getUploadPostAnalytics      = (user, platforms, period) => request(`/uploadpost?action=analytics&user=${encodeURIComponent(user)}&platforms=${platforms || 'instagram,tiktok'}&period=${period || 'last_month'}`);
 export const getTotalImpressions         = (user, period) => request(`/uploadpost?action=total-impressions&user=${encodeURIComponent(user)}&period=${period || 'last_month'}&breakdown=true`);
 export const getPostAnalytics            = (request_id)  => request(`/uploadpost?action=post-analytics&request_id=${request_id}`);
+export const saveAnalyticsSnapshot       = (data)        => request('/uploadpost?action=save-analytics', { method: 'POST', body: JSON.stringify(data) });
+export const getAnalyticsHistory         = (client_id, period, platforms) => request(`/uploadpost?action=analytics-history&client_id=${client_id}${period ? `&period=${period}` : ''}${platforms ? `&platforms=${encodeURIComponent(platforms)}` : ''}`);
+export const getMonitors                 = (client_id)   => request(`/uploadpost?action=get-monitors&client_id=${client_id}`);
+export const startMonitor                = (data)        => request('/uploadpost?action=start-monitor', { method: 'POST', body: JSON.stringify(data) });
+export const stopMonitor                 = (data)        => request('/uploadpost?action=stop-monitor', { method: 'POST', body: JSON.stringify(data) });
 
 // Team & Access
 export const getTeamMembers   = ()           => request('/team');

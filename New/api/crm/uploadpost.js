@@ -264,6 +264,136 @@ export default async function handler(req, res) {
       return res.json(data);
     }
 
+    // ── Save analytics snapshot to DB ─────────────────────────────────────────
+    if (req.method === 'POST' && action === 'save-analytics') {
+      const { client_id, user, platforms, period } = req.body;
+      if (!client_id || !user) return res.status(400).json({ error: 'client_id and user required' });
+      const plat = platforms || 'instagram,tiktok';
+      const per  = period    || 'last_7_days';
+
+      const [analyticsData, impressionsData] = await Promise.allSettled([
+        upFetch(`/analytics/${user}?platforms=${plat}&period=${per}`, { headers: upHeaders() }),
+        upFetch(`/uploadposts/total-impressions/${user}?period=${per}&breakdown=true`, { headers: upHeaders() }),
+      ]);
+
+      const snapshot = {
+        client_id,
+        snapshot_date: new Date().toISOString().slice(0, 10),
+        period: per,
+        platforms: plat,
+        analytics_data: analyticsData.status === 'fulfilled' ? analyticsData.value : null,
+        impressions_data: impressionsData.status === 'fulfilled' ? impressionsData.value : null,
+        updated_at: new Date().toISOString(),
+      };
+
+      await supaFetch('crm_analytics_snapshots', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify(snapshot),
+      }).catch(() => {});
+
+      return res.json(snapshot);
+    }
+
+    // ── Get analytics history from DB ─────────────────────────────────────────
+    if (req.method === 'GET' && action === 'analytics-history') {
+      const { client_id, period, platforms } = req.query;
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      let qs = `crm_analytics_snapshots?client_id=eq.${client_id}&order=snapshot_date.desc&limit=90`;
+      if (period)    qs += `&period=eq.${period}`;
+      if (platforms) qs += `&platforms=eq.${platforms}`;
+      const rows = await supaFetch(qs);
+      return res.json(rows || []);
+    }
+
+    // ── Get AutoDM monitors from DB ───────────────────────────────────────────
+    if (req.method === 'GET' && action === 'get-monitors') {
+      const { client_id } = req.query;
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      const rows = await supaFetch(
+        `crm_autodm_monitors?client_id=eq.${client_id}&order=created_at.desc`
+      );
+      // Auto-expire monitors past 15 days
+      const now = new Date();
+      const expired = (rows || []).filter(r => r.status === 'active' && new Date(r.expires_at) < now);
+      for (const r of expired) {
+        await supaFetch(`crm_autodm_monitors?id=eq.${r.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'expired' }),
+        }).catch(() => {});
+        // Stop on Upload-Post side if we have a monitor_id
+        if (r.monitor_id) {
+          await upFetch('/uploadposts/autodms/stop', {
+            method: 'POST', headers: upHeaders(),
+            body: JSON.stringify({ monitor_id: r.monitor_id }),
+          }).catch(() => {});
+        }
+      }
+      const fresh = await supaFetch(`crm_autodm_monitors?client_id=eq.${client_id}&order=created_at.desc`);
+      return res.json(fresh || []);
+    }
+
+    // ── Start AutoDM monitor for a script ─────────────────────────────────────
+    if (req.method === 'POST' && action === 'start-monitor') {
+      const { client_id, script_id, user, post_url, reply_message, trigger_keywords } = req.body;
+      if (!client_id || !post_url || !user) return res.status(400).json({ error: 'client_id, user, post_url required' });
+
+      // Enforce max 2 active — stop the oldest if needed
+      const active = await supaFetch(
+        `crm_autodm_monitors?client_id=eq.${client_id}&status=eq.active&order=created_at.asc`
+      );
+      if ((active || []).length >= 2) {
+        const oldest = active[0];
+        if (oldest.monitor_id) {
+          await upFetch('/uploadposts/autodms/stop', {
+            method: 'POST', headers: upHeaders(),
+            body: JSON.stringify({ monitor_id: oldest.monitor_id }),
+          }).catch(() => {});
+        }
+        await supaFetch(`crm_autodm_monitors?id=eq.${oldest.id}`, {
+          method: 'PATCH', body: JSON.stringify({ status: 'stopped' }),
+        }).catch(() => {});
+      }
+
+      // Start on Upload-Post
+      const upBody = { profile_username: user, post_url, reply_message: reply_message || '' };
+      if (trigger_keywords) upBody.trigger_keywords = trigger_keywords;
+      const upRes = await upFetch('/uploadposts/autodms/start', {
+        method: 'POST', headers: upHeaders(), body: JSON.stringify(upBody),
+      });
+
+      // Save to DB
+      const row = await supaFetch('crm_autodm_monitors', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          client_id, script_id: script_id || null,
+          monitor_id: upRes?.monitor_id || upRes?.id || null,
+          post_url, reply_message: reply_message || null,
+          status: 'active',
+          started_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString(),
+        }),
+      });
+      return res.json({ ...upRes, db_row: Array.isArray(row) ? row[0] : row });
+    }
+
+    // ── Stop AutoDM monitor ───────────────────────────────────────────────────
+    if (req.method === 'POST' && action === 'stop-monitor') {
+      const { db_id, monitor_id } = req.body;
+      if (monitor_id) {
+        await upFetch('/uploadposts/autodms/stop', {
+          method: 'POST', headers: upHeaders(), body: JSON.stringify({ monitor_id }),
+        }).catch(() => {});
+      }
+      if (db_id) {
+        await supaFetch(`crm_autodm_monitors?id=eq.${db_id}`, {
+          method: 'PATCH', body: JSON.stringify({ status: 'stopped' }),
+        }).catch(() => {});
+      }
+      return res.json({ success: true });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
 
   } catch (err) {
