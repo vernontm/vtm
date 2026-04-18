@@ -83,6 +83,7 @@ export default function ContentScheduler() {
   const [selectedClientId, setSelectedClientId] = useState('');
   const [client, setClient] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Content state
   const [scripts, setScripts] = useState([]);
@@ -211,7 +212,7 @@ export default function ContentScheduler() {
   const emptyClientForm = {
     business_name: '', owner_name: '', industry: '', website_url: '',
     instagram_handle: '', tiktok_handle: '', facebook_handle: '', threads_handle: '', youtube_handle: '', linkedin_handle: '',
-    uploadpost_user: '', uploadpost_platforms: ['tiktok', 'instagram'],
+    uploadpost_user: 'rayvaughnceo', uploadpost_platforms: ['tiktok', 'instagram'],
     autodm_reply_message: '',
     brand_bible: '', target_audience: '', preferred_tone: 'friendly', notes: '',
   };
@@ -466,7 +467,7 @@ export default function ContentScheduler() {
 
   // ── Publish to Upload-Post ──
   async function handlePublish(script, platforms, scheduledDate) {
-    if (!client?.uploadpost_user) { alert('Set an Upload-Post username in client settings first.'); return; }
+    const upUser = client?.uploadpost_user || 'rayvaughnceo';
     setPublishLoading(true);
     try {
       const mediaUrls = script.media_urls || [];
@@ -477,7 +478,7 @@ export default function ContentScheduler() {
       await publishToSocial({
         script_id: script.id,
         client_id: client.id,
-        user: client.uploadpost_user,
+        user: upUser,
         platforms,
         title: script.title,
         caption: script.caption,
@@ -798,7 +799,7 @@ export default function ContentScheduler() {
       threads_handle: client.threads_handle || '',
       youtube_handle: client.youtube_handle || '',
       linkedin_handle: client.linkedin_handle || '',
-      uploadpost_user: client.uploadpost_user || '',
+      uploadpost_user: client.uploadpost_user || 'rayvaughnceo',
       uploadpost_platforms: client.uploadpost_platforms || ['tiktok', 'instagram'],
       autodm_reply_message: client.autodm_reply_message || '',
       brand_bible: client.brand_bible || '',
@@ -919,8 +920,9 @@ export default function ContentScheduler() {
     <div className="cs-page" style={{ height: '100%', display: 'flex' }}>
       {/* ══════ LEFT SIDEBAR ══════ */}
       <div className="cs-sidebar" style={{
-        width: 200, background: '#fff', borderRight: '1px solid #e5e7ef',
+        width: sidebarCollapsed ? 0 : 200, background: '#fff', borderRight: sidebarCollapsed ? 'none' : '1px solid #e5e7ef',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
+        overflow: 'hidden', transition: 'width 0.2s ease',
       }}>
         {/* Sidebar header */}
         <div style={{ padding: '18px 16px 10px', fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>
@@ -938,7 +940,7 @@ export default function ContentScheduler() {
           {clients.map(c => (
             <div
               key={c.id}
-              onClick={() => setSelectedClientId(c.id)}
+              onClick={() => { setSelectedClientId(c.id); setSidebarCollapsed(true); }}
               style={{
                 padding: '8px 16px',
                 fontSize: 13,
@@ -979,8 +981,21 @@ export default function ContentScheduler() {
         <div className="cs-sections" style={{
           width: 56, background: '#fafbfd', borderRight: '1px solid #e5e7ef',
           display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0,
-          paddingTop: 16, gap: 4,
+          paddingTop: 8, gap: 4,
         }}>
+          {/* Expand/collapse client list toggle */}
+          <button
+            onClick={() => setSidebarCollapsed(v => !v)}
+            title={sidebarCollapsed ? 'Show clients' : 'Hide clients'}
+            style={{
+              width: 42, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: 'transparent', color: '#8e8ea0', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+              transition: 'color 0.15s',
+            }}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
           {SIDEBAR_SECTIONS.map(({ key, label, Icon }) => (
             <button key={key} onClick={() => setActiveSection(key)} title={label}
               style={{
@@ -1281,7 +1296,7 @@ export default function ContentScheduler() {
                   }}>
                     <Calendar size={13} /> Auto Schedule
                   </button>}
-                  {scripts.length > 0 && client?.uploadpost_user && <button
+                  {scripts.length > 0 && <button
                     style={{ ...btnPrimary, opacity: selectedScripts.size > 0 ? 1 : 0.4, background: '#16a34a', borderColor: '#16a34a' }}
                     onClick={() => {
                       if (!selectedScripts.size) return;
@@ -1643,7 +1658,7 @@ export default function ContentScheduler() {
                                       ? <Loader size={12} className="spin" />
                                       : <Sparkles size={12} />}
                                   </button>
-                                  {client?.uploadpost_user && (
+                                  {(
                                     <button onClick={() => {
                                       setPublishModal(script);
                                       setPublishPlatforms(client.uploadpost_platforms || ['tiktok', 'instagram']);
