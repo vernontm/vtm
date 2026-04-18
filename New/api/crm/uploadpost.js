@@ -61,15 +61,19 @@ export default async function handler(req, res) {
       if (!platforms?.length) return res.status(400).json({ error: 'platforms required' });
 
       const fullCaption = [caption, hashtags].filter(Boolean).join('\n\n');
-      const postTitle   = title || fullCaption.slice(0, 100);
       const mediaUrl    = (media_urls || [])[0] || null;
+
+      // title is only meaningful for YouTube/LinkedIn — all other platforms (TikTok, Instagram, etc.)
+      // use description as the caption; sending title there causes it to appear instead of the caption
+      const titlePlatforms = ['youtube', 'linkedin'];
+      const needsTitle = (platforms || []).some(p => titlePlatforms.includes(p));
 
       // Build multipart/form-data body
       const form = new URLSearchParams();
       form.append('user', user);
       (platforms || []).forEach(p => form.append('platform[]', p));
-      if (postTitle)      form.append('title', postTitle);
-      if (fullCaption)    form.append('description', fullCaption);
+      if (needsTitle && title) form.append('title', title);
+      if (fullCaption)         form.append('description', fullCaption);
       if (scheduled_date) form.append('scheduled_date', scheduled_date);
       if (timezone)       form.append('timezone', timezone);
       if (first_comment)  form.append('first_comment', first_comment);

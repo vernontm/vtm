@@ -96,7 +96,10 @@ module.exports = async function handler(req, res) {
         client.core_hashtags ? `MANDATORY CORE HASHTAGS (always include first): ${client.core_hashtags}` : '',
       ].filter(Boolean).join('\n');
 
+      const today = new Date().toISOString().slice(0, 10);
       const prompt = `You are a social media content creator. Based on this video transcript and the brand context below, generate content for posting this video on social media.
+
+TODAY'S DATE: ${today}
 
 BRAND CONTEXT:
 ${brandContext}

@@ -201,7 +201,7 @@ MANDATORY CORE HASHTAGS (always include first): ${client.core_hashtags || '(none
             body: JSON.stringify({
               model: 'claude-sonnet-4-5',
               max_tokens: 4096,
-              system: `Generate social media posts. NEVER use em dashes.\n\nBRAND CONTEXT:${brandContext}${styleInstructions}\n\nReturn JSON: { "posts": [{ "title": "...", "caption": "...", "hashtags": "...", "first_comment": "..." }] }. Return ONLY valid JSON.`,
+              system: `Generate social media posts. NEVER use em dashes. TODAY'S DATE: ${new Date().toISOString().slice(0, 10)}.\n\nBRAND CONTEXT:${brandContext}${styleInstructions}\n\nReturn JSON: { "posts": [{ "title": "...", "caption": "...", "hashtags": "...", "first_comment": "..." }] }. Return ONLY valid JSON.`,
               messages: [{ role: 'user', content: action.params.prompt || `Create ${action.params.count || 5} engaging posts` }],
             }),
           });
