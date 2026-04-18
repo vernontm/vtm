@@ -2730,13 +2730,12 @@ export default function ContentScheduler() {
                               );
                             })}
                           </div>
-                          {autoDMPostUrl && (
-                            <div style={{ marginTop: 6, fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <Check size={11} color="#16a34a" />
-                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{autoDMPostUrl}</span>
-                              <button onClick={() => setAutoDMPostUrl('')} style={{ ...btnGhost, padding: '1px 4px', flexShrink: 0 }}><X size={10} /></button>
-                            </div>
-                          )}
+                          <input
+                            style={{ ...inputStyle, marginTop: 8 }}
+                            placeholder="Or paste a TikTok post URL directly…"
+                            value={autoDMPostUrl}
+                            onChange={e => setAutoDMPostUrl(e.target.value)}
+                          />
                         </div>
                         <input style={{ ...inputStyle, marginBottom: 8 }} placeholder="Trigger keywords (comma-separated, optional — e.g. LINK, INFO)"
                           value={autoDMKeywords} onChange={e => setAutoDMKeywords(e.target.value)} />
