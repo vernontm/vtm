@@ -66,7 +66,6 @@ export default async function handler(req, res) {
           }),
         });
 
-        console.log(`Email sent to ${toEmail} (Gmail msg: ${result.id})`);
         return res.json({ success: true, message_id: result.id });
       } catch (err) {
         console.error('Gmail send error:', err.message);
@@ -114,7 +113,6 @@ export default async function handler(req, res) {
           }),
         });
 
-        console.log(`Draft saved for ${toEmail}: ${draft.id}`);
         return res.json({ success: true, draft_id: draft.id });
       } catch (err) {
         console.error('Gmail draft error:', err.message);

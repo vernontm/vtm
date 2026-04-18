@@ -33,7 +33,6 @@ export default async function handler(req, res) {
     }
 
     const result = await response.json();
-    console.log('NanoBanana record-info response:', JSON.stringify(result).slice(0, 800));
 
     // Actual API response format (verified):
     // Success: { code: 200, data: { taskId, successFlag: 1, response: { resultImageUrl: "..." } } }

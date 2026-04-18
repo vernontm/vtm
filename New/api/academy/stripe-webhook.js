@@ -55,7 +55,6 @@ export default async function handler(req, res) {
     }
 
     const event = JSON.parse(rawBody.toString());
-    console.log(`Stripe webhook received: ${event.type} (${event.id})`);
 
     // Idempotency check — skip if already processed
     try {
@@ -65,7 +64,6 @@ export default async function handler(req, res) {
         headers: { 'Prefer': 'return=representation,resolution=ignore-duplicates' },
       });
       if (!insertResult || (Array.isArray(insertResult) && insertResult.length === 0)) {
-        console.log(`Stripe event ${event.id} already processed, skipping`);
         return res.json({ received: true, skipped: true });
       }
     } catch {
@@ -89,7 +87,6 @@ export default async function handler(req, res) {
             }),
           });
         }
-        console.log(`Updated subscription for customer ${customerId}: ${obj.status}`);
         break;
       }
 
@@ -101,7 +98,6 @@ export default async function handler(req, res) {
             subscription_status: 'canceled',
           }),
         }).catch(() => {});
-        console.log(`Subscription canceled for customer ${customerId}`);
         break;
       }
 
@@ -118,12 +114,12 @@ export default async function handler(req, res) {
             }),
           }).catch(() => {});
         }
-        console.log(`Checkout completed for user ${userId}, customer ${customerId}`);
         break;
       }
 
       default:
-        console.log(`Unhandled Stripe event type: ${event.type}`);
+        // Unhandled event type — no-op
+        break;
     }
 
     return res.json({ received: true });

@@ -22,13 +22,16 @@ export default function Blog() {
   const [saving, setSaving]     = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async () => {
+    setLoadError('');
     try {
       const data = await getBlogPosts();
       setPosts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load posts:', err);
+      setLoadError(err?.message || 'Failed to load posts');
     } finally {
       setLoading(false);
     }
@@ -329,6 +332,13 @@ export default function Blog() {
           </button>
         ))}
       </div>
+
+      {loadError && (
+        <div style={{ margin: '12px 0', padding: '12px 16px', background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, fontSize: 13, color: '#ff5c5c', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontFamily: 'Inter, sans-serif' }}>
+          <span>Couldn't load blog posts: {loadError}</span>
+          <button onClick={load} style={{ padding: '6px 14px', borderRadius: 6, background: '#ff5c5c', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (

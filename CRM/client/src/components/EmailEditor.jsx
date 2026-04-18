@@ -5,7 +5,22 @@ import {
   List, ListOrdered, Link as LinkIcon, Image as ImageIcon,
   Heading1, Heading2, Type, Code2, Eye, Loader, Upload,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { uploadEmailImage } from '../api';
+
+// Sanitize HTML before assigning to innerHTML / dangerouslySetInnerHTML.
+// Emails from Gmail can contain arbitrary senders' HTML (XSS vector).
+function sanitize(html) {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    // Email-friendly: allow images, links, basic tables; strip scripts/iframes/event handlers.
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'target', 'rel', 'style', 'class', 'width', 'height', 'align', 'border', 'cellpadding', 'cellspacing', 'colspan', 'rowspan'],
+    FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'style', 'link', 'meta'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit'],
+    ADD_ATTR: ['target'],
+  });
+}
 
 // Broadcast-style rich text editor with image upload.
 // Emits HTML via onChange(html). Accepts initial `value` (HTML string).
@@ -22,9 +37,10 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
   useEffect(() => {
     if (value !== lastPropValue.current) {
       lastPropValue.current = value;
-      setHtmlSource(value || '');
-      if (editorRef.current && mode === 'rich' && editorRef.current.innerHTML !== (value || '')) {
-        editorRef.current.innerHTML = value || '';
+      const clean = sanitize(value || '');
+      setHtmlSource(clean);
+      if (editorRef.current && mode === 'rich' && editorRef.current.innerHTML !== clean) {
+        editorRef.current.innerHTML = clean;
       }
     }
   }, [value, mode]);
@@ -32,7 +48,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
   // On first mount — hydrate contentEditable
   useEffect(() => {
     if (editorRef.current && mode === 'rich' && !editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = value || '';
+      editorRef.current.innerHTML = sanitize(value || '');
     }
   }, [mode]);
 
@@ -245,7 +261,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
         >
           <div
             style={{ maxWidth: 600, margin: '0 auto', background: '#fff', padding: '32px 28px', borderRadius: 12, boxShadow: '0 2px 8px rgba(10,20,40,0.06)' }}
-            dangerouslySetInnerHTML={{ __html: htmlSource || '<p style="color:#b0b0c0">Nothing to preview yet.</p>' }}
+            dangerouslySetInnerHTML={{ __html: sanitize(htmlSource) || '<p style="color:#b0b0c0">Nothing to preview yet.</p>' }}
           />
         </div>
       )}

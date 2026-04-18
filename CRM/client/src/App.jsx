@@ -27,6 +27,7 @@ import Portfolio from './pages/Portfolio';
 import ContentScheduler from './pages/ContentScheduler';
 import EmailMarketing from './pages/EmailMarketing';
 import GlobalAgent from './components/GlobalAgent';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Academy Admin Pages
 import AcademyDashboard from './pages/AcademyDashboard';
@@ -71,6 +72,7 @@ function AppLayout() {
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <main key={refreshKey} className="app-main" style={{ flex: 1, overflow: 'auto' }}>
+            <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
@@ -105,6 +107,7 @@ function AppLayout() {
               <Route path="/scripts" element={<Scripts />} />
               <Route path="/products" element={<Products />} />
             </Routes>
+            </ErrorBoundary>
           </main>
           <GlobalAgent />
         </div>
@@ -114,7 +117,19 @@ function AppLayout() {
 }
 
 function AuthGate() {
-  const { session, loading } = useAuth();
+  const { session, loading, authError, retry } = useAuth();
+
+  if (authError) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ maxWidth: 440, background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '28px 32px', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e', marginBottom: 10 }}>Connection problem</div>
+          <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, marginBottom: 18 }}>{authError}</div>
+          <button onClick={retry} style={{ padding: '10px 20px', borderRadius: 8, background: '#4a6cf7', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Try again</button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -143,10 +158,12 @@ function AuthGate() {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/admin">
-      <AuthProvider>
-        <AuthGate />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter basename="/admin">
+        <AuthProvider>
+          <AuthGate />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

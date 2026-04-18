@@ -772,7 +772,6 @@ export default function ContentScheduler() {
 
         const safeName = upload.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const filePath = `${client.id}/bulk/${Date.now()}_${safeName}`;
-        console.log('Uploading to storage:', filePath, 'size:', upload.file.size, 'type:', upload.file.type);
 
         // Upload via REST API directly (bypasses JS client issues)
         const { data: { session: uploadSession } } = await supabase.auth.getSession();

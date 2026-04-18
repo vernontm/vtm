@@ -19,9 +19,12 @@ export default function Contacts() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [loadError, setLoadError] = useState('');
 
   const load = async () => {
-    try { setContacts((await getContacts()).filter(c => !c.archived)); } catch (e) { console.error(e); }
+    setLoadError('');
+    try { setContacts((await getContacts()).filter(c => !c.archived)); }
+    catch (e) { console.error(e); setLoadError(e?.message || 'Failed to load contacts'); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
@@ -108,6 +111,13 @@ export default function Contacts() {
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Contact</button>
         </div>
       </div>
+
+      {loadError && (
+        <div style={{ margin: '12px 20px', padding: '12px 16px', background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, fontSize: 13, color: '#ff5c5c', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span>Couldn't load contacts: {loadError}</span>
+          <button onClick={load} style={{ padding: '6px 14px', borderRadius: 6, background: '#ff5c5c', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+        </div>
+      )}
 
       {/* ── Mobile card view ── */}
       <div className="mobile-cards">

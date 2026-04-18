@@ -395,7 +395,6 @@ Return ONLY valid JSON.`;
 
     // ── Step 2: Generate images via Kie.ai ──
     const carouselId = Date.now().toString(36);
-    console.log(`Generating ${content.slides.length} slides (templates: ${hasTemplates ? 'yes' : 'no'})...`);
 
     const taskIds = [];
     for (const slide of content.slides) {
@@ -410,23 +409,19 @@ Return ONLY valid JSON.`;
 
       let taskId;
       if (templateUrl) {
-        console.log(`Slide ${slide.slide_number}: image-to-image from template (${modelKey || 'nano-banana'})`);
         taskId = await imageToImage(templateUrl, slide.image_prompt, modelKey);
       } else {
-        console.log(`Slide ${slide.slide_number}: text-to-image (${modelKey || 'nano-banana'})`);
         taskId = await generateImage(slide.image_prompt, modelKey);
       }
       taskIds.push(taskId);
     }
 
     // Wait for all images
-    console.log('Waiting for Kie.ai...');
     const imageUrls = [];
     for (let i = 0; i < taskIds.length; i++) {
       const imgUrl = await waitForImage(taskIds[i]);
       const storageUrl = await saveImageToStorage(imgUrl, client_id, carouselId, i);
       imageUrls.push(storageUrl);
-      console.log(`Slide ${i} saved: ${storageUrl}`);
     }
 
     // ── Step 3: Create content script row ──

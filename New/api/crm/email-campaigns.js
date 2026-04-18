@@ -108,7 +108,6 @@ async function sendBatch(config, campaign, contacts, supaFetchFn) {
       method: 'POST',
       body: JSON.stringify(rolloverRows),
     });
-    console.log(`Rolled over ${toRollover.length} emails to ${rolloverTime}`);
   }
 
   // Update daily usage

@@ -40,7 +40,6 @@ export default async function handler(req, res) {
         return res.redirect(`${FRONTEND_URL}/admin/settings?gmail_error=${encodeURIComponent('OAuth succeeded but failed to save tokens. Make sure the crm_app_settings table exists.')}`);
       }
 
-      console.log(`Gmail connected: ${userData.email}`);
       return res.redirect(`${FRONTEND_URL}/admin/settings?gmail_connected=true`);
     } catch (err) {
       console.error('Gmail OAuth callback error:', err.message);
