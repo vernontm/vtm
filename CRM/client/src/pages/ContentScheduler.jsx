@@ -138,6 +138,7 @@ export default function ContentScheduler() {
   const [autoDMLoading, setAutoDMLoading] = useState(false);
   const [autoDMPostUrl, setAutoDMPostUrl] = useState('');
   const [autoDMKeywords, setAutoDMKeywords] = useState('');
+  const [autoDMReplyMessage, setAutoDMReplyMessage] = useState('');
   const [autoDMLogs, setAutoDMLogs] = useState({});
 
   // Analytics state
@@ -271,6 +272,7 @@ export default function ContentScheduler() {
         getScheduleConfig(clientId),
       ]);
       setClient(c);
+      setAutoDMReplyMessage(c?.autodm_reply_message || '');
       setScripts(s || []);
       setScheduleConfig(sc);
       if (sc) {
@@ -2739,14 +2741,14 @@ export default function ContentScheduler() {
                         </div>
                         <input style={{ ...inputStyle, marginBottom: 8 }} placeholder="Trigger keywords (comma-separated, optional — e.g. LINK, INFO)"
                           value={autoDMKeywords} onChange={e => setAutoDMKeywords(e.target.value)} />
-                        <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', marginBottom: 8 }}
-                          placeholder={client.autodm_reply_message || "Reply message when someone comments..."}
-                          value={client.autodm_reply_message || ''}
-                          readOnly />
+                        <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', marginBottom: 4 }}
+                          placeholder="Reply message when someone comments… (required)"
+                          value={autoDMReplyMessage}
+                          onChange={e => setAutoDMReplyMessage(e.target.value)} />
                         <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 8 }}>
-                          Reply message is set in client settings. Edit it there to change.
+                          Pre-filled from client settings. Edit as needed.
                         </div>
-                        <button style={btnPrimary} disabled={autoDMLoading || !autoDMPostUrl}
+                        <button style={btnPrimary} disabled={autoDMLoading || !autoDMPostUrl || !autoDMReplyMessage.trim()}
                           onClick={async () => {
                             setAutoDMLoading(true);
                             try {
@@ -2755,7 +2757,7 @@ export default function ContentScheduler() {
                                 script_id: null,
                                 user: client.uploadpost_user || 'rayvaughnceo',
                                 post_url: autoDMPostUrl,
-                                reply_message: client.autodm_reply_message || '',
+                                reply_message: autoDMReplyMessage.trim(),
                               });
                               setAutoDMPostUrl('');
                               setAutoDMKeywords('');
