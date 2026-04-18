@@ -5,7 +5,7 @@ import {
   Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, CheckSquare, LogOut,
   Eye, EyeOff, FileText, CreditCard, FolderOpen, Zap, Film,
   GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2, UserCog,
-  Video, X,
+  Video, X, Package,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -232,6 +232,10 @@ export default function Sidebar() {
                   <span>Call Scripts</span>
                 </NavLink>
               )}
+              <NavLink to="/products" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                <Package size={15} />
+                <span>Products & Services</span>
+              </NavLink>
             </>
           )}
 

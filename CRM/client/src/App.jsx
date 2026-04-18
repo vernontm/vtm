@@ -42,6 +42,7 @@ import AcademySettings from './pages/AcademySettings';
 import Team from './pages/Team';
 import Training from './pages/Training';
 import Scripts from './pages/Scripts';
+import Products from './pages/Products';
 
 export const MobileContext = createContext({ sidebarOpen: false, setSidebarOpen: () => {} });
 export const useMobile = () => useContext(MobileContext);
@@ -102,6 +103,7 @@ function AppLayout() {
               <Route path="/team" element={<Team />} />
               <Route path="/training" element={<Training />} />
               <Route path="/scripts" element={<Scripts />} />
+              <Route path="/products" element={<Products />} />
             </Routes>
           </main>
           <GlobalAgent />

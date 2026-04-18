@@ -983,10 +983,18 @@ function ScriptBrowseRow({ script }) {
 // ─── Call Script Widget ───────────────────────────────────────────────────────
 function CallScriptWidget({ lead, scripts }) {
   const [copied, setCopied]         = useState(false);
-  const [aiScript, setAiScript]     = useState('');
+  const [aiScript, setAiScript]     = useState(lead.ai_script || '');
   const [aiLoading, setAiLoading]   = useState(false);
   const [aiError, setAiError]       = useState('');
-  const [showAi, setShowAi]         = useState(false);
+  // Default to AI view if lead has a cached ai_script
+  const [showAi, setShowAi]         = useState(!!lead.ai_script);
+
+  // Reset when switching between leads
+  useEffect(() => {
+    setAiScript(lead.ai_script || '');
+    setShowAi(!!lead.ai_script);
+    setAiError('');
+  }, [lead.id, lead.ai_script]);
 
   const script = scripts.find(s => s.service === lead.product_need);
 
@@ -1113,7 +1121,9 @@ function CallScriptWidget({ lead, scripts }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, scripts }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, scripts, onPrev, onNext, hasPrev, hasNext }) {
+  const { startRecording, stopRecording, isRecordingLead, status: recStatus, elapsed } = useRecorder();
+  const isRec = isRecordingLead(lead.id);
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
@@ -1195,6 +1205,24 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                 >
                   <CalendarIcon size={12} /> Schedule Meeting
                 </button>
+                <button
+                  onClick={() => isRec ? stopRecording() : startRecording(lead.id, lead.name)}
+                  disabled={recStatus === 'requesting' || recStatus === 'saving'}
+                  title={isRec ? 'Stop recording' : 'Start recording call'}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '6px 14px', borderRadius: 6,
+                    cursor: (recStatus === 'requesting' || recStatus === 'saving') ? 'wait' : 'pointer',
+                    fontSize: 12, fontWeight: 600,
+                    border: 'none',
+                    background: isRec ? '#ff5c5c' : '#ff5c5c15',
+                    color: isRec ? '#fff' : '#ff5c5c',
+                    animation: isRec ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                  }}
+                >
+                  {isRec ? <Square size={11} fill="#fff" /> : <Mic size={12} />}
+                  {isRec ? `Recording · ${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,'0')}` : recStatus === 'requesting' ? 'Starting…' : recStatus === 'saving' ? 'Saving…' : 'Record Call'}
+                </button>
                 {lead.email && (
                   <button
                     onClick={() => onAddToList(lead)}
@@ -1215,9 +1243,27 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                 )}
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, flexShrink: 0 }}>
-              <X size={20} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              <button
+                onClick={onPrev}
+                disabled={!hasPrev}
+                title="Previous lead"
+                style={{ background: hasPrev ? '#f5f7fa' : 'transparent', border: '1px solid #e5e7ef', borderRadius: 6, cursor: hasPrev ? 'pointer' : 'not-allowed', color: hasPrev ? '#1a1a2e' : '#d0d0d8', padding: '6px 7px', display: 'flex', alignItems: 'center' }}
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <button
+                onClick={onNext}
+                disabled={!hasNext}
+                title="Next lead"
+                style={{ background: hasNext ? '#f5f7fa' : 'transparent', border: '1px solid #e5e7ef', borderRadius: 6, cursor: hasNext ? 'pointer' : 'not-allowed', color: hasNext ? '#1a1a2e' : '#d0d0d8', padding: '6px 7px', display: 'flex', alignItems: 'center' }}
+              >
+                <ChevronRight size={15} />
+              </button>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, marginLeft: 4 }}>
+                <X size={20} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2093,22 +2139,31 @@ export default function Leads() {
         onMoveTo={handleBulkMoveTo}
       />
 
-      {detailLead && (
-        <LeadDetailPanel
-          lead={detailLead}
-          onClose={() => { setDetailLead(null); setLeadPanelOpen(false); }}
-          onFieldSave={handleFieldSave}
-          onSaveAll={handleSaveAllFields}
-          statuses={LEAD_STATUSES}
-          onEmail={handleEmail}
-          onSchedule={(lead) => { setScheduleLead(lead); }}
-          onAddToList={(lead) => setEmailListLead(lead)}
-          lastFollowUp={lastFollowUps[detailLead.id]}
-          convos={detailConvos}
-          recordings={detailRecordings}
-          scripts={scripts}
-        />
-      )}
+      {detailLead && (() => {
+        const idx = filtered.findIndex(l => l.id === detailLead.id);
+        const hasPrev = idx > 0;
+        const hasNext = idx >= 0 && idx < filtered.length - 1;
+        return (
+          <LeadDetailPanel
+            lead={detailLead}
+            onClose={() => { setDetailLead(null); setLeadPanelOpen(false); }}
+            onFieldSave={handleFieldSave}
+            onSaveAll={handleSaveAllFields}
+            statuses={LEAD_STATUSES}
+            onEmail={handleEmail}
+            onSchedule={(lead) => { setScheduleLead(lead); }}
+            onAddToList={(lead) => setEmailListLead(lead)}
+            lastFollowUp={lastFollowUps[detailLead.id]}
+            convos={detailConvos}
+            recordings={detailRecordings}
+            scripts={scripts}
+            onPrev={hasPrev ? () => setDetailLead(filtered[idx - 1]) : undefined}
+            onNext={hasNext ? () => setDetailLead(filtered[idx + 1]) : undefined}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+          />
+        );
+      })()}
 
       {showImport && (
         <BulkImport onClose={() => setShowImport(false)} onImported={() => { load(); setShowImport(false); }} />
