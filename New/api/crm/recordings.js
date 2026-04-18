@@ -81,6 +81,14 @@ function buildMultipart(fields, fileField) {
   return { body: Buffer.concat(parts), contentType: `multipart/form-data; boundary=${boundary}` };
 }
 
+// ── Fetch with AbortController timeout ────────────────────────────────────
+function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
 // ── ElevenLabs audio isolation (noise/echo removal) ────────────────────────
 async function isolateAudio(fileBuffer) {
   const { body, contentType } = buildMultipart({}, {
@@ -90,14 +98,14 @@ async function isolateAudio(fileBuffer) {
     buffer: fileBuffer,
   });
 
-  const res = await fetch('https://api.elevenlabs.io/v1/audio-isolation', {
+  const res = await fetchWithTimeout('https://api.elevenlabs.io/v1/audio-isolation', {
     method: 'POST',
     headers: {
       'xi-api-key': ELEVENLABS_API_KEY,
       'Content-Type': contentType,
     },
     body,
-  });
+  }, 90_000); // 90s timeout
 
   if (!res.ok) {
     const err = await res.text();
@@ -115,14 +123,14 @@ async function transcribeAudio(fileBuffer, mimeType = 'audio/mpeg', filename = '
     { name: 'file', filename, mimeType, buffer: fileBuffer }
   );
 
-  const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+  const res = await fetchWithTimeout('https://api.elevenlabs.io/v1/speech-to-text', {
     method: 'POST',
     headers: {
       'xi-api-key': ELEVENLABS_API_KEY,
       'Content-Type': contentType,
     },
     body,
-  });
+  }, 120_000); // 120s timeout
 
   if (!res.ok) {
     const err = await res.text();
@@ -226,7 +234,7 @@ module.exports = async function handler(req, res) {
       // ?action=processing — return recordings currently being processed
       if (req.query.action === 'processing') {
         const rows = await supaFetch(
-          `crm_lead_recordings?transcript_status=eq.processing&select=id,lead_id,lead_name,created_at&order=created_at.desc`
+          `crm_lead_recordings?transcript_status=eq.processing&select=id,lead_id,created_at&order=created_at.desc`
         );
         return res.json(rows || []);
       }
