@@ -1268,14 +1268,19 @@ export default function ContentScheduler() {
                   )}
                 </div>
                 <div className="cs-toolbar-right" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
-                    setActionLoading('captions');
-                    const ids = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
-                    await generateCaptions({ client_id: client.id, script_ids: ids });
-                    await loadClientData(client.id);
-                    setActionLoading('');
-                  }}>
-                    <Sparkles size={13} /> Generate Captions
+                  {scripts.length > 0 && <button style={{ ...btnGhost, opacity: actionLoading === 'captions' ? 0.6 : 1 }}
+                    disabled={actionLoading === 'captions'}
+                    onClick={async () => {
+                      setActionLoading('captions');
+                      try {
+                        const ids = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
+                        const result = await generateCaptions({ client_id: client.id, script_ids: ids });
+                        await loadClientData(client.id);
+                        if (result?.updated === 0) alert('No scripts needed captions (all already have them). Select specific rows to regenerate.');
+                      } catch (e) { alert('Caption generation failed: ' + e.message); }
+                      setActionLoading('');
+                    }}>
+                    {actionLoading === 'captions' ? <><Loader size={13} className="spin" /> Generating...</> : <><Sparkles size={13} /> Generate Captions</>}
                   </button>}
                   {scripts.length > 0 && <button style={btnGhost} onClick={async () => {
                     setActionLoading('schedule');
@@ -1645,12 +1650,17 @@ export default function ContentScheduler() {
                                     <Edit3 size={12} />
                                   </button>
                                   <button onClick={async () => {
-                                    setActionLoading('captions');
-                                    await generateCaptions({ client_id: client.id, script_ids: [script.id] });
-                                    await loadClientData(client.id);
+                                    setActionLoading('captions_' + script.id);
+                                    try {
+                                      await generateCaptions({ client_id: client.id, script_ids: [script.id] });
+                                      await loadClientData(client.id);
+                                    } catch (e) { alert('Failed: ' + e.message); }
                                     setActionLoading('');
-                                  }} style={{ ...btnGhost, padding: '4px 6px' }} title="Regenerate caption">
-                                    <Sparkles size={12} />
+                                  }} style={{ ...btnGhost, padding: '4px 6px' }} title="Regenerate caption"
+                                    disabled={actionLoading === 'captions_' + script.id}>
+                                    {actionLoading === 'captions_' + script.id
+                                      ? <Loader size={12} className="spin" />
+                                      : <Sparkles size={12} />}
                                   </button>
                                   {client?.uploadpost_user && (
                                     <button onClick={() => {
