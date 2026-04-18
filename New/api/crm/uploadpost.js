@@ -121,12 +121,15 @@ export default async function handler(req, res) {
             `crm_content_scripts?uploadpost_request_id=eq.${encodeURIComponent(request_id)}&select=id`
           ).catch(() => []);
           if (scripts?.[0]?.id) {
+            const patch = {
+              publish_status: status,
+              updated_at: new Date().toISOString(),
+            };
+            // Move to "posted" status so it appears in Delivered tab
+            if (status === 'completed') patch.status = 'posted';
             await supaFetch(`crm_content_scripts?id=eq.${scripts[0].id}`, {
               method: 'PATCH',
-              body: JSON.stringify({
-                publish_status: status,
-                updated_at: new Date().toISOString(),
-              }),
+              body: JSON.stringify(patch),
             }).catch(() => {});
           }
         }
