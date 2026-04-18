@@ -2746,22 +2746,21 @@ export default function ContentScheduler() {
                         <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 8 }}>
                           Reply message is set in client settings. Edit it there to change.
                         </div>
-                        <button style={btnPrimary} disabled={autoDMLoading || !autoDMPostUrl || !client.autodm_reply_message}
+                        <button style={btnPrimary} disabled={autoDMLoading || !autoDMPostUrl}
                           onClick={async () => {
                             setAutoDMLoading(true);
                             try {
-                              const keywords = autoDMKeywords.split(',').map(k => k.trim()).filter(Boolean);
-                              await startAutoDM({
-                                user: client.uploadpost_user,
+                              await startMonitor({
+                                client_id: client.id,
+                                script_id: null,
+                                user: client.uploadpost_user || 'rayvaughnceo',
                                 post_url: autoDMPostUrl,
-                                reply_message: client.autodm_reply_message,
-                                trigger_keywords: keywords.length ? keywords : undefined,
+                                reply_message: client.autodm_reply_message || '',
                               });
                               setAutoDMPostUrl('');
                               setAutoDMKeywords('');
-                              // Refresh status
-                              const statusData = await getAutoDMStatus();
-                              setAutoDMMonitors(statusData.monitors || statusData || []);
+                              const rows = await getMonitors(client.id);
+                              setMonitors(rows || []);
                               alert('AutoDM monitor started!');
                             } catch (e) { alert('Failed: ' + e.message); }
                             setAutoDMLoading(false);
