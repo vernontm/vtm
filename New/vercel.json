@@ -64,6 +64,7 @@
     { "source": "/portfolio/pickapaint", "destination": "/pickapaint.html" },
     { "source": "/portfolio", "destination": "/portfolio.html" },
     { "source": "/free-gift", "destination": "/free-gift.html" },
+    { "source": "/claude-guide", "destination": "/claude-guide.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
