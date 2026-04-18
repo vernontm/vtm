@@ -503,12 +503,27 @@ export default function ContentScheduler() {
   useEffect(() => {
     const inProgress = scripts.filter(s => s.publish_status === 'publishing');
     if (!inProgress.length) return;
+
+    // Immediately mark any stuck scripts (no request_id) as failed so they stop looping
+    const stuck = inProgress.filter(s => !s.uploadpost_request_id);
+    if (stuck.length) {
+      stuck.forEach(s => {
+        supabase
+          .from('crm_content_scripts')
+          .update({ publish_status: 'failed', updated_at: new Date().toISOString() })
+          .eq('id', s.id)
+          .then(() => {});
+      });
+    }
+
+    const pollable = inProgress.filter(s => !!s.uploadpost_request_id);
+    if (!pollable.length) return;
+
     const interval = setInterval(async () => {
-      for (const s of inProgress) {
-        if (!s.uploadpost_request_id) continue;
+      for (const s of pollable) {
         try {
           await getUploadPostStatus(s.uploadpost_request_id);
-          // Status auto-updates in DB via API; reload
+          // Status auto-updates in DB via API; reload triggered below
         } catch {}
       }
       await loadClientData(client?.id);

@@ -39,7 +39,8 @@
     "api/academy/billing.js": { "maxDuration": 30 },
     "api/academy/stripe-webhook.js": { "maxDuration": 30 },
     "api/crm/email-campaigns.js": { "maxDuration": 60 },
-    "api/crm/email-cron.js": { "maxDuration": 60 }
+    "api/crm/email-cron.js": { "maxDuration": 60 },
+    "api/crm/uploadpost.js": { "maxDuration": 60 }
   },
   "crons": [
     { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" }
