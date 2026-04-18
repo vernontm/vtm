@@ -53,6 +53,8 @@ export default async function handler(req, res) {
         // platform-specific
         tiktok_privacy, instagram_media_type,
         facebook_page_id, youtube_privacy,
+        // cover frame
+        cover_timestamp, thumb_offset, pinterest_cover_image_key_frame_time,
       } = req.body;
 
       if (!user)       return res.status(400).json({ error: 'user required' });
@@ -78,6 +80,11 @@ export default async function handler(req, res) {
       if (instagram_media_type)    form.append('media_type', instagram_media_type);
       if (facebook_page_id)        form.append('facebook_page_id', facebook_page_id);
       if (youtube_privacy)         form.append('privacyStatus', youtube_privacy);
+
+      // Cover frame (milliseconds)
+      if (cover_timestamp != null)                    form.append('cover_timestamp', String(cover_timestamp));
+      if (thumb_offset != null)                       form.append('thumb_offset', String(thumb_offset));
+      if (pinterest_cover_image_key_frame_time != null) form.append('pinterest_cover_image_key_frame_time', String(pinterest_cover_image_key_frame_time));
 
       let endpoint;
       if (media_type === 'video' && mediaUrl) {

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import EditPostModal from '../components/EditPostModal';
 import { useTeam } from '../context/TeamContext';
+import CoverFramePicker from '../components/CoverFramePicker';
 
 const STATUS_COLORS = {
   draft: { bg: '#f0f0f5', text: '#8e8ea0', label: 'Draft' },
@@ -127,6 +128,7 @@ export default function ContentScheduler() {
   const [publishPlatforms, setPublishPlatforms] = useState([]);
   const [publishScheduleDate, setPublishScheduleDate] = useState('');
   const [publishLoading, setPublishLoading] = useState(false);
+  const [coverTimestampMs, setCoverTimestampMs] = useState(null);
 
   // Engagement state
   const [engageTab, setEngageTab] = useState('comments'); // comments | dms | autodms
@@ -558,7 +560,7 @@ export default function ContentScheduler() {
   }
 
   // ── Publish to Upload-Post ──
-  async function handlePublish(script, platforms, scheduledDate) {
+  async function handlePublish(script, platforms, scheduledDate, coverMs) {
     const upUser = client?.uploadpost_user || 'rayvaughnceo';
     setPublishLoading(true);
     try {
@@ -584,6 +586,12 @@ export default function ContentScheduler() {
         tiktok_privacy: 'PUBLIC_TO_EVERYONE',
         youtube_privacy: 'public',
         facebook_page_id: client?.facebook_id || undefined,
+        // Cover frame — platform-specific mappings
+        ...(coverMs != null ? {
+          cover_timestamp:   coverMs,           // TikTok (integer ms)
+          thumb_offset:      String(coverMs),   // Instagram (string ms)
+          pinterest_cover_image_key_frame_time: coverMs, // Pinterest (integer ms)
+        } : {}),
       });
       await loadClientData(client.id);
       setPublishModal(null);
@@ -1403,6 +1411,7 @@ export default function ContentScheduler() {
                         setPublishModal({ _bulk: true, ids: Array.from(selectedScripts) });
                         setPublishPlatforms(client.uploadpost_platforms || ['tiktok', 'instagram']);
                         setPublishScheduleDate('');
+                        setCoverTimestampMs(null);
                       }
                     }} disabled={selectedScripts.size === 0}>
                     <Send size={14} /> Publish Selected
@@ -1762,6 +1771,7 @@ export default function ContentScheduler() {
                                       setPublishPlatforms(client.uploadpost_platforms || ['tiktok', 'instagram']);
                                       setPublishScheduleDate(script.scheduled_datetime
                                         ? new Date(script.scheduled_datetime).toISOString().slice(0, 16) : '');
+                                      setCoverTimestampMs(null);
                                     }} style={{ ...btnGhost, padding: '4px 6px', color: '#16a34a' }} title="Publish / Schedule">
                                       <Send size={12} />
                                     </button>
@@ -3048,24 +3058,36 @@ export default function ContentScheduler() {
             <input type="datetime-local" style={{ ...inputStyle, marginBottom: 16 }}
               value={publishScheduleDate} onChange={e => setPublishScheduleDate(e.target.value)} />
 
+            {/* Cover frame picker — single video posts only */}
+            {!publishModal._bulk && (() => {
+              const videoUrl = (publishModal.media_urls || [])[0];
+              const isVideo = videoUrl && /\.(mp4|mov|webm)/i.test(videoUrl);
+              return isVideo ? (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 8 }}>Cover Frame</div>
+                  <CoverFramePicker videoUrl={videoUrl} onChange={setCoverTimestampMs} />
+                </div>
+              ) : null;
+            })()}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button style={btnGhost} onClick={() => !publishLoading && setPublishModal(null)} disabled={publishLoading}>Cancel</button>
               <button style={{ ...btnPrimary, background: '#16a34a', borderColor: '#16a34a' }}
                 disabled={publishLoading || !publishPlatforms.length}
                 onClick={async () => {
                   if (publishModal._bulk) {
-                    // Bulk publish
+                    // Bulk publish — cover frame not applicable for bulk
                     setPublishLoading(true);
                     const bulkScripts = scripts.filter(s => publishModal.ids.includes(s.id));
                     for (const s of bulkScripts) {
-                      try { await handlePublish(s, publishPlatforms, publishScheduleDate); }
+                      try { await handlePublish(s, publishPlatforms, publishScheduleDate, null); }
                       catch {}
                     }
                     await loadClientData(client.id);
                     setPublishModal(null);
                     setPublishLoading(false);
                   } else {
-                    await handlePublish(publishModal, publishPlatforms, publishScheduleDate);
+                    await handlePublish(publishModal, publishPlatforms, publishScheduleDate, coverTimestampMs);
                   }
                 }}>
                 {publishLoading ? <><Loader size={13} className="spin" /> Publishing...</> : <><Send size={13} /> {publishScheduleDate ? 'Schedule' : 'Publish Now'}</>}
