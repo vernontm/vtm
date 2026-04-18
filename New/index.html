@@ -1327,5 +1327,174 @@
             });
         });
     </script>
+
+    <!-- ── Email popup ──────────────────────────────────────────────────── -->
+    <style>
+        #emailPopup {
+            position: fixed; inset: 0; z-index: 9000;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        #emailPopup.show { opacity: 1; visibility: visible; }
+        .ep-card {
+            position: relative;
+            background: #1a1a1c;
+            border: 1px solid rgba(255,155,38,0.2);
+            border-radius: 20px;
+            padding: 36px 32px;
+            max-width: 440px; width: 100%;
+            box-shadow: 0 0 0 1px rgba(255,155,38,0.05), 0 32px 80px rgba(0,0,0,0.7);
+            animation: epSlideUp 0.4s ease both;
+            text-align: center;
+        }
+        @keyframes epSlideUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+        .ep-close {
+            position: absolute; top: 14px; right: 14px;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(255,255,255,0.06); border: none;
+            cursor: pointer; color: #6b6b72; font-size: 16px; line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, color 0.2s;
+        }
+        .ep-close:hover { background: rgba(255,255,255,0.12); color: #f0f0f0; }
+        .ep-pill {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: rgba(255,155,38,0.08); border: 1px solid rgba(255,155,38,0.25);
+            color: #ff9b26; padding: 5px 12px; border-radius: 100px;
+            font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+            text-transform: uppercase; margin-bottom: 16px;
+        }
+        .ep-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #ff9b26; box-shadow: 0 0 6px #ff9b26; }
+        .ep-card h2 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.45rem; font-weight: 300; line-height: 1.15;
+            letter-spacing: -0.025em; color: #f0f0f0; margin-bottom: 10px;
+        }
+        .ep-card h2 strong { font-weight: 800; }
+        .ep-card h2 .grad {
+            background: linear-gradient(135deg, #ff9b26, #ee4c27);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; font-weight: 800;
+        }
+        .ep-sub { font-size: 0.875rem; color: #6b6b72; line-height: 1.55; margin-bottom: 24px; }
+        .ep-form { display: flex; flex-direction: column; gap: 10px; }
+        .ep-form input {
+            width: 100%; background: #222226; border: 1px solid rgba(255,255,255,0.07);
+            color: #f0f0f0; font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem; font-weight: 300;
+            padding: 13px 15px; border-radius: 11px; outline: none;
+            transition: border 0.2s;
+        }
+        .ep-form input::placeholder { color: #6b6b72; opacity: 0.8; }
+        .ep-form input:focus { border-color: rgba(255,155,38,0.4); }
+        .ep-form button {
+            background: linear-gradient(135deg, #ff9b26, #ee4c27);
+            color: #fff; font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem; font-weight: 700; border: none;
+            border-radius: 11px; padding: 13px; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 6px 20px rgba(255,155,38,0.25);
+        }
+        .ep-form button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(255,155,38,0.35); }
+        .ep-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ep-note { margin-top: 10px; font-size: 0.72rem; color: #6b6b72; }
+        .ep-success { padding: 8px 0; animation: epSlideUp 0.4s ease both; }
+        .ep-success .ep-check { font-size: 2.2rem; margin-bottom: 10px; }
+        .ep-success h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; color: #f0f0f0; }
+        .ep-success p { font-size: 0.85rem; color: #6b6b72; line-height: 1.5; }
+    </style>
+
+    <div id="emailPopup">
+        <div class="ep-card">
+            <button class="ep-close" id="epClose">✕</button>
+            <div class="ep-pill">Free Guide</div>
+            <h2>Build a real business<br>using <span class="grad">AI tools</span></h2>
+            <p class="ep-sub">Websites, apps, faceless content, marketing — get the free guide I use to run everything with AI.</p>
+            <div id="epFormWrap">
+                <div class="ep-form">
+                    <input type="text"  id="epName"  placeholder="Your name" autocomplete="name" />
+                    <input type="email" id="epEmail" placeholder="Your email" autocomplete="email" />
+                    <button id="epSubmit" onclick="epHandleSubmit()">Send Me the Free Guide →</button>
+                </div>
+                <p class="ep-note">No spam. Unsubscribe anytime.</p>
+            </div>
+            <div id="epSuccess" class="ep-success" style="display:none;">
+                <div class="ep-check">🎉</div>
+                <h3>You're in!</h3>
+                <p>Check your inbox — guide is on its way.<br><a href="/claude-guide" style="color:#ff9b26;text-decoration:none;font-weight:600;">View the full page →</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var POPUP_KEY = 'vtm_popup_dismissed';
+            var popup = document.getElementById('emailPopup');
+            var closeBtn = document.getElementById('epClose');
+
+            // Don't show if already dismissed/submitted this session
+            if (sessionStorage.getItem(POPUP_KEY)) return;
+
+            // Show after 5 seconds
+            var timer = setTimeout(function() {
+                popup.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }, 5000);
+
+            function dismiss() {
+                popup.classList.remove('show');
+                document.body.style.overflow = '';
+                sessionStorage.setItem(POPUP_KEY, '1');
+            }
+
+            closeBtn.addEventListener('click', dismiss);
+            popup.addEventListener('click', function(e) {
+                if (e.target === popup) dismiss();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') dismiss();
+            });
+
+            window.epHandleSubmit = async function() {
+                var name  = document.getElementById('epName').value.trim();
+                var email = document.getElementById('epEmail').value.trim();
+                if (!email) { document.getElementById('epEmail').focus(); return; }
+
+                var btn = document.getElementById('epSubmit');
+                btn.disabled = true;
+                btn.textContent = 'Sending…';
+
+                try {
+                    await fetch('/api/lead', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name || 'Website visitor',
+                            email: email,
+                            source: 'Website',
+                            notes: 'Popup signup — homepage',
+                            problem: 'Wants to use AI for business',
+                            goal: 'Build and grow with AI tools',
+                        }),
+                    });
+                } catch(e) { console.error(e); }
+
+                document.getElementById('epFormWrap').style.display = 'none';
+                document.getElementById('epSuccess').style.display  = 'block';
+                sessionStorage.setItem(POPUP_KEY, '1');
+            };
+
+            // Allow Enter key
+            ['epName','epEmail'].forEach(function(id) {
+                document.getElementById(id).addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') window.epHandleSubmit();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>
