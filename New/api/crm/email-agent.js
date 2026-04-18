@@ -19,6 +19,12 @@ module.exports = async function handler(req, res) {
   try {
     const { prompt, conversation, attachments } = req.body;
     if (!prompt && (!attachments || !attachments.length)) return res.status(400).json({ error: 'prompt required' });
+    if (typeof prompt === 'string' && prompt.length > 20000) {
+      return res.status(400).json({ error: 'Prompt too long (max 20000 chars)' });
+    }
+    if (Array.isArray(conversation) && JSON.stringify(conversation).length > 50000) {
+      return res.status(400).json({ error: 'Conversation history too long' });
+    }
 
     // Get settings for context
     const settings = await supaFetch('crm_app_settings');

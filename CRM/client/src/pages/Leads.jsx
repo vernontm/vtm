@@ -981,7 +981,7 @@ function ScriptBrowseRow({ script }) {
 }
 
 // ─── Call Script Widget ───────────────────────────────────────────────────────
-function CallScriptWidget({ lead, scripts }) {
+function CallScriptWidget({ lead, scripts, onScriptSaved }) {
   const [copied, setCopied]         = useState(false);
   const [aiScript, setAiScript]     = useState(lead.ai_script || '');
   const [aiLoading, setAiLoading]   = useState(false);
@@ -1032,6 +1032,13 @@ function CallScriptWidget({ lead, scripts }) {
       const result = await personalizeScript(substituteTags(script.content, lead), lead);
       setAiScript(result.script);
       setShowAi(true);
+      // Persist to DB so the regenerated version survives reloads
+      try {
+        await updateLead(lead.id, { ai_script: result.script, ai_script_generated_at: new Date().toISOString() });
+        onScriptSaved?.(lead.id, result.script);
+      } catch {
+        setAiError('Generated, but saving to DB failed. The script is still visible here.');
+      }
     } catch (e) {
       setAiError(e.message || 'AI personalization failed');
     } finally {
@@ -1121,7 +1128,7 @@ function CallScriptWidget({ lead, scripts }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, scripts, onPrev, onNext, hasPrev, hasNext }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, scripts, onPrev, onNext, hasPrev, hasNext, onScriptSaved }) {
   const { startRecording, stopRecording, isRecordingLead, status: recStatus, elapsed } = useRecorder();
   const isRec = isRecordingLead(lead.id);
   const [draft, setDraft]   = useState({ ...lead });
@@ -1286,7 +1293,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
           ))}
 
           {/* Call Script */}
-          <CallScriptWidget lead={lead} scripts={scripts} />
+          <CallScriptWidget lead={lead} scripts={scripts} onScriptSaved={onScriptSaved} />
 
           {/* Activity Timeline */}
           <ActivityTimeline lead={lead} convos={convos} recordings={recordings} />
@@ -2163,6 +2170,10 @@ export default function Leads() {
             onNext={hasNext ? () => setDetailLead(filtered[idx + 1]) : undefined}
             hasPrev={hasPrev}
             hasNext={hasNext}
+            onScriptSaved={(id, script) => {
+              setLeads(ls => ls.map(l => l.id === id ? { ...l, ai_script: script } : l));
+              setDetailLead(d => d && d.id === id ? { ...d, ai_script: script } : d);
+            }}
           />
         );
       })()}

@@ -12,6 +12,12 @@ module.exports = async function handler(req, res) {
 
   const { script, lead } = req.body;
   if (!script || !lead) return res.status(400).json({ error: 'script and lead required' });
+  if (typeof script !== 'string' || script.length > 20000) {
+    return res.status(400).json({ error: 'Script too long (max 20000 chars)' });
+  }
+  if (typeof lead !== 'object' || JSON.stringify(lead).length > 10000) {
+    return res.status(400).json({ error: 'Lead payload too large' });
+  }
 
   const systemPrompt = `You are a sales script personalizer for Vernon Tech & Media, a creative technology studio that builds websites, apps, AI content systems, and marketing automation for small businesses.
 
@@ -70,8 +76,9 @@ ${script}`;
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      return res.status(500).json({ error: `Anthropic error: ${err}` });
+      const errText = await response.text();
+      console.error('Anthropic error:', response.status, errText);
+      return res.status(502).json({ error: 'AI provider error. Please try again.' });
     }
 
     const data = await response.json();
@@ -79,6 +86,6 @@ ${script}`;
     return res.json({ script: personalizedScript });
   } catch (err) {
     console.error('personalize-script error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Personalization failed' });
   }
 };

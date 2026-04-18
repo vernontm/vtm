@@ -19,6 +19,12 @@ module.exports = async function handler(req, res) {
   try {
     const { prompt, conversation, page, attachments } = req.body;
     if (!prompt && (!attachments || !attachments.length)) return res.status(400).json({ error: 'prompt required' });
+    if (typeof prompt === 'string' && prompt.length > 20000) {
+      return res.status(400).json({ error: 'Prompt too long (max 20000 chars)' });
+    }
+    if (Array.isArray(conversation) && JSON.stringify(conversation).length > 50000) {
+      return res.status(400).json({ error: 'Conversation history too long' });
+    }
 
     // Gather CRM context
     const [settings, contacts, leads, deals, todos] = await Promise.all([
