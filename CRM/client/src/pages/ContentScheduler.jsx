@@ -25,6 +25,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import EditPostModal from '../components/EditPostModal';
+import { useTeam } from '../context/TeamContext';
 
 const STATUS_COLORS = {
   draft: { bg: '#f0f0f5', text: '#8e8ea0', label: 'Draft' },
@@ -82,6 +83,8 @@ const SIDEBAR_SECTIONS = [
 ];
 
 export default function ContentScheduler() {
+  const { allowedClientIds, defaultClientId } = useTeam();
+
   // Client state
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -246,13 +249,20 @@ export default function ContentScheduler() {
   async function loadClients() {
     try {
       const data = await getContentClients();
-      setClients(data || []);
-      // Auto-select the rayvaughnceo client on first load
-      const defaultClient = (data || []).find(c =>
-        c.uploadpost_user === 'rayvaughnceo' || c.business_name?.toLowerCase().includes('rayvaughn')
-      );
-      if (defaultClient) {
-        setSelectedClientId(defaultClient.id);
+      // Filter to only allowed clients for restricted team members
+      const visible = allowedClientIds?.length
+        ? (data || []).filter(c => allowedClientIds.includes(c.id))
+        : (data || []);
+      setClients(visible);
+
+      // Pick default: explicit defaultClientId → first allowed → rayvaughnceo fallback
+      const pick =
+        (defaultClientId && visible.find(c => c.id === defaultClientId)) ||
+        (allowedClientIds?.length && visible[0]) ||
+        visible.find(c => c.uploadpost_user === 'rayvaughnceo' || c.business_name?.toLowerCase().includes('rayvaughn'));
+
+      if (pick) {
+        setSelectedClientId(pick.id);
         setSidebarCollapsed(true);
       }
     } catch (e) { console.error(e); }

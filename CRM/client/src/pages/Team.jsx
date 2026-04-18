@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useTeam } from '../context/TeamContext';
+import { getContentClients } from '../api';
 
 // ─── Permission definitions ───────────────────────────────────────────────────
 const ALL_PAGES = [
@@ -173,6 +174,79 @@ function PermissionCheckboxes({ selected, onChange }) {
   );
 }
 
+// ─── ClientAccessPicker ───────────────────────────────────────────────────────
+function ClientAccessPicker({ allClients, selectedIds, defaultId, onChangeIds, onChangeDefault }) {
+  const allSelected = selectedIds.length === 0; // empty = all clients
+
+  function toggleClient(id) {
+    if (selectedIds.includes(id)) {
+      const next = selectedIds.filter(x => x !== id);
+      onChangeIds(next);
+      if (defaultId === id) onChangeDefault(next[0] || null);
+    } else {
+      onChangeIds([...selectedIds, id]);
+    }
+  }
+
+  function toggleAll() {
+    if (allSelected) {
+      // restrict to none (means all) → no change needed; clicking when all means switch to restricted
+    } else {
+      onChangeIds([]);
+      onChangeDefault(null);
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Client Access</label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: TEXT_MUTED, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleAll}
+            style={{ accentColor: ACCENT, cursor: 'pointer' }}
+          />
+          All clients
+        </label>
+      </div>
+      {!allSelected && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+          {allClients.map(c => (
+            <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: TEXT }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(c.id)}
+                onChange={() => toggleClient(c.id)}
+                style={{ accentColor: ACCENT, width: 15, height: 15, cursor: 'pointer' }}
+              />
+              {c.business_name}
+            </label>
+          ))}
+        </div>
+      )}
+      {selectedIds.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 4 }}>
+            Default client (loads first)
+          </label>
+          <select
+            value={defaultId || ''}
+            onChange={e => onChangeDefault(e.target.value || null)}
+            style={{ ...INPUT_STYLE, fontSize: 13 }}
+          >
+            <option value="">— None —</option>
+            {allClients.filter(c => selectedIds.includes(c.id)).map(c => (
+              <option key={c.id} value={c.id}>{c.business_name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Modal shell ──────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children, footer }) {
   return (
@@ -215,11 +289,18 @@ function Modal({ title, onClose, children, footer }) {
 
 // ─── InviteModal ──────────────────────────────────────────────────────────────
 function InviteModal({ onClose, onSaved }) {
-  const [name,        setName]        = useState('');
-  const [email,       setEmail]       = useState('');
-  const [permissions, setPermissions] = useState([]);
-  const [saving,      setSaving]      = useState(false);
-  const [error,       setError]       = useState('');
+  const [name,              setName]              = useState('');
+  const [email,             setEmail]             = useState('');
+  const [permissions,       setPermissions]       = useState([]);
+  const [allowedClientIds,  setAllowedClientIds]  = useState([]);
+  const [defaultClientId,   setDefaultClientId]   = useState(null);
+  const [allClients,        setAllClients]        = useState([]);
+  const [saving,            setSaving]            = useState(false);
+  const [error,             setError]             = useState('');
+
+  useEffect(() => {
+    getContentClients().then(d => setAllClients(d || [])).catch(() => {});
+  }, []);
 
   async function handleSave() {
     if (!name.trim())  return setError('Name is required.');
@@ -229,7 +310,13 @@ function InviteModal({ onClose, onSaved }) {
     try {
       const member = await apiFetch('/api/crm/team', {
         method: 'POST',
-        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), permissions }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          permissions,
+          allowed_client_ids: allowedClientIds,
+          default_client_id: defaultClientId,
+        }),
       });
       onSaved(member);
       onClose();
@@ -266,9 +353,18 @@ function InviteModal({ onClose, onSaved }) {
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 5 }}>Email</label>
         <input style={INPUT_STYLE} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@example.com" />
       </div>
-      <div>
+      <div style={{ marginBottom: 20 }}>
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 10 }}>Permissions</label>
         <PermissionCheckboxes selected={permissions} onChange={setPermissions} />
+      </div>
+      <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 18 }}>
+        <ClientAccessPicker
+          allClients={allClients}
+          selectedIds={allowedClientIds}
+          defaultId={defaultClientId}
+          onChangeIds={setAllowedClientIds}
+          onChangeDefault={setDefaultClientId}
+        />
       </div>
     </Modal>
   );
@@ -276,10 +372,17 @@ function InviteModal({ onClose, onSaved }) {
 
 // ─── EditModal ────────────────────────────────────────────────────────────────
 function EditModal({ member, onClose, onSaved }) {
-  const [name,        setName]        = useState(member.name || '');
-  const [permissions, setPermissions] = useState(member.permissions || []);
-  const [saving,      setSaving]      = useState(false);
-  const [error,       setError]       = useState('');
+  const [name,             setName]             = useState(member.name || '');
+  const [permissions,      setPermissions]      = useState(member.permissions || []);
+  const [allowedClientIds, setAllowedClientIds] = useState(member.allowed_client_ids || []);
+  const [defaultClientId,  setDefaultClientId]  = useState(member.default_client_id || null);
+  const [allClients,       setAllClients]       = useState([]);
+  const [saving,           setSaving]           = useState(false);
+  const [error,            setError]            = useState('');
+
+  useEffect(() => {
+    getContentClients().then(d => setAllClients(d || [])).catch(() => {});
+  }, []);
 
   async function handleSave() {
     if (!name.trim()) return setError('Name is required.');
@@ -288,7 +391,12 @@ function EditModal({ member, onClose, onSaved }) {
     try {
       const updated = await apiFetch(`/api/crm/team?id=${member.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name: name.trim(), permissions }),
+        body: JSON.stringify({
+          name: name.trim(),
+          permissions,
+          allowed_client_ids: allowedClientIds,
+          default_client_id: defaultClientId,
+        }),
       });
       onSaved(updated);
       onClose();
@@ -321,9 +429,18 @@ function EditModal({ member, onClose, onSaved }) {
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 5 }}>Name</label>
         <input style={INPUT_STYLE} value={name} onChange={e => setName(e.target.value)} />
       </div>
-      <div>
+      <div style={{ marginBottom: 20 }}>
         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 10 }}>Permissions</label>
         <PermissionCheckboxes selected={permissions} onChange={setPermissions} />
+      </div>
+      <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 18 }}>
+        <ClientAccessPicker
+          allClients={allClients}
+          selectedIds={allowedClientIds}
+          defaultId={defaultClientId}
+          onChangeIds={setAllowedClientIds}
+          onChangeDefault={setDefaultClientId}
+        />
       </div>
     </Modal>
   );
@@ -350,9 +467,12 @@ function ConfirmModal({ message, onConfirm, onClose, loading }) {
 }
 
 // ─── MemberCard ───────────────────────────────────────────────────────────────
-function MemberCard({ member, onEdit, onRemove, onViewAs }) {
+function MemberCard({ member, onEdit, onRemove, onViewAs, allClients }) {
   const isOwnerRole = member.role === 'owner';
   const perms = member.permissions || [];
+  const restrictedClients = (member.allowed_client_ids || [])
+    .map(id => allClients.find(c => c.id === id))
+    .filter(Boolean);
 
   return (
     <div style={{
@@ -420,6 +540,27 @@ function MemberCard({ member, onEdit, onRemove, onViewAs }) {
         {isOwnerRole && (
           <span style={{ fontSize: 12, color: '#b45309', fontStyle: 'italic' }}>Full access (owner)</span>
         )}
+
+        {/* Client access */}
+        {!isOwnerRole && (
+          <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600 }}>Clients:</span>
+            {restrictedClients.length === 0
+              ? <span style={{ fontSize: 11, color: TEXT_MUTED, fontStyle: 'italic' }}>All</span>
+              : restrictedClients.map(c => (
+                <span key={c.id} style={{
+                  fontSize: 11, padding: '2px 7px', borderRadius: 4,
+                  background: '#f0f4ff', color: '#4a6cf7', fontWeight: 500,
+                }}>
+                  {c.business_name}
+                  {member.default_client_id === c.id && (
+                    <span style={{ marginLeft: 3, color: '#94a3b8' }}>★</span>
+                  )}
+                </span>
+              ))
+            }
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -467,6 +608,7 @@ export default function Team() {
   const [members,      setMembers]      = useState([]);
   const [loadingList,  setLoadingList]  = useState(true);
   const [fetchError,   setFetchError]   = useState('');
+  const [allClients,   setAllClients]   = useState([]);
 
   const [showInvite,   setShowInvite]   = useState(false);
   const [editTarget,   setEditTarget]   = useState(null);  // member to edit
@@ -489,6 +631,7 @@ export default function Team() {
 
   useEffect(() => {
     if (!teamLoading) fetchMembers();
+    getContentClients().then(d => setAllClients(d || [])).catch(() => {});
   }, [teamLoading, fetchMembers]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -616,6 +759,7 @@ export default function Team() {
               <MemberCard
                 key={m.id}
                 member={m}
+                allClients={allClients}
                 onEdit={setEditTarget}
                 onRemove={setRemoveTarget}
                 onViewAs={handleViewAs}

@@ -2,14 +2,16 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { supabase } from '../lib/supabase';
 
 const TeamContext = createContext({
-  currentMember:       null,
-  isOwner:             false,
-  viewingAs:           null,
+  currentMember:        null,
+  isOwner:              false,
+  viewingAs:            null,
   effectivePermissions: null,
-  loading:             true,
-  hasPermission:       () => true,
-  setViewingAs:        () => {},
-  clearViewingAs:      () => {},
+  allowedClientIds:     null,
+  defaultClientId:      null,
+  loading:              true,
+  hasPermission:        () => true,
+  setViewingAs:         () => {},
+  clearViewingAs:       () => {},
 });
 
 const LS_KEY = 'vtm_viewing_as';
@@ -74,14 +76,30 @@ export function TeamProvider({ children }) {
 
   /**
    * effectivePermissions:
-   *   - null          → full access (owner not viewing as anyone)
-   *   - string[]      → explicit list of allowed page slugs
+   *   - null      → full access (owner not viewing as anyone)
+   *   - string[]  → explicit list of allowed page slugs
+   *
+   * allowedClientIds:
+   *   - null      → all clients visible
+   *   - string[]  → only these client UUIDs are accessible
    */
   const effectivePermissions = viewingAs
     ? (viewingAs.permissions ?? [])
     : isOwner
       ? null
       : (currentMember?.permissions ?? []);
+
+  const allowedClientIds = viewingAs
+    ? (viewingAs.allowed_client_ids?.length ? viewingAs.allowed_client_ids : null)
+    : isOwner
+      ? null
+      : (currentMember?.allowed_client_ids?.length ? currentMember.allowed_client_ids : null);
+
+  const defaultClientId = viewingAs
+    ? (viewingAs.default_client_id || null)
+    : isOwner
+      ? null
+      : (currentMember?.default_client_id || null);
 
   // ── Permission helper ─────────────────────────────────────────────────────
   const hasPermission = useCallback(
@@ -92,10 +110,12 @@ export function TeamProvider({ children }) {
   // ── viewingAs setters ─────────────────────────────────────────────────────
   const setViewingAs = useCallback((member) => {
     const record = {
-      id:          member.id,
-      email:       member.email,
-      name:        member.name,
-      permissions: member.permissions ?? [],
+      id:                 member.id,
+      email:              member.email,
+      name:               member.name,
+      permissions:        member.permissions ?? [],
+      allowed_client_ids: member.allowed_client_ids ?? [],
+      default_client_id:  member.default_client_id ?? null,
     };
     setViewingAsState(record);
     try { localStorage.setItem(LS_KEY, JSON.stringify(record)); } catch {}
@@ -111,11 +131,13 @@ export function TeamProvider({ children }) {
     isOwner,
     viewingAs,
     effectivePermissions,
+    allowedClientIds,
+    defaultClientId,
     loading,
     hasPermission,
     setViewingAs,
     clearViewingAs,
-  }), [currentMember, isOwner, viewingAs, effectivePermissions, loading, hasPermission, setViewingAs, clearViewingAs]);
+  }), [currentMember, isOwner, viewingAs, effectivePermissions, allowedClientIds, defaultClientId, loading, hasPermission, setViewingAs, clearViewingAs]);
 
   return (
     <TeamContext.Provider value={value}>

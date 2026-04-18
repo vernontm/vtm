@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
     // ── POST — invite new member ───────────────────────────────────────────────
     if (req.method === 'POST') {
-      const { email, name, permissions } = req.body;
+      const { email, name, permissions, allowed_client_ids, default_client_id } = req.body;
       if (!email) return res.status(400).json({ error: 'email is required' });
       if (!name)  return res.status(400).json({ error: 'name is required' });
 
@@ -62,6 +62,8 @@ export default async function handler(req, res) {
         name:  name.trim(),
         role:  'admin',
         permissions: permissions || [],
+        allowed_client_ids: allowed_client_ids || [],
+        default_client_id: default_client_id || null,
         invite_status: 'pending',
       };
 
@@ -93,10 +95,12 @@ export default async function handler(req, res) {
 
     // ── PATCH ?id=xxx — update name and/or permissions ────────────────────────
     if (req.method === 'PATCH' && id) {
-      const { name, permissions } = req.body;
+      const { name, permissions, allowed_client_ids, default_client_id } = req.body;
       const updates = {};
-      if (name        !== undefined) updates.name        = name;
-      if (permissions !== undefined) updates.permissions = permissions;
+      if (name               !== undefined) updates.name               = name;
+      if (permissions        !== undefined) updates.permissions        = permissions;
+      if (allowed_client_ids !== undefined) updates.allowed_client_ids = allowed_client_ids;
+      if (default_client_id  !== undefined) updates.default_client_id  = default_client_id;
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: 'Nothing to update' });
