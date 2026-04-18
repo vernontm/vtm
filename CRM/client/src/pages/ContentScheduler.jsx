@@ -3082,11 +3082,11 @@ export default function ContentScheduler() {
                 disabled={publishLoading || !publishPlatforms.length}
                 onClick={async () => {
                   if (publishModal._bulk) {
-                    // Bulk publish — cover frame not applicable for bulk
                     setPublishLoading(true);
                     const bulkScripts = scripts.filter(s => publishModal.ids.includes(s.id));
                     for (const s of bulkScripts) {
-                      try { await handlePublish(s, publishPlatforms, publishScheduleDate, null); }
+                      // Pass coverTimestampMs for 1-item bulk; null for multi (picker doesn't show)
+                      try { await handlePublish(s, publishPlatforms, publishScheduleDate, coverTimestampMs); }
                       catch {}
                     }
                     await loadClientData(client.id);
