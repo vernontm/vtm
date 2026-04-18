@@ -30,9 +30,25 @@ const STATUS_STYLES = {
 
 const FILTER_TABS = ['All Leads', ...LEAD_STATUSES];
 
+// Sources that count as inbound (someone came to us)
+const INBOUND_SOURCES = new Set([
+  'TikTok', 'Instagram', 'YouTube', 'Threads', 'Facebook', 'X / Twitter',
+  'LinkedIn', 'Website', 'Referral', 'Podcast', 'Event', 'Email',
+]);
+
+function segmentFromSource(source) {
+  if (source === 'Cold Outreach') return 'cold';
+  return 'inbound';
+}
+
+function assignedFromSegment(segment) {
+  return segment === 'cold' ? 'Stephanie' : 'Ray';
+}
+
 const EMPTY = {
   name: '', status: 'New', company: '', email: '', phone: '',
   tiktok_username: '', ig_username: '', lead_source: '', notes: '', product_need: '',
+  segment: 'inbound', assigned_to: 'Ray',
 };
 
 // ─── Product Need options & chip ──────────────────────────────────────────────
@@ -1221,6 +1237,7 @@ export default function Leads() {
   const [allCommLog, setAllCommLog] = useState([]);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [activeTab, setActiveTab] = useState('All Leads');
+  const [activeSegment, setActiveSegment] = useState('inbound');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [selected, setSelected] = useState(null);
@@ -1257,19 +1274,25 @@ export default function Leads() {
     }).catch(() => {});
   }, [leads]);
 
-  // Counts per tab
+  // Segment counts for the top-level tabs
+  const segmentCounts = useMemo(() => ({
+    inbound: leads.filter(l => (l.segment || 'inbound') === 'inbound').length,
+    cold:    leads.filter(l => l.segment === 'cold').length,
+  }), [leads]);
+
+  // Counts per status tab within the active segment
   const statusCounts = useMemo(() => {
     const c = { 'All Leads': 0 };
     LEAD_STATUSES.forEach(s => { c[s] = 0; });
-    leads.forEach(l => {
+    leads.filter(l => (l.segment || 'inbound') === activeSegment).forEach(l => {
       c['All Leads']++;
       if (c[l.status] !== undefined) c[l.status]++;
     });
     return c;
-  }, [leads]);
+  }, [leads, activeSegment]);
 
   const filtered = useMemo(() => {
-    let list = leads;
+    let list = leads.filter(l => (l.segment || 'inbound') === activeSegment);
     if (activeTab !== 'All Leads') list = list.filter(l => l.status === activeTab);
     if (search) {
       const q = search.toLowerCase();
@@ -1289,6 +1312,7 @@ export default function Leads() {
     return sortFn ? [...list].sort(sortFn) : list;
   }, [leads, activeTab, search, sort]);
 
+  useEffect(() => { setPage(1); setActiveTab('All Leads'); }, [activeSegment]);
   useEffect(() => { setPage(1); }, [activeTab, search, sort, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -1324,7 +1348,7 @@ export default function Leads() {
     } catch (e) { console.error(e); }
   };
 
-  const openAdd    = () => { setForm(EMPTY); setModal('add'); };
+  const openAdd    = () => { setForm({ ...EMPTY, segment: activeSegment, assigned_to: assignedFromSegment(activeSegment) }); setModal('add'); };
   const openDelete = (l) => { setSelected(l); setModal('delete'); };
   const openConvert = (l) => { setSelected(l); setModal('convert'); };
 
@@ -1412,6 +1436,31 @@ export default function Leads() {
           </button>
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Lead</button>
         </div>
+      </div>
+
+      {/* ── Segment tabs ────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', background: '#fff', borderBottom: '1px solid #e5e7ef' }}>
+        {[
+          { key: 'inbound', label: 'Inbound', emoji: '📥', accent: '#E8650A', bg: '#fff5f0', owner: 'Ray' },
+          { key: 'cold',    label: 'Cold Calls', emoji: '❄️', accent: '#0369A1', bg: '#E0F2FE', owner: 'Stephanie' },
+        ].map(seg => {
+          const active = activeSegment === seg.key;
+          return (
+            <button key={seg.key} onClick={() => setActiveSegment(seg.key)} style={{
+              flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
+              background: active ? seg.bg : '#fafafa',
+              borderBottom: active ? `3px solid ${seg.accent}` : '3px solid transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              transition: 'all 0.15s',
+            }}>
+              <span style={{ fontSize: 18 }}>{seg.emoji}</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: active ? seg.accent : '#8e8ea0' }}>{seg.label}</div>
+                <div style={{ fontSize: 11, color: active ? seg.accent : '#b0b0c0' }}>{segmentCounts[seg.key]} leads · {seg.owner}</div>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Stats bar ───────────────────────────────────────────────────────── */}
@@ -1625,7 +1674,17 @@ export default function Leads() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Avatar name={lead.name} />
                     <div style={{ minWidth: 0 }}>
-                      <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{lead.name || '—'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{lead.name || '—'}</div>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                          background: (lead.assigned_to || 'Ray') === 'Stephanie' ? '#E0F2FE' : '#FFF5F0',
+                          color: (lead.assigned_to || 'Ray') === 'Stephanie' ? '#0369A1' : '#E8650A',
+                          flexShrink: 0,
+                        }}>
+                          {lead.assigned_to || 'Ray'}
+                        </span>
+                      </div>
                       {lead.company && <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0' }}>{lead.company}</div>}
                     </div>
                   </div>
@@ -1878,8 +1937,31 @@ export default function Leads() {
             </div>
             <div className="form-group">
               <label className="form-label">Lead Source</label>
-              <select className="form-select" value={form.lead_source} onChange={e => setForm(f => ({ ...f, lead_source: e.target.value }))}>
+              <select className="form-select" value={form.lead_source} onChange={e => {
+                const src = e.target.value;
+                const seg = segmentFromSource(src);
+                setForm(f => ({ ...f, lead_source: src, segment: seg, assigned_to: assignedFromSegment(seg) }));
+              }}>
                 {LEAD_SOURCES.map(s => <option key={s}>{s || '— Select —'}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="form-group">
+              <label className="form-label">Segment</label>
+              <select className="form-select" value={form.segment || 'inbound'} onChange={e => {
+                const seg = e.target.value;
+                setForm(f => ({ ...f, segment: seg, assigned_to: assignedFromSegment(seg) }));
+              }}>
+                <option value="inbound">📥 Inbound</option>
+                <option value="cold">❄️ Cold Call</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Assigned To</label>
+              <select className="form-select" value={form.assigned_to || 'Ray'} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}>
+                <option value="Ray">Ray</option>
+                <option value="Stephanie">Stephanie</option>
               </select>
             </div>
           </div>
