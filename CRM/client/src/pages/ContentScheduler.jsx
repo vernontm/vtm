@@ -12,6 +12,7 @@ import {
   getUploadPostAnalytics, getTotalImpressions,
   saveAnalyticsSnapshot, getAnalyticsHistory,
   getMonitors, startMonitor, stopMonitor,
+  getRecentPosts,
 } from '../api';
 import {
   Search, Plus, Building2, Globe, ChevronDown, ChevronUp, Edit3,
@@ -151,6 +152,8 @@ export default function ContentScheduler() {
   // AutoDM monitors state
   const [monitors, setMonitors] = useState([]);
   const [monitorLoading, setMonitorLoading] = useState(null); // script id being toggled
+  const [recentTikTokPosts, setRecentTikTokPosts] = useState([]);
+  const [recentPostsLoading, setRecentPostsLoading] = useState(false);
 
   // Generator state
   const [genMessages, setGenMessages] = useState([]);
@@ -291,6 +294,18 @@ export default function ContentScheduler() {
     } catch (e) { console.error(e); }
     setLoading(false);
   }
+
+  // ── Fetch recent TikTok posts when AutoDMs tab opens ──
+  useEffect(() => {
+    if (activeSection !== 'engagement' || engageTab !== 'autodms' || !client) return;
+    if (recentTikTokPosts.length) return; // already loaded
+    setRecentPostsLoading(true);
+    const user = client.uploadpost_user || 'rayvaughnceo';
+    getRecentPosts(user, 'tiktok', 10)
+      .then(data => setRecentTikTokPosts(Array.isArray(data) ? data : (data?.posts || data?.data || [])))
+      .catch(() => setRecentTikTokPosts([]))
+      .finally(() => setRecentPostsLoading(false));
+  }, [activeSection, engageTab, client?.id]);
 
   // ── Auto-load analytics when section opens ──
   useEffect(() => {
@@ -2670,63 +2685,59 @@ export default function ContentScheduler() {
                       {/* Start New Monitor */}
                       <div style={{ background: '#f8f9fc', borderRadius: 10, padding: 14, marginBottom: 16 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', marginBottom: 10 }}>Start New Monitor</div>
-                        {/* Post picker — latest 10 delivered */}
-                        {(() => {
-                          const delivered = scripts
-                            .filter(s => ['posted', 'exported'].includes(s.status))
-                            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-                            .slice(0, 10);
-                          return (
-                            <div style={{ position: 'relative', marginBottom: 8 }}>
-                              <div style={{
-                                maxHeight: 200, overflowY: 'auto', borderRadius: 8,
-                                border: '1px solid #e5e7ef', background: '#fff',
-                              }}>
-                                {delivered.length === 0 && (
-                                  <div style={{ padding: '10px 12px', fontSize: 12, color: '#8e8ea0' }}>No delivered posts yet</div>
-                                )}
-                                {delivered.map(s => {
-                                  const thumb = s.media_urls?.[0];
-                                  const isSelected = autoDMPostUrl === (thumb || s.id);
-                                  return (
-                                    <div key={s.id} onClick={() => setAutoDMPostUrl(thumb || '')}
-                                      style={{
-                                        display: 'flex', alignItems: 'center', gap: 10,
-                                        padding: '8px 12px', cursor: 'pointer',
-                                        background: isSelected ? '#fff0e6' : 'transparent',
-                                        borderLeft: isSelected ? '3px solid #E8650A' : '3px solid transparent',
-                                        borderBottom: '1px solid #f5f5f8',
-                                      }}>
-                                      {thumb && (
-                                        <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: '#f0f0f5' }}>
-                                          {thumb.match(/\.(mp4|mov|webm)/i)
-                                            ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Play size={14} color="#8e8ea0" /></div>
-                                            : <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                                        </div>
-                                      )}
-                                      <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                          {s.title || 'Untitled'}
-                                        </div>
-                                        <div style={{ fontSize: 10, color: '#8e8ea0' }}>
-                                          {s.updated_at ? new Date(s.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                                        </div>
-                                      </div>
-                                      {isSelected && <Check size={12} color="#E8650A" />}
+                        {/* Post picker — latest 10 TikTok posts */}
+                        <div style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            Latest TikTok Posts
+                            {recentPostsLoading && <Loader size={11} className="spin" />}
+                            {!recentPostsLoading && <button onClick={() => { setRecentTikTokPosts([]); }} style={{ ...btnGhost, padding: '1px 6px', fontSize: 10 }}><RefreshCw size={10} /> Refresh</button>}
+                          </div>
+                          <div style={{ maxHeight: 220, overflowY: 'auto', borderRadius: 8, border: '1px solid #e5e7ef', background: '#fff' }}>
+                            {recentPostsLoading && (
+                              <div style={{ padding: '14px 12px', fontSize: 12, color: '#8e8ea0', textAlign: 'center' }}>Loading posts…</div>
+                            )}
+                            {!recentPostsLoading && recentTikTokPosts.length === 0 && (
+                              <div style={{ padding: '10px 12px', fontSize: 12, color: '#8e8ea0' }}>No TikTok posts found</div>
+                            )}
+                            {recentTikTokPosts.map((post, i) => {
+                              const url = post.post_url || post.url || post.share_url || post.video_url || '';
+                              const thumb = post.thumbnail || post.cover_image || post.thumbnail_url || '';
+                              const title = post.title || post.description || post.caption || `Post ${i + 1}`;
+                              const date = post.created_at || post.create_time || post.published_at || '';
+                              const isSelected = autoDMPostUrl === url;
+                              return (
+                                <div key={url || i} onClick={() => url && setAutoDMPostUrl(url)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 10,
+                                    padding: '8px 12px', cursor: url ? 'pointer' : 'default',
+                                    background: isSelected ? '#fff0e6' : 'transparent',
+                                    borderLeft: isSelected ? '3px solid #E8650A' : '3px solid transparent',
+                                    borderBottom: '1px solid #f5f5f8',
+                                  }}>
+                                  <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {thumb
+                                      ? <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+                                      : <Play size={14} color="#8e8ea0" />}
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {title}
                                     </div>
-                                  );
-                                })}
-                              </div>
-                              {autoDMPostUrl && (
-                                <div style={{ marginTop: 6, fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <Check size={11} color="#16a34a" />
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Selected: {autoDMPostUrl}</span>
-                                  <button onClick={() => setAutoDMPostUrl('')} style={{ ...btnGhost, padding: '1px 4px', flexShrink: 0 }}><X size={10} /></button>
+                                    {date && <div style={{ fontSize: 10, color: '#8e8ea0' }}>{new Date(typeof date === 'number' ? date * 1000 : date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>}
+                                  </div>
+                                  {isSelected && <Check size={12} color="#E8650A" />}
                                 </div>
-                              )}
+                              );
+                            })}
+                          </div>
+                          {autoDMPostUrl && (
+                            <div style={{ marginTop: 6, fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <Check size={11} color="#16a34a" />
+                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{autoDMPostUrl}</span>
+                              <button onClick={() => setAutoDMPostUrl('')} style={{ ...btnGhost, padding: '1px 4px', flexShrink: 0 }}><X size={10} /></button>
                             </div>
-                          );
-                        })()}
+                          )}
+                        </div>
                         <input style={{ ...inputStyle, marginBottom: 8 }} placeholder="Trigger keywords (comma-separated, optional — e.g. LINK, INFO)"
                           value={autoDMKeywords} onChange={e => setAutoDMKeywords(e.target.value)} />
                         <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', marginBottom: 8 }}

@@ -33,6 +33,15 @@ export default async function handler(req, res) {
       return res.json(data);
     }
 
+    // ── Recent posts for a user/platform ─────────────────────────────────────
+    if (req.method === 'GET' && action === 'recent-posts') {
+      const { user, platform = 'tiktok', limit = '10' } = req.query;
+      if (!user) return res.status(400).json({ error: 'user required' });
+      const qs = new URLSearchParams({ platform, limit });
+      const data = await upFetch(`/uploadposts/posts/${user}?${qs}`, { headers: upHeaders() });
+      return res.json(data);
+    }
+
     // ── Publish / schedule a post ─────────────────────────────────────────────
     if (req.method === 'POST' && action === 'publish') {
       const {
