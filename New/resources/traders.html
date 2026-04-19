@@ -17,12 +17,12 @@
             --font-display: 'Plus Jakarta Sans', sans-serif;
             --font-body: 'DM Sans', sans-serif;
         }
-        html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
         body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%); pointer-events: none; z-index: 0; }
-        .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+        .page { position: relative; z-index: 1; }
 
         /* Nav */
-        nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; animation: fadeDown 0.6s ease both; flex-shrink: 0; position: relative; z-index: 101; }
+        nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; animation: fadeDown 0.6s ease both; position: relative; z-index: 101; }
         .logo img { height: 46px; width: auto; display: block; }
         .nav-links { display: flex; align-items: center; gap: 28px; }
         .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
@@ -46,19 +46,19 @@
         .menu-overlay a:hover { color: var(--orange); }
 
         /* Hero */
-        .page-hero { text-align: center; padding: 60px 40px 20px; max-width: 800px; margin: 0 auto; animation: fadeUp 0.7s ease both; }
+        .page-hero { text-align: center; padding: 60px 20px 40px; animation: fadeUp 0.7s 0.1s ease both; }
         .page-hero .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,155,38,0.1); border: 1px solid rgba(255,155,38,0.2); color: var(--orange); padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px; }
-        .page-hero h1 { font-family: var(--font-display); font-size: clamp(32px, 5vw, 52px); font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
-        .page-hero h1 em { font-style: italic; color: var(--orange); }
-        .page-hero p { font-size: 16px; color: var(--muted); line-height: 1.7; max-width: 600px; margin: 0 auto; }
+        .page-hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 5.5vw, 4rem); font-weight: 300; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 12px; }
+        .page-hero h1 em { font-style: normal; font-weight: 800; color: var(--orange); }
+        .page-hero p { font-size: 1rem; color: var(--muted); font-weight: 300; max-width: 520px; margin: 0 auto; }
 
         /* Gate */
-        #gateWrap { display: flex; align-items: center; justify-content: center; padding: 40px 20px 80px; animation: fadeUp 0.7s 0.1s ease both; }
+        #gateWrap { display: flex; align-items: center; justify-content: center; padding: 20px 20px 80px; animation: fadeUp 0.7s 0.2s ease both; }
         .gate-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 44px 40px; max-width: 460px; width: 100%; text-align: center; }
         .gate-card .lock-icon { width: 52px; height: 52px; background: rgba(255,155,38,0.1); border: 1px solid rgba(255,155,38,0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
-        .gate-card .lock-icon svg { width: 24px; height: 24px; color: var(--orange); }
+        .gate-card .lock-icon svg { width: 24px; height: 24px; color: var(--orange); stroke: var(--orange); }
         .gate-card h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-        .gate-card p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+        .gate-card > p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
         .gate-form { display: flex; flex-direction: column; gap: 14px; }
         .gate-form input { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; transition: border-color 0.2s; width: 100%; }
         .gate-form input::placeholder { color: var(--muted); }
@@ -69,38 +69,68 @@
         .gate-error { font-size: 13px; color: #f87171; margin-top: 4px; min-height: 18px; }
         .gate-legal { font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
 
-        /* Content */
-        #contentWrap { display: none; flex-direction: column; padding: 20px 40px 80px; max-width: 900px; margin: 0 auto; width: 100%; animation: fadeUp 0.7s ease both; }
+        /* Content grid (hidden until unlocked) */
+        #contentWrap { display: none; }
+        .prompts-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 60px; animation: fadeUp 0.7s ease both; }
+        .prompts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 
-        .section-label { font-size: 11px; font-weight: 700; color: var(--orange); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-display); margin-bottom: 20px; }
+        .prompt-card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+            overflow: hidden; transition: all 0.25s; cursor: pointer;
+        }
+        .prompt-card:hover {
+            border-color: rgba(255,155,38,0.25); transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,155,38,0.06);
+        }
+        .card-thumb {
+            width: 100%; aspect-ratio: 16/9; background: var(--surface-2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; border-bottom: 1px solid var(--border);
+        }
+        .card-body { padding: 18px 20px 20px; }
+        .card-tag {
+            display: inline-block; font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.06em; text-transform: uppercase; color: var(--orange);
+            background: rgba(255,155,38,0.1); border: 1px solid rgba(255,155,38,0.2);
+            padding: 3px 10px; border-radius: 100px; margin-bottom: 10px;
+        }
+        .card-body h3 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
+        .card-body p { font-size: 0.85rem; color: var(--muted); font-weight: 300; line-height: 1.55; }
 
-        .prompt-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 24px; transition: box-shadow 0.25s; }
-        .prompt-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
-        .prompt-header { padding: 20px 24px 16px; display: flex; align-items: flex-start; gap: 14px; }
-        .prompt-num { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,155,38,0.12); border: 1px solid rgba(255,155,38,0.2); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 13px; color: var(--orange); flex-shrink: 0; }
-        .prompt-meta { flex: 1; }
-        .prompt-meta h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-        .prompt-meta p { font-size: 13px; color: var(--muted); line-height: 1.5; }
-        .prompt-body { padding: 0 24px 24px; }
-        .prompt-body iframe { border-radius: 10px; display: block; }
+        /* Prompt modal */
+        .prompt-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 40px; backdrop-filter: blur(8px); opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .prompt-modal.open { opacity: 1; visibility: visible; }
+        .prompt-modal-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; z-index: 201; opacity: 0.7; transition: opacity 0.2s; line-height: 1; }
+        .prompt-modal-close:hover { opacity: 1; }
+        .prompt-modal-inner { max-width: 860px; width: 100%; max-height: 90vh; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+        .prompt-modal-header { padding: 24px 28px 0; }
+        .prompt-modal-header .card-tag { margin-bottom: 8px; }
+        .prompt-modal-header h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+        .prompt-modal-header p { font-size: 13px; color: var(--muted); line-height: 1.5; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .prompt-modal-body { padding: 20px 28px 28px; }
+        .prompt-modal-body iframe { border-radius: 10px; display: block; }
 
         /* CTA */
-        .cta-section { text-align: center; padding: 20px 40px 80px; animation: fadeUp 0.7s 0.2s ease both; }
+        .cta-section { text-align: center; padding: 20px 40px 80px; }
         .cta-section h2 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 16px; }
         .cta-section p { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
         .cta-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--orange); color: #111; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; }
         .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,155,38,0.3); }
 
         @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 
-        @media (max-width: 768px) {
-            nav { padding: 16px 20px; }
+        @media (max-width: 900px) { .prompts-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) {
+            nav { padding: 20px 24px; }
             .nav-links a:not(.nav-mode-btn) { display: none; }
-            .page-hero { padding: 40px 20px 16px; }
-            #gateWrap { padding: 24px 20px 60px; }
+            .page-hero { padding: 40px 16px 24px; }
+            #gateWrap { padding: 16px 20px 60px; }
             .gate-card { padding: 32px 24px; }
-            #contentWrap { padding: 16px 20px 60px; }
+            .prompts-section { padding: 0 16px 60px; }
+            .prompts-grid { grid-template-columns: 1fr; }
+            .prompt-modal { padding: 16px; }
+            .prompt-modal-inner { border-radius: 16px; max-height: 95vh; }
             .cta-section { padding: 20px 20px 60px; }
         }
     </style>
@@ -108,9 +138,7 @@
 <body>
     <div class="page">
         <nav>
-            <a href="/" class="logo">
-                <img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" />
-            </a>
+            <a href="/" class="logo"><img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" /></a>
             <div class="nav-links">
                 <a href="/services">Services</a>
                 <a href="/contact">Contact Us</a>
@@ -143,7 +171,7 @@
         <div id="gateWrap">
             <div class="gate-card">
                 <div class="lock-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
@@ -163,54 +191,40 @@
             </div>
         </div>
 
-        <!-- Content (shown after unlock) -->
+        <!-- Content — shown after unlock -->
         <div id="contentWrap">
-            <div class="section-label">Prompts &amp; Tools</div>
-
-            <div class="prompt-card">
-                <div class="prompt-header">
-                    <div class="prompt-num">01</div>
-                    <div class="prompt-meta">
-                        <h3>Trading Dashboard Prompt</h3>
-                        <p>A full AI-assisted prompt to build your personal trading dashboard and analysis workflow.</p>
-                    </div>
-                </div>
-                <div class="prompt-body">
-                    <iframe
-                        src="https://claude.site/public/artifacts/5b28b5d5-f53c-4625-ad1f-c9bc7b4ee664/embed"
-                        title="trading_dashboard_prompt.md"
-                        width="100%"
-                        height="600"
-                        frameborder="0"
-                        allow="clipboard-write"
-                        allowfullscreen
-                    ></iframe>
-                </div>
+            <section class="prompts-section">
+                <div class="prompts-grid" id="promptsGrid"></div>
+            </section>
+            <div class="cta-section">
+                <h2>Want us to build this for you?</h2>
+                <p>We automate systems for traders, creators, and businesses. Let's talk.</p>
+                <a href="/book-call" class="cta-btn">Book a Call &#8594;</a>
             </div>
         </div>
+    </div>
 
-        <div class="cta-section" id="ctaSection" style="display:none;">
-            <h2>Want us to build this for you?</h2>
-            <p>We automate systems for traders, creators, and businesses. Let's talk.</p>
-            <a href="/book-call" class="cta-btn">Book a Call &#8594;</a>
+    <!-- Prompt modal -->
+    <div class="prompt-modal" id="promptModal">
+        <button class="prompt-modal-close" id="modalClose">&times;</button>
+        <div class="prompt-modal-inner">
+            <div class="prompt-modal-header">
+                <span class="card-tag" id="modalTag"></span>
+                <h2 id="modalTitle"></h2>
+                <p id="modalDesc"></p>
+            </div>
+            <div class="prompt-modal-body" id="modalBody"></div>
         </div>
     </div>
 
     <script>
-        // Menu
+        // ── Menu ──
         const menuToggle = document.getElementById('menuToggle');
         const menuOverlay = document.getElementById('menuOverlay');
         menuToggle.addEventListener('click', () => {
             menuToggle.classList.toggle('open');
             menuOverlay.classList.toggle('open');
             document.body.style.overflow = menuOverlay.classList.contains('open') ? 'hidden' : '';
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && menuOverlay.classList.contains('open')) {
-                menuToggle.classList.remove('open');
-                menuOverlay.classList.remove('open');
-                document.body.style.overflow = '';
-            }
         });
         menuOverlay.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
@@ -220,20 +234,90 @@
             });
         });
 
+        // ── Prompts data ──
+        const PROMPTS = [
+            {
+                emoji: '📊',
+                tag: 'AI Prompt',
+                title: 'Trading Dashboard Prompt',
+                desc: 'A full AI-assisted prompt to build your personal trading dashboard and analysis workflow.',
+                iframeSrc: 'https://claude.site/public/artifacts/5b28b5d5-f53c-4625-ad1f-c9bc7b4ee664/embed',
+                iframeTitle: 'trading_dashboard_prompt.md',
+            },
+        ];
+
+        // ── Modal logic ──
+        const modal = document.getElementById('promptModal');
+        const modalClose = document.getElementById('modalClose');
+
+        function openPrompt(p) {
+            document.getElementById('modalTag').textContent = p.tag;
+            document.getElementById('modalTitle').textContent = p.title;
+            document.getElementById('modalDesc').textContent = p.desc;
+            document.getElementById('modalBody').innerHTML = `
+                <iframe
+                    src="${p.iframeSrc}"
+                    title="${p.iframeTitle}"
+                    width="100%"
+                    height="580"
+                    frameborder="0"
+                    allow="clipboard-write"
+                    allowfullscreen
+                ></iframe>`;
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+            document.getElementById('modalBody').innerHTML = '';
+        }
+
+        modalClose.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (modal.classList.contains('open')) closeModal();
+                if (menuOverlay.classList.contains('open')) {
+                    menuToggle.classList.remove('open');
+                    menuOverlay.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+
+        // ── Render cards ──
+        function renderPrompts() {
+            const grid = document.getElementById('promptsGrid');
+            grid.innerHTML = PROMPTS.map((p, i) => `
+                <div class="prompt-card" data-index="${i}">
+                    <div class="card-thumb">${p.emoji}</div>
+                    <div class="card-body">
+                        <span class="card-tag">${p.tag}</span>
+                        <h3>${p.title}</h3>
+                        <p>${p.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+            grid.querySelectorAll('.prompt-card').forEach(card => {
+                card.addEventListener('click', () => openPrompt(PROMPTS[+card.dataset.index]));
+            });
+        }
+
+        // ── Gate logic ──
         const STORAGE_KEY = 'vtm_traders_unlocked';
 
         function showContent() {
             document.getElementById('gateWrap').style.display = 'none';
-            document.getElementById('contentWrap').style.display = 'flex';
-            document.getElementById('ctaSection').style.display = 'block';
+            document.getElementById('contentWrap').style.display = 'block';
         }
 
-        // Check if already unlocked
         if (localStorage.getItem(STORAGE_KEY)) {
             showContent();
+            renderPrompts();
         }
 
-        // Gate form submit
         document.getElementById('gateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('gateName').value.trim();
@@ -242,10 +326,7 @@
             const btnText = document.getElementById('gateBtnText');
             const errEl = document.getElementById('gateError');
 
-            if (!name || !email) {
-                errEl.textContent = 'Please fill in both fields.';
-                return;
-            }
+            if (!name || !email) { errEl.textContent = 'Please fill in both fields.'; return; }
 
             btn.disabled = true;
             btnText.textContent = 'Unlocking...';
@@ -259,15 +340,17 @@
                         name,
                         email,
                         source: 'traders-page',
+                        tags: ['traders'],
                         notes: 'Signed up via /resources/traders page',
                     }),
                 });
             } catch (_) {
-                // Non-blocking — unlock regardless of API result
+                // Non-blocking
             }
 
             localStorage.setItem(STORAGE_KEY, '1');
             showContent();
+            renderPrompts();
         });
     </script>
 </body>

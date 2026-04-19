@@ -36,7 +36,7 @@ export default async function handler(req, res) {
           client_id: VTM_EMAIL_CLIENT_ID,
           email: lead.email.toLowerCase().trim(),
           name: lead.name || '',
-          tags: ['warm lead'],
+          tags: ['warm lead', ...(Array.isArray(lead.tags) ? lead.tags : [])],
           status: 'active',
           signed_up_at: new Date().toISOString(),
         }),
