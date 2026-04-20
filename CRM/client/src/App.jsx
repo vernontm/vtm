@@ -45,6 +45,7 @@ import Team from './pages/Team';
 import Training from './pages/Training';
 import Scripts from './pages/Scripts';
 import Products from './pages/Products';
+import Resources from './pages/Resources';
 
 export const MobileContext = createContext({ sidebarOpen: false, setSidebarOpen: () => {} });
 export const useMobile = () => useContext(MobileContext);
@@ -108,6 +109,7 @@ function AppLayout() {
               <Route path="/training" element={<Training />} />
               <Route path="/scripts" element={<Scripts />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/resources" element={<Resources />} />
             </Routes>
             </ErrorBoundary>
           </main>

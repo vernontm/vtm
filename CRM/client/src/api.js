@@ -214,6 +214,12 @@ export const createBlogPost  = (data)       => request('/blog-posts', { method: 
 export const updateBlogPost  = (id, data)   => request(`/blog-posts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteBlogPost  = (id)         => request(`/blog-posts?id=${id}`, { method: 'DELETE' });
 
+// Trader Resources (public traders page)
+export const getTraderResources    = ()         => request('/trader-resources');
+export const createTraderResource  = (data)     => request('/trader-resources', { method: 'POST', body: JSON.stringify(data) });
+export const updateTraderResource  = (id, data) => request(`/trader-resources?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteTraderResource  = (id)       => request(`/trader-resources?id=${id}`, { method: 'DELETE' });
+
 export async function uploadBlogMedia(file) {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;

@@ -107,8 +107,43 @@
         .prompt-modal-header .card-tag { margin-bottom: 8px; }
         .prompt-modal-header h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 6px; }
         .prompt-modal-header p { font-size: 13px; color: var(--muted); line-height: 1.5; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
-        .prompt-modal-body { padding: 20px 28px 28px; }
-        .prompt-modal-body iframe { border-radius: 10px; display: block; }
+        .prompt-modal-body { padding: 20px 28px 28px; display: flex; flex-direction: column; gap: 20px; }
+        .prompt-modal-body iframe { border-radius: 10px; display: block; border: 0; }
+
+        /* YouTube */
+        .yt-wrap { position: relative; width: 100%; padding-bottom: 56.25%; border-radius: 10px; overflow: hidden; background: #000; }
+        .yt-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+        /* Code block groups */
+        .code-parts { display: flex; flex-direction: column; gap: 14px; }
+        .code-part { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .code-part-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; background: rgba(255,155,38,0.06);
+            border-bottom: 1px solid var(--border);
+        }
+        .code-part-label { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--orange); display: flex; align-items: center; gap: 8px; }
+        .code-part-lang { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--bg); padding: 3px 8px; border-radius: 100px; }
+        .code-part-actions { display: flex; gap: 6px; }
+        .code-copy-btn {
+            background: var(--bg); color: var(--muted); border: 1px solid var(--border); border-radius: 6px;
+            padding: 5px 10px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+            font-family: var(--font-body); transition: all 0.15s;
+        }
+        .code-copy-btn:hover { color: var(--orange); border-color: rgba(255,155,38,0.3); }
+        .code-copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); }
+        .code-part pre {
+            margin: 0; padding: 14px 16px; overflow-x: auto; max-height: 420px; overflow-y: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 12.5px; line-height: 1.6; color: #d7d7d9; white-space: pre;
+        }
+        .code-part pre::-webkit-scrollbar { height: 6px; width: 6px; }
+        .code-part pre::-webkit-scrollbar-thumb { background: #3a3a40; border-radius: 3px; }
+
+        .section-label {
+            font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+        }
 
         /* CTA */
         .cta-section { text-align: center; padding: 20px 40px 80px; }
@@ -234,17 +269,41 @@
             });
         });
 
-        // ── Prompts data ──
-        const PROMPTS = [
-            {
-                emoji: '📊',
-                tag: 'AI Prompt',
-                title: 'Trading Dashboard Prompt',
-                desc: 'A full AI-assisted prompt to build your personal trading dashboard and analysis workflow.',
-                iframeSrc: 'https://claude.site/public/artifacts/5b28b5d5-f53c-4625-ad1f-c9bc7b4ee664/embed',
-                iframeTitle: 'trading_dashboard_prompt.md',
-            },
-        ];
+        // ── Prompts data (loaded from API) ──
+        let PROMPTS = [];
+
+        async function loadPrompts() {
+            try {
+                const res = await fetch('/api/trader-resources');
+                if (!res.ok) throw new Error('Failed to load');
+                const rows = await res.json();
+                PROMPTS = rows.map(r => ({
+                    id: r.id,
+                    emoji: r.emoji || '📊',
+                    tag: r.tag || 'Resource',
+                    title: r.title,
+                    desc: r.description || '',
+                    iframeSrc: r.iframe_src || '',
+                    youtubeUrl: r.youtube_url || '',
+                    codeBlocks: Array.isArray(r.code_blocks) ? r.code_blocks : [],
+                }));
+            } catch (e) {
+                console.error('Failed to load resources', e);
+                PROMPTS = [];
+            }
+        }
+
+        // ── Helpers ──
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        }
+
+        function getYoutubeEmbed(url) {
+            if (!url) return null;
+            const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            if (!m) return null;
+            return `https://www.youtube.com/embed/${m[1]}`;
+        }
 
         // ── Modal logic ──
         const modal = document.getElementById('promptModal');
@@ -254,16 +313,85 @@
             document.getElementById('modalTag').textContent = p.tag;
             document.getElementById('modalTitle').textContent = p.title;
             document.getElementById('modalDesc').textContent = p.desc;
-            document.getElementById('modalBody').innerHTML = `
-                <iframe
-                    src="${p.iframeSrc}"
-                    title="${p.iframeTitle}"
-                    width="100%"
-                    height="580"
-                    frameborder="0"
-                    allow="clipboard-write"
-                    allowfullscreen
-                ></iframe>`;
+
+            const body = document.getElementById('modalBody');
+            body.innerHTML = '';
+
+            // YouTube video
+            const ytEmbed = getYoutubeEmbed(p.youtubeUrl);
+            if (ytEmbed) {
+                const section = document.createElement('div');
+                section.innerHTML = `
+                    <div class="section-label">Walkthrough</div>
+                    <div class="yt-wrap"><iframe src="${ytEmbed}" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+                `;
+                body.appendChild(section);
+            }
+
+            // Code blocks
+            if (p.codeBlocks && p.codeBlocks.length > 0) {
+                const wrap = document.createElement('div');
+                wrap.innerHTML = `<div class="section-label">Prompts &amp; Code</div>`;
+                const parts = document.createElement('div');
+                parts.className = 'code-parts';
+                p.codeBlocks.forEach((b, i) => {
+                    const label = b.label || `Part ${i + 1}`;
+                    const lang = b.language || 'text';
+                    const code = b.code || '';
+                    const el = document.createElement('div');
+                    el.className = 'code-part';
+                    el.innerHTML = `
+                        <div class="code-part-head">
+                            <div class="code-part-label">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                                ${escapeHtml(label)}
+                                <span class="code-part-lang">${escapeHtml(lang)}</span>
+                            </div>
+                            <div class="code-part-actions">
+                                <button class="code-copy-btn" data-copy="${i}">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                        <pre>${escapeHtml(code)}</pre>
+                    `;
+                    parts.appendChild(el);
+                });
+                wrap.appendChild(parts);
+                body.appendChild(wrap);
+
+                // Wire copy buttons
+                parts.querySelectorAll('.code-copy-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const idx = +btn.dataset.copy;
+                        try {
+                            await navigator.clipboard.writeText(p.codeBlocks[idx].code || '');
+                            btn.classList.add('copied');
+                            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied`;
+                            setTimeout(() => {
+                                btn.classList.remove('copied');
+                                btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy`;
+                            }, 1800);
+                        } catch (_) {}
+                    });
+                });
+            }
+
+            // iframe embed (Claude artifact, etc.)
+            if (p.iframeSrc) {
+                const section = document.createElement('div');
+                section.innerHTML = `
+                    <div class="section-label">Interactive Embed</div>
+                    <iframe src="${escapeHtml(p.iframeSrc)}" title="${escapeHtml(p.title)}" width="100%" height="580" allow="clipboard-write" allowfullscreen></iframe>
+                `;
+                body.appendChild(section);
+            }
+
+            if (!ytEmbed && (!p.codeBlocks || p.codeBlocks.length === 0) && !p.iframeSrc) {
+                body.innerHTML = `<p style="color:var(--muted);text-align:center;padding:40px 20px;">This resource has no content yet. Check back soon!</p>`;
+            }
+
             modal.classList.add('open');
             document.body.style.overflow = 'hidden';
         }
@@ -290,19 +418,28 @@
         // ── Render cards ──
         function renderPrompts() {
             const grid = document.getElementById('promptsGrid');
+            if (!PROMPTS.length) {
+                grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">No resources available yet. Check back soon!</p>`;
+                return;
+            }
             grid.innerHTML = PROMPTS.map((p, i) => `
                 <div class="prompt-card" data-index="${i}">
-                    <div class="card-thumb">${p.emoji}</div>
+                    <div class="card-thumb">${escapeHtml(p.emoji)}</div>
                     <div class="card-body">
-                        <span class="card-tag">${p.tag}</span>
-                        <h3>${p.title}</h3>
-                        <p>${p.desc}</p>
+                        <span class="card-tag">${escapeHtml(p.tag)}</span>
+                        <h3>${escapeHtml(p.title)}</h3>
+                        <p>${escapeHtml(p.desc)}</p>
                     </div>
                 </div>
             `).join('');
             grid.querySelectorAll('.prompt-card').forEach(card => {
                 card.addEventListener('click', () => openPrompt(PROMPTS[+card.dataset.index]));
             });
+        }
+
+        async function loadAndRender() {
+            await loadPrompts();
+            renderPrompts();
         }
 
         // ── Gate logic ──
@@ -315,7 +452,7 @@
 
         if (localStorage.getItem(STORAGE_KEY)) {
             showContent();
-            renderPrompts();
+            loadAndRender();
         }
 
         document.getElementById('gateForm').addEventListener('submit', async (e) => {
@@ -350,7 +487,7 @@
 
             localStorage.setItem(STORAGE_KEY, '1');
             showContent();
-            renderPrompts();
+            loadAndRender();
         });
     </script>
 </body>
