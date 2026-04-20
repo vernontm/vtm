@@ -22,7 +22,7 @@ const nav = [
   { to: '/projects',          icon: Briefcase,       label: 'Projects',         slug: 'projects' },
   { to: '/blog',              icon: FileText,        label: 'Blog',             slug: 'blog' },
   { to: '/portfolio',         icon: FolderOpen,      label: 'Portfolio',        slug: 'portfolio' },
-  { to: '/resources',         icon: FileCode,        label: 'Trader Resources', slug: 'resources' },
+  { to: '/resources',         icon: FileCode,        label: 'Resources',        slug: 'resources' },
   { to: '/content-scheduler', icon: Film,            label: 'Content',          slug: 'content-scheduler' },
   { to: '/email-marketing',   icon: Mail,            label: 'Email Marketing',  slug: 'email-marketing' },
 ];
