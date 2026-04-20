@@ -1592,6 +1592,7 @@ export default function Leads() {
   // Processing tracker state
   const [processingLeadIds, setProcessingLeadIds] = useState(new Set()); // lead IDs with in-flight recordings
   const [processedNotifs, setProcessedNotifs] = useState([]); // [{id, leadId, leadName}] completed
+  const [recordingCompletionTick, setRecordingCompletionTick] = useState(0); // bumps when any recording finishes
   const knownProcessingRef = useRef(new Map()); // recordingId → {leadId, leadName}
 
   // Poll for processing recordings every 8s
@@ -1623,6 +1624,10 @@ export default function Leads() {
           setProcessedNotifs(n => [...n, ...completed.map(c => ({ ...c, ts: Date.now() }))]);
           // Refresh recording counts so badge updates
           getLeadRecordingCounts().then(counts => setRecordingCounts(counts || {})).catch(() => {});
+          // Bump tick so any open lead detail panel reloads its activity timeline
+          setRecordingCompletionTick(t => t + 1);
+          // Also refresh the comm log since recordings append an entry there on completion
+          getCommLog().then(logs => setAllCommLog(logs || [])).catch(() => {});
         }
       } catch { /* silent */ }
     }
@@ -1777,7 +1782,7 @@ export default function Leads() {
   useEffect(() => {
     if (!detailLead) { setDetailRecordings([]); return; }
     getLeadRecordings(detailLead.id).then(r => setDetailRecordings(r || [])).catch(() => {});
-  }, [detailLead, recStatus]); // re-fetch when recording finishes
+  }, [detailLead, recStatus, recordingCompletionTick]); // re-fetch when recording starts/finishes
 
   const [recordingCounts, setRecordingCounts] = useState({});
   const [recordingStats, setRecordingStats]   = useState({ calls_24h: 0, calls_7d: 0, calls_30d: 0 });
