@@ -82,7 +82,7 @@ export default function AcademyHomework() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -117,9 +117,9 @@ export default function AcademyHomework() {
             onClick={() => setActiveTab(tab)}
             style={{
               padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              background: activeTab === tab ? '#4a6cf7' : '#fff',
+              background: activeTab === tab ? 'var(--orange)' : '#fff',
               color: activeTab === tab ? '#fff' : '#7a7f9a',
-              border: activeTab === tab ? 'none' : '1px solid #e5e7ef',
+              border: activeTab === tab ? 'none' : '1px solid var(--border)',
             }}
           >{tabLabels[tab]}</button>
         ))}
@@ -154,7 +154,7 @@ export default function AcademyHomework() {
                 onClick={() => toggleExpand(s.id, s.admin_feedback)}
                 style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
               >
-                {expandedId === s.id ? <ChevronUp size={14} color="#4a6cf7" /> : <ChevronDown size={14} color="#4a6cf7" />}
+                {expandedId === s.id ? <ChevronUp size={14} color="var(--orange)" /> : <ChevronDown size={14} color="var(--orange)" />}
               </button>
             </div>
           </div>

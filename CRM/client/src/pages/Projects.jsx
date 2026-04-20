@@ -25,7 +25,7 @@ function SubitemRow({ item, onFieldSave, onDelete }) {
       <td style={{ width: 70 }}></td>
       <td style={{ paddingLeft: 36 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 3, height: 20, background: '#e5e7ef', borderRadius: 2, flexShrink: 0 }} />
+          <div style={{ width: 3, height: 20, background: 'var(--surface-3)', borderRadius: 2, flexShrink: 0 }} />
           <InlineEdit value={item.name} onSave={v => onFieldSave(item.id, 'name', v)} placeholder="Subitem name" />
         </div>
       </td>
@@ -248,7 +248,7 @@ export default function Projects() {
             {items.length > 0 && (
               <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))} style={{ margin: '4px 0' }}>
                 {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                <span style={{ color: label === 'Completed' ? '#4a6cf7' : '#fdab3d' }}>{label}</span>
+                <span style={{ color: label === 'Completed' ? '#22c55e' : 'var(--orange)' }}>{label}</span>
                 <span style={{ background: 'var(--border-light)', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: 'var(--muted)' }}>{items.length}</span>
               </div>
             )}
@@ -286,7 +286,7 @@ export default function Projects() {
                   {pct > 0 && (
                     <div className="mobile-card-row">
                       <span className="mobile-card-label">Progress</span>
-                      <div style={{ flex: 1, height: 6, background: '#e5e7ef', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ width: `${pct}%`, height: '100%', background: 'var(--orange)', borderRadius: 3 }} />
                       </div>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>{pct}%</span>
@@ -332,7 +332,7 @@ export default function Projects() {
                   <td colSpan={10} style={{ padding: 0, background: 'var(--surface)' }}>
                     <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))}>
                       {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                      <span style={{ color: label === 'Completed' ? '#4a6cf7' : '#fdab3d' }}>{label}</span>
+                      <span style={{ color: label === 'Completed' ? '#22c55e' : 'var(--orange)' }}>{label}</span>
                       <span style={{ background: 'var(--border-light)', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: 'var(--muted)' }}>{items.length}</span>
                     </div>
                   </td>
@@ -397,10 +397,10 @@ export default function Projects() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ flex: 1, height: 6, background: '#e5e7ef', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
+                            <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
                               <div style={{
                                 height: '100%', borderRadius: 3, width: `${pct}%`,
-                                background: pct === 100 ? '#4a6cf7' : pct > 60 ? '#fdab3d' : '#4a6cf7',
+                                background: pct === 100 ? '#22c55e' : pct > 60 ? 'var(--orange)' : '#ef4444',
                                 transition: 'width 0.3s',
                               }} />
                             </div>

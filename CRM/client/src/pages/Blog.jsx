@@ -137,7 +137,7 @@ export default function Blog() {
             <button onClick={handleCancel} style={btnStyle('#e5e7ef', '#8e8ea0')}>
               <X size={14} /> Cancel
             </button>
-            <button onClick={handleSave} disabled={saving} style={btnStyle('rgba(74,108,247,0.15)', '#4a6cf7')}>
+            <button onClick={handleSave} disabled={saving} style={btnStyle('rgba(74,108,247,0.15)', 'var(--orange)')}>
               <Save size={14} /> {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
@@ -276,11 +276,11 @@ export default function Blog() {
           {/* Toggles */}
           <div className="flex items-center gap-6" style={{ marginTop: 4 }}>
             <label className="flex items-center gap-2" style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
-              <input type="checkbox" checked={editing.published} onChange={e => set('published', e.target.checked)} style={{ accentColor: '#4a6cf7' }} />
+              <input type="checkbox" checked={editing.published} onChange={e => set('published', e.target.checked)} style={{ accentColor: 'var(--orange)' }} />
               Published
             </label>
             <label className="flex items-center gap-2" style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
-              <input type="checkbox" checked={editing.gated} onChange={e => set('gated', e.target.checked)} style={{ accentColor: '#4a6cf7' }} />
+              <input type="checkbox" checked={editing.gated} onChange={e => set('gated', e.target.checked)} style={{ accentColor: 'var(--orange)' }} />
               Gated (require email)
             </label>
           </div>
@@ -300,7 +300,7 @@ export default function Blog() {
             {posts.length} post{posts.length !== 1 ? 's' : ''} · {posts.filter(p => p.published).length} published
           </p>
         </div>
-        <button onClick={handleNew} style={btnStyle('rgba(74,108,247,0.15)', '#4a6cf7')}>
+        <button onClick={handleNew} style={btnStyle('rgba(74,108,247,0.15)', 'var(--orange)')}>
           <Plus size={14} /> New Post
         </button>
       </div>
@@ -323,7 +323,7 @@ export default function Blog() {
             style={{
               padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
               background: filter === f ? 'rgba(74,108,247,0.15)' : 'transparent',
-              color: filter === f ? '#4a6cf7' : '#8e8ea0',
+              color: filter === f ? 'var(--orange)' : '#8e8ea0',
               border: filter === f ? '1px solid rgba(74,108,247,0.3)' : '1px solid transparent',
               fontFamily: 'var(--font-display)',
             }}
@@ -348,9 +348,9 @@ export default function Blog() {
       {/* Empty */}
       {!loading && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: 60 }}>
-          <FileText size={40} style={{ color: '#e5e7ef', margin: '0 auto 12px' }} />
+          <FileText size={40} style={{ color: 'var(--border-light)', margin: '0 auto 12px' }} />
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>No posts found</p>
-          <button onClick={handleNew} style={{ ...btnStyle('rgba(74,108,247,0.15)', '#4a6cf7'), marginTop: 12 }}>
+          <button onClick={handleNew} style={{ ...btnStyle('rgba(74,108,247,0.15)', 'var(--orange)'), marginTop: 12 }}>
             <Plus size={14} /> Create your first post
           </button>
         </div>
@@ -458,7 +458,7 @@ function btnStyle(bg, color) {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-    background: bg, color: color, border: '1px solid ' + (color === '#4a6cf7' ? 'rgba(74,108,247,0.3)' : '#e5e7ef'),
+    background: bg, color: color, border: '1px solid ' + (color === 'var(--orange)' ? 'rgba(74,108,247,0.3)' : '#e5e7ef'),
     cursor: 'pointer', fontFamily: 'var(--font-display)',
   };
 }

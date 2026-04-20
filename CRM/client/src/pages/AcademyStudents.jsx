@@ -28,7 +28,7 @@ function ProgressBar({ value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <div style={{ flex: 1, height: 6, background: '#f0f1f5', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: pct > 70 ? '#22c55e' : '#4a6cf7', borderRadius: 3 }} />
+        <div style={{ width: `${pct}%`, height: '100%', background: pct > 70 ? '#22c55e' : 'var(--orange)', borderRadius: 3 }} />
       </div>
       <span style={{ fontSize: 12, color: '#7a7f9a', fontWeight: 500, minWidth: 32 }}>{pct}%</span>
     </div>
@@ -90,7 +90,7 @@ export default function AcademyStudents() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -111,8 +111,8 @@ export default function AcademyStudents() {
   return (
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Users size={18} color="#4a6cf7" />
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Users size={18} color="var(--orange)" />
         </div>
         <h1 style={headingStyle}>Student Management</h1>
       </div>
@@ -151,7 +151,7 @@ export default function AcademyStudents() {
                 <td style={tdStyle}>{formatDate(s.created_at)}</td>
                 <td style={{ ...tdStyle, minWidth: 120 }}><ProgressBar value={s.completed_lessons} /></td>
                 <td style={{ ...tdStyle, textAlign: 'right' }}>
-                  <button onClick={e => { e.stopPropagation(); viewStudent(s); }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Eye size={14} color="#4a6cf7" /></button>
+                  <button onClick={e => { e.stopPropagation(); viewStudent(s); }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Eye size={14} color="var(--orange)" /></button>
                 </td>
               </tr>
             ))}
@@ -169,12 +169,12 @@ export default function AcademyStudents() {
           <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
             {detailLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-                <Loader2 size={24} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={24} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
               </div>
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>
                     {(selectedStudent.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
                   <div>

@@ -14,7 +14,7 @@ const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var
 const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const modalStyle = { background: 'var(--surface)', borderRadius: 16, padding: 28, width: 480, maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' };
 
-const categoryColors = { Tools: '#4a6cf7', Books: '#8b5cf6', Resources: '#22c55e', Brokers: '#f59e0b' };
+const categoryColors = { Tools: 'var(--orange)', Books: '#8b5cf6', Resources: '#22c55e', Brokers: '#f59e0b' };
 
 function CategoryBadge({ category }) {
   const c = categoryColors[category] || '#7a7f9a';
@@ -107,7 +107,7 @@ export default function AcademyRecommendations() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -178,7 +178,7 @@ export default function AcademyRecommendations() {
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button onClick={() => openEdit(r)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Pencil size={14} color="#4a6cf7" /></button>
+                      <button onClick={() => openEdit(r)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Pencil size={14} color="var(--orange)" /></button>
                       <button onClick={() => handleDelete(r.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Trash2 size={14} color="#ef4444" /></button>
                     </div>
                   </td>

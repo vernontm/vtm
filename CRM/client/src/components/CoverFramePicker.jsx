@@ -51,7 +51,7 @@ export default function CoverFramePicker({ videoUrl, onChange }) {
           onClick={() => setEnabled(v => !v)}
           style={{
             width: 36, height: 20, borderRadius: 10, position: 'relative', cursor: 'pointer',
-            background: enabled ? '#4a6cf7' : '#d1d5db',
+            background: enabled ? 'var(--orange)' : '#d1d5db',
             transition: 'background 0.2s',
             flexShrink: 0,
           }}
@@ -102,7 +102,7 @@ export default function CoverFramePicker({ videoUrl, onChange }) {
               onChange={handleScrub}
               disabled={!loaded}
               style={{
-                width: '100%', accentColor: '#4a6cf7', cursor: loaded ? 'pointer' : 'not-allowed',
+                width: '100%', accentColor: 'var(--orange)', cursor: loaded ? 'pointer' : 'not-allowed',
                 height: 4, marginBottom: 6,
               }}
             />

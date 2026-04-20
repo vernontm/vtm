@@ -122,8 +122,8 @@ export default function GenerateModal({ onClose, onComplete }) {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
                       borderRadius: 8, cursor: 'pointer', transition: 'background 0.15s',
-                      background: mode === id ? '#e8ecf4' : '#f5f7fa',
-                      border: `1px solid ${mode === id ? '#ff9b26' : '#e5e7ef'}`,
+                      background: mode === id ? 'rgba(255,155,38,0.1)' : 'var(--surface-2)',
+                      border: `1px solid ${mode === id ? 'var(--orange)' : 'var(--border)'}`,
                     }}
                   >
                     <div style={{
@@ -152,8 +152,8 @@ export default function GenerateModal({ onClose, onComplete }) {
                         onClick={() => setSegment(s)}
                         style={{
                           padding: '6px 16px', borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          border: `1px solid ${segment === s ? SEGMENT_COLORS[s] : '#e5e7ef'}`,
-                          background: segment === s ? `${SEGMENT_COLORS[s]}20` : '#f5f7fa',
+                          border: `1px solid ${segment === s ? SEGMENT_COLORS[s] : 'var(--border)'}`,
+                          background: segment === s ? `${SEGMENT_COLORS[s]}20` : 'var(--surface-2)',
                           color: segment === s ? SEGMENT_COLORS[s] : '#8e8ea0',
                           textTransform: 'capitalize',
                         }}

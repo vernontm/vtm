@@ -1002,7 +1002,7 @@ export default function ContentScheduler() {
   const btnPrimary = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '8px 18px', borderRadius: 10, border: 'none',
-    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+    background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
     color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
   };
   const btnGhost = {
@@ -1026,7 +1026,7 @@ export default function ContentScheduler() {
     <div className="cs-page" style={{ height: '100%', display: 'flex' }}>
       {/* ══════ LEFT SIDEBAR ══════ */}
       <div className="cs-sidebar" style={{
-        width: sidebarCollapsed ? 0 : 200, background: 'var(--surface)', borderRight: sidebarCollapsed ? 'none' : '1px solid #e5e7ef',
+        width: sidebarCollapsed ? 0 : 200, background: 'var(--surface)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
         overflow: 'hidden', transition: 'width 0.2s ease',
       }}>
@@ -1053,7 +1053,7 @@ export default function ContentScheduler() {
                 cursor: 'pointer',
                 color: selectedClientId === c.id ? 'var(--orange)' : 'var(--text)',
                 background: selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent',
-                borderLeft: selectedClientId === c.id ? '3px solid #4a6cf7' : '3px solid transparent',
+                borderLeft: selectedClientId === c.id ? '3px solid var(--orange)' : '3px solid transparent',
                 fontWeight: selectedClientId === c.id ? 600 : 400,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 transition: 'all 0.15s',
@@ -1218,7 +1218,7 @@ export default function ContentScheduler() {
                 <input type="file" ref={bulkUploadRef} accept="video/*,audio/*,.mp4,.mov,.avi,.mkv,.webm,.mp3,.m4a,.wav" multiple onChange={handleBulkUpload} style={{ display: 'none' }} />
                 <div style={{
                   width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                  background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                  background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Film size={18} color="#fff" />
@@ -1252,7 +1252,7 @@ export default function ContentScheduler() {
                       padding: '8px 16px', borderBottom: '1px solid #f0f0f5',
                       display: 'flex', alignItems: 'center', gap: 10,
                     }}>
-                      <Film size={14} color={u.status === 'done' ? '#22c55e' : u.status === 'error' ? '#ef4444' : '#4a6cf7'} />
+                      <Film size={14} color={u.status === 'done' ? '#22c55e' : u.status === 'error' ? '#ef4444' : 'var(--orange)'} />
                       <span style={{ fontSize: 12, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {u.name}
                       </span>
@@ -1360,7 +1360,7 @@ export default function ContentScheduler() {
                   {scripts.length > 0 && (
                     <label style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                       <input type="checkbox" checked={scripts.length > 0 && selectedScripts.size === scripts.length}
-                        onChange={selectAll} style={{ accentColor: '#4a6cf7' }} />
+                        onChange={selectAll} style={{ accentColor: 'var(--orange)' }} />
                       Select All ({scripts.length})
                     </label>
                   )}
@@ -1598,7 +1598,7 @@ export default function ContentScheduler() {
                               {/* Checkbox */}
                               <td style={{ padding: 10 }}>
                                 <input type="checkbox" checked={selectedScripts.has(script.id)}
-                                  onChange={() => toggleSelect(script.id)} style={{ accentColor: '#4a6cf7' }} />
+                                  onChange={() => toggleSelect(script.id)} style={{ accentColor: 'var(--orange)' }} />
                               </td>
 
                               {/* Media */}
@@ -1868,7 +1868,7 @@ export default function ContentScheduler() {
                         opacity: genLoading ? 0.5 : 1,
                         transition: 'all 0.15s',
                       }}
-                      onMouseEnter={e => { if (!genLoading) { e.target.style.background = '#eef0ff'; e.target.style.borderColor = '#4a6cf7'; } }}
+                      onMouseEnter={e => { if (!genLoading) { e.target.style.background = '#eef0ff'; e.target.style.borderColor = 'var(--orange)'; } }}
                       onMouseLeave={e => { e.target.style.background = '#f8f9fc'; e.target.style.borderColor = '#e5e7ef'; }}
                     >
                       <span>{action.icon}</span> {action.label}
@@ -1974,14 +1974,14 @@ export default function ContentScheduler() {
                       alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                       maxWidth: '80%',
                       padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.5,
-                      background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #3b5de7)' : '#f0f0f5',
+                      background: msg.role === 'user' ? 'linear-gradient(135deg, var(--orange), #3b5de7)' : '#f0f0f5',
                       color: '#fff',
                     }}>
                       {msg.content}
                     </div>
                   ))}
                   {genLoading && (
-                    <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, background: '#f0f0f5', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--muted)' }}>
+                    <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--muted)' }}>
                       <Loader size={14} className="spin" /> Generating...
                     </div>
                   )}
@@ -2000,7 +2000,7 @@ export default function ContentScheduler() {
                   />
                   <button onClick={handleGenerate} disabled={!genInput.trim() || genLoading} style={{
                     width: 36, height: 36, borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                    background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     opacity: genInput.trim() && !genLoading ? 1 : 0.4, flexShrink: 0,
                   }}>
@@ -2231,11 +2231,11 @@ export default function ContentScheduler() {
                       <button key={m.key} onClick={() => setCarouselModel(m.key)}
                         style={{
                           flex: 1, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
-                          border: carouselModel === m.key ? '2px solid #4a6cf7' : '1px solid #e5e7ef',
+                          border: carouselModel === m.key ? '2px solid var(--orange)' : '1px solid var(--border)',
                           background: carouselModel === m.key ? 'rgba(74,108,247,0.06)' : '#fff',
                           textAlign: 'left',
                         }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: carouselModel === m.key ? '#4a6cf7' : '#1a1a2e' }}>{m.label}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: carouselModel === m.key ? 'var(--orange)' : '#1a1a2e' }}>{m.label}</div>
                         <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.desc}</div>
                       </button>
                     ))}
@@ -2441,7 +2441,7 @@ export default function ContentScheduler() {
                   />
                   <button onClick={handleCommand} disabled={!chatInput.trim()} style={{
                     width: 32, height: 32, borderRadius: 8, border: 'none',
-                    background: 'linear-gradient(135deg, #4a6cf7, #3b5de7)',
+                    background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     opacity: chatInput.trim() ? 1 : 0.4, flexShrink: 0,
                   }}>
@@ -2557,9 +2557,9 @@ export default function ContentScheduler() {
                 ].map(({ key, label, Icon }) => (
                   <button key={key} onClick={() => setEngageTab(key)} style={{
                     ...btnGhost, padding: '6px 14px', fontSize: 12,
-                    background: engageTab === key ? '#4a6cf7' : 'transparent',
+                    background: engageTab === key ? 'var(--orange)' : 'transparent',
                     color: engageTab === key ? '#fff' : '#8e8ea0',
-                    border: `1px solid ${engageTab === key ? '#4a6cf7' : '#e5e7ef'}`,
+                    border: `1px solid ${engageTab === key ? 'var(--orange)' : '#e5e7ef'}`,
                   }}>
                     <Icon size={13} /> {label}
                   </button>
@@ -2737,7 +2737,7 @@ export default function ContentScheduler() {
                                     borderLeft: isSelected ? '3px solid #E8650A' : '3px solid transparent',
                                     borderBottom: '1px solid #f5f5f8',
                                   }}>
-                                  <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     {thumb
                                       ? <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
                                       : <Play size={14} color="#8e8ea0" />}
@@ -3185,8 +3185,8 @@ export default function ContentScheduler() {
                 {showMediaModal.media_urls.map((_, i) => (
                   <span key={i} onClick={() => setCarouselIndex(i)} style={{
                     width: 10, height: 10, borderRadius: '50%', cursor: 'pointer',
-                    background: i === carouselIndex ? '#4a6cf7' : 'rgba(255,255,255,0.25)',
-                    border: i === carouselIndex ? '2px solid #4a6cf7' : '2px solid transparent',
+                    background: i === carouselIndex ? 'var(--orange)' : 'rgba(255,255,255,0.25)',
+                    border: i === carouselIndex ? '2px solid var(--orange)' : '2px solid transparent',
                     transition: 'all 0.15s',
                   }} />
                 ))}
@@ -3302,7 +3302,7 @@ export default function ContentScheduler() {
                   <div key={i} onClick={() => setCarouselIndex(i)}
                     style={{
                       width: 64, height: 80, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
-                      border: i === carouselIndex ? '2px solid #4a6cf7' : '2px solid transparent',
+                      border: i === carouselIndex ? '2px solid var(--orange)' : '2px solid transparent',
                       cursor: 'pointer', opacity: i === carouselIndex ? 1 : 0.6,
                       transition: 'all 0.15s',
                     }}>

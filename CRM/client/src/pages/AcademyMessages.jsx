@@ -121,7 +121,7 @@ export default function AcademyMessages() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -142,8 +142,8 @@ export default function AcademyMessages() {
   return (
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <MessageSquare size={18} color="#4a6cf7" />
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <MessageSquare size={18} color="var(--orange)" />
         </div>
         <h1 style={headingStyle}>Student Messages</h1>
       </div>
@@ -172,8 +172,8 @@ export default function AcademyMessages() {
                   onClick={() => selectThread(t)}
                   style={{
                     padding: '14px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f1f5',
-                    background: isSelected ? '#4a6cf708' : '#fff',
-                    borderLeft: isSelected ? '3px solid #4a6cf7' : '3px solid transparent',
+                    background: isSelected ? 'rgba(255,155,38,0.05)' : '#fff',
+                    borderLeft: isSelected ? '3px solid var(--orange)' : '3px solid transparent',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -181,7 +181,7 @@ export default function AcademyMessages() {
                     <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatTime(t.latest_at || t.last_message_at || t.updated_at)}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {(t.unread_count > 0) && <Circle size={7} fill="#4a6cf7" color="#4a6cf7" />}
+                    {(t.unread_count > 0) && <Circle size={7} fill="var(--orange)" color="var(--orange)" />}
                     <span style={{ fontSize: 12, color: '#7a7f9a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.latest_message || t.last_message || t.preview || ''}</span>
                     {(t.unread_count > 0) && (
                       <span style={{ marginLeft: 'auto', background: 'var(--orange)', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{t.unread_count}</span>
@@ -208,7 +208,7 @@ export default function AcademyMessages() {
               <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {messagesLoading ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-                    <Loader2 size={22} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+                    <Loader2 size={22} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
                   </div>
                 ) : messages.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#7a7f9a', fontSize: 13, padding: 40 }}>No messages yet</div>
@@ -219,7 +219,7 @@ export default function AcademyMessages() {
                     <div key={m.id || i} style={{ display: 'flex', justifyContent: isAdmin ? 'flex-end' : 'flex-start' }}>
                       <div style={{
                         maxWidth: '70%', padding: '10px 14px', borderRadius: 12,
-                        background: isAdmin ? '#4a6cf7' : '#f5f7fa',
+                        background: isAdmin ? 'var(--orange)' : 'var(--surface-2)',
                         color: isAdmin ? '#fff' : '#1a1a2e',
                       }}>
                         <div style={{ fontSize: 13, lineHeight: 1.5 }}>{m.message || m.text}</div>

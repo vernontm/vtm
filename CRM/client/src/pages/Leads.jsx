@@ -61,7 +61,7 @@ const PRODUCT_NEEDS = [
 ];
 
 const PRODUCT_NEED_STYLES = {
-  'Digital Presence': { bg: 'rgba(74,108,247,0.12)', fg: '#4a6cf7', icon: '🌐',
+  'Digital Presence': { bg: 'rgba(74,108,247,0.12)', fg: 'var(--orange)', icon: '🌐',
     subtitle: 'Website · App · Local SEO' },
   'Content Engine':   { bg: '#f59e0b20', fg: '#d97706', icon: '🎬',
     subtitle: 'AI Content · Reels · Intros/Outros' },
@@ -152,7 +152,7 @@ const LEAD_SOURCES = [
 ];
 
 const PLATFORM_STYLES = {
-  'Email':        { bg: 'rgba(74,108,247,0.12)', fg: '#4a6cf7', icon: '✉️' },
+  'Email':        { bg: 'rgba(74,108,247,0.12)', fg: 'var(--orange)', icon: '✉️' },
   'TikTok':       { bg: '#FF004F20', fg: '#E60048', icon: '🎵' },
   'Instagram':    { bg: '#E1306C20', fg: '#E1306C', icon: '📸' },
   'YouTube':      { bg: '#FF000020', fg: '#D00000', icon: '▶️' },
@@ -297,7 +297,7 @@ function StatusPill({ value, onChange }) {
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
-  '#4a6cf7', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6',
+  'var(--orange)', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6',
   '#06B6D4', '#EF4444', '#059669', '#D97706', '#6366F1',
 ];
 function avatarColor(name) {
@@ -782,7 +782,7 @@ function RecordingCard({ recording: rawR }) {
         {/* Seek bar */}
         <div
           onClick={handleSeek}
-          style={{ flex: 1, height: 4, background: '#e5e7ef', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
+          style={{ flex: 1, height: 4, background: 'var(--surface-3)', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
         >
           <div style={{ width: `${progress * 100}%`, height: '100%', background: 'var(--orange)', borderRadius: 2, transition: 'width 0.1s' }} />
         </div>
@@ -907,7 +907,7 @@ function RecordingCard({ recording: rawR }) {
               const match = line.match(/^(Speaker \d+):\s*(.*)$/);
               if (match) {
                 const speakerNum = parseInt(match[1].replace('Speaker ', ''), 10);
-                const colors = ['#4a6cf7', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
+                const colors = ['var(--orange)', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
                 const color = colors[(speakerNum - 1) % colors.length];
                 return (
                   <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -961,7 +961,7 @@ function ScriptBrowseRow({ script }) {
         <ChevronRight size={14} color="#8e8ea0" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', flex: 1 }}>📞 {script.title}</span>
         {script.service && (
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#4a6cf720', color: 'var(--orange)' }}>{script.service}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(255,155,38,0.12)', color: 'var(--orange)' }}>{script.service}</span>
         )}
       </div>
       {expanded && (
@@ -1087,7 +1087,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
           {aiScript && (
             <button
               onClick={() => setShowAi(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: showAi ? '#4a6cf720' : '#f5f7fa', border: `1px solid ${showAi ? '#4a6cf7' : '#e5e7ef'}`, color: showAi ? '#4a6cf7' : '#6b7280', transition: 'all 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: showAi ? 'rgba(255,155,38,0.12)' : '#f5f7fa', border: `1px solid ${showAi ? 'var(--orange)' : '#e5e7ef'}`, color: showAi ? 'var(--orange)' : '#6b7280', transition: 'all 0.15s' }}
             >
               {showAi ? '⚡ AI' : '📄 Base'}
             </button>
@@ -1110,7 +1110,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
 
       {/* AI mode badge */}
       {showAi && aiScript && (
-        <div style={{ padding: '6px 16px', background: '#4a6cf710', borderBottom: '1px solid #4a6cf720', fontSize: 11, color: 'var(--orange)', fontWeight: 600 }}>
+        <div style={{ padding: '6px 16px', background: 'rgba(255,155,38,0.08)', borderBottom: '1px solid var(--orange)20', fontSize: 11, color: 'var(--orange)', fontWeight: 600 }}>
           ⚡ AI-personalized for {lead.name || lead.company} — based on their notes & situation
         </div>
       )}
@@ -1311,7 +1311,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
             style={{
               flex: 1, padding: '9px 0', borderRadius: 6, cursor: isDirty ? 'pointer' : 'not-allowed',
               fontSize: 13, fontWeight: 700, border: 'none',
-              background: isDirty ? '#4a6cf7' : '#e5e7ef',
+              background: isDirty ? 'var(--orange)' : '#e5e7ef',
               color: isDirty ? '#fff' : '#8e8ea0',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
@@ -1399,7 +1399,7 @@ function EmailListModal({ lead, onClose, onSuccess }) {
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ListPlus size={16} color="#4a6cf7" />
+            <ListPlus size={16} color="var(--orange)" />
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Add to Email List</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={17} /></button>
@@ -1799,7 +1799,7 @@ export default function Leads() {
               }}
             >
               {tab}
-              <span style={{ fontSize: 10, color: active ? '#4a6cf7' : '#b0b0c0', background: active ? '#fff' : 'var(--surface-3)', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>
+              <span style={{ fontSize: 10, color: active ? 'var(--orange)' : '#b0b0c0', background: active ? '#fff' : 'var(--surface-3)', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>
                 {count}
               </span>
             </button>
@@ -2052,7 +2052,7 @@ export default function Leads() {
                         style={{
                           background: lead.interest === 'up' ? 'rgba(74,108,247,0.12)' : 'none',
                           border: 'none', borderRadius: 5, cursor: 'pointer', padding: '5px 7px',
-                          color: lead.interest === 'up' ? '#4a6cf7' : '#8e8ea0',
+                          color: lead.interest === 'up' ? 'var(--orange)' : '#8e8ea0',
                           display: 'flex', alignItems: 'center',
                         }}>
                         <ThumbsUp size={13} />
@@ -2075,7 +2075,7 @@ export default function Leads() {
                       {lead.email && (
                         <button title="Add to Email List" onClick={() => setEmailListLead(lead)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => { e.currentTarget.style.color = '#4a6cf7'; e.currentTarget.style.background = '#4a6cf710'; }}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--orange)'; e.currentTarget.style.background = 'rgba(255,155,38,0.08)'; }}
                           onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
                         >
                           <ListPlus size={14} />
@@ -2333,11 +2333,11 @@ export default function Leads() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
-          background: 'var(--surface)', border: '1px solid #4a6cf7', color: 'var(--text)',
+          background: 'var(--surface)', border: '1px solid var(--orange)', color: 'var(--text)',
           padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
         }}>
-          <Check size={14} color="#4a6cf7" /> {toast}
+          <Check size={14} color="var(--orange)" /> {toast}
         </div>
       )}
 

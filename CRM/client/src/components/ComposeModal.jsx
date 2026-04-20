@@ -232,7 +232,7 @@ export default function ComposeModal({ onClose, onComplete }) {
             <PenLine size={16} color="#ff9b26" />
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Compose Email</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: 4 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 }}>
             <X size={16} />
           </button>
         </div>
@@ -241,7 +241,7 @@ export default function ComposeModal({ onClose, onComplete }) {
 
           {/* ── To field ─────────────────────────────────────────────────────── */}
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               To
             </label>
 
@@ -252,13 +252,13 @@ export default function ComposeModal({ onClose, onComplete }) {
                 background: 'var(--bg)', border: '1px solid var(--border)',
               }}>
                 <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, flex: 1 }}>{selectedLead.full_name}</span>
-                <span style={{ color: '#4a4845', fontSize: 13 }}>{selectedLead.email}</span>
+                <span style={{ color: 'var(--muted)', fontSize: 13 }}>{selectedLead.email}</span>
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 8, textTransform: 'uppercase',
                   color:       SEGMENT_COLORS[selectedLead.lead_segment] || SEGMENT_COLORS.cold,
                   background: (SEGMENT_COLORS[selectedLead.lead_segment] || SEGMENT_COLORS.cold) + '20',
                 }}>{selectedLead.lead_segment || 'cold'}</span>
-                <button onClick={clearLead} title="Change recipient" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', display: 'flex', alignItems: 'center', padding: 2, borderRadius: 4 }}>
+                <button onClick={clearLead} title="Change recipient" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', alignItems: 'center', padding: 2, borderRadius: 4 }}>
                   <X size={13} />
                 </button>
               </div>
@@ -284,19 +284,19 @@ export default function ComposeModal({ onClose, onComplete }) {
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <span style={{ fontWeight: 600, color: 'var(--text)', flex: 1 }}>{l.full_name}</span>
-                        <span style={{ color: '#4a4845' }}>{l.email}</span>
+                        <span style={{ color: 'var(--muted)' }}>{l.email}</span>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 8, textTransform: 'uppercase', color: SEGMENT_COLORS[l.lead_segment] || SEGMENT_COLORS.cold, background: (SEGMENT_COLORS[l.lead_segment] || SEGMENT_COLORS.cold) + '20' }}>{l.lead_segment || 'cold'}</span>
                       </div>
                     ))}
                     {toInput.includes('@') && (
-                      <div style={{ padding: '8px 12px', fontSize: 11, color: '#4a4845', borderTop: '1px solid var(--border)', fontStyle: 'italic' }}>
+                      <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--muted)', borderTop: '1px solid var(--border)', fontStyle: 'italic' }}>
                         Or press Tab / click outside to send to <strong style={{ color: 'var(--muted)' }}>{toInput}</strong> directly
                       </div>
                     )}
                   </div>
                 )}
                 {!showSuggestions && toInput.includes('@') && toInput.includes('.') && (
-                  <div style={{ marginTop: 6, fontSize: 11, color: '#4a4845' }}>
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)' }}>
                     Sending to: <span style={{ color: '#ff9b26', fontWeight: 600 }}>{toInput}</span> (custom address — not linked to a lead)
                   </div>
                 )}
@@ -308,7 +308,7 @@ export default function ComposeModal({ onClose, onComplete }) {
           {selectedLead && (
             <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#4a4845' }}>Gmail History</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Gmail History</span>
                 <button
                   onClick={handleSync}
                   disabled={syncing}
@@ -322,7 +322,7 @@ export default function ComposeModal({ onClose, onComplete }) {
               {syncError && <div style={{ fontSize: 11, color: '#ff5c5c', marginTop: 8 }}>{syncError}</div>}
 
               {!syncResult && !syncing && !syncError && (
-                <div style={{ fontSize: 11, color: '#4a4845', marginTop: 8, fontStyle: 'italic' }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, fontStyle: 'italic' }}>
                   Click Sync Gmail to check sent/reply history for this lead.
                 </div>
               )}
@@ -340,12 +340,12 @@ export default function ComposeModal({ onClose, onComplete }) {
                         {syncResult.last_sent_subject || '(no subject)'}
                       </div>
                       {syncResult.last_sent_at && (
-                        <div style={{ fontSize: 10, color: '#4a4845', marginBottom: 6 }}>
+                        <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 6 }}>
                           {new Date(syncResult.last_sent_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       )}
                       {syncResult.last_sent_preview && (
-                        <div style={{ fontSize: 11, color: '#4a4845', lineHeight: 1.5, borderTop: '1px solid #1e3a5f', paddingTop: 6, marginTop: 4, marginBottom: 10, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5, borderTop: '1px solid #1e3a5f', paddingTop: 6, marginTop: 4, marginBottom: 10, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                           {syncResult.last_sent_preview.slice(0, 300)}{syncResult.last_sent_preview.length > 300 ? '…' : ''}
                         </div>
                       )}
@@ -372,7 +372,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 11, color: '#4a4845', fontStyle: 'italic', background: '#141e36', borderRadius: 6, padding: '8px 10px' }}>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic', background: '#141e36', borderRadius: 6, padding: '8px 10px' }}>
                       📤 No outbound emails found for this lead.
                     </div>
                   )}
@@ -385,7 +385,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                           💬 Their Last Reply
                         </div>
                         {syncResult.thread_message_count && (
-                          <span style={{ fontSize: 9, color: '#4a4845', background: '#1e4028', padding: '1px 5px', borderRadius: 4 }}>
+                          <span style={{ fontSize: 9, color: 'var(--muted)', background: '#1e4028', padding: '1px 5px', borderRadius: 4 }}>
                             {syncResult.thread_message_count} msg thread
                           </span>
                         )}
@@ -394,7 +394,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                         {syncResult.last_reply_subject || '(no subject)'}
                       </div>
                       {syncResult.last_reply_at && (
-                        <div style={{ fontSize: 10, color: '#4a4845', marginBottom: 6 }}>
+                        <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 6 }}>
                           {new Date(syncResult.last_reply_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       )}
@@ -426,7 +426,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 11, color: '#4a4845', fontStyle: 'italic', background: '#142018', borderRadius: 6, padding: '8px 10px' }}>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic', background: '#142018', borderRadius: 6, padding: '8px 10px' }}>
                       💬 No replies found from this lead.
                     </div>
                   )}
@@ -446,7 +446,7 @@ export default function ComposeModal({ onClose, onComplete }) {
 
           {/* ── Email type ───────────────────────────────────────────────────── */}
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Email Type
             </label>
             <select
@@ -461,7 +461,7 @@ export default function ComposeModal({ onClose, onComplete }) {
           {/* ── Labels ───────────────────────────────────────────────────────── */}
           {labelDefs.length > 0 && (
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
                 Labels
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -476,12 +476,12 @@ export default function ComposeModal({ onClose, onComplete }) {
                         display: 'flex', alignItems: 'center', gap: 5,
                         padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
                         cursor: 'pointer', transition: 'all 0.15s',
-                        background: on ? (l.color || '#4a6cf7') + '22' : '#f5f7fa',
-                        border: `1.5px solid ${on ? (l.color || '#4a6cf7') : '#e5e7ef'}`,
-                        color: on ? (l.color || '#4a6cf7') : '#4a4845',
+                        background: on ? (l.color || 'var(--orange)') + '22' : '#f5f7fa',
+                        border: `1.5px solid ${on ? (l.color || 'var(--orange)') : '#e5e7ef'}`,
+                        color: on ? (l.color || 'var(--orange)') : '#4a4845',
                       }}
                     >
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: l.color || '#4a6cf7', flexShrink: 0 }} />
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: l.color || 'var(--orange)', flexShrink: 0 }} />
                       {l.name}
                     </button>
                   );
@@ -492,7 +492,7 @@ export default function ComposeModal({ onClose, onComplete }) {
 
           {/* ── Subject ──────────────────────────────────────────────────────── */}
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Subject
             </label>
             <input
@@ -505,7 +505,7 @@ export default function ComposeModal({ onClose, onComplete }) {
 
           {/* ── Body ─────────────────────────────────────────────────────────── */}
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               Body
             </label>
             <textarea
@@ -521,11 +521,11 @@ export default function ComposeModal({ onClose, onComplete }) {
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <MessageSquare size={13} color="#4a4845" />
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Additional Context
               </label>
             </div>
-            <div style={{ fontSize: 11, color: '#4a4845', marginBottom: 8, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, lineHeight: 1.5 }}>
               Notes or instructions saved alongside the email for reference.
             </div>
             <textarea
@@ -548,14 +548,14 @@ export default function ComposeModal({ onClose, onComplete }) {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button
               onClick={onClose}
-              style={{ padding: '8px 16px', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'none', border: '1px solid var(--border)', color: '#4a4845' }}
+              style={{ padding: '8px 16px', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', background: '#ff9b26', border: 'none', color: '#0a0a08', opacity: saving ? 0.7 : 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', background: '#ff9b26', border: 'none', color: 'var(--text)', opacity: saving ? 0.7 : 1 }}
             >
               {saving
                 ? <Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} />

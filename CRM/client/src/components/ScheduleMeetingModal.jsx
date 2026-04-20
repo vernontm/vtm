@@ -155,23 +155,23 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   }
 
-  const inputStyle = { width:'100%', padding:'9px 12px', borderRadius:8, fontSize:13, background:'#f5f7fa', border:'1px solid #e5e7ef', color:'#1a1a2e', outline:'none', boxSizing:'border-box' };
-  const labelStyle = { fontSize:12, fontWeight:600, color:'#8e8ea0', marginBottom:4, display:'block' };
+  const inputStyle = { width:'100%', padding:'9px 12px', borderRadius:8, fontSize:13, background:'var(--surface-2)', border:'1px solid var(--border)', color:'var(--text)', outline:'none', boxSizing:'border-box' };
+  const labelStyle = { fontSize:12, fontWeight:600, color:'var(--muted)', marginBottom:4, display:'block' };
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:8000, display:'flex', alignItems:'center', justifyContent:'center' }}
       onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
-      <div style={{ background:'#fff', borderRadius:14, width:560, maxWidth:'95vw', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.15)' }}>
+      <div style={{ background:'var(--surface)', borderRadius:14, width:560, maxWidth:'95vw', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.15)' }}>
 
         {/* Header */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid #e5e7ef', flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg,var(--orange),#ee7c1a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <Calendar size={16} color="#fff" />
             </div>
-            <span style={{ fontSize:16, fontWeight:700, color:'#1a1a2e' }}>Schedule Meeting</span>
+            <span style={{ fontSize:16, fontWeight:700, color:'var(--text)' }}>Schedule Meeting</span>
           </div>
-          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'#8e8ea0', display:'flex' }}><X size={18} /></button>
+          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex' }}><X size={18} /></button>
         </div>
 
         {/* Body */}
@@ -184,24 +184,24 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                 </div>
                 <div>
                   <div style={{ fontSize:15, fontWeight:700, color:'#22c55e' }}>Meeting Scheduled!</div>
-                  <div style={{ fontSize:12, color:'#8e8ea0' }}>{success.title}</div>
+                  <div style={{ fontSize:12, color:'var(--muted)' }}>{success.title}</div>
                 </div>
               </div>
-              <div style={{ fontSize:13, color:'#1a1a2e', lineHeight:1.6 }}>
-                <div><span style={{ color:'#8e8ea0' }}>Start:</span> {new Date(success.start_time).toLocaleString()}</div>
-                <div><span style={{ color:'#8e8ea0' }}>Duration:</span> {duration}m</div>
-                {success.participants?.length>0 && <div><span style={{ color:'#8e8ea0' }}>Attendees:</span> {success.participants.map(p=>p.email).join(', ')}</div>}
+              <div style={{ fontSize:13, color:'var(--text)', lineHeight:1.6 }}>
+                <div><span style={{ color:'var(--muted)' }}>Start:</span> {new Date(success.start_time).toLocaleString()}</div>
+                <div><span style={{ color:'var(--muted)' }}>Duration:</span> {duration}m</div>
+                {success.participants?.length>0 && <div><span style={{ color:'var(--muted)' }}>Attendees:</span> {success.participants.map(p=>p.email).join(', ')}</div>}
               </div>
               {success.meet_link ? (
-                <div style={{ background:'#f5f7fa', border:'1px solid #e5e7ef', borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:10 }}>
-                  <Video size={14} color="#4a6cf7" style={{ flexShrink:0 }} />
-                  <span style={{ fontSize:12, color:'#4a6cf7', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{success.meet_link}</span>
-                  <button onClick={copyMeetLink} style={{ flexShrink:0, padding:'4px 10px', borderRadius:5, border:'1px solid #4a6cf7', background:'#4a6cf710', color:'#4a6cf7', cursor:'pointer', fontSize:11, fontWeight:600 }}>
+                <div style={{ background:'var(--surface-2)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:10 }}>
+                  <Video size={14} color="var(--orange)" style={{ flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:'var(--orange)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{success.meet_link}</span>
+                  <button onClick={copyMeetLink} style={{ flexShrink:0, padding:'4px 10px', borderRadius:5, border:'1px solid var(--orange)', background:'rgba(255,155,38,0.08)', color:'var(--orange)', cursor:'pointer', fontSize:11, fontWeight:600 }}>
                     {copied?'Copied!':'Copy Link'}
                   </button>
                 </div>
-              ) : <div style={{ fontSize:12, color:'#8e8ea0' }}>No Meet link attached.</div>}
-              <button onClick={onClose} style={{ alignSelf:'flex-end', padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>Done</button>
+              ) : <div style={{ fontSize:12, color:'var(--muted)' }}>No Meet link attached.</div>}
+              <button onClick={onClose} style={{ alignSelf:'flex-end', padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>Done</button>
             </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
@@ -258,19 +258,19 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                         placeholder="Search contacts or type email..."
                         style={inputStyle} />
                       {showContactDropdown && contactResults.length>0 && (
-                        <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:4, background:'#fff', border:'1px solid #e5e7ef', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:220, overflow:'auto' }}>
+                        <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:4, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:220, overflow:'auto' }}>
                           {contactResults.filter(c => !attendees.some(a=>a.email===c.email.toLowerCase())).slice(0,6).map((c,i) => (
                             <div key={c.email+i} onClick={() => selectContact(c)}
                               style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', cursor:'pointer', borderBottom:i<5?'1px solid #f0f2f8':'none' }}
-                              onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
-                              <div style={{ width:26, height:26, borderRadius:'50%', background:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'#4a6cf7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#fff', flexShrink:0 }}>
+                              onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+                              <div style={{ width:26, height:26, borderRadius:'50%', background:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#fff', flexShrink:0 }}>
                                 {(c.name||c.email)[0].toUpperCase()}
                               </div>
                               <div style={{ flex:1, minWidth:0 }}>
-                                <div style={{ fontSize:12, fontWeight:600, color:'#1a1a2e', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name||c.email}</div>
-                                <div style={{ fontSize:10, color:'#8e8ea0' }}>{c.email}</div>
+                                <div style={{ fontSize:12, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name||c.email}</div>
+                                <div style={{ fontSize:10, color:'var(--muted)' }}>{c.email}</div>
                               </div>
-                              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'#4a6cf710', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'#4a6cf7' }}>
+                              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(255,155,38,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>
                                 {c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'CRM'}
                               </span>
                             </div>
@@ -278,19 +278,19 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                         </div>
                       )}
                     </div>
-                    <button onClick={() => addAttendee()} style={{ flexShrink:0, display:'flex', alignItems:'center', gap:4, padding:'0 14px', borderRadius:8, border:'1px solid #e5e7ef', background:'#fff', color:'#8e8ea0', cursor:'pointer', fontSize:12, fontWeight:500 }}>
+                    <button onClick={() => addAttendee()} style={{ flexShrink:0, display:'flex', alignItems:'center', gap:4, padding:'0 14px', borderRadius:8, border:'1px solid var(--border)', background:'var(--surface)', color:'var(--muted)', cursor:'pointer', fontSize:12, fontWeight:500 }}>
                       <Plus size={14} /> Add
                     </button>
                   </div>
                   {attendees.length>0 && (
                     <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                       {attendees.map(att => (
-                        <div key={att.email} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 8px 4px 6px', borderRadius:20, background:'#4a6cf710', border:'1px solid #4a6cf730' }}>
-                          <div style={{ width:20, height:20, borderRadius:'50%', background:'#4a6cf7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff', flexShrink:0 }}>
+                        <div key={att.email} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 8px 4px 6px', borderRadius:20, background:'rgba(255,155,38,0.08)', border:'1px solid var(--orange)30' }}>
+                          <div style={{ width:20, height:20, borderRadius:'50%', background:'var(--orange)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff', flexShrink:0 }}>
                             {(att.name||att.email)[0].toUpperCase()}
                           </div>
-                          <span style={{ fontSize:11, color:'#1a1a2e', fontWeight:500 }}>{att.name||att.email}</span>
-                          <button onClick={() => removeAttendee(att.email)} style={{ background:'none', border:'none', cursor:'pointer', color:'#8e8ea0', display:'flex', padding:'0 0 0 2px' }}><X size={10} /></button>
+                          <span style={{ fontSize:11, color:'var(--text)', fontWeight:500 }}>{att.name||att.email}</span>
+                          <button onClick={() => removeAttendee(att.email)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:'0 0 0 2px' }}><X size={10} /></button>
                         </div>
                       ))}
                     </div>
@@ -298,7 +298,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                   {attendees.length>0 && (
                     <div style={{ marginTop:8, display:'flex', alignItems:'center', gap:8 }}>
                       <button onClick={handleCheckAvailability} disabled={checkingAvail||!date||!time}
-                        style={{ fontSize:11, padding:'5px 12px', display:'flex', alignItems:'center', gap:5, borderRadius:6, border:'1px solid #e5e7ef', background:'#fff', color:'#8e8ea0', cursor:'pointer', fontWeight:500 }}>
+                        style={{ fontSize:11, padding:'5px 12px', display:'flex', alignItems:'center', gap:5, borderRadius:6, border:'1px solid var(--border)', background:'var(--surface)', color:'var(--muted)', cursor:'pointer', fontWeight:500 }}>
                         {checkingAvail ? <Loader size={11} style={{ animation:'spin 0.7s linear infinite' }} /> : <Clock size={11} />}
                         Check Availability
                       </button>
@@ -332,12 +332,12 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                 <div>
                   <label style={labelStyle}>Google Meet Link</label>
                   <div onClick={() => setAddMeetLink(v=>!v)}
-                    style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:8, border:`1px solid ${addMeetLink?'#4a6cf730':'#e5e7ef'}`, background:addMeetLink?'#4a6cf708':'transparent', cursor:'pointer' }}>
-                    <div style={{ width:32, height:18, borderRadius:9, background:addMeetLink?'#4a6cf7':'#d0d0d8', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
-                      <div style={{ position:'absolute', top:3, left:addMeetLink?15:3, width:12, height:12, borderRadius:'50%', background:'#fff', transition:'left 0.18s' }} />
+                    style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:8, border:`1px solid ${addMeetLink?'rgba(255,155,38,0.2)':'#e5e7ef'}`, background:addMeetLink?'rgba(255,155,38,0.05)':'transparent', cursor:'pointer' }}>
+                    <div style={{ width:32, height:18, borderRadius:9, background:addMeetLink?'var(--orange)':'#d0d0d8', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+                      <div style={{ position:'absolute', top:3, left:addMeetLink?15:3, width:12, height:12, borderRadius:'50%', background:'var(--surface)', transition:'left 0.18s' }} />
                     </div>
-                    <Video size={13} color={addMeetLink?'#4a6cf7':'#8e8ea0'} />
-                    <span style={{ fontSize:12, color:addMeetLink?'#4a6cf7':'#8e8ea0' }}>
+                    <Video size={13} color={addMeetLink?'var(--orange)':'#8e8ea0'} />
+                    <span style={{ fontSize:12, color:addMeetLink?'var(--orange)':'#8e8ea0' }}>
                       {addMeetLink?'Will be added':'No Meet link'}
                     </span>
                   </div>
@@ -349,10 +349,10 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
 
         {/* Footer */}
         {!success && (
-          <div style={{ padding:'14px 20px', borderTop:'1px solid #e5e7ef', display:'flex', justifyContent:'flex-end', gap:10, flexShrink:0 }}>
-            <button onClick={onClose} style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #e5e7ef', background:'#fff', color:'#8e8ea0', fontSize:13, fontWeight:500, cursor:'pointer' }}>Cancel</button>
+          <div style={{ padding:'14px 20px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'flex-end', gap:10, flexShrink:0 }}>
+            <button onClick={onClose} style={{ padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--surface)', color:'var(--muted)', fontSize:13, fontWeight:500, cursor:'pointer' }}>Cancel</button>
             <button onClick={handleSchedule} disabled={saving}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity:saving?0.7:1 }}>
+              style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity:saving?0.7:1 }}>
               {saving ? <Loader size={14} style={{ animation:'spin 0.7s linear infinite' }} /> : <Calendar size={14} />}
               {saving ? 'Scheduling…' : 'Schedule Meeting'}
             </button>

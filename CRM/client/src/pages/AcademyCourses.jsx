@@ -116,7 +116,7 @@ export default function AcademyCourses() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -126,8 +126,8 @@ export default function AcademyCourses() {
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BookOpen size={18} color="#4a6cf7" />
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BookOpen size={18} color="var(--orange)" />
           </div>
           <h1 style={headingStyle}>Course Manager</h1>
         </div>
@@ -182,7 +182,7 @@ export default function AcademyCourses() {
                       onClick={() => navigate(`/academy/courses/${c.id}/edit`)}
                       style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
                     >
-                      <Pencil size={14} color="#4a6cf7" />
+                      <Pencil size={14} color="var(--orange)" />
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(c.id)}

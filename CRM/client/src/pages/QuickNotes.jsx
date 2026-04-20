@@ -4,7 +4,7 @@ import { getQuickNotes, createQuickNote, updateQuickNote, deleteQuickNote } from
 import { copyToClipboard } from '../lib/clipboard';
 
 // ── Accent color palette ───────────────────────────────────────────────────────
-const COLORS = ['#4a6cf7', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#8e8ea0'];
+const COLORS = ['var(--orange)', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#8e8ea0'];
 
 // ── Detect URLs and render them as links ──────────────────────────────────────
 function RichContent({ text }) {
@@ -126,7 +126,7 @@ function NoteCard({ note, onUpdate, onDelete }) {
           </div>
           {/* Save/Cancel */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleSave} style={{ flex: 1, background: 'var(--orange)', color: '#f5f7fa', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <button onClick={handleSave} style={{ flex: 1, background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
               <Check size={13} /> Save
             </button>
             <button onClick={handleCancel} className="btn-ghost" style={{ flex: 1, fontSize: 13 }}>
@@ -158,7 +158,7 @@ function NoteCard({ note, onUpdate, onDelete }) {
                   <ExternalLink size={12} />
                 </a>
               )}
-              <button onClick={handleCopy} title="Copy content" style={{ display: 'flex', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 7px', color: copied ? '#4a6cf7' : '#8e8ea0', cursor: 'pointer' }}>
+              <button onClick={handleCopy} title="Copy content" style={{ display: 'flex', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 7px', color: copied ? 'var(--orange)' : '#8e8ea0', cursor: 'pointer' }}>
                 {copied ? <Check size={12} /> : <Copy size={12} />}
               </button>
               <button onClick={handlePin} title={note.pinned ? 'Unpin' : 'Pin'} style={{ display: 'flex', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 7px', color: note.pinned ? note.color : '#8e8ea0', cursor: 'pointer' }}>
@@ -193,7 +193,7 @@ export default function QuickNotes() {
   // New note form
   const [newTitle,   setNewTitle]   = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newColor,   setNewColor]   = useState('#4a6cf7');
+  const [newColor,   setNewColor]   = useState('var(--orange)');
   const [adding,     setAdding]     = useState(false);
   const [saving,     setSaving]     = useState(false);
   const newTextRef = useRef(null);
@@ -217,7 +217,7 @@ export default function QuickNotes() {
       setNotes(prev => [note, ...prev]);
       setNewTitle('');
       setNewContent('');
-      setNewColor('#4a6cf7');
+      setNewColor('var(--orange)');
       setAdding(false);
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -255,14 +255,14 @@ export default function QuickNotes() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="page-title">Quick Notes</div>
           {notes.length > 0 && (
-            <span style={{ background: '#e5e7ef', color: 'var(--muted)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
+            <span style={{ background: 'var(--surface-3)', color: 'var(--muted)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
               {notes.length}
             </span>
           )}
         </div>
         <button
           onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--orange)', color: '#f5f7fa', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
         >
           <Plus size={15} /> New Note
         </button>
@@ -308,7 +308,7 @@ export default function QuickNotes() {
               <button
                 onClick={handleAdd}
                 disabled={!newContent.trim() || saving}
-                style={{ background: newContent.trim() ? '#4a6cf7' : '#e5e7ef', color: 'var(--text)', border: 'none', borderRadius: 8, padding: '7px 18px', cursor: newContent.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13 }}
+                style={{ background: newContent.trim() ? 'var(--orange)' : 'var(--surface-3)', color: 'var(--text)', border: 'none', borderRadius: 8, padding: '7px 18px', cursor: newContent.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13 }}
               >
                 {saving ? 'Saving...' : 'Save Note'}
               </button>
@@ -335,12 +335,12 @@ export default function QuickNotes() {
           <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60, fontSize: 14 }}>Loading notes...</div>
         ) : notes.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
-            <StickyNote size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
+            <StickyNote size={40} style={{ color: 'var(--border-light)', marginBottom: 16 }} />
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--muted)', marginBottom: 8 }}>No notes yet</div>
             <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>Save links, credentials, snippets — anything you want to reuse.</div>
             <button
               onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
-              style={{ background: 'var(--orange)', color: '#f5f7fa', border: 'none', borderRadius: 8, padding: '9px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+              style={{ background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
             >
               <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />Add your first note
             </button>

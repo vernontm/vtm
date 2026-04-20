@@ -85,7 +85,7 @@ export default function AcademyCommunity() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -120,9 +120,9 @@ export default function AcademyCommunity() {
             onClick={() => setFilter(tab)}
             style={{
               padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              background: filter === tab ? '#4a6cf7' : '#fff',
+              background: filter === tab ? 'var(--orange)' : '#fff',
               color: filter === tab ? '#fff' : '#7a7f9a',
-              border: filter === tab ? 'none' : '1px solid #e5e7ef',
+              border: filter === tab ? 'none' : '1px solid var(--border)',
             }}
           >{tab}</button>
         ))}
@@ -134,7 +134,7 @@ export default function AcademyCommunity() {
         <div key={post.id} style={{ ...cardStyle, borderLeft: post.pinned ? '3px solid #f59e0b' : undefined, opacity: actionLoading === post.id ? 0.6 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: 12, flex: 1 }}>
-              <div className="private-value" style={{ width: 38, height: 38, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
+              <div className="private-value" style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
                 {getInitials(post.author_name)}
               </div>
               <div style={{ flex: 1 }}>

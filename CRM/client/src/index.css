@@ -8,19 +8,19 @@
   --orange:      #ff9b26;
   --orange-dark: #ee4c27;
 
-  /* Backgrounds — unified so content matches sidebar */
-  --bg:        #1a1a1c;
-  --surface:   #222226;
-  --surface-2: #2a2a2f;
-  --surface-3: #313138;
+  /* Backgrounds */
+  --bg:        #0f0f0f;
+  --surface:   #1a1a1a;
+  --surface-2: #1e1e1e;
+  --surface-3: #252525;
 
   /* Borders */
-  --border:       rgba(255,255,255,0.07);
-  --border-light: rgba(255,255,255,0.11);
+  --border:       #2a2a2a;
+  --border-light: #333333;
 
   /* Text */
   --text:  #f0f0f0;
-  --muted: #6b6b72;
+  --muted: #888888;
 
   /* Status */
   --green:  #22c55e;
@@ -36,7 +36,7 @@
   --accent:      #ff9b26;
   --accent-dim:  rgba(255,155,38,0.08);
   --accent-mid:  rgba(255,155,38,0.18);
-  --text-muted:  #6b6b72;
+  --text-muted:  #888888;
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────── */
@@ -164,7 +164,7 @@ button:focus, input:focus, select:focus, textarea:focus {
 .page-header {
   position: sticky; top: 0; z-index: 50;
   padding: 16px 24px;
-  background: rgba(26,26,28,0.9);
+  background: rgba(15,15,15,0.95);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between; gap: 16px;

@@ -13,8 +13,8 @@ import {
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
 const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const btnOutline = { padding: '10px 20px', background: 'var(--surface)', color: 'var(--orange)', border: '1px solid #4a6cf7', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const btnAI = { padding: '10px 20px', background: 'linear-gradient(135deg, #8b5cf6, #4a6cf7)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnOutline = { padding: '10px 20px', background: 'var(--surface)', color: 'var(--orange)', border: '1px solid var(--orange)', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnAI = { padding: '10px 20px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
 const btnDanger = { padding: '6px 12px', background: 'var(--surface)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 };
 const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
@@ -325,7 +325,7 @@ export default function AcademyLessonEdit() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -338,8 +338,8 @@ export default function AcademyLessonEdit() {
           <button onClick={() => form.course_id ? navigate(`/academy/courses/${form.course_id}/edit`) : navigate('/academy/courses')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
             <ArrowLeft size={18} color="#7a7f9a" />
           </button>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FileText size={18} color="#4a6cf7" />
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={18} color="var(--orange)" />
           </div>
           <h1 style={headingStyle}>Edit Lesson</h1>
         </div>
@@ -376,7 +376,7 @@ export default function AcademyLessonEdit() {
           <div style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Upload size={16} color="#4a6cf7" />
+                <Upload size={16} color="var(--orange)" />
                 <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
                   Lesson Media ({contentItems.length})
                 </span>
@@ -406,7 +406,7 @@ export default function AcademyLessonEdit() {
                   cursor: 'pointer', transition: 'border-color 0.2s',
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#4a6cf7'; }}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--orange)'; }}
                 onDragLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7ef'; }}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -449,11 +449,11 @@ export default function AcademyLessonEdit() {
                             width: 48, height: 48, borderRadius: 8, background: 'var(--surface)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                           }}>
-                            <Film size={20} color="#4a6cf7" />
+                            <Film size={20} color="var(--orange)" />
                           </div>
                         ) : (
                           <div style={{
-                            width: 48, height: 48, borderRadius: 8, background: '#e5e7ef',
+                            width: 48, height: 48, borderRadius: 8, background: 'var(--surface-3)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                           }}>
                             <Icon size={20} color="#7a7f9a" />
@@ -471,7 +471,7 @@ export default function AcademyLessonEdit() {
                           <div style={{ fontSize: 11, color: '#7a7f9a', display: 'flex', gap: 12, marginTop: 2 }}>
                             <span style={{
                               padding: '1px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                              background: '#4a6cf718', color: 'var(--orange)', textTransform: 'uppercase',
+                              background: 'rgba(255,155,38,0.1)', color: 'var(--orange)', textTransform: 'uppercase',
                             }}>
                               {item.content_type}
                             </span>
@@ -646,7 +646,7 @@ export default function AcademyLessonEdit() {
                       onClick={() => updateQuestion(qi, 'correct_answer', oi)}
                       style={{
                         width: 26, height: 26, borderRadius: 6, border: '2px solid',
-                        borderColor: q.correct_answer === oi ? '#22c55e' : '#e5e7ef',
+                        borderColor: q.correct_answer === oi ? '#22c55e' : 'var(--border)',
                         background: q.correct_answer === oi ? '#22c55e18' : '#fff',
                         color: q.correct_answer === oi ? '#22c55e' : '#7a7f9a',
                         fontSize: 11, fontWeight: 700, cursor: 'pointer',

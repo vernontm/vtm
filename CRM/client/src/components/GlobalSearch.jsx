@@ -19,14 +19,14 @@ function statusColor(status) {
   if (s === 'won')        return '#22c55e';
   if (s === 'lost')       return '#ff5c5c';
   if (s === 'active')     return '#22c55e';
-  if (s === 'completed')  return '#4a6cf7';
+  if (s === 'completed')  return 'var(--orange)';
   return '#8e8ea0';
 }
 
 function ResultRow({ result, isActive, onHover, onClick }) {
   const cat = CATEGORIES.find(c => c.key === result._cat);
   const Icon = cat?.icon || Star;
-  const color = cat?.color || '#4a6cf7';
+  const color = cat?.color || 'var(--orange)';
   const sub = result.email || result.client || result.industry || result.company || '';
   const badge = result.status || result.stage || '';
 
@@ -141,7 +141,7 @@ export default function GlobalSearch({ onClose }) {
           <input
             ref={inputRef} value={query} onChange={handleChange} onKeyDown={handleKeyDown}
             placeholder="Search leads, contacts, deals, projects..."
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: 'var(--text)', caretColor: '#4a6cf7' }}
+            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: 'var(--text)', caretColor: 'var(--orange)' }}
           />
           {query && (
             <button onClick={() => { setQuery(''); setResults(null); inputRef.current?.focus(); }}
@@ -204,7 +204,7 @@ export default function GlobalSearch({ onClose }) {
               {CATEGORIES.filter(cat => (results[cat.key] || []).length > 0).map(cat => (
                 <button key={cat.key} onClick={() => { navigate(`${cat.route}?search=${encodeURIComponent(query)}`); onClose(); }}
                   style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#4a6cf7'; e.currentTarget.style.borderColor = '#4a6cf7'; }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--orange)'; e.currentTarget.style.borderColor = 'var(--orange)'; }}
                   onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.borderColor = '#e5e7ef'; }}
                 >
                   All {cat.label} →

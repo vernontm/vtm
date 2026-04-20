@@ -6,13 +6,13 @@ import { getAcademyCourses, updateAcademyCourse, getAcademyLessons, createAcadem
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
 const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const btnOutline = { padding: '10px 20px', background: 'var(--surface)', color: 'var(--orange)', border: '1px solid #4a6cf7', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnOutline = { padding: '10px 20px', background: 'var(--surface)', color: 'var(--orange)', border: '1px solid var(--orange)', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
 const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'block' };
 const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' };
 const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
-const btnAI = { padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #4a6cf7)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 };
+const btnAI = { padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 };
 
 function StatusBadge({ status }) {
   const isPublished = status === 'published';
@@ -195,7 +195,7 @@ export default function AcademyCourseEdit() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -208,8 +208,8 @@ export default function AcademyCourseEdit() {
           <button onClick={() => navigate('/academy/courses')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
             <ArrowLeft size={18} color="#7a7f9a" />
           </button>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BookOpen size={18} color="#4a6cf7" />
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BookOpen size={18} color="var(--orange)" />
           </div>
           <h1 style={headingStyle}>Edit Course</h1>
         </div>
@@ -270,7 +270,7 @@ export default function AcademyCourseEdit() {
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', flex: 1 }}>{l.title}</span>
                 <StatusBadge status={l.status || 'draft'} />
                 <button onClick={() => navigate(`/academy/lessons/${l.id}/edit`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                  <Pencil size={14} color="#4a6cf7" />
+                  <Pencil size={14} color="var(--orange)" />
                 </button>
                 <button onClick={() => handleDeleteLesson(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                   <Trash2 size={14} color="#ef4444" />
@@ -374,7 +374,7 @@ export default function AcademyCourseEdit() {
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Content Drip</span>
               <button onClick={() => updateField('drip_enabled', !form.drip_enabled)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 {form.drip_enabled
-                  ? <ToggleRight size={24} color="#4a6cf7" />
+                  ? <ToggleRight size={24} color="var(--orange)" />
                   : <ToggleLeft size={24} color="#7a7f9a" />
                 }
               </button>

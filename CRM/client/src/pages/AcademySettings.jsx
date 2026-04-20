@@ -79,7 +79,7 @@ export default function AcademySettings() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -172,7 +172,7 @@ export default function AcademySettings() {
                     <div style={{ fontSize: 12, color: '#7a7f9a', marginTop: 2 }}>{meta.hint}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    {saving[key] && <Loader2 size={14} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />}
+                    {saving[key] && <Loader2 size={14} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />}
                     {saved[key] && <Check size={14} color="#22c55e" />}
                     <div onClick={() => handleToggle(key)} style={{ cursor: 'pointer' }}>
                       {isOn
@@ -205,9 +205,9 @@ export default function AcademySettings() {
             </div>
           )}
 
-          <div style={{ ...cardStyle, background: '#4a6cf708' }}>
+          <div style={{ ...cardStyle, background: 'rgba(255,155,38,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Info size={16} color="#4a6cf7" />
+              <Info size={16} color="var(--orange)" />
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Configuration Note</span>
             </div>
             <p style={{ fontSize: 12, color: '#7a7f9a', margin: 0, lineHeight: 1.6 }}>

@@ -13,7 +13,7 @@ import {
 } from '../api';
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['#4a6cf7', '#4a6cf7', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
+const AVATAR_COLORS = ['var(--orange)', 'var(--orange)', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatDateTime(iso) {
@@ -242,7 +242,7 @@ export default function MeetingDetail() {
     return {
       padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 500,
       color: active ? '#fff' : '#8e8ea0', background: 'none', border: 'none',
-      borderBottom: `2px solid ${active ? '#4a6cf7' : 'transparent'}`,
+      borderBottom: `2px solid ${active ? 'var(--orange)' : 'transparent'}`,
       transition: 'color 0.15s, border-color 0.15s',
       display: 'flex', alignItems: 'center', gap: 6,
     };
@@ -414,11 +414,11 @@ export default function MeetingDetail() {
                     </div>
                   ) : (
                     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '28px 20px', textAlign: 'center' }}>
-                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                         <Video size={22} color="#8e8ea0" />
                       </div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>No Recording Found</div>
-                      <div style={{ fontSize: 11, color: '#e5e7ef', marginBottom: 14 }}>
+                      <div style={{ fontSize: 11, color: 'var(--border-light)', marginBottom: 14 }}>
                         Search your Drive folder for a recording of this meeting
                       </div>
                       <button
@@ -483,26 +483,26 @@ export default function MeetingDetail() {
                       {/* Action Items + Key Decisions */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                         {summary.action_items?.length > 0 && (
-                          <div style={{ background: '#1a1d2e', border: '1px solid #4a6cf730', borderRadius: 8, padding: '12px 14px' }}>
+                          <div style={{ background: '#1a1d2e', border: '1px solid var(--orange)30', borderRadius: 8, padding: '12px 14px' }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
                               Action Items
                             </div>
                             {summary.action_items.map((item, i) => (
                               <div key={i} style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 7, marginBottom: 6, alignItems: 'flex-start' }}>
-                                <Check size={11} color="#4a6cf7" style={{ marginTop: 2, flexShrink: 0 }} />
+                                <Check size={11} color="var(--orange)" style={{ marginTop: 2, flexShrink: 0 }} />
                                 <span>{item}</span>
                               </div>
                             ))}
                           </div>
                         )}
                         {summary.key_decisions?.length > 0 && (
-                          <div style={{ background: '#1a1d2e', border: '1px solid #4a6cf730', borderRadius: 8, padding: '12px 14px' }}>
+                          <div style={{ background: '#1a1d2e', border: '1px solid var(--orange)30', borderRadius: 8, padding: '12px 14px' }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
                               Key Decisions
                             </div>
                             {summary.key_decisions.map((item, i) => (
                               <div key={i} style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 7, marginBottom: 6, alignItems: 'flex-start' }}>
-                                <ChevronRight size={11} color="#4a6cf7" style={{ marginTop: 2, flexShrink: 0 }} />
+                                <ChevronRight size={11} color="var(--orange)" style={{ marginTop: 2, flexShrink: 0 }} />
                                 <span>{item}</span>
                               </div>
                             ))}
@@ -519,7 +519,7 @@ export default function MeetingDetail() {
                       )}
 
                       {/* Meta footer */}
-                      <div style={{ fontSize: 10, color: '#e5e7ef', textAlign: 'right' }}>
+                      <div style={{ fontSize: 10, color: 'var(--border-light)', textAlign: 'right' }}>
                         Generated {summary.generated_at ? new Date(summary.generated_at).toLocaleDateString() : ''} · {summary.model_used || ''}
                       </div>
                     </div>
@@ -571,7 +571,7 @@ export default function MeetingDetail() {
                             )}
                           </div>
                           {linkedLead && (
-                            <span className="private-value" style={{ fontSize: 11, background: '#4a6cf718', color: 'var(--orange)', padding: '2px 8px', borderRadius: 8, border: '1px solid #4a6cf740' }}>
+                            <span className="private-value" style={{ fontSize: 11, background: 'rgba(255,155,38,0.1)', color: 'var(--orange)', padding: '2px 8px', borderRadius: 8, border: '1px solid var(--orange)40' }}>
                               {linkedLead.name}
                             </span>
                           )}
@@ -598,7 +598,7 @@ export default function MeetingDetail() {
                         to={`/leads?search=${encodeURIComponent(lead.name || lead.email || '')}`}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', padding: '10px 14px', background: '#1a1d2e', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 6 }}
                       >
-                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#4a6cf722', border: '1px solid #4a6cf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,155,38,0.13)', border: '1px solid var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
                           {(lead.name || lead.email || '?')[0].toUpperCase()}
                         </div>
                         <div>
@@ -629,7 +629,7 @@ export default function MeetingDetail() {
                     color: 'var(--text)', fontSize: 13, lineHeight: 1.7, fontFamily: 'inherit',
                     resize: 'vertical', outline: 'none',
                   }}
-                  onFocus={e => e.target.style.borderColor = '#4a6cf7'}
+                  onFocus={e => e.target.style.borderColor = 'var(--orange)'}
                   onBlur={e  => e.target.style.borderColor = '#e5e7ef'}
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
@@ -701,7 +701,7 @@ export default function MeetingDetail() {
                         padding: '8px 10px', fontSize: 11, color: 'var(--muted)', cursor: 'pointer',
                         textAlign: 'left', transition: 'border-color 0.1s',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = '#4a6cf7'}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--orange)'}
                       onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7ef'}
                     >
                       {q}
@@ -715,7 +715,7 @@ export default function MeetingDetail() {
                   <div style={{
                     maxWidth: '88%', padding: '8px 12px',
                     borderRadius: msg.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
-                    background: msg.role === 'user' ? '#4a6cf7' : '#ffffff',
+                    background: msg.role === 'user' ? 'var(--orange)' : '#ffffff',
                     fontSize: 12, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap',
                   }}>
                     {msg.content}
@@ -746,14 +746,14 @@ export default function MeetingDetail() {
                   flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
                   padding: '8px 12px', fontSize: 12, color: 'var(--text)', outline: 'none',
                 }}
-                onFocus={e => e.target.style.borderColor = '#4a6cf7'}
+                onFocus={e => e.target.style.borderColor = 'var(--orange)'}
                 onBlur={e  => e.target.style.borderColor = '#e5e7ef'}
               />
               <button
                 type="submit"
                 disabled={!chatInput.trim() || chatLoading}
                 style={{
-                  background: chatInput.trim() && !chatLoading ? '#4a6cf7' : '#ffffff',
+                  background: chatInput.trim() && !chatLoading ? 'var(--orange)' : '#ffffff',
                   border: 'none', borderRadius: 8, padding: '8px 12px',
                   cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default',
                   color: 'var(--text)', display: 'flex', alignItems: 'center',
@@ -776,7 +776,7 @@ export default function MeetingDetail() {
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, width: 440, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <LinkIcon size={15} color="#4a6cf7" />
+                <LinkIcon size={15} color="var(--orange)" />
                 <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Link to Lead</span>
               </div>
               <button onClick={() => setShowLinkModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}>
@@ -813,7 +813,7 @@ export default function MeetingDetail() {
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lead.email || ''}</div>
                     </div>
                     {linkingLeadId === lead.id ? (
-                      <Loader size={13} color="#4a6cf7" style={{ animation: 'spin 0.7s linear infinite' }} />
+                      <Loader size={13} color="var(--orange)" style={{ animation: 'spin 0.7s linear infinite' }} />
                     ) : alreadyLinked ? (
                       <span style={{ fontSize: 11, color: 'var(--orange)', display: 'flex', alignItems: 'center', gap: 4 }}><Check size={11} /> Linked</span>
                     ) : (
@@ -831,12 +831,12 @@ export default function MeetingDetail() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9000,
-          background: 'var(--surface)', border: '1px solid #4a6cf7',
+          background: 'var(--surface)', border: '1px solid var(--orange)',
           color: 'var(--muted)', padding: '10px 20px', borderRadius: 8,
           fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <Check size={14} color="#4a6cf7" /> {toast}
+          <Check size={14} color="var(--orange)" /> {toast}
         </div>
       )}
 

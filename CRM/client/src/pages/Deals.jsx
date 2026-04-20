@@ -28,7 +28,7 @@ const GROUPS = [
 const PAYMENT_STATUS_COLORS = {
   'Pending':      '#8e8ea0',
   'Partial Paid': '#fdab3d',
-  'Paid':         '#4a6cf7',
+  'Paid':         'var(--orange)',
 };
 
 // ── Payment Progress Badge (Stripe) ──────────────────────────────────────────
@@ -130,9 +130,9 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
                 {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                   <button key={val} onClick={() => setStructure(val)} style={{
                     flex: 1, padding: '9px 0', borderRadius: 8,
-                    border: `1px solid ${structure === val ? '#4a6cf7' : '#e5e7ef'}`,
-                    background: structure === val ? '#4a6cf722' : 'transparent',
-                    color: structure === val ? '#4a6cf7' : '#8e8ea0',
+                    border: `1px solid ${structure === val ? 'var(--orange)' : '#e5e7ef'}`,
+                    background: structure === val ? 'rgba(255,155,38,0.13)' : 'transparent',
+                    color: structure === val ? 'var(--orange)' : '#8e8ea0',
                     cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                   }}>{lbl}</button>
                 ))}
@@ -154,7 +154,7 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
                   <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                 </div>
               </div>
-              <div style={{ height: 1, background: '#e5e7ef' }} />
+              <div style={{ height: 1, background: 'var(--surface-3)' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
                 <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 14 }}>${amount2.toLocaleString()} ({100 - pct1}%)</span>
@@ -309,10 +309,10 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               <button key={m} onClick={() => setMode(m)} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '5px 12px', fontSize: 12, cursor: 'pointer', border: 'none',
-                background: mode === m ? '#4a6cf722' : 'transparent',
-                color: mode === m ? '#4a6cf7' : '#8e8ea0',
+                background: mode === m ? 'rgba(255,155,38,0.13)' : 'transparent',
+                color: mode === m ? 'var(--orange)' : '#8e8ea0',
                 fontWeight: mode === m ? 700 : 400,
-                borderRight: m === 'manual' ? '1px solid #e5e7ef' : 'none',
+                borderRight: m === 'manual' ? '1px solid var(--border)' : 'none',
               }}>
                 <Icon size={12} /> {label}
               </button>
@@ -350,9 +350,9 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                     {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                       <button key={val} onClick={() => setStructure(val)} style={{
                         flex: 1, padding: '9px 0', borderRadius: 8,
-                        border: `1px solid ${structure === val ? '#4a6cf7' : '#e5e7ef'}`,
-                        background: structure === val ? '#4a6cf722' : 'transparent',
-                        color: structure === val ? '#4a6cf7' : '#8e8ea0',
+                        border: `1px solid ${structure === val ? 'var(--orange)' : '#e5e7ef'}`,
+                        background: structure === val ? 'rgba(255,155,38,0.13)' : 'transparent',
+                        color: structure === val ? 'var(--orange)' : '#8e8ea0',
                         cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                       }}>{lbl}</button>
                     ))}
@@ -374,7 +374,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                       <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                     </div>
                   </div>
-                  <div style={{ height: 1, background: '#e5e7ef' }} />
+                  <div style={{ height: 1, background: 'var(--surface-3)' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
                     <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 14 }}>${amount2.toLocaleString()} ({100 - pct1}%)</span>
@@ -488,7 +488,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {err && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{err}</div>}
 
           {saved && (
-            <div style={{ color: 'var(--orange)', fontSize: 13, background: '#4a6cf715', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ color: 'var(--orange)', fontSize: 13, background: 'rgba(255,155,38,0.09)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
               <Check size={14} /> Invoice #{saved.invoice_number} saved successfully
             </div>
           )}
@@ -550,7 +550,7 @@ function buildInvoiceHTML({ invoice_number, invoice_date, due_date, bill_to_name
     .company { font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 6px; }
     .from-details { font-size: 13px; color: #6b7280; line-height: 1.6; }
     .invoice-meta { text-align: right; }
-    .invoice-title { font-size: 28px; font-weight: 800; color: #4a6cf7; margin-bottom: 8px; }
+    .invoice-title { font-size: 28px; font-weight: 800; color: var(--orange); margin-bottom: 8px; }
     .meta-row { font-size: 13px; color: #6b7280; margin-bottom: 3px; }
     .meta-row span { color: #111827; font-weight: 600; }
     .bill-to { margin-bottom: 32px; }
@@ -749,10 +749,10 @@ export default function Deals() {
 
   // Group color by label
   const groupLabelColor = (label) => {
-    if (label === 'Closed Won') return '#4a6cf7';
+    if (label === 'Closed Won') return 'var(--orange)';
     if (label === 'Closed Lost') return '#ff5c5c';
     if (label === 'Completed') return '#784bd1';
-    return '#4a6cf7';
+    return 'var(--orange)';
   };
 
   return (
@@ -863,7 +863,7 @@ export default function Deals() {
                     </td>
                     <td>
                       <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <DollarSign size={13} style={{ color: deal.amount_paid > 0 ? '#4a6cf7' : '#555880', flexShrink: 0 }} />
+                        <DollarSign size={13} style={{ color: deal.amount_paid > 0 ? 'var(--orange)' : '#555880', flexShrink: 0 }} />
                         <InlineEdit value={String(deal.amount_paid || '')} type="number" onSave={val => handleAmountPaidSave(deal, val)} placeholder="0" />
                       </div>
                     </td>
@@ -882,7 +882,7 @@ export default function Deals() {
                           onClick={() => setManualDeal(deal)}
                           title="Create or Send Invoice"
                           style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--orange)', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#4a6cf722'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,155,38,0.13)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
                           <FileText size={11} /> Invoice

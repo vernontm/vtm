@@ -50,7 +50,7 @@ function getInitials(name = '') {
 }
 
 const AVATAR_COLORS = [
-  '#4a6cf7', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#9333ea',
+  'var(--orange)', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#9333ea',
 ];
 function avatarColor(name = '') {
   let hash = 0;

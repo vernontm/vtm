@@ -20,7 +20,7 @@ const TABS = [
   { key: 'spam',    label: 'Spam',    icon: Ban },
 ];
 
-const AVATAR_COLORS = ['#4a6cf7','#784bd1','#22c55e','#f5a623','#ff5c5c','#00b8d4','#e91e8c','#ff6b35'];
+const AVATAR_COLORS = ['var(--orange)','#784bd1','#22c55e','#f5a623','#ff5c5c','#00b8d4','#e91e8c','#ff6b35'];
 
 const LABEL_CONFIG = {
   favorite:    { icon: Star,          color: '#f5a623', label: 'Favorite' },
@@ -57,7 +57,7 @@ function Linkify({ text }) {
       <div key={i} style={{ margin:'12px 0' }}>
         <a href={part} target="_blank" rel="noopener noreferrer">
           <img src={part} alt="" style={{ maxWidth:'100%', maxHeight:400, borderRadius:10, border:'1px solid var(--border)', display:'block' }}
-            onError={e => { e.target.style.display='none'; e.target.parentElement.innerHTML=`<a href="${part}" target="_blank" rel="noopener noreferrer" style="color:#4a6cf7;word-break:break-all">${part}</a>`; }} />
+            onError={e => { e.target.style.display='none'; e.target.parentElement.innerHTML=`<a href="${part}" target="_blank" rel="noopener noreferrer" style="color:var(--orange);word-break:break-all">${part}</a>`; }} />
         </a>
       </div>
     );
@@ -180,7 +180,7 @@ function SchedulePopup({ onSelect, onPickCustom, onClose }) {
     document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h);
   }, [onClose]);
   return (
-    <div ref={ref} style={{ position:'absolute', bottom:'100%', left:0, marginBottom:8, background:'#fff', border:'1px solid #e5e7ef', borderRadius:12, boxShadow:'0 8px 32px rgba(0,0,0,0.12)', width:300, zIndex:200, overflow:'hidden' }}>
+    <div ref={ref} style={{ position:'absolute', bottom:'100%', left:0, marginBottom:8, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, boxShadow:'0 8px 32px rgba(0,0,0,0.12)', width:300, zIndex:200, overflow:'hidden' }}>
       <div style={{ padding:'14px 18px 10px', borderBottom:'1px solid #f0f2f8', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <span style={{ fontSize:14, fontWeight:700, color:'var(--text)' }}>Schedule send</span>
         <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex' }}><X size={16} /></button>
@@ -188,13 +188,13 @@ function SchedulePopup({ onSelect, onPickCustom, onClose }) {
       <div style={{ fontSize:11, color:'var(--muted)', padding:'6px 18px 4px' }}>{Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g,' ')}</div>
       {options.map((o,i) => (
         <div key={i} onClick={() => { onSelect(o.value); onClose(); }} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 18px', cursor:'pointer', borderTop:'1px solid #f0f2f8' }}
-          onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+          onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
           <span style={{ fontSize:13, color:'var(--text)', fontWeight:500 }}>{o.label}</span>
           <span style={{ fontSize:12, color:'var(--muted)' }}>{o.detail}</span>
         </div>
       ))}
       <div onClick={() => { onPickCustom(); onClose(); }} style={{ display:'flex', alignItems:'center', gap:8, padding:'11px 18px', cursor:'pointer', borderTop:'1px solid #f0f2f8' }}
-        onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+        onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
         <Calendar size={14} color="#8e8ea0" />
         <span style={{ fontSize:13, color:'var(--text)', fontWeight:500 }}>Pick date & time</span>
       </div>
@@ -221,17 +221,17 @@ function ContactSearch({ value, onChange, contacts, gmailContacts }) {
       <input value={value} onChange={e => { onChange(e.target.value); setQuery(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)}
         placeholder="Search contacts or type email..." style={{ width:'100%', border:'none', outline:'none', fontSize:13, color:'var(--text)', background:'transparent' }} />
       {open && filtered.length > 0 && (
-        <div style={{ position:'absolute', bottom:'100%', left:-16, right:-16, marginBottom:6, background:'#fff', border:'1px solid #e5e7ef', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:260, overflow:'auto' }}>
+        <div style={{ position:'absolute', bottom:'100%', left:-16, right:-16, marginBottom:6, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:260, overflow:'auto' }}>
           {filtered.map((c,i) => (
             <div key={c.email+i} onClick={() => { onChange(c.email); setOpen(false); setQuery(''); }}
               style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', cursor:'pointer', borderBottom: i<filtered.length-1?'1px solid #f0f2f8':'none' }}
-              onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+              onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
               {c.photo ? <img src={c.photo} style={{ width:28, height:28, borderRadius:'50%', objectFit:'cover' }} alt="" /> : <Avatar name={c.name||c.email} size={28} />}
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:12, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name||c.email}</div>
                 <div style={{ fontSize:10, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.email}</div>
               </div>
-              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'#4a6cf710', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'#4a6cf7' }}>{c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'Contact'}</span>
+              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(255,155,38,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>{c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'Contact'}</span>
             </div>
           ))}
         </div>
@@ -274,8 +274,8 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
   return (
     <div className="compose-popup" style={{
       position:'fixed', bottom:0, right:80, width:480, maxWidth:'100vw', zIndex:8000,
-      background:'#fff', borderRadius:'12px 12px 0 0', boxShadow:'0 -4px 32px rgba(0,0,0,0.15)',
-      border:'1px solid #e5e7ef', borderBottom:'none', display:'flex', flexDirection:'column',
+      background:'var(--surface)', borderRadius:'12px 12px 0 0', boxShadow:'0 -4px 32px rgba(0,0,0,0.15)',
+      border:'1px solid var(--border)', borderBottom:'none', display:'flex', flexDirection:'column',
       maxHeight: minimized ? 44 : '70vh', transition:'max-height 0.2s ease',
     }}>
       {/* Title bar */}
@@ -346,10 +346,10 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
           <div style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderTop:'1px solid #f0f2f8', position:'relative', flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'stretch', borderRadius:8, overflow:'hidden' }}>
               <button onClick={handleSend} disabled={sending||!to||!subject}
-                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject)?0.5:1, borderRight:'1px solid rgba(255,255,255,0.2)' }}>
+                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject)?0.5:1, borderRight:'1px solid rgba(255,255,255,0.2)' }}>
                 <Send size={12} /> {sending?'Sending...':'Send'}
               </button>
-              <button onClick={() => setShowSchedule(!showSchedule)} style={{ padding:'7px 8px', cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', display:'flex', alignItems:'center' }}>
+              <button onClick={() => setShowSchedule(!showSchedule)} style={{ padding:'7px 8px', cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', display:'flex', alignItems:'center' }}>
                 <ChevronDown size={13} />
               </button>
             </div>
@@ -386,7 +386,7 @@ export default function EmailPage() {
   const [customLabels, setCustomLabels]     = useState([]);
   const [showNewLabel, setShowNewLabel]     = useState(false);
   const [newLabelName, setNewLabelName]     = useState('');
-  const [newLabelColor, setNewLabelColor]   = useState('#4a6cf7');
+  const [newLabelColor, setNewLabelColor]   = useState('var(--orange)');
 
   // AI Follow-ups
   const [followups, setFollowups]           = useState([]);
@@ -612,7 +612,7 @@ export default function EmailPage() {
       {/* ── Left Sidebar ── */}
       <div className="email-sidebar" style={{ width:200, background:'var(--surface)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', flexShrink:0 }}>
         <div className="email-sidebar-compose" style={{ padding:'16px 14px 12px' }}>
-          <button onClick={openCompose} style={{ width:'100%', padding:'10px 0', borderRadius:10, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+          <button onClick={openCompose} style={{ width:'100%', padding:'10px 0', borderRadius:10, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
             <Edit3 size={14} /> Compose
           </button>
         </div>
@@ -620,7 +620,7 @@ export default function EmailPage() {
           <div style={{ position:'relative' }}>
             <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--muted)' }} />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
-              style={{ width:'100%', padding:'8px 10px 8px 30px', borderRadius:8, fontSize:12, background:'#f5f7fa', border:'1px solid #e5e7ef', color:'var(--text)', outline:'none' }} />
+              style={{ width:'100%', padding:'8px 10px 8px 30px', borderRadius:8, fontSize:12, background:'var(--surface-2)', border:'1px solid var(--border)', color:'var(--text)', outline:'none' }} />
           </div>
         </div>
         <div className="email-sidebar-tabs" style={{ flex:1 }}>
@@ -632,7 +632,7 @@ export default function EmailPage() {
             return (
               <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); }}
                 style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 18px', border:'none', cursor:'pointer', fontSize:13, fontWeight:500,
-                  background:isActive?'rgba(255,155,38,0.08)':'transparent', color:isActive?'#4a6cf7':'#5a5a6e', borderLeft:isActive?'3px solid #4a6cf7':'3px solid transparent' }}>
+                  background:isActive?'rgba(255,155,38,0.08)':'transparent', color:isActive?'var(--orange)':'#5a5a6e', borderLeft:isActive?'3px solid var(--orange)':'3px solid transparent' }}>
                 <t.icon size={16} /> {t.label}
                 {count > 0 && <span style={{ marginLeft:'auto', background:t.key==='drafts'?'var(--red)':'var(--orange)', color:'#fff', borderRadius:10, padding:'1px 7px', fontSize:10, fontWeight:700 }}>{count}</span>}
               </button>
@@ -643,7 +643,7 @@ export default function EmailPage() {
         <div className="email-sidebar-labels" style={{ borderTop:'1px solid #f0f2f8', padding:'8px 14px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
             <span style={{ fontSize:10, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Labels</span>
-            <button onClick={() => setShowNewLabel(!showNewLabel)} style={{ background:'none', border:'none', cursor:'pointer', color:'#4a6cf7', display:'flex', padding:2 }}>
+            <button onClick={() => setShowNewLabel(!showNewLabel)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--orange)', display:'flex', padding:2 }}>
               <Plus size={13} />
             </button>
           </div>
@@ -657,15 +657,15 @@ export default function EmailPage() {
                 value={newLabelName} onChange={e => setNewLabelName(e.target.value)}
                 placeholder="Label name..."
                 onKeyDown={e => e.key==='Enter' && handleCreateLabel()}
-                style={{ flex:1, fontSize:11, padding:'4px 8px', border:'1px solid #e5e7ef', borderRadius:6, outline:'none', color:'var(--text)', background:'#f5f7fa' }}
+                style={{ flex:1, fontSize:11, padding:'4px 8px', border:'1px solid var(--border)', borderRadius:6, outline:'none', color:'var(--text)', background:'var(--surface-2)' }}
               />
-              <button onClick={handleCreateLabel} style={{ background:'#4a6cf7', border:'none', borderRadius:6, color:'#fff', fontSize:10, padding:'4px 8px', cursor:'pointer', fontWeight:600 }}>Add</button>
+              <button onClick={handleCreateLabel} style={{ background:'var(--orange)', border:'none', borderRadius:6, color:'#fff', fontSize:10, padding:'4px 8px', cursor:'pointer', fontWeight:600 }}>Add</button>
             </div>
           )}
           <div style={{ display:'flex', flexDirection:'column', gap:2, maxHeight:120, overflow:'auto' }}>
             {customLabels.map(l => (
               <div key={l.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 8px', borderRadius:6, cursor:'pointer', fontSize:12, color:'var(--muted)' }}
-                onMouseEnter={e => e.currentTarget.style.background='#f5f7fa'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                 <div style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />
                 <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</span>
                 <button onClick={e => { e.stopPropagation(); handleDeleteLabel(l.id); }} style={{ background:'none', border:'none', cursor:'pointer', color:'#d0d0d8', display:'flex', padding:1 }}
@@ -680,7 +680,7 @@ export default function EmailPage() {
         {/* ── AI Follow-ups & Refresh ── */}
         <div className="email-sidebar-actions" style={{ padding:'8px 14px 12px', borderTop:'1px solid #f0f2f8', display:'flex', flexDirection:'column', gap:6 }}>
           <button onClick={loadFollowups} disabled={followupsLoading}
-            style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid #e5e7ef', borderRadius:8, background:followupsLoading?'#f5f7fa':'linear-gradient(135deg,rgba(74,108,247,0.05),rgba(110,142,251,0.05))', color:followupsLoading?'#b0b0c0':'#4a6cf7', fontSize:12, cursor:followupsLoading?'wait':'pointer', fontWeight:500 }}>
+            style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid var(--border)', borderRadius:8, background:followupsLoading?'#f5f7fa':'linear-gradient(135deg,rgba(74,108,247,0.05),rgba(110,142,251,0.05))', color:followupsLoading?'#b0b0c0':'var(--orange)', fontSize:12, cursor:followupsLoading?'wait':'pointer', fontWeight:500 }}>
             <Zap size={12} /> {followupsLoading ? 'Analyzing...' : 'AI Follow-ups'}
           </button>
           <button onClick={handleRefresh} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 0', border:'1px solid var(--border)', borderRadius:8, background:'var(--surface-2)', color:'var(--muted)', fontSize:12, cursor:'pointer' }}>
@@ -697,7 +697,7 @@ export default function EmailPage() {
           <div style={{ flex:1, display:'flex', flexDirection:'column' }}>
             {/* Header */}
             <div className="email-detail-header" style={{ padding:'12px 24px', background:'var(--surface)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10 }}>
-              <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'#4a6cf7', display:'flex', alignItems:'center', gap:4, fontSize:13, fontWeight:500 }}>
+              <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--orange)', display:'flex', alignItems:'center', gap:4, fontSize:13, fontWeight:500 }}>
                 <ChevronLeft size={16} /> Back
               </button>
               <div style={{ flex:1 }} />
@@ -744,16 +744,16 @@ export default function EmailPage() {
                   <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                     {threadMessages.map((msg, idx) => (
                       <div key={msg.id} style={{
-                        background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', overflow:'hidden',
-                        borderLeft: msg.isFromMe ? '3px solid #4a6cf7' : '3px solid #22c55e',
+                        background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)', overflow:'hidden',
+                        borderLeft: msg.isFromMe ? '3px solid var(--orange)' : '3px solid #22c55e',
                       }}>
                         {/* Message header */}
-                        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderBottom:'1px solid #f0f2f8', background:'#f8f9fc' }}>
-                          <Avatar name={msg.from?.name || msg.from?.email || '?'} size={32} color={msg.isFromMe ? '#4a6cf7' : undefined} />
+                        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderBottom:'1px solid #f0f2f8', background:'var(--surface-2)' }}>
+                          <Avatar name={msg.from?.name || msg.from?.email || '?'} size={32} color={msg.isFromMe ? 'var(--orange)' : undefined} />
                           <div style={{ flex:1 }}>
                             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                               <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{msg.from?.name || msg.from?.email}</span>
-                              {msg.isFromMe && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:4, background:'#4a6cf710', color:'#4a6cf7', fontWeight:700 }}>You</span>}
+                              {msg.isFromMe && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:4, background:'rgba(255,155,38,0.08)', color:'var(--orange)', fontWeight:700 }}>You</span>}
                             </div>
                             <div className="private-value" style={{ fontSize:11, color:'var(--muted)' }}>
                               to {(msg.to||'').replace(/<.*>/,'').trim().split(',')[0]}
@@ -771,7 +771,7 @@ export default function EmailPage() {
                 ) : (
                   /* Single message */
                   <>
-                    <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'14px 18px', background:'#fff', borderRadius:10, border:'1px solid #e5e7ef' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'14px 18px', background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)' }}>
                       <Avatar name={getName(selected)} size={42} />
                       <div style={{ flex:1 }}>
                         <div className="private-value" style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>{getName(selected)}</div>
@@ -783,7 +783,7 @@ export default function EmailPage() {
                         <button onClick={() => handleDelete(selected.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ff5c5c', display:'flex', padding:6 }}><Trash2 size={15} /></button>
                       )}
                     </div>
-                    <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e5e7ef', padding:16, fontSize:14, lineHeight:1.8, color:'var(--text)', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                    <div style={{ background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)', padding:16, fontSize:14, lineHeight:1.8, color:'var(--text)', wordBreak:'break-word', overflowWrap:'break-word' }}>
                       <EmailBody
                         msg={threadMessages.length === 1 ? threadMessages[0] : null}
                         fallbackText={threadMessages.length === 1 ? (threadMessages[0]?.body || selected.snippet) : (selected.body||selected.generated_body||selected.snippet)}
@@ -805,7 +805,7 @@ export default function EmailPage() {
                     {selected.auto_generated && selected.status==='draft' && (
                       <button onClick={() => handleApprove(selected)} style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'#22c55e', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}><Check size={14} /> Approve</button>
                     )}
-                    <button onClick={() => handleSendQueue(selected.id)} style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}><Send size={13} /> Send Now</button>
+                    <button onClick={() => handleSendQueue(selected.id)} style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}><Send size={13} /> Send Now</button>
                     {selected.auto_generated && selected.status==='draft' && (
                       <button onClick={() => handleDelete(selected.id)} style={{ padding:'9px 16px', borderRadius:8, cursor:'pointer', background:'none', border:'1px solid #ff5c5c40', color:'#ff5c5c', fontSize:13, fontWeight:500, display:'flex', alignItems:'center', gap:6 }}><X size={13} /> Deny</button>
                     )}
@@ -814,9 +814,9 @@ export default function EmailPage() {
 
                 {/* Reply button */}
                 {selected._type!=='queue' && !(selected.status==='draft'||selected.status==='pending') && (
-                  <button onClick={openReply} style={{ marginTop:20, display:'flex', alignItems:'center', gap:8, width:'100%', padding:'12px 18px', borderRadius:10, cursor:'pointer', background:'#fff', border:'1px solid #e5e7ef', color:'var(--muted)', fontSize:13, fontWeight:500, transition:'all 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor='#4a6cf7'; e.currentTarget.style.color='#4a6cf7'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor='#e5e7ef'; e.currentTarget.style.color='#8e8ea0'; }}>
+                  <button onClick={openReply} style={{ marginTop:20, display:'flex', alignItems:'center', gap:8, width:'100%', padding:'12px 18px', borderRadius:10, cursor:'pointer', background:'var(--surface)', border:'1px solid var(--border)', color:'var(--muted)', fontSize:13, fontWeight:500, transition:'all 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor='var(--orange)'; e.currentTarget.style.color='var(--orange)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.color='var(--muted)'; }}>
                     <Reply size={14} /> Click here to reply...
                   </button>
                 )}
@@ -835,13 +835,13 @@ export default function EmailPage() {
             </div>
 
             {tab==='drafts' && autoDraftCount > 0 && (
-              <div className="email-draft-banner" style={{ padding:'8px 24px', background:'rgba(74,108,247,0.04)', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
-                <Sparkles size={12} color="#4a6cf7" />
+              <div className="email-draft-banner" style={{ padding:'8px 24px', background:'rgba(74,108,247,0.04)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
+                <Sparkles size={12} color="var(--orange)" />
                 <span style={{ color:'var(--orange)', fontWeight:500 }}>{autoDraftCount} auto-drafted — review & approve</span>
               </div>
             )}
 
-            <div style={{ flex:1, overflow:'auto', background:'#fff' }}>
+            <div style={{ flex:1, overflow:'auto', background:'var(--surface)' }}>
               {loading ? (
                 <div style={{ textAlign:'center', padding:60, color:'var(--muted)', fontSize:13 }}>Loading...</div>
               ) : filtered.length===0 ? (
@@ -865,16 +865,16 @@ export default function EmailPage() {
                         display:'flex', alignItems:'center', gap:14, padding:'12px 24px', cursor:'pointer',
                         borderBottom:'1px solid #f0f2f8', transition:'background 0.1s',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'}
-                      onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+                      onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'}
+                      onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
                       <Avatar name={name} size={38} />
                       <div className="email-item-name" style={{ width:200, minWidth:0, flexShrink:1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                           <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                             {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
                           </span>
-                          {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'#4a6cf710', color:'#4a6cf7', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}
-                          {email.isReply && <Reply size={11} color="#4a6cf7" style={{flexShrink:0}} />}
+                          {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'rgba(255,155,38,0.08)', color:'var(--orange)', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}
+                          {email.isReply && <Reply size={11} color="var(--orange)" style={{flexShrink:0}} />}
                         </div>
                       </div>
                       <div className="email-item-preview" style={{ flex:1, minWidth:0, display:'flex', alignItems:'baseline', gap:8 }}>
@@ -888,7 +888,7 @@ export default function EmailPage() {
                       <div className="email-item-labels" style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                         {isGmail && <LabelButton labelKey="favorite" active={isFav} onClick={e => { e.stopPropagation(); toggleLabel(email,'favorite'); }} size={13} />}
                         {crmLabels.filter(l=>l!=='spam'&&l!=='favorite').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:cfg.color+'15',color:cfg.color,fontWeight:600}}>{cfg.label}</span> : null; })}
-                        {email.auto_generated && <span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'#4a6cf710',color:'#4a6cf7',fontWeight:600,display:'flex',alignItems:'center',gap:2}}><Sparkles size={8} /> Auto</span>}
+                        {email.auto_generated && <span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(255,155,38,0.08)',color:'var(--orange)',fontWeight:600,display:'flex',alignItems:'center',gap:2}}><Sparkles size={8} /> Auto</span>}
                       </div>
                       <span className="email-item-time" style={{ fontSize:11, color:'var(--muted)', flexShrink:0, width:70, textAlign:'right' }}>
                         {timeAgo(getDate(email))}
@@ -928,11 +928,11 @@ export default function EmailPage() {
       {showFollowups && followups.length > 0 && (
         <div style={{
           position:'fixed', bottom:16, left:'50%', transform:'translateX(-50%)', zIndex:7000,
-          background:'#fff', borderRadius:14, boxShadow:'0 8px 40px rgba(0,0,0,0.15)', border:'1px solid #e5e7ef',
+          background:'var(--surface)', borderRadius:14, boxShadow:'0 8px 40px rgba(0,0,0,0.15)', border:'1px solid var(--border)',
           width:520, maxWidth:'calc(100vw - 32px)', maxHeight:'60vh', display:'flex', flexDirection:'column',
         }}>
           <div style={{ display:'flex', alignItems:'center', padding:'14px 18px', borderBottom:'1px solid #f0f2f8' }}>
-            <Zap size={16} color="#4a6cf7" />
+            <Zap size={16} color="var(--orange)" />
             <span style={{ fontSize:14, fontWeight:700, color:'var(--text)', marginLeft:8, flex:1 }}>Follow-up Suggestions</span>
             <span style={{ fontSize:11, color:'var(--muted)', marginRight:10 }}>{followups.length} suggestion{followups.length!==1?'s':''}</span>
             <button onClick={() => setShowFollowups(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex' }}><X size={16} /></button>
@@ -943,8 +943,8 @@ export default function EmailPage() {
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
                   <span style={{
                     fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:4, textTransform:'uppercase',
-                    background: f.priority==='high'?'#ff5c5c15':f.priority==='medium'?'#f5a62315':'#4a6cf715',
-                    color: f.priority==='high'?'#ff5c5c':f.priority==='medium'?'#f5a623':'#4a6cf7',
+                    background: f.priority==='high'?'#ff5c5c15':f.priority==='medium'?'#f5a62315':'rgba(255,155,38,0.09)',
+                    color: f.priority==='high'?'#ff5c5c':f.priority==='medium'?'#f5a623':'var(--orange)',
                   }}>{f.priority}</span>
                   <span style={{ fontSize:12, fontWeight:600, color:'var(--text)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                     {f.original_subject}
@@ -953,7 +953,7 @@ export default function EmailPage() {
                 </div>
                 <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>To: {(f.original_to||'').replace(/<.*>/,'').trim()}</div>
                 {f.suggested_body && (
-                  <div style={{ fontSize:12, color:'var(--muted)', background:'#f8f9fc', borderRadius:8, padding:'8px 12px', marginBottom:8, lineHeight:1.6, maxHeight:60, overflow:'hidden' }}>
+                  <div style={{ fontSize:12, color:'var(--muted)', background:'var(--surface-2)', borderRadius:8, padding:'8px 12px', marginBottom:8, lineHeight:1.6, maxHeight:60, overflow:'hidden' }}>
                     {f.suggested_body}
                   </div>
                 )}
@@ -961,11 +961,11 @@ export default function EmailPage() {
                   <button onClick={() => {
                     setComposeOpen({ subject: f.suggested_subject, to_email: f.original_to, from: { email: f.original_to } });
                     setFollowups(prev => prev.filter((_,j) => j!==i));
-                  }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
+                  }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
                     <Edit3 size={10} /> Draft Follow-up
                   </button>
                   <button onClick={() => setFollowups(prev => prev.filter((_,j) => j!==i))}
-                    style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'#fff', border:'1px solid #e5e7ef', color:'var(--muted)', fontWeight:500 }}>
+                    style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'var(--surface)', border:'1px solid var(--border)', color:'var(--muted)', fontWeight:500 }}>
                     Dismiss
                   </button>
                 </div>
@@ -973,7 +973,7 @@ export default function EmailPage() {
             ))}
           </div>
           <div style={{ padding:'10px 18px', borderTop:'1px solid #f0f2f8', display:'flex', justifyContent:'flex-end' }}>
-            <button onClick={() => { setFollowups([]); setShowFollowups(false); }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'#fff', border:'1px solid #e5e7ef', color:'var(--muted)', fontWeight:500 }}>
+            <button onClick={() => { setFollowups([]); setShowFollowups(false); }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'var(--surface)', border:'1px solid var(--border)', color:'var(--muted)', fontWeight:500 }}>
               Dismiss All
             </button>
           </div>

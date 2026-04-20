@@ -31,7 +31,7 @@ function ActionBtn({ icon, label, onClick, color }) {
 }
 
 const VDivider = () => (
-  <div style={{ width: 1, height: 32, background: '#e5e7ef', flexShrink: 0, margin: '0 4px' }} />
+  <div style={{ width: 1, height: 32, background: 'var(--surface-3)', flexShrink: 0, margin: '0 4px' }} />
 );
 
 export default function SelectionBar({

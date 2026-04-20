@@ -142,12 +142,12 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     transition: 'background 0.12s',
   };
-  const tbDivider = { width: 1, height: 20, background: '#e5e7ef', margin: '0 4px' };
+  const tbDivider = { width: 1, height: 20, background: 'var(--surface-3)', margin: '0 4px' };
   const tbGroup = { display: 'inline-flex', alignItems: 'center', gap: 1 };
 
   const Btn = ({ onClick, title, children, active }) => (
     <button type="button" onClick={onClick} title={title}
-      style={{ ...tbStyle, background: active ? '#e8ebff' : 'transparent', color: active ? '#4a6cf7' : '#5a5a6e' }}
+      style={{ ...tbStyle, background: active ? 'rgba(255,155,38,0.15)' : 'transparent', color: active ? 'var(--orange)' : '#5a5a6e' }}
       onMouseEnter={e => !active && (e.currentTarget.style.background = '#f0f0f5')}
       onMouseLeave={e => !active && (e.currentTarget.style.background = 'transparent')}>
       {children}
@@ -159,7 +159,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
       {/* Toolbar */}
       <div style={{
         display: 'flex', alignItems: 'center', padding: '6px 8px',
-        borderBottom: '1px solid var(--border)', background: '#fafbfd',
+        borderBottom: '1px solid var(--border)', background: 'var(--surface-2)',
         flexWrap: 'wrap', gap: 2,
       }}>
         {mode === 'rich' && (
@@ -251,7 +251,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
             outline: 'none',
             resize: 'vertical',
             boxSizing: 'border-box',
-            background: '#fafbfd',
+            background: 'var(--surface-2)',
           }}
         />
       )}
@@ -276,7 +276,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
         [contentEditable=true] h2 { font-size: 22px; font-weight: 700; margin: 14px 0 6px; }
         [contentEditable=true] p { margin: 0 0 12px 0; }
         [contentEditable=true] ul, [contentEditable=true] ol { margin: 0 0 12px 20px; }
-        [contentEditable=true] a { color: #4a6cf7; text-decoration: underline; }
+        [contentEditable=true] a { color: var(--orange); text-decoration: underline; }
         [contentEditable=true] img { max-width: 100%; height: auto; border-radius: 4px; }
         [contentEditable=true] .merge-tag {
           display: inline-block;

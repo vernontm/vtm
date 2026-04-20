@@ -12,10 +12,10 @@ import {
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
   open:          { bg: '#fdab3d22', color: '#fdab3d', label: 'Open' },
-  paid:          { bg: '#4a6cf722', color: 'var(--orange)', label: 'Paid' },
+  paid:          { bg: 'rgba(255,155,38,0.13)', color: 'var(--orange)', label: 'Paid' },
   void:          { bg: '#8e8ea022', color: 'var(--muted)', label: 'Void' },
   uncollectible: { bg: '#ff5c5c22', color: '#ff5c5c', label: 'Uncollectible' },
-  draft:         { bg: '#4a6cf722', color: 'var(--orange)', label: 'Draft' },
+  draft:         { bg: 'rgba(255,155,38,0.13)', color: 'var(--orange)', label: 'Draft' },
   cancelled:     { bg: '#8e8ea022', color: 'var(--muted)', label: 'Cancelled' },
 };
 
@@ -31,7 +31,7 @@ function StatusBadge({ status }) {
 function TypeBadge({ type }) {
   const isStripe = type === 'stripe';
   return (
-    <span style={{ background: isStripe ? '#784bd122' : '#4a6cf722', color: isStripe ? '#a78bfa' : '#4a6cf7', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
+    <span style={{ background: isStripe ? '#784bd122' : 'rgba(255,155,38,0.13)', color: isStripe ? '#a78bfa' : 'var(--orange)', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
       {isStripe ? 'Stripe' : 'Manual'}
     </span>
   );
@@ -152,22 +152,22 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
                 style={inputStyle} placeholder="Search contacts, leads, or type name..." />
               {form.bill_to_name && (
                 <button onClick={() => { setForm(f => ({ ...f, bill_to_name: '', bill_to_email: '' })); setContactQuery(''); }}
-                  style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#8e8ea0', display:'flex' }}><X size={14} /></button>
+                  style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex' }}><X size={14} /></button>
               )}
               {showContactDropdown && !form.bill_to_name && filteredContacts.length > 0 && (
-                <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:4, background:'#fff', border:'1px solid #e5e7ef', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:220, overflow:'auto' }}>
+                <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:4, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.1)', zIndex:100, maxHeight:220, overflow:'auto' }}>
                   {filteredContacts.map((c,i) => (
                     <div key={c.email+i} onClick={() => selectBillToContact(c)}
                       style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', cursor:'pointer', borderBottom:i<filteredContacts.length-1?'1px solid #f0f2f8':'none' }}
-                      onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
-                      <div style={{ width:24, height:24, borderRadius:'50%', background:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'#4a6cf7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff' }}>
+                      onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+                      <div style={{ width:24, height:24, borderRadius:'50%', background:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff' }}>
                         {(c.name||c.email)[0].toUpperCase()}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:12, fontWeight:600, color:'#1a1a2e' }}>{c.name||c.email}</div>
-                        <div style={{ fontSize:10, color:'#8e8ea0' }}>{c.email}</div>
+                        <div style={{ fontSize:12, fontWeight:600, color:'var(--text)' }}>{c.name||c.email}</div>
+                        <div style={{ fontSize:10, color:'var(--muted)' }}>{c.email}</div>
                       </div>
-                      <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'#4a6cf710', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'#4a6cf7' }}>
+                      <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(255,155,38,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>
                         {c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'CRM'}
                       </span>
                     </div>
@@ -217,7 +217,7 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
               ))}
               <button onClick={addItem} style={{
                 display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)',
-                background: 'none', border: '1px dashed #4a6cf740', borderRadius: 6, padding: '6px 10px',
+                background: 'none', border: '1px dashed var(--orange)40', borderRadius: 6, padding: '6px 10px',
                 cursor: 'pointer', fontWeight: 500, alignSelf: 'flex-start',
               }}>
                 <Plus size={12} /> Add item
@@ -416,7 +416,7 @@ export default function Invoices() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="page-title">Invoices</div>
-          <span style={{ background: '#e5e7ef', color: 'var(--muted)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
+          <span style={{ background: 'var(--surface-3)', color: 'var(--muted)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
             {allRows.length}
           </span>
         </div>
@@ -460,9 +460,9 @@ export default function Invoices() {
                 onClick={() => setTab(key)}
                 style={{
                   padding: '5px 14px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-                  border: `1px solid ${tab === key ? '#4a6cf7' : '#e5e7ef'}`,
-                  background: tab === key ? '#4a6cf722' : 'transparent',
-                  color: tab === key ? '#4a6cf7' : '#8e8ea0',
+                  border: `1px solid ${tab === key ? 'var(--orange)' : '#e5e7ef'}`,
+                  background: tab === key ? 'rgba(255,155,38,0.13)' : 'transparent',
+                  color: tab === key ? 'var(--orange)' : '#8e8ea0',
                   fontWeight: tab === key ? 700 : 400,
                 }}
               >
@@ -490,7 +490,7 @@ export default function Invoices() {
           <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60, fontSize: 14 }}>Loading invoices...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
-            <FileText size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
+            <FileText size={40} style={{ color: 'var(--border-light)', marginBottom: 16 }} />
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--muted)' }}>No invoices found</div>
           </div>
         ) : (
@@ -516,7 +516,7 @@ export default function Invoices() {
                     {/* # */}
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : '#4a6cf722', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : 'rgba(255,155,38,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: 'var(--orange)' }} />}
                         </div>
                         <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{inv._number}</span>
@@ -573,7 +573,7 @@ export default function Invoices() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="View on Stripe"
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: '#4a6cf718', border: '1px solid #4a6cf740', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: 'rgba(255,155,38,0.1)', border: '1px solid var(--orange)40', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
                               >
                                 <ExternalLink size={12} /> View
                               </a>
@@ -661,7 +661,7 @@ export default function Invoices() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-          background: toast.error ? '#ff5c5c' : '#4a6cf7', color: 'var(--text)',
+          background: toast.error ? '#ff5c5c' : 'var(--orange)', color: 'var(--text)',
           borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600,
           zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
         }}>

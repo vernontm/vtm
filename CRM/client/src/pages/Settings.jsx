@@ -12,7 +12,7 @@ function Toggle({ checked, onChange }) {
       aria-checked={checked}
       style={{
         width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
-        background: checked ? '#4a6cf7' : '#e5e7ef',
+        background: checked ? 'var(--orange)' : '#e5e7ef',
         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
       }}
     >
@@ -32,7 +32,7 @@ function Section({ title, icon: Icon, children }) {
   return (
     <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 24px', border: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-        {Icon && <Icon size={16} color="#4a6cf7" />}
+        {Icon && <Icon size={16} color="var(--orange)" />}
         <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</h3>
       </div>
       {children}
@@ -232,7 +232,7 @@ export default function Settings() {
         <Section title="Gmail Connection" icon={Mail}>
           {/* Status messages */}
           {gmailMsg === 'connected' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#4a6cf720', border: '1px solid #4a6cf7', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: 'var(--orange)', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,155,38,0.12)', border: '1px solid var(--orange)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: 'var(--orange)', fontSize: 13 }}>
               <CheckCircle size={15} /> Gmail connected successfully!
             </div>
           )}
@@ -246,8 +246,8 @@ export default function Settings() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <div style={{
               width: 10, height: 10, borderRadius: '50%',
-              background: gmailStatus.connected && !gmailStatus.expired ? '#4a6cf7' : '#ff5c5c',
-              boxShadow: gmailStatus.connected && !gmailStatus.expired ? '0 0 6px #4a6cf7' : '0 0 6px #ff5c5c',
+              background: gmailStatus.connected && !gmailStatus.expired ? 'var(--orange)' : '#ff5c5c',
+              boxShadow: gmailStatus.connected && !gmailStatus.expired ? '0 0 6px var(--orange)' : '0 0 6px #ff5c5c',
               flexShrink: 0,
             }} />
             <span style={{ fontSize: 13, color: 'var(--muted)' }}>

@@ -93,7 +93,7 @@ export default function Accounts() {
   };
 
   const industryColor = (ind) => {
-    const colors = { Technology: '#4a6cf7', Marketing: '#fdab3d', Logistics: '#784bd1', Finance: '#4a6cf7', Media: '#ff5c5c' };
+    const colors = { Technology: 'var(--orange)', Marketing: '#fdab3d', Logistics: '#784bd1', Finance: 'var(--orange)', Media: '#ff5c5c' };
     return colors[ind] || '#8e8ea0';
   };
 

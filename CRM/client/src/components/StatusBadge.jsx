@@ -5,7 +5,7 @@ const STATUS_COLORS = {
   'Contacted':  { bg: '#fdab3d', text: '#fff' },
   'Qualified':  { bg: '#ff9b26', text: '#fff' },
   'Converted':  { bg: '#784bd1', text: '#fff' },
-  'Warm':       { bg: '#4a6cf7', text: '#fff' },
+  'Warm':       { bg: 'var(--orange)', text: '#fff' },
   'Hot':        { bg: '#ff5c5c', text: '#fff' },
   'Unqualified':{ bg: '#8e8ea0', text: '#fff' },
   // Deal stages

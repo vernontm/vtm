@@ -319,8 +319,8 @@ function EditModal({ item, onClose, onSave }) {
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
                 fontSize: 12, fontWeight: 600, border: 'none',
-                background: form.visible ? '#4a6cf710' : '#ff5c5c10',
-                color: form.visible ? '#4a6cf7' : '#ff5c5c',
+                background: form.visible ? 'rgba(255,155,38,0.08)' : '#ff5c5c10',
+                color: form.visible ? 'var(--orange)' : '#ff5c5c',
               }}
             >
               {form.visible ? <Eye size={13} /> : <EyeOff size={13} />}
@@ -415,7 +415,7 @@ export default function Portfolio() {
           style={{
             padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
             cursor: 'pointer', border: 'none',
-            background: filterCat === 'all' ? '#4a6cf7' : '#fff',
+            background: filterCat === 'all' ? 'var(--orange)' : '#fff',
             color: filterCat === 'all' ? '#fff' : '#8e8ea0',
           }}
         >
@@ -428,7 +428,7 @@ export default function Portfolio() {
             style={{
               padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
               cursor: 'pointer', border: 'none',
-              background: filterCat === cat.toLowerCase() ? '#4a6cf7' : '#fff',
+              background: filterCat === cat.toLowerCase() ? 'var(--orange)' : '#fff',
               color: filterCat === cat.toLowerCase() ? '#fff' : '#8e8ea0',
             }}
           >

@@ -208,7 +208,7 @@ export default function Notifications() {
                 style={{
                   padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
                   border: `1px solid ${active ? (tc?.color || 'var(--orange)') : 'var(--border)'}`,
-                  background: active ? (tc?.color || '#4a6cf7') + '22' : 'transparent',
+                  background: active ? (tc?.color || 'var(--orange)') + '22' : 'transparent',
                   color: active ? (tc?.color || 'var(--orange)') : 'var(--muted)',
                   fontWeight: active ? 700 : 400,
                   display: 'flex', alignItems: 'center', gap: 5,

@@ -88,13 +88,13 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
               onClick={() => load()}
               disabled={loading}
               title="Refresh"
-              style={{ background: 'none', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', color: '#4a4845', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 4, opacity: loading ? 0.5 : 1 }}
+              style={{ background: 'none', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', color: 'var(--muted)', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 4, opacity: loading ? 0.5 : 1 }}
             >
               <RefreshCw size={14} style={{ animation: loading ? 'spin 0.7s linear infinite' : 'none' }} />
             </button>
             <button
               onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', display: 'flex', padding: 4 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 4 }}
             >
               <X size={16} />
             </button>
@@ -105,7 +105,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
         <div style={{ overflowY: 'auto', flex: 1 }}>
 
           {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 10, color: '#4a4845', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 10, color: 'var(--muted)', fontSize: 13 }}>
               <Loader size={16} style={{ animation: 'spin 0.7s linear infinite' }} />
               Loading threads from Gmail…
             </div>
@@ -118,7 +118,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
           )}
 
           {!loading && !error && threads.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 48, color: '#4a4845', fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)', fontSize: 13 }}>
               No threads found in <strong style={{ color: 'var(--muted)' }}>{labelName}</strong>.<br />
               <span style={{ fontSize: 11, marginTop: 6, display: 'block' }}>
                 Threads appear here automatically once you send or draft an email via the CRM.
@@ -156,7 +156,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
                   <span style={{ fontSize: 12, fontWeight: t.hasReply ? 700 : 500, color: t.hasReply ? '#fff' : '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {stripEmail(t.from) || stripEmail(t.to) || '(unknown)'}
                   </span>
-                  <span style={{ fontSize: 11, color: '#4a4845', flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
                     {relativeDate(t.date)}
                   </span>
                 </div>
@@ -165,20 +165,20 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
                 <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
                   {t.subject}
                   {t.messageCount > 1 && (
-                    <span style={{ fontSize: 10, color: '#4a4845', marginLeft: 6 }}>({t.messageCount})</span>
+                    <span style={{ fontSize: 10, color: 'var(--muted)', marginLeft: 6 }}>({t.messageCount})</span>
                   )}
                 </div>
 
                 {/* Row 3: snippet */}
                 {t.snippet && (
-                  <div style={{ fontSize: 11, color: '#4a4845', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.snippet}
                   </div>
                 )}
               </div>
 
               {/* Right: open in Gmail icon */}
-              <div style={{ paddingTop: 2, flexShrink: 0, color: '#e5e7ef' }}>
+              <div style={{ paddingTop: 2, flexShrink: 0, color: 'var(--border-light)' }}>
                 <ExternalLink size={12} />
               </div>
             </a>
@@ -213,7 +213,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
             padding: '10px 20px', borderTop: '1px solid var(--border)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span style={{ fontSize: 11, color: '#4a4845' }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>
               {threads.length} thread{threads.length !== 1 ? 's' : ''} shown
               {threads.some(t => t.hasReply) && (
                 <span style={{ marginLeft: 10, color: '#ff9b26' }}>

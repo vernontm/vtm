@@ -10,11 +10,11 @@ import { useTeam } from '../context/TeamContext';
 const CATEGORIES = ['General', 'Onboarding', 'Tools', 'Processes', 'Sales', 'Other'];
 
 const CAT_COLORS = {
-  General:    { bg: '#4a6cf722', fg: '#4a6cf7' },
+  General:    { bg: 'rgba(255,155,38,0.13)', fg: 'var(--orange)' },
   Onboarding: { bg: '#00d1d122', fg: '#00a8a8' },
   Tools:      { bg: '#784bd122', fg: '#784bd1' },
   Processes:  { bg: '#fdab3d22', fg: '#d97706' },
-  Sales:      { bg: '#4a6cf722', fg: '#22c55e' },
+  Sales:      { bg: 'rgba(255,155,38,0.13)', fg: '#22c55e' },
   Other:      { bg: '#e5e7ef',   fg: '#8e8ea0' },
 };
 
@@ -64,7 +64,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
         overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s',
         display: 'flex', flexDirection: 'column',
       }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 18px rgba(74,108,247,0.13)'; e.currentTarget.style.borderColor = '#4a6cf740'; }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 18px rgba(74,108,247,0.13)'; e.currentTarget.style.borderColor = 'rgba(255,155,38,0.25)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e5e7ef'; }}
     >
       {/* Thumbnail */}
@@ -75,7 +75,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
         {video.thumbnail_url ? (
           <img src={video.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
         ) : (
-          <Video size={36} color="#4a6cf750" />
+          <Video size={36} color="var(--orange)50" />
         )}
         {completed && (
           <div style={{
@@ -107,8 +107,8 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
 
       {/* Progress bar */}
       {pct > 0 && (
-        <div style={{ height: 3, background: '#e5e7ef' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: completed ? '#22c55e' : '#4a6cf7', transition: 'width 0.3s' }} />
+        <div style={{ height: 3, background: 'var(--surface-3)' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: completed ? '#22c55e' : 'var(--orange)', transition: 'width 0.3s' }} />
         </div>
       )}
 
@@ -405,7 +405,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Upload size={16} color="#4a6cf7" />
+            <Upload size={16} color="var(--orange)" />
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{isEdit ? 'Edit Video' : 'Upload Training Video'}</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={17} /></button>
@@ -487,9 +487,9 @@ function VideoFormModal({ existing, onClose, onSave }) {
 
               {/* Divider */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
+                <div style={{ flex: 1, height: 1, background: 'var(--surface-3)' }} />
                 <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>OR UPLOAD A SMALL FILE</span>
-                <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
+                <div style={{ flex: 1, height: 1, background: 'var(--surface-3)' }} />
               </div>
 
               {/* File upload — secondary, small files only */}
@@ -505,13 +505,13 @@ function VideoFormModal({ existing, onClose, onSave }) {
                   onClick={() => fileRef.current.click()}
                   style={{
                     width: '100%', padding: '18px 16px', borderRadius: 10, border: '2px dashed #d1d5db',
-                    background: file ? '#4a6cf710' : '#f9fafb', cursor: 'pointer', display: 'flex',
+                    background: file ? 'rgba(255,155,38,0.08)' : '#f9fafb', cursor: 'pointer', display: 'flex',
                     flexDirection: 'column', alignItems: 'center', gap: 6, color: 'var(--muted)',
-                    borderColor: file ? '#4a6cf7' : '#d1d5db', transition: 'all 0.15s',
+                    borderColor: file ? 'var(--orange)' : '#d1d5db', transition: 'all 0.15s',
                   }}
                 >
-                  <Upload size={20} color={file ? '#4a6cf7' : '#9ca3af'} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: file ? '#4a6cf7' : '#374151' }}>
+                  <Upload size={20} color={file ? 'var(--orange)' : '#9ca3af'} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: file ? 'var(--orange)' : '#374151' }}>
                     {file ? file.name : 'Click to choose a video file'}
                   </span>
                   {file && (
@@ -535,7 +535,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>Uploading…</span>
                 <span style={{ fontSize: 11, color: 'var(--orange)', fontWeight: 700 }}>{uploadPct}%</span>
               </div>
-              <div style={{ height: 6, background: '#e5e7ef', borderRadius: 3 }}>
+              <div style={{ height: 6, background: 'var(--surface-3)', borderRadius: 3 }}>
                 <div style={{ height: '100%', width: `${uploadPct}%`, background: 'var(--orange)', borderRadius: 3, transition: 'width 0.2s' }} />
               </div>
             </div>
@@ -628,7 +628,7 @@ export default function Training() {
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <BookOpen size={22} color="#4a6cf7" />
+          <BookOpen size={22} color="var(--orange)" />
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Training</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>Internal video library for the team</div>
@@ -684,8 +684,8 @@ export default function Training() {
                   onClick={() => setActiveTab(cat)}
                   style={{
                     padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: active ? 700 : 500,
-                    cursor: 'pointer', border: `1px solid ${active ? '#4a6cf7' : '#e5e7ef'}`,
-                    background: active ? '#4a6cf7' : '#fff', color: active ? '#fff' : '#6b7280',
+                    cursor: 'pointer', border: `1px solid ${active ? 'var(--orange)' : '#e5e7ef'}`,
+                    background: active ? 'var(--orange)' : '#fff', color: active ? '#fff' : '#6b7280',
                     transition: 'all 0.12s',
                   }}
                 >
@@ -756,11 +756,11 @@ export default function Training() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
-          background: 'var(--surface)', border: '1px solid #4a6cf7', color: 'var(--text)',
+          background: 'var(--surface)', border: '1px solid var(--orange)', color: 'var(--text)',
           padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <Check size={14} color="#4a6cf7" /> {toast}
+          <Check size={14} color="var(--orange)" /> {toast}
         </div>
       )}
 

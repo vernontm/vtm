@@ -12,7 +12,7 @@ const CYCLE_OPTIONS = ['monthly','yearly','quarterly','weekly'];
 const STATUS_OPTIONS = ['active','paused','cancelled'];
 
 const CATEGORY_COLORS = {
-  software:'#4a6cf7', hosting:'#22c55e', marketing:'#f5a623', productivity:'#784bd1',
+  software:'var(--orange)', hosting:'#22c55e', marketing:'#f5a623', productivity:'#784bd1',
   communication:'#00b8d4', storage:'#6e8efb', security:'#ff5c5c', entertainment:'#e91e8c',
   finance:'#ff6b35', other:'#8e8ea0',
 };
@@ -131,14 +131,14 @@ export default function SubscriptionsPage() {
       {/* Header */}
       <div style={{ padding:'20px 28px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <CreditCard size={22} color="#4a6cf7" />
+          <CreditCard size={22} color="var(--orange)" />
           <h1 style={{ fontSize:20, fontWeight:700, color:'var(--text)', margin:0, flex:1 }}>Subscriptions</h1>
           <button onClick={handleScan} disabled={scanning}
             style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, cursor:scanning?'wait':'pointer', background:'var(--surface-2)', border:'1px solid var(--border)', color:scanning?'var(--muted)':'var(--orange)', fontSize:12, fontWeight:600 }}>
             <Scan size={13} style={{ animation:scanning?'spin 1s linear infinite':'none' }} /> {scanning ? 'Scanning emails...' : 'Scan Gmail'}
           </button>
           <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ service:'', amount:'', billing_cycle:'monthly', next_renewal:'', category:'software', status:'active', notes:'' }); }}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:12, fontWeight:600 }}>
+            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:12, fontWeight:600 }}>
             <Plus size={13} /> Add Subscription
           </button>
         </div>
@@ -166,8 +166,8 @@ export default function SubscriptionsPage() {
 
       {/* Scan result banner */}
       {scanResult && (
-        <div style={{ padding:'10px 28px', background:scanResult.subscriptions?.length ? 'rgba(34,197,94,0.06)' : 'rgba(74,108,247,0.04)', borderBottom:'1px solid #e5e7ef', display:'flex', alignItems:'center', gap:8 }}>
-          <Check size={14} color={scanResult.subscriptions?.length ? '#22c55e' : '#4a6cf7'} />
+        <div style={{ padding:'10px 28px', background:scanResult.subscriptions?.length ? 'rgba(34,197,94,0.06)' : 'rgba(74,108,247,0.04)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8 }}>
+          <Check size={14} color={scanResult.subscriptions?.length ? '#22c55e' : 'var(--orange)'} />
           <span style={{ fontSize:12, color:'var(--muted)', flex:1 }}>
             {scanResult.subscriptions?.length
               ? `Found and saved ${scanResult.subscriptions.length} subscription${scanResult.subscriptions.length!==1?'s':''} from ${scanResult.emailsScanned || 0} emails`
@@ -182,7 +182,7 @@ export default function SubscriptionsPage() {
         <div style={{ position:'relative', flex:1, maxWidth:300 }}>
           <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--muted)' }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search subscriptions..."
-            style={{ width:'100%', padding:'8px 10px 8px 30px', borderRadius:8, fontSize:12, background:'#f5f7fa', border:'1px solid #e5e7ef', color:'#1a1a2e', outline:'none' }} />
+            style={{ width:'100%', padding:'8px 10px 8px 30px', borderRadius:8, fontSize:12, background:'var(--surface-2)', border:'1px solid var(--border)', color:'var(--text)', outline:'none' }} />
         </div>
         {['all','active','paused','cancelled'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
@@ -216,7 +216,7 @@ export default function SubscriptionsPage() {
             <tbody>
               {filtered.map(sub => (
                 <tr key={sub.id} style={{ borderBottom:'1px solid #f0f2f8' }}
-                  onMouseEnter={e => e.currentTarget.style.background='#f8f9fc'} onMouseLeave={e => e.currentTarget.style.background='#fff'}>
+                  onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
                   <td style={{ padding:'12px', fontSize:13, fontWeight:600, color:'var(--text)' }}>
                     {sub.service}
                     {sub.notes && <div style={{ fontSize:11, color:'var(--muted)', fontWeight:400 }}>{sub.notes}</div>}
@@ -239,11 +239,11 @@ export default function SubscriptionsPage() {
                   </td>
                   <td style={{ padding:'12px', display:'flex', gap:4 }}>
                     <button onClick={() => handleEdit(sub)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:4 }}
-                      onMouseEnter={e => e.currentTarget.style.color='#4a6cf7'} onMouseLeave={e => e.currentTarget.style.color='#8e8ea0'}>
+                      onMouseEnter={e => e.currentTarget.style.color='var(--orange)'} onMouseLeave={e => e.currentTarget.style.color='var(--muted)'}>
                       <Edit3 size={14} />
                     </button>
                     <button onClick={() => handleDelete(sub.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:4 }}
-                      onMouseEnter={e => e.currentTarget.style.color='#ff5c5c'} onMouseLeave={e => e.currentTarget.style.color='#8e8ea0'}>
+                      onMouseEnter={e => e.currentTarget.style.color='#ff5c5c'} onMouseLeave={e => e.currentTarget.style.color='var(--muted)'}>
                       <Trash2 size={14} />
                     </button>
                   </td>
@@ -258,27 +258,27 @@ export default function SubscriptionsPage() {
       {showAdd && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center' }}
           onClick={e => { if(e.target===e.currentTarget){ setShowAdd(false); setEditing(null); } }}>
-          <div style={{ background:'#fff', borderRadius:14, width:440, boxShadow:'0 16px 48px rgba(0,0,0,0.15)', overflow:'hidden' }}>
-            <div style={{ display:'flex', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid #e5e7ef' }}>
-              <span style={{ fontSize:15, fontWeight:700, color:'#1a1a2e', flex:1 }}>{editing ? 'Edit' : 'Add'} Subscription</span>
+          <div style={{ background:'var(--surface)', borderRadius:14, width:440, boxShadow:'0 16px 48px rgba(0,0,0,0.15)', overflow:'hidden' }}>
+            <div style={{ display:'flex', alignItems:'center', padding:'16px 20px', borderBottom:'1px solid var(--border)' }}>
+              <span style={{ fontSize:15, fontWeight:700, color:'var(--text)', flex:1 }}>{editing ? 'Edit' : 'Add'} Subscription</span>
               <button onClick={() => { setShowAdd(false); setEditing(null); }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex' }}><X size={18} /></button>
             </div>
             <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
               <div>
                 <label style={{ fontSize:11, fontWeight:600, color:'var(--muted)', display:'block', marginBottom:4 }}>Service Name *</label>
                 <input value={form.service} onChange={e => setForm({...form, service:e.target.value})} placeholder="e.g., Vercel, GitHub, Figma"
-                  style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #e5e7ef', fontSize:13, color:'#1a1a2e', outline:'none' }} />
+                  style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid var(--border)', fontSize:13, color:'var(--text)', outline:'none' }} />
               </div>
               <div style={{ display:'flex', gap:12 }}>
                 <div style={{ flex:1 }}>
                   <label style={{ fontSize:11, fontWeight:600, color:'var(--muted)', display:'block', marginBottom:4 }}>Amount ($)</label>
                   <input type="number" value={form.amount} onChange={e => setForm({...form, amount:e.target.value})} placeholder="0.00" step="0.01"
-                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #e5e7ef', fontSize:13, color:'#1a1a2e', outline:'none' }} />
+                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid var(--border)', fontSize:13, color:'var(--text)', outline:'none' }} />
                 </div>
                 <div style={{ flex:1 }}>
                   <label style={{ fontSize:11, fontWeight:600, color:'var(--muted)', display:'block', marginBottom:4 }}>Billing Cycle</label>
                   <select value={form.billing_cycle} onChange={e => setForm({...form, billing_cycle:e.target.value})}
-                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #e5e7ef', fontSize:13, color:'#1a1a2e', outline:'none', background:'#fff' }}>
+                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid var(--border)', fontSize:13, color:'var(--text)', outline:'none', background:'var(--surface)' }}>
                     {CYCLE_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
@@ -287,12 +287,12 @@ export default function SubscriptionsPage() {
                 <div style={{ flex:1 }}>
                   <label style={{ fontSize:11, fontWeight:600, color:'var(--muted)', display:'block', marginBottom:4 }}>Next Renewal</label>
                   <input type="date" value={form.next_renewal} onChange={e => setForm({...form, next_renewal:e.target.value})}
-                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #e5e7ef', fontSize:13, color:'#1a1a2e', outline:'none' }} />
+                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid var(--border)', fontSize:13, color:'var(--text)', outline:'none' }} />
                 </div>
                 <div style={{ flex:1 }}>
                   <label style={{ fontSize:11, fontWeight:600, color:'var(--muted)', display:'block', marginBottom:4 }}>Category</label>
                   <select value={form.category} onChange={e => setForm({...form, category:e.target.value})}
-                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #e5e7ef', fontSize:13, color:'#1a1a2e', outline:'none', background:'#fff' }}>
+                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid var(--border)', fontSize:13, color:'var(--text)', outline:'none', background:'var(--surface)' }}>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
@@ -303,9 +303,9 @@ export default function SubscriptionsPage() {
                   {STATUS_OPTIONS.map(s => (
                     <button key={s} onClick={() => setForm({...form, status:s})}
                       style={{ flex:1, padding:'8px 0', borderRadius:8, cursor:'pointer', fontSize:12, fontWeight:600, textTransform:'capitalize',
-                        background: form.status===s ? (s==='active'?'#22c55e15':s==='paused'?'#f5a62315':'#ff5c5c15') : '#f5f7fa',
+                        background: form.status===s ? (s==='active'?'rgba(34,197,94,0.1)':s==='paused'?'rgba(245,166,35,0.1)':'rgba(255,92,92,0.1)') : 'var(--surface-3)',
                         color: form.status===s ? (s==='active'?'#22c55e':s==='paused'?'#f5a623':'#ff5c5c') : '#8e8ea0',
-                        border: form.status===s ? `1px solid ${s==='active'?'#22c55e30':s==='paused'?'#f5a62330':'#ff5c5c30'}` : '1px solid #e5e7ef' }}>
+                        border: form.status===s ? `1px solid ${s==='active'?'#22c55e30':s==='paused'?'#f5a62330':'#ff5c5c30'}` : '1px solid var(--border)' }}>
                       {s}
                     </button>
                   ))}
@@ -314,14 +314,14 @@ export default function SubscriptionsPage() {
               <div>
                 <label style={{ fontSize:11, fontWeight:600, color:'var(--muted)', display:'block', marginBottom:4 }}>Notes</label>
                 <input value={form.notes} onChange={e => setForm({...form, notes:e.target.value})} placeholder="Optional notes..."
-                  style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #e5e7ef', fontSize:13, color:'#1a1a2e', outline:'none' }} />
+                  style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid var(--border)', fontSize:13, color:'var(--text)', outline:'none' }} />
               </div>
             </div>
-            <div style={{ padding:'12px 20px', borderTop:'1px solid #e5e7ef', display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <div style={{ padding:'12px 20px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'flex-end', gap:8 }}>
               <button onClick={() => { setShowAdd(false); setEditing(null); }}
-                style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'#fff', border:'1px solid #e5e7ef', color:'var(--muted)', fontSize:13, fontWeight:500 }}>Cancel</button>
+                style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'var(--surface)', border:'1px solid var(--border)', color:'var(--muted)', fontSize:13, fontWeight:500 }}>Cancel</button>
               <button onClick={handleSave}
-                style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,#4a6cf7,#6e8efb)', border:'none', color:'#fff', fontSize:13, fontWeight:600 }}>
+                style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600 }}>
                 {editing ? 'Update' : 'Add'} Subscription
               </button>
             </div>

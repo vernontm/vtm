@@ -6,7 +6,7 @@ const PACKAGES = [
     key: 'digital',
     name: 'Digital Presence',
     icon: Globe,
-    accent: '#4a6cf7',
+    accent: 'var(--orange)',
     tagline: 'Get found. Get clicked. Get clients.',
     oneLiner: 'A complete professional online presence — website, SEO, Google Business, and lead capture — so customers can actually find and book with you.',
     whoItsFor: [

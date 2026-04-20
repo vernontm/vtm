@@ -37,7 +37,7 @@ function Card({ children, style }) {
   );
 }
 
-function CardHeader({ icon: Icon, title, color = '#4a6cf7', linkTo, linkLabel }) {
+function CardHeader({ icon: Icon, title, color = 'var(--orange)', linkTo, linkLabel }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -55,7 +55,7 @@ function CardHeader({ icon: Icon, title, color = '#4a6cf7', linkTo, linkLabel })
   );
 }
 
-function StatMini({ icon: Icon, label, value, color = '#4a6cf7' }) {
+function StatMini({ icon: Icon, label, value, color = 'var(--orange)' }) {
   return (
     <div style={{
       background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
@@ -149,7 +149,7 @@ export default function Dashboard() {
       {/* Quick Stats */}
       <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
         <StatMini icon={Star} label="Open Leads" value={openLeads} color="#f5a623" />
-        <StatMini icon={Mail} label="Drafts to Review" value={pendingDrafts} color={pendingDrafts > 0 ? '#ff5c5c' : '#4a6cf7'} />
+        <StatMini icon={Mail} label="Drafts to Review" value={pendingDrafts} color={pendingDrafts > 0 ? '#ff5c5c' : 'var(--orange)'} />
         <StatMini icon={FolderOpen} label="Active Projects" value={activeProjects} color="#00b8d4" />
         <StatMini icon={TrendingUp} label="Active Deals" value={activeDeals} color="#22c55e" />
       </div>
@@ -192,7 +192,7 @@ export default function Dashboard() {
                     <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                       <div title={`$${m.revenue.toLocaleString()}`} style={{
                         width: '100%', height: h, borderRadius: '4px 4px 0 0',
-                        background: m.revenue > 0 ? 'linear-gradient(180deg, #4a6cf7, #6e8efb)' : 'var(--surface-3)',
+                        background: m.revenue > 0 ? 'linear-gradient(180deg, var(--orange), #6e8efb)' : 'var(--surface-3)',
                         transition: 'height 0.3s ease',
                       }} />
                       <span style={{ fontSize: 8, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{m.label}</span>
@@ -241,11 +241,11 @@ export default function Dashboard() {
             borderRadius: 12, padding: '14px 20px', marginBottom: 20,
             display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
           }}>
-            <Sparkles size={18} color="#4a6cf7" />
+            <Sparkles size={18} color="var(--orange)" />
             <span style={{ fontSize: 14, color: 'var(--orange)', fontWeight: 600, flex: 1 }}>
               {pendingDrafts} auto-drafted email{pendingDrafts > 1 ? 's' : ''} waiting for your review
             </span>
-            <ArrowRight size={16} color="#4a6cf7" />
+            <ArrowRight size={16} color="var(--orange)" />
           </div>
         </Link>
       )}
@@ -289,7 +289,7 @@ export default function Dashboard() {
 
         {/* Email Drafts to Review */}
         <Card>
-          <CardHeader icon={Mail} title="Drafts to Review" color="#4a6cf7" linkTo="/email" />
+          <CardHeader icon={Mail} title="Drafts to Review" color="var(--orange)" linkTo="/email" />
           {drafts.length === 0 ? (
             <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
               <CheckSquare size={20} style={{ opacity: 0.3, marginBottom: 6, display: 'block', margin: '0 auto 6px' }} />
@@ -302,10 +302,10 @@ export default function Dashboard() {
                 padding: '10px 0', borderBottom: '1px solid var(--border)',
               }}>
                 <div style={{
-                  width: 32, height: 32, borderRadius: '50%', background: '#4a6cf718',
+                  width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,155,38,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles size={13} color="#4a6cf7" />
+                  <Sparkles size={13} color="var(--orange)" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

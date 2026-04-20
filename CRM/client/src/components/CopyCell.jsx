@@ -26,7 +26,7 @@ export default function CopyCell({ value, children, style }) {
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
           padding: 2, display: 'inline-flex', alignItems: 'center',
-          color: copied ? '#4a6cf7' : '#b0b0c0',
+          color: copied ? 'var(--orange)' : '#b0b0c0',
           opacity: copied ? 1 : 0,
           transition: 'opacity 0.15s, color 0.15s',
           flexShrink: 0,

@@ -100,7 +100,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
         {/* Body: two columns */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {/* LEFT — editor */}
-          <div style={{ flex: 1.35, overflowY: 'auto', padding: '18px 22px', background: '#fafbfd' }}>
+          <div style={{ flex: 1.35, overflowY: 'auto', padding: '18px 22px', background: 'var(--surface-2)' }}>
             {/* Media grid */}
             <Section title="Media" right={
               <button style={btnGhostSm} title="Remove all"
@@ -201,7 +201,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   {/* Post / Story / Reel tabs */}
                   <div style={{
                     display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2,
-                    background: '#f4f6fb', borderRadius: 10, padding: 3, marginBottom: 18,
+                    background: 'var(--surface-2)', borderRadius: 10, padding: 3, marginBottom: 18,
                   }}>
                     {[
                       { k: 'post', label: 'Post', Icon: Grid3x3 },
@@ -213,7 +213,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                         style={{
                           padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
                           background: postType === t.k ? '#fff' : 'transparent',
-                          color: postType === t.k ? '#4a6cf7' : '#8e8ea0',
+                          color: postType === t.k ? 'var(--orange)' : '#8e8ea0',
                           fontSize: 12, fontWeight: 600,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                           boxShadow: postType === t.k ? '0 1px 3px rgba(10,20,40,0.1)' : 'none',
@@ -235,7 +235,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                         width: '100%', minHeight: 90, padding: '12px 14px',
                         borderRadius: 10, border: '1px solid #eef0f5',
                         fontSize: 12, lineHeight: 1.5, resize: 'vertical', outline: 'none',
-                        background: '#f8f9fc', fontFamily: 'inherit',
+                        background: 'var(--surface-2)', fontFamily: 'inherit',
                       }}
                     />
                     <div style={{
@@ -265,7 +265,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                       style={{
                         width: '100%', padding: '10px 12px 10px 34px',
                         borderRadius: 10, border: '1px solid #eef0f5',
-                        fontSize: 12, outline: 'none', background: '#f8f9fc',
+                        fontSize: 12, outline: 'none', background: 'var(--surface-2)',
                       }}
                     />
                   </div>
@@ -358,7 +358,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   display: 'flex', gap: 8, alignItems: 'flex-start',
                 }}>
                   <div style={{
-                    width: 24, height: 24, borderRadius: '50%', background: '#f4f6fb',
+                    width: 24, height: 24, borderRadius: '50%', background: 'var(--surface-2)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 10, color: 'var(--muted)', flexShrink: 0,
                   }}>@</div>
@@ -379,7 +379,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Calendar size={13} color="#4a6cf7" />
+              <Calendar size={13} color="var(--orange)" />
               Scheduled for:
             </label>
             <input
@@ -388,14 +388,14 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
               onChange={e => setScheduledAt(e.target.value)}
               style={{
                 padding: '6px 10px', borderRadius: 8, border: '1px solid #eef0f5',
-                fontSize: 12, outline: 'none', background: '#f8f9fc', fontFamily: 'inherit',
+                fontSize: 12, outline: 'none', background: 'var(--surface-2)', fontFamily: 'inherit',
               }}
             />
             {onDelete && (
               <button
                 onClick={() => { if (confirm('Delete this post?')) { onDelete(); onClose(); } }}
                 style={{
-                  ...btnIcon, color: '#ef4444', border: '1px solid #fee2e2', background: '#fef2f2',
+                  ...btnIcon, color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.1)',
                   marginLeft: 8,
                 }}
                 title="Delete post"
@@ -411,7 +411,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
               disabled={saving}
               style={{
                 padding: '8px 22px', borderRadius: 8, border: 'none', cursor: saving ? 'wait' : 'pointer',
-                background: saving ? '#b0b0c0' : 'linear-gradient(135deg,#4a6cf7,#3b5de7)', color: '#fff',
+                background: saving ? 'var(--surface-3)' : 'linear-gradient(135deg,var(--orange),#ee7c1a)', color: '#fff',
                 fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6,
               }}
             >

@@ -95,7 +95,7 @@ export default function Contacts() {
 
   const initials = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const avatarColor = (name) => {
-    const colors = ['#4a6cf7', '#784bd1', '#22c55e', '#f5a623', '#ff5c5c'];
+    const colors = ['var(--orange)', '#784bd1', '#22c55e', '#f5a623', '#ff5c5c'];
     return colors[name.charCodeAt(0) % colors.length];
   };
 

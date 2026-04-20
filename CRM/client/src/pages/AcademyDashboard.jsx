@@ -8,7 +8,7 @@ const cardStyle = { background: 'var(--surface)', border: '1px solid var(--borde
 const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
 
-function StatCard({ icon: Icon, label, value, color = '#4a6cf7' }) {
+function StatCard({ icon: Icon, label, value, color = 'var(--orange)' }) {
   return (
     <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 200 }}>
       <div style={{ width: 44, height: 44, borderRadius: 12, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -47,7 +47,7 @@ export default function AcademyDashboard() {
   if (loading) {
     return (
       <div style={{ ...pageStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={28} color="#4a6cf7" style={{ animation: 'spin 1s linear infinite' }} />
+        <Loader2 size={28} color="var(--orange)" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -71,15 +71,15 @@ export default function AcademyDashboard() {
   return (
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <LayoutDashboard size={18} color="#4a6cf7" />
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <LayoutDashboard size={18} color="var(--orange)" />
         </div>
         <h1 style={headingStyle}>Academy Dashboard</h1>
       </div>
       <p style={subStyle}>Overview of your academy performance, students, and revenue.</p>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-        <StatCard icon={Users} label="Total Students" value={stats?.total_students ?? 0} color="#4a6cf7" />
+        <StatCard icon={Users} label="Total Students" value={stats?.total_students ?? 0} color="var(--orange)" />
         <StatCard icon={BookOpen} label="Active Subscribers" value={stats?.active_subscribers ?? 0} color="#22c55e" />
         <StatCard icon={DollarSign} label="Monthly Recurring Revenue" value={`$${(stats?.mrr ?? 0).toFixed(2)}`} color="#f59e0b" />
         <StatCard icon={ClipboardCheck} label="Pending Homework" value={stats?.pending_homework ?? 0} color="#ef4444" />
@@ -88,7 +88,7 @@ export default function AcademyDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <TrendingUp size={16} color="#4a6cf7" />
+            <TrendingUp size={16} color="var(--orange)" />
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Revenue Trend</span>
           </div>
           {revenueTrend.length > 0 ? (
@@ -98,7 +98,7 @@ export default function AcademyDashboard() {
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#7a7f9a' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#7a7f9a' }} />
                 <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--border)', fontSize: 12 }} />
-                <Line type="monotone" dataKey="revenue" stroke="#4a6cf7" strokeWidth={2} dot={{ r: 3, fill: '#4a6cf7' }} />
+                <Line type="monotone" dataKey="revenue" stroke="var(--orange)" strokeWidth={2} dot={{ r: 3, fill: 'var(--orange)' }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -141,8 +141,8 @@ export default function AcademyDashboard() {
             {recentEnrollments.map((e, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: i % 2 === 0 ? '#f5f7fa' : '#fff', borderRadius: 8, marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Users size={14} color="#4a6cf7" />
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={14} color="var(--orange)" />
                   </div>
                   <div>
                     <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{e.student_name || e.name || 'Unknown Student'}</div>
