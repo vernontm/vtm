@@ -368,7 +368,7 @@ export default function GlobalAgent() {
                   return (
                     <button key={i} onClick={() => handleSend(label)} style={{
                       padding: '4px 10px', borderRadius: 7, border: '1px solid var(--border)',
-                      background: '#f8f9fc', fontSize: 11, color: '#5a5a6e', cursor: 'pointer',
+                      background: 'var(--surface-2)', fontSize: 11, color: 'var(--muted)', cursor: 'pointer',
                       fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4,
                     }}>
                       {icon && <span>{icon}</span>} {label}
@@ -383,9 +383,9 @@ export default function GlobalAgent() {
               <div key={i} style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '75%', position: 'relative', display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <div style={{
                   padding: '6px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap',
-                  background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : msg.role === 'system' ? 'var(--surface-3)' : '#f8f9fc',
-                  color: msg.role === 'user' ? '#fff' : '#1a1a2e',
-                  border: msg.role === 'user' ? 'none' : '1px solid #e5e7ef',
+                  background: msg.role === 'user' ? 'linear-gradient(135deg, var(--orange), var(--orange-dark))' : msg.role === 'system' ? 'var(--surface-3)' : 'var(--surface-2)',
+                  color: '#fff',
+                  border: msg.role === 'user' ? 'none' : '1px solid var(--border)',
                 }}>
                   {msg.content}
                 </div>
@@ -411,10 +411,10 @@ export default function GlobalAgent() {
 
             {/* Draft preview */}
             {draft && (
-              <div style={{ background: '#f8f9fc', border: '1px solid var(--border)', borderRadius: 10, padding: 10, maxWidth: '85%' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, letterSpacing: 0.5 }}>DRAFT</div>
-                <div style={{ fontSize: 11, color: '#5a5a6e' }}><strong>To:</strong> {draft.to_name} &lt;{draft.to_email}&gt;</div>
-                <div style={{ fontSize: 11, color: '#5a5a6e', marginBottom: 4 }}><strong>Subject:</strong> {draft.subject}</div>
+              <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 10, maxWidth: '85%' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--orange)', marginBottom: 4, letterSpacing: 0.5 }}>DRAFT</div>
+                <div style={{ fontSize: 11, color: 'var(--text)' }}><strong>To:</strong> {draft.to_name} &lt;{draft.to_email}&gt;</div>
+                <div style={{ fontSize: 11, color: 'var(--text)', marginBottom: 4 }}><strong>Subject:</strong> {draft.subject}</div>
                 <div style={{
                   fontSize: 11, color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 6, padding: '6px 8px', lineHeight: 1.5, whiteSpace: 'pre-wrap',
@@ -437,8 +437,8 @@ export default function GlobalAgent() {
                     <Edit3 size={10} /> Edit
                   </button>
                   <button onClick={handleDeny} style={{
-                    padding: '5px 10px', borderRadius: 6, border: '1px solid #fee2e2', background: '#fef2f2', cursor: 'pointer',
-                    color: '#ef4444', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3,
+                    padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', cursor: 'pointer',
+                    color: '#f87171', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3,
                   }}>
                     <X size={10} /> Deny
                   </button>
@@ -450,7 +450,7 @@ export default function GlobalAgent() {
             {loading && (
               <div style={{
                 alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 10,
-                background: '#f8f9fc', border: '1px solid var(--border)',
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
                 fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5,
               }}>
                 <Loader size={11} className="spin" />
@@ -472,7 +472,7 @@ export default function GlobalAgent() {
             <div key={i} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '3px 6px 3px 8px', borderRadius: 6,
-              background: 'var(--accent-dim)', border: '1px solid #dbe2ff',
+              background: 'var(--accent-dim)', border: '1px solid var(--border)',
               fontSize: 10, color: 'var(--orange)', fontWeight: 600, maxWidth: 220,
             }}>
               {a.kind === 'image' ? <ImageIcon size={10} /> : <FileText size={10} />}
@@ -507,7 +507,7 @@ export default function GlobalAgent() {
 
         {/* Agent icon + context label */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <MessageSquare size={14} color="#4a6cf7" />
+          <MessageSquare size={14} color="var(--orange)" />
           <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--orange)' }}>{ctx.label}</span>
         </div>
 
@@ -527,7 +527,7 @@ export default function GlobalAgent() {
           title="Attach reference files (images, PDFs, text)"
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: attachments.length ? '#4a6cf7' : '#8e8ea0',
+            color: attachments.length ? 'var(--orange)' : 'var(--muted)',
             display: 'flex', alignItems: 'center', padding: 2, flexShrink: 0,
           }}
         >
@@ -545,7 +545,7 @@ export default function GlobalAgent() {
           placeholder={PLACEHOLDERS[ctx.type] || PLACEHOLDERS.general}
           style={{
             flex: 1, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)',
-            fontSize: 12, outline: 'none', fontFamily: 'inherit', background: '#f8f9fc',
+            fontSize: 12, outline: 'none', fontFamily: 'inherit', background: 'var(--surface-2)', color: 'var(--text)',
             minWidth: 0,
           }}
         />
@@ -554,8 +554,8 @@ export default function GlobalAgent() {
         <button onClick={() => handleSend()} disabled={(!input.trim() && attachments.length === 0) || loading} style={{
           padding: '7px 12px', borderRadius: 8, border: 'none',
           cursor: (input.trim() || attachments.length) && !loading ? 'pointer' : 'default',
-          background: (input.trim() || attachments.length) && !loading ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#e5e7ef',
-          color: (input.trim() || attachments.length) && !loading ? '#fff' : '#b0b0c0',
+          background: (input.trim() || attachments.length) && !loading ? 'linear-gradient(135deg, var(--orange), #ffb347)' : 'var(--surface-3)',
+          color: (input.trim() || attachments.length) && !loading ? '#fff' : 'var(--muted)',
           fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
         }}>
           <Send size={12} />
