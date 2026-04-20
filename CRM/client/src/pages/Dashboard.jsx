@@ -192,7 +192,7 @@ export default function Dashboard() {
                     <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                       <div title={`$${m.revenue.toLocaleString()}`} style={{
                         width: '100%', height: h, borderRadius: '4px 4px 0 0',
-                        background: m.revenue > 0 ? 'linear-gradient(180deg, var(--orange), #6e8efb)' : 'var(--surface-3)',
+                        background: m.revenue > 0 ? 'var(--orange)' : 'var(--surface-3)',
                         transition: 'height 0.3s ease',
                       }} />
                       <span style={{ fontSize: 8, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{m.label}</span>

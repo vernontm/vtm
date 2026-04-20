@@ -233,7 +233,7 @@ export default function GenerateModal({ onClose, onComplete }) {
                   <div style={{ height: 8, background: 'var(--bg)', borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', width: `${progress.percent || 0}%`,
-                      background: 'linear-gradient(90deg, #ff9b26, #784bd1)',
+                      background: 'var(--orange)',
                       borderRadius: 4, transition: 'width 0.4s',
                     }} />
                   </div>

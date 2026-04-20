@@ -1002,7 +1002,7 @@ export default function ContentScheduler() {
   const btnPrimary = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '8px 18px', borderRadius: 10, border: 'none',
-    background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
+    background: 'var(--orange)',
     color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
   };
   const btnGhost = {
@@ -1218,7 +1218,7 @@ export default function ContentScheduler() {
                 <input type="file" ref={bulkUploadRef} accept="video/*,audio/*,.mp4,.mov,.avi,.mkv,.webm,.mp3,.m4a,.wav" multiple onChange={handleBulkUpload} style={{ display: 'none' }} />
                 <div style={{
                   width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                  background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
+                  background: 'var(--orange)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Film size={18} color="#fff" />
@@ -1974,7 +1974,7 @@ export default function ContentScheduler() {
                       alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                       maxWidth: '80%',
                       padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.5,
-                      background: msg.role === 'user' ? 'linear-gradient(135deg, var(--orange), #3b5de7)' : '#f0f0f5',
+                      background: msg.role === 'user' ? 'var(--orange)' : '#f0f0f5',
                       color: '#fff',
                     }}>
                       {msg.content}
@@ -2000,7 +2000,7 @@ export default function ContentScheduler() {
                   />
                   <button onClick={handleGenerate} disabled={!genInput.trim() || genLoading} style={{
                     width: 36, height: 36, borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
+                    background: 'var(--orange)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     opacity: genInput.trim() && !genLoading ? 1 : 0.4, flexShrink: 0,
                   }}>
@@ -2441,7 +2441,7 @@ export default function ContentScheduler() {
                   />
                   <button onClick={handleCommand} disabled={!chatInput.trim()} style={{
                     width: 32, height: 32, borderRadius: 8, border: 'none',
-                    background: 'linear-gradient(135deg, var(--orange), #3b5de7)',
+                    background: 'var(--orange)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     opacity: chatInput.trim() ? 1 : 0.4, flexShrink: 0,
                   }}>
