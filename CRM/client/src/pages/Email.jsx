@@ -696,11 +696,11 @@ export default function EmailPage() {
       </div>
 
       {/* ── Main Area ── */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, minHeight:0 }}>
 
         {selected ? (
           /* ── Detail View ── */
-          <div style={{ flex:1, display:'flex', flexDirection:'column' }}>
+          <div style={{ flex:1, display:'flex', flexDirection:'column', minHeight:0 }}>
             {/* Header */}
             <div className="email-detail-header" style={{ padding:'12px 24px', background:'var(--surface)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10 }}>
               <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--orange)', display:'flex', alignItems:'center', gap:4, fontSize:13, fontWeight:500 }}>
@@ -724,7 +724,7 @@ export default function EmailPage() {
             </div>
 
             {/* Content */}
-            <div className="email-detail-content" style={{ flex:1, overflow:'auto', padding:24 }}>
+            <div className="email-detail-content" style={{ flex:1, overflowY:'auto', overflowX:'hidden', minHeight:0, padding:24 }}>
               <div className="email-detail-inner" style={{ maxWidth:740, margin:'0 auto' }}>
                 <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text)', margin:'0 0 6px' }}>{selected.subject||'(no subject)'}</h1>
                 <div style={{ fontSize:12, color:'var(--muted)', marginBottom:20 }}>{fmtFullDate(getDate(selected))}</div>
