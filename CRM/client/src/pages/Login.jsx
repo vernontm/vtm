@@ -23,54 +23,67 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: 380, padding: 40, background: '#ffffff', borderRadius: 16, border: '1px solid #e5e7ef', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 380, padding: 40, background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border)', boxShadow: '0 8px 60px rgba(0,0,0,0.5)' }}>
         {/* Logo */}
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, marginBottom:32 }}>
-          <img src={import.meta.env.BASE_URL + 'vtm-icon.png'} alt="VTM" style={{ width:64, height:64, borderRadius:14, objectFit:'cover' }} />
-          <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:18, fontWeight:800, color:'#1a1a2e', fontFamily:'Inter, sans-serif' }}>Vernon Tech & Media</div>
-            <div style={{ fontSize:12, color:'#8e8ea0', fontFamily:'Inter, sans-serif', marginTop:2 }}>CRM</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 32 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 16,
+            background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(255,155,38,0.35)',
+            overflow: 'hidden',
+          }}>
+            <img
+              src={import.meta.env.BASE_URL + 'vtm-icon.png'}
+              alt="VTM"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={e => { e.currentTarget.style.display = 'none'; }}
+            />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Vernon Tech &amp; Media</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-display)', marginTop: 2 }}>CRM</div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#8e8ea0', marginBottom: 6, fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>Email</label>
+            <label style={{ display: 'block', fontSize: 13, color: 'var(--muted)', marginBottom: 6, fontWeight: 600, fontFamily: 'var(--font-display)' }}>Email</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
               style={{
-                width: '100%', padding: '10px 12px', borderRadius: 8,
-                background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e',
-                fontSize: 14, outline: 'none', fontFamily: 'Inter, sans-serif',
+                width: '100%', padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box',
+                background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
+                fontSize: 14, outline: 'none', fontFamily: 'var(--font-body)',
               }}
-              onFocus={e => { e.target.style.borderColor = '#4a6cf7'; e.target.style.boxShadow = '0 0 0 3px rgba(74,108,247,0.1)'; }}
-              onBlur={e => { e.target.style.borderColor = '#e5e7ef'; e.target.style.boxShadow = 'none'; }}
+              onFocus={e => { e.target.style.borderColor = 'var(--orange)'; e.target.style.boxShadow = '0 0 0 3px rgba(255,155,38,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#8e8ea0', marginBottom: 6, fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>Password</label>
+            <label style={{ display: 'block', fontSize: 13, color: 'var(--muted)', marginBottom: 6, fontWeight: 600, fontFamily: 'var(--font-display)' }}>Password</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
               style={{
-                width: '100%', padding: '10px 12px', borderRadius: 8,
-                background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e',
-                fontSize: 14, outline: 'none', fontFamily: 'Inter, sans-serif',
+                width: '100%', padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box',
+                background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
+                fontSize: 14, outline: 'none', fontFamily: 'var(--font-body)',
               }}
-              onFocus={e => { e.target.style.borderColor = '#4a6cf7'; e.target.style.boxShadow = '0 0 0 3px rgba(74,108,247,0.1)'; }}
-              onBlur={e => { e.target.style.borderColor = '#e5e7ef'; e.target.style.boxShadow = 'none'; }}
+              onFocus={e => { e.target.style.borderColor = 'var(--orange)'; e.target.style.boxShadow = '0 0 0 3px rgba(255,155,38,0.15)'; }}
+              onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
 
           {error && (
-            <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,92,92,0.06)', border: '1px solid rgba(255,92,92,0.2)', color: '#ff5c5c', fontSize: 13 }}>
+            <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: 13, fontFamily: 'var(--font-display)' }}>
               {error}
             </div>
           )}
@@ -79,11 +92,12 @@ export default function Login() {
             type="submit"
             disabled={loading}
             style={{
-              width: '100%', padding: '10px 0', borderRadius: 8, cursor: loading ? 'wait' : 'pointer',
-              background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
-              color: '#ffffff', fontSize: 14, fontWeight: 600, fontFamily: 'Inter, sans-serif',
+              width: '100%', padding: '11px 0', borderRadius: 10, cursor: loading ? 'wait' : 'pointer',
+              background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', border: 'none',
+              color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-display)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               opacity: loading ? 0.7 : 1,
+              boxShadow: '0 4px 18px rgba(255,155,38,0.35)',
             }}
           >
             <LogIn size={16} />

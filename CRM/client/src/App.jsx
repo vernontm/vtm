@@ -59,7 +59,7 @@ function AppLayout() {
 
   return (
     <MobileContext.Provider value={{ sidebarOpen, setSidebarOpen }}>
-      <div className={privacyMode ? 'privacy-mode' : ''} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f5f7fa' }}>
+      <div className={privacyMode ? 'privacy-mode' : ''} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
         {/* Mobile hamburger */}
         <button className="mobile-hamburger" onClick={() => setSidebarOpen(true)}>
           <Menu size={20} />
@@ -121,11 +121,11 @@ function AuthGate() {
 
   if (authError) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ maxWidth: 440, background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '28px 32px', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e', marginBottom: 10 }}>Connection problem</div>
-          <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, marginBottom: 18 }}>{authError}</div>
-          <button onClick={retry} style={{ padding: '10px 20px', borderRadius: 8, background: '#4a6cf7', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Try again</button>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'var(--font-display)' }}>
+        <div style={{ maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 32px', textAlign: 'center', boxShadow: '0 4px 40px rgba(0,0,0,0.4)' }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Connection problem</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 18 }}>{authError}</div>
+          <button onClick={retry} style={{ padding: '10px 20px', borderRadius: 10, background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Try again</button>
         </div>
       </div>
     );
@@ -133,8 +133,8 @@ function AuthGate() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#8e8ea0', fontSize: 14, fontFamily: 'Inter, sans-serif' }}>Loading...</div>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--muted)', fontSize: 14, fontFamily: 'var(--font-display)' }}>Loading...</div>
       </div>
     );
   }
