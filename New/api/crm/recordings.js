@@ -467,34 +467,47 @@ module.exports = async function handler(req, res) {
           }
         }
 
-        // 6. Log to communication log
-        const mins = Math.floor((duration_seconds || 0) / 60);
-        const secs = (duration_seconds || 0) % 60;
-        const durStr = duration_seconds ? ` (${mins}:${String(secs).padStart(2, '0')})` : '';
-        const interestLabel = summary?.interest_level
-          ? ` · ${summary.interest_level.replace('_', ' ').toUpperCase()}`
-          : '';
-        await supaFetch('crm_communication_log', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=minimal' },
-          body: JSON.stringify([{
-            lead_id: lid,
-            channel: 'call',
-            subject: `Call recording${durStr}${interestLabel}`,
-            body: summary?.summary
-              ? `${summary.summary}\n\n${transcript}`
-              : transcript || '(Transcription unavailable)',
-            direction: 'outbound',
-          }]),
-        });
+        // 6. Log to communication log (non-fatal — recording is already marked done)
+        try {
+          const mins = Math.floor((duration_seconds || 0) / 60);
+          const secs = (duration_seconds || 0) % 60;
+          const durStr = duration_seconds ? ` (${mins}:${String(secs).padStart(2, '0')})` : '';
+          const interestLabel = summary?.interest_level
+            ? ` · ${summary.interest_level.replace('_', ' ').toUpperCase()}`
+            : '';
+          await supaFetch('crm_communication_log', {
+            method: 'POST',
+            headers: { 'Prefer': 'return=minimal' },
+            body: JSON.stringify([{
+              lead_id: lid,
+              channel: 'call',
+              subject: `Call recording${durStr}${interestLabel}`,
+              body: summary?.summary
+                ? `${summary.summary}\n\n${transcript}`
+                : transcript || '(Transcription unavailable)',
+              direction: 'outbound',
+            }]),
+          });
+        } catch (logErr) {
+          console.warn('Failed to append to communication log:', logErr.message);
+        }
 
       } catch (err) {
         console.error('Recording processing failed:', err.message);
-        await supaFetch(`crm_lead_recordings?id=eq.${recording.id}`, {
-          method: 'PATCH',
-          headers: { 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ transcript_status: 'error' }),
-        });
+        // Only mark error if we haven't already saved a successful transcript.
+        try {
+          const rows = await supaFetch(`crm_lead_recordings?id=eq.${recording.id}&select=transcript_status`);
+          const current = rows?.[0]?.transcript_status;
+          if (current !== 'done') {
+            await supaFetch(`crm_lead_recordings?id=eq.${recording.id}`, {
+              method: 'PATCH',
+              headers: { 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ transcript_status: 'error' }),
+            });
+          }
+        } catch (statusErr) {
+          console.warn('Failed to update error status:', statusErr.message);
+        }
       }
 
       return; // already responded
