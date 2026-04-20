@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Package, Globe, Film, Rocket, Check, ChevronDown, ChevronRight, AlertCircle, Lightbulb, Users } from 'lucide-react';
+import { Package, Globe, Film, Rocket, Check, ChevronDown, ChevronRight, AlertCircle, Lightbulb, Users, BookOpen, MessageCircle, TrendingUp, Zap } from 'lucide-react';
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Vernon Tech & Media — Packages Knowledge Base
+   Written for: a virtual assistant or team member who may know nothing about
+   what we do. Every section explains things in plain English so they can
+   confidently answer client questions without hesitation.
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 const PACKAGES = [
   {
@@ -7,123 +14,564 @@ const PACKAGES = [
     name: 'Digital Presence',
     icon: Globe,
     accent: 'var(--orange)',
-    tagline: 'Get found. Get clicked. Get clients.',
-    oneLiner: 'A complete professional online presence — website, SEO, Google Business, and lead capture — so customers can actually find and book with you.',
+    tagline: 'Get found. Get clicked. Get chosen.',
+    oneLiner:
+      'Everything a business needs to look professional online and get discovered by customers — a real website, a verified Google listing, a Yelp page, search engine optimization, and built-in forms that send leads straight to the owner.',
+
+    plainEnglish:
+      "Think of Digital Presence as building the business's storefront on the internet. When someone Googles their service, this is the package that makes sure the business actually shows up — and when the customer clicks through, they land on a professional-looking site that works on their phone, loads fast, and lets them contact or book right there. No sending people to a Google Form, no janky Wix site, no 'we don't have a website, just call us.' It's the foundation every business needs before anything else we do can work.",
+
     whoItsFor: [
-      'Local service businesses with no website or an outdated one',
-      'Businesses relying on word-of-mouth who want consistent online leads',
-      'Anyone losing customers because they don\'t show up in Google search',
-      'Businesses using only Google Calendar or Facebook for bookings',
+      "Businesses with NO website at all — they're losing every customer who Googles them to competitors",
+      "Businesses with an outdated or broken site (old Wix, Squarespace, WordPress that hasn't been touched in years)",
+      "Businesses relying only on Facebook or Instagram pages as their 'website'",
+      "Businesses that send clients to Google Forms, Linktree, or third-party booking sites — this package brings all of that into one branded home",
+      "Owners who want customers to find them in Google Maps when searching '[service] near me'",
+      "Anyone who wants to look like a real, legitimate business online — not a side hustle",
     ],
+
     whatsIncluded: [
-      { name: 'Custom website or web app', detail: 'Built to match their brand, optimized for conversions, not just a template.' },
-      { name: 'Professional domain setup', detail: 'We handle the domain purchase, DNS, and connect it. They get theirbusiness.com instead of theirbusiness.wixsite.com.' },
-      { name: 'Mobile-optimized design', detail: '70%+ of local searches happen on mobile. The site looks great and loads fast on phones.' },
-      { name: 'On-page SEO', detail: 'Titles, meta descriptions, schema markup, local keywords — so they rank when people search for their service in their area.' },
-      { name: 'Google Business Profile setup / optimization', detail: 'The most important free marketing tool for local businesses. We claim it, optimize it, and tie it to the site.' },
-      { name: 'Contact forms & booking integration', detail: 'Leads get captured and emailed/texted directly. Can connect to Calendly, Google Calendar, or a custom booking flow.' },
-      { name: 'Ongoing support', detail: 'They can reach out with tweaks, updates, or content changes — not left high and dry after launch.' },
+      {
+        name: 'Custom-built website',
+        detail:
+          "We design and build a website from scratch for the client's specific business. It's not a template they fill in — it's built around their brand colors, their services, their voice, and their customers. Fully mobile-friendly (70%+ of local searches happen on phones), fast-loading, and structured to convert visitors into leads.",
+      },
+      {
+        name: 'Professional domain setup',
+        detail:
+          "We buy and configure the domain name (like www.theirbusiness.com) so they're not stuck with theirbusiness.wixsite.com or theirbusiness.squarespace.com. We handle all the technical DNS stuff so they don't have to think about it.",
+      },
+      {
+        name: 'Google Business Profile setup & optimization',
+        detail:
+          "This is the single most important free marketing tool for local businesses. It's what makes them appear in Google Maps and the 'local pack' (the top 3 businesses shown when you search for a service in your area). We claim it, verify it, fill in every field correctly, add photos, and connect it to their website so they rank higher.",
+      },
+      {
+        name: 'Yelp page setup & optimization',
+        detail:
+          "Yelp still drives a ton of traffic for service businesses (especially food, home services, beauty, fitness). We set up or claim their Yelp page, optimize the description, categories, hours, and photos, and link it to their site. This gives them another place to show up in search.",
+      },
+      {
+        name: 'On-page SEO (Search Engine Optimization)',
+        detail:
+          "SEO is what makes a website show up when people search. We write the page titles, descriptions, headings, and behind-the-scenes code (schema markup) using the right keywords for their industry and their city. Translation: when someone Googles 'best dog groomer in Tampa,' we make sure they find our client, not the groomer down the street.",
+      },
+      {
+        name: 'Embedded forms (no more Google Forms)',
+        detail:
+          "Most small businesses link out to Google Forms, Jotform, or Calendly — which breaks the professional look. We build contact forms, booking forms, quote request forms, and consultation forms directly INTO the website. When someone fills one out, the lead is emailed and/or texted to the owner instantly, and the client never leaves the site.",
+      },
+      {
+        name: 'Mobile-optimized design',
+        detail:
+          "The website is built mobile-first, meaning it looks great and works perfectly on phones before anything else. Over 70% of local customer searches happen on mobile, so this is non-negotiable.",
+      },
+      {
+        name: 'Ongoing support',
+        detail:
+          "Once the site is live, we don't disappear. The client can message us for tweaks, content updates, new photos, or fixes. They're not left figuring out 'how do I change my hours' on some builder they don't understand.",
+      },
     ],
+
+    whyItMatters: [
+      "When customers Google a business and can't find a website, most assume the business is dead or unprofessional — they pick a competitor.",
+      "Having a Google Business Profile set up correctly can triple phone calls and direction requests.",
+      "Embedded forms mean the client gets leads 24/7, even when they're asleep — the form works while they sleep.",
+      "SEO compounds — once a page ranks, it can bring in free customers every month for years.",
+      "A real domain builds trust. theirbusiness.com feels legitimate. theirbusiness.wixsite.com feels like a hobby.",
+    ],
+
+    clientQuestions: [
+      {
+        q: "What's the difference between this and just using Wix or Squarespace myself?",
+        a: "Wix and Squarespace are DIY tools — you're doing everything: picking the template, writing the copy, trying to figure out SEO, connecting forms, setting up the Google listing yourself. We do all of that FOR you, customized to your business, and built to actually rank and convert. A template looks the same as 10,000 other businesses. Our sites look like yours.",
+      },
+      {
+        q: "I already have a website. Why would I need this?",
+        a: "Great — can I ask, when's the last time your current site brought you a new customer directly? A lot of sites sit online looking fine but aren't actually pulling leads in. We'd take a quick look on a 15-minute call and tell you honestly whether it needs a rebuild, tune-up, or if it's already working.",
+      },
+      {
+        q: "Will it show up on Google?",
+        a: "Yes — that's literally the goal. We build the site with on-page SEO, set up your Google Business Profile, and optimize everything so you show up in Google Maps AND regular search results when people look for your service in your area.",
+      },
+      {
+        q: "Do I have to maintain it?",
+        a: "No. We include ongoing support — if you need to change hours, update a photo, add a service, or anything else, you just message us. You don't need to log into a dashboard or figure out how anything works.",
+      },
+      {
+        q: "What about Yelp — does that actually matter?",
+        a: "For service businesses (food, home services, beauty, etc.), Yelp is still one of the top sources of new customers. People search Yelp directly for reviews before calling. Even if you never look at it, your customers are.",
+      },
+      {
+        q: "Can I take bookings or payments through the site?",
+        a: "Absolutely. We build in booking forms, consultation request forms, and can integrate with Calendly, Stripe, or a custom booking system depending on the business.",
+      },
+      {
+        q: "How long does it take?",
+        a: "Most Digital Presence builds take 2–4 weeks from kickoff to live, depending on how fast we can get content and approvals from you.",
+      },
+    ],
+
     painPoints: [
-      { point: 'No website at all', pitch: '"We noticed you don\'t have a website — that means every customer searching for a [industry] in your area is landing on your competitors instead of you. We\'d build you a proper site that captures those searches."' },
-      { point: 'Outdated / Wix / Square site', pitch: '"I saw your current site — it\'s not really set up to convert visitors or rank in search. We\'d rebuild it cleaner, faster, mobile-friendly, and actually optimized to pull in leads."' },
-      { point: 'Broken or not-working site', pitch: '"Your site link isn\'t loading right now — which means anyone googling you is either leaving or going to a competitor. That\'s a fast fix we can knock out in a few days."' },
-      { point: 'Uses only Google Calendar/Facebook', pitch: '"Running bookings off Google Calendar or a Facebook page works at the start, but it\'s capping how many new customers find you. A real site makes you bookable 24/7 by strangers."' },
+      {
+        point: 'No website at all',
+        pitch:
+          '"We noticed you don\'t have a website — that means every customer searching for a [industry] in your area is landing on your competitors instead of you. We\'d build you a proper site that captures those searches."',
+      },
+      {
+        point: 'Outdated / Wix / Square site',
+        pitch:
+          '"I saw your current site — it\'s not really set up to convert visitors or rank in search. We\'d rebuild it cleaner, faster, mobile-friendly, and actually optimized to pull in leads."',
+      },
+      {
+        point: 'Broken or not-working site',
+        pitch:
+          '"Your site link isn\'t loading right now — which means anyone googling you is either leaving or going to a competitor. That\'s a fast fix we can knock out in a few days."',
+      },
+      {
+        point: 'Uses Google Forms / Linktree',
+        pitch:
+          '"Sending customers out to a Google Form makes the business look smaller than it is. We\'d bring all of that into one branded site with forms built in — same functionality, looks ten times more professional."',
+      },
     ],
-    objections: [
-      { q: '"How much does it cost?"', a: 'Great question — that\'s actually another reason to hop on the 15-min call, we\'ll walk through exactly what you need and find a fit.' },
-      { q: '"I have a site already."', a: 'Understood — when\'s the last time it brought you a new customer? Sometimes sites sit there looking fine but aren\'t actually pulling in leads. We can audit it on the call.' },
-      { q: '"I don\'t need a website."', a: 'Totally get that — but when people search for your service in your area, they\'re finding someone. A website just makes sure it\'s you they\'re calling.' },
-      { q: '"I\'m too busy."', a: 'That\'s actually the whole point — we build it for you, you barely lift a finger. 15 minutes to talk through it?' },
-    ],
+
     talkingAngles: [
-      'Local SEO = showing up in Google Maps when people search "car detailing near me"',
-      'A demo website shows them what\'s possible before they pay a dime',
-      'Mobile-first — 70%+ of their customers are on phones',
-      'Lead capture forms mean they never miss a potential client who visits at 2am',
+      'Local SEO = showing up in Google Maps when someone searches "[service] near me"',
+      "A demo website can be shown BEFORE they pay anything — proof before commitment",
+      "Mobile-first design because 70%+ of customers are on phones",
+      "Embedded forms mean no more broken user experience sending people off to Google Forms",
+      "Yelp + Google Business Profile are free marketing we make sure they're actually using",
     ],
   },
+
   {
     key: 'content',
     name: 'Content Engine',
     icon: Film,
     accent: '#d97706',
-    tagline: 'Stop posting. Start performing.',
-    oneLiner: 'A done-for-you content system — AI-written scripts, branded intros/outros, faceless reels, captions, and a calendar — so their social channels pull in leads without them doing the work.',
+    tagline: 'We run their social media. Fully.',
+    oneLiner:
+      "A fully managed social media service — we take over their Instagram, TikTok, YouTube, Facebook, and more. We create the content (using AI-written scripts, real photos, real graphics, and videos), post on a schedule, write captions and hashtags, and keep the brand active without the owner ever lifting a finger.",
+
+    plainEnglish:
+      "Most business owners know they should post on social media but never do because it takes forever and they don't know what to post. Content Engine solves that by taking over the entire thing. We don't just 'help' — we run the accounts. We plan what to post, create the videos and graphics using a mix of AI and real media, write the captions, research the hashtags, and post everything on a calendar. The owner sees their account growing and getting engagement without having to film themselves, write captions, or think about it. We can also create video and image content for things OUTSIDE social media — like images for their online courses, videos for their website, or promotional graphics for an event.",
+
     whoItsFor: [
-      'Businesses with empty or inconsistent social accounts',
-      'Owners who know they need content but have no time to create it',
-      'Businesses tired of boring "we\'re open!" posts that don\'t drive bookings',
-      'Anyone who wants organic reach without paying for ads every month',
+      "Businesses with empty or abandoned social media accounts",
+      "Owners who know social matters but have zero time or skill to do it",
+      "Businesses tired of posting 'we're open!' updates that don't drive any bookings",
+      "Service providers, course creators, coaches, and local shops who want organic reach (free leads)",
+      "Businesses who refuse to be on camera — we do faceless content that still performs",
+      "Anyone who has a course, product, website, or event that needs visual content created for it",
     ],
+
     whatsIncluded: [
-      { name: 'AI-generated short-form scripts', detail: 'Written for their specific niche and voice — not generic. Scripts for Reels, TikTok, Shorts that are designed to hook and convert.' },
-      { name: 'Custom branded intro & outro', detail: 'Same 2-5 sec open and close on every video so viewers recognize the brand instantly. Built once, reused forever.' },
-      { name: 'Faceless content production', detail: 'B-roll, stock, text overlays, animated visuals — polished content without them needing to film themselves.' },
-      { name: 'On-camera editing', detail: 'If they do want to film, we edit it — cuts, captions, transitions, music. Professional without the learning curve.' },
-      { name: 'Content calendar & strategy', detail: 'What to post, when to post, and why. So they\'re not guessing what works.' },
-      { name: 'Captions, hashtags & posting', detail: 'We can post directly to their accounts on a schedule. Captions written for their audience. Hashtags researched.' },
+      {
+        name: 'Full social media management',
+        detail:
+          "We take over their Instagram, TikTok, Facebook, YouTube Shorts, Threads — whichever platforms make sense for their business. That means we log in, we post, we respond to comments if they want, we manage the whole presence. The owner stops thinking about it.",
+      },
+      {
+        name: 'AI-written scripts customized to their brand',
+        detail:
+          "We use AI to draft short-form video scripts based on the client's specific niche, voice, and audience. These aren't generic 'top 5 tips' scripts — they're built around the client's business, their customer's pain points, and their tone. Every script is reviewed by a human before it goes out.",
+      },
+      {
+        name: 'Real photos, graphics, and videos',
+        detail:
+          "Not just AI slop. We mix AI-generated visuals, stock footage, the client's own photos (if they have them), custom graphics, and real video we create or film. The output looks polished, professional, and real — not robotic.",
+      },
+      {
+        name: 'Faceless content that performs',
+        detail:
+          "If the client doesn't want to be on camera (most don't), we create content using B-roll, text overlays, voiceovers, and animated visuals. Some of our best-performing reels have no face in them at all.",
+      },
+      {
+        name: 'Custom intros, outros & brand consistency',
+        detail:
+          "We create a branded intro and outro (2–5 seconds each) that appears on every video, so viewers recognize the brand instantly. This builds awareness over time — people start remembering the business.",
+      },
+      {
+        name: 'Captions, hashtags & posting schedule',
+        detail:
+          "Every post gets a hand-crafted caption written to drive engagement, plus a researched hashtag set targeted at their audience. We post on an optimized schedule (best times of day for their audience).",
+      },
+      {
+        name: 'Content for courses, websites & events',
+        detail:
+          "Beyond social media, we can create images and videos for whatever the client needs — cover images for their online course modules, hero videos for their website, promo graphics for an event, thumbnails for YouTube. If it needs visuals, we can make it.",
+      },
+      {
+        name: 'Content calendar & strategy',
+        detail:
+          "We plan a month of content at a time — what to post, what platform, what format (reel, carousel, story, long-form). The client sees the plan, approves it, and we execute.",
+      },
+      {
+        name: 'Performance tracking',
+        detail:
+          "We report what's working: which videos hit, which captions drove DMs, which posts converted to leads. The strategy adjusts based on actual results, not guesses.",
+      },
     ],
+
+    whyItMatters: [
+      "Social media drives free, compounding reach — a single 30-second video can bring in leads for months after it's posted.",
+      "Consistency is the #1 reason most business content fails. We solve the consistency problem by making posting automatic and hands-off.",
+      "Organic content = free leads. Instead of paying for ads forever, the business builds an audience that comes back.",
+      "A polished, active social presence makes the business look credible to anyone who checks before hiring or buying.",
+      "Faceless content removes the #1 excuse (being on camera) and still delivers results.",
+    ],
+
+    clientQuestions: [
+      {
+        q: "Do I have to be on camera?",
+        a: "Nope. We do faceless content using B-roll, graphics, voiceovers, and text overlays. Most of our best-performing reels don't show anyone's face. If you DO want to be on camera, we'll edit the footage for you — but it's not required.",
+      },
+      {
+        q: "Do I have to come up with what to post?",
+        a: "No — that's literally what we handle. We plan the whole content calendar (what to post, when, on which platform) and run it by you for approval. Your job is basically 'thumbs up' or 'change this.'",
+      },
+      {
+        q: "What platforms do you cover?",
+        a: "Instagram, TikTok, YouTube Shorts, Facebook, Threads, LinkedIn — whichever ones make sense for the business. We cross-post efficiently so we're not making 5 versions of the same thing.",
+      },
+      {
+        q: "How is this different from just using AI to make posts?",
+        a: "AI alone makes generic slop that anyone can spot in a second. We use AI as a starting point, then layer on real graphics, real video, your brand voice, strategy, and human judgment about what's actually going to perform. The output doesn't look 'AI.'",
+      },
+      {
+        q: "Can you make content for my course / website / event, not just social?",
+        a: "Yes. We create images, videos, thumbnails, cover art, and promo graphics for anything you need — courses, websites, webinars, email campaigns, whatever.",
+      },
+      {
+        q: "Will my social accounts grow?",
+        a: "That's the goal — and yes, consistent, strategic content is how accounts grow. We can't promise exact numbers because the algorithm varies, but businesses we run consistently see real follower and engagement growth within 60–90 days.",
+      },
+      {
+        q: "Do you respond to DMs and comments?",
+        a: "If you want us to, yes. We can handle community management as part of the service, or you can keep that yourself — up to the client.",
+      },
+      {
+        q: "Can I approve content before it goes out?",
+        a: "Absolutely. Every piece of content gets reviewed by you before posting unless you tell us to just run it. Most clients start with approvals and move to hands-off once they trust the output.",
+      },
+    ],
+
     painPoints: [
-      { point: 'Not posting / inactive accounts', pitch: '"I looked at [company]\'s social and you guys haven\'t posted in a while — which means you\'re missing out on leads coming from organic discovery. We built a quick sample to show what we\'d do for you."' },
-      { point: 'Posting but not getting reach', pitch: '"You\'re posting, which is great, but the reach isn\'t there. Our content system uses scripts and hooks that are built specifically to perform on the algorithm."' },
-      { point: 'Tried content but quit', pitch: '"A lot of business owners try content and burn out because it\'s hard to keep up. That\'s literally what we fix — we run it for you."' },
-      { point: 'Won\'t go on camera', pitch: '"You don\'t have to be on camera — we do faceless content that performs just as well. Most of our top-performing reels don\'t show a face."' },
+      {
+        point: "Not posting / inactive accounts",
+        pitch:
+          '"I looked at [company]\'s social and you guys haven\'t posted in a while — which means you\'re missing out on leads coming from organic discovery. We built a quick sample to show what we\'d do for you."',
+      },
+      {
+        point: "Posting but not getting reach",
+        pitch:
+          '"You\'re posting, which is great, but the reach isn\'t there. Our content system uses scripts and hooks built specifically to perform on the algorithm — not just checkmark posts."',
+      },
+      {
+        point: "Tried content but burned out",
+        pitch:
+          '"A lot of business owners try content and quit because it\'s too much work. That\'s literally what we fix — we run it for you so you never have to touch it again."',
+      },
+      {
+        point: "Won't go on camera",
+        pitch:
+          '"You don\'t have to be on camera — we do faceless content that performs just as well. Some of our best clients have never shown their face and still pull in leads."',
+      },
     ],
-    objections: [
-      { q: '"How much is it?"', a: 'That\'s another reason to jump on the call — we\'ll walk through exactly what you need and match the pricing to your scope.' },
-      { q: '"I already have someone doing it."', a: 'Got it — how are the results? If they\'re crushing it, keep them. If it\'s just checkmarks, that\'s where we come in.' },
-      { q: '"Social media doesn\'t work for my business."', a: 'Fair — I\'d love to show you what we\'ve done for a [industry] business similar to yours. 15 mins and you can judge for yourself.' },
-      { q: '"Will this work on TikTok?"', a: 'Yep — TikTok, Instagram Reels, YouTube Shorts, Threads. Same content, cross-posted. We handle all of it.' },
-    ],
+
     talkingAngles: [
-      'Organic reach = free leads. No ad spend required.',
-      'Consistency beats perfection — we solve the consistency problem.',
-      'Faceless reels remove the #1 excuse (being on camera)',
-      'A 15-30 sec reel can pull in leads for months after it\'s posted',
+      "Organic reach = free leads, no ad spend required",
+      "We handle everything — scripts, filming, editing, captions, hashtags, posting",
+      "AI + real human content = polished, not robotic",
+      "Faceless option means no excuses",
+      "Works for social AND for their course/website/event content needs",
     ],
   },
+
   {
     key: 'growth',
     name: 'Growth System',
     icon: Rocket,
     accent: '#059669',
-    tagline: 'Sales on autopilot.',
-    oneLiner: 'The full infrastructure — CRM, automated email sequences, AutoDM flows, lead capture pages, hosting, analytics — all wired together so leads never slip through the cracks.',
+    tagline: 'Sales on autopilot. Backend infrastructure for real growth.',
+    oneLiner:
+      "A complete backend CRM system connected directly to the client's website — so every lead, customer, deal, email, invoice, and piece of data lives in one place. Plus automated email sequences, lead capture pages, AutoDM flows, and analytics that keep the business running while the owner sleeps.",
+
+    plainEnglish:
+      "This is the biggest package and the most important one to understand. A regular website is a storefront — people can look at it and fill out a form. A website WITH a CRM (what we build in Growth System) is a storefront connected to the business's entire operations. When someone fills out a form, they don't just send an email — they become a 'lead' in a system that tracks them, follows up automatically, reminds the owner to call, sends a welcome email, adds them to a pipeline, and records every interaction forever. The CRM is the 'brain' behind the website. It's the difference between 'we got a customer' and 'we got a customer and now the system is going to follow up with them for the next 6 months without anyone having to remember to do it.'",
+
+    websiteVsCRM: {
+      title: "Website vs. Website + CRM — What's the Difference?",
+      website: {
+        heading: "Just a Website (Digital Presence)",
+        points: [
+          "A digital storefront that shows what the business does",
+          "Forms send an email to the owner when someone submits",
+          "Owner has to manually follow up, remember who they talked to, write back",
+          "No record of past customers beyond what's in the owner's email inbox",
+          "Each new tool (booking, invoicing, email marketing, reviews) is a separate service the owner has to juggle",
+          "Works great for: simple service businesses where the owner handles everything personally",
+        ],
+      },
+      crm: {
+        heading: "Website + CRM (Growth System)",
+        points: [
+          "Everything a website does PLUS a connected backend that tracks every person the business has ever interacted with",
+          "When a form is filled out, the lead is saved forever — with notes, contact info, source, every email exchanged, every call logged",
+          "Automated email sequences kick in instantly (welcome email, follow-up in 2 days, check-in in a week, etc.)",
+          "AutoDMs on Instagram/TikTok fire automatically when someone comments a keyword",
+          "Dashboards show what's working — which marketing channels bring in leads, which ones convert, where the money is coming from",
+          "Invoicing, contracts, appointment scheduling, and email marketing all connected to the same customer record",
+          "Works great for: businesses that want to scale without hiring an army, or that already have leads coming in but are losing them to slow follow-up",
+        ],
+      },
+      bottomLine:
+        "Bottom line: a website is a way to be found. A website + CRM is a way to be found AND grow without the owner burning out. Most businesses start with Digital Presence and upgrade to Growth System once they're generating real lead volume.",
+    },
+
     whoItsFor: [
-      'Businesses getting leads but losing them to slow/no follow-up',
-      'Owners drowning in manual outreach and spreadsheets',
-      'Businesses ready to scale who need real infrastructure',
-      'Anyone wanting their pipeline to work while they sleep',
+      "Businesses getting leads but losing them because follow-up is slow or forgotten",
+      "Owners managing everything in their head, a notes app, or messy spreadsheets",
+      "Businesses ready to scale but held back by disorganized operations",
+      "Service providers, agencies, coaches, and course creators who have clients to nurture",
+      "Anyone who wants their pipeline working 24/7 without constant manual effort",
+      "Businesses paying for 5 different tools (CRM + email + scheduler + invoicing + analytics) that don't talk to each other",
     ],
+
     whatsIncluded: [
-      { name: 'CRM setup', detail: 'Every lead, contact, and deal tracked in one place. Custom pipeline stages, segments, reminders. No more spreadsheets.' },
-      { name: 'Automated email sequences', detail: 'Welcome flows, follow-ups, nurture sequences, re-engagement campaigns. Triggered automatically when leads do certain things.' },
-      { name: 'AutoDM & social flows', detail: 'When someone comments on a post or messages on Instagram/TikTok, they get an automatic DM with the right info — drives them to book.' },
-      { name: 'Lead capture pages', detail: 'Landing pages built to convert — for ads, social bios, QR codes. Each one tracks where leads come from.' },
-      { name: 'Website & app hosting', detail: 'We host the sites/apps, handle updates, SSL, uptime monitoring. They never have to think about it.' },
-      { name: 'Analytics & reporting', detail: 'Dashboards showing what\'s working — which campaigns pull in leads, which sources convert, where the money comes from.' },
+      {
+        name: 'Full CRM (Customer Relationship Management) system',
+        detail:
+          "The heart of the package. A CRM is a database where every lead, contact, customer, and deal lives. Every time someone fills out a form, sends an email, books an appointment, or pays an invoice — it's tracked in the CRM. The owner can open any customer's profile and see their entire history with the business in one place.",
+      },
+      {
+        name: 'Automated email sequences (drip campaigns)',
+        detail:
+          "Pre-written, scheduled email series that trigger automatically based on what a lead does. Example: someone fills out a contact form → they get a welcome email immediately → 2 days later they get a case study → 5 days later they get a 'ready to chat?' email → if they don't respond, 2 weeks later they get a check-in. All automatic. The owner doesn't send a single one manually.",
+      },
+      {
+        name: 'AutoDM flows (Instagram / TikTok / Facebook)',
+        detail:
+          "When a follower comments a specific keyword (like 'INFO' or 'LINK') on a post, they automatically get a private DM with the information, a link, or a booking prompt. Converts social media engagement into actual leads without the owner having to check DMs.",
+      },
+      {
+        name: 'Lead capture landing pages',
+        detail:
+          "Dedicated one-page websites built to convert — for ad campaigns, social media bios, QR codes, or events. Each landing page is tracked separately so the owner knows which marketing effort is actually bringing in leads.",
+      },
+      {
+        name: 'Pipeline & deal tracking',
+        detail:
+          "Visual pipeline (like Trello but for sales) showing every lead and what stage they're at — New Lead, Contacted, Quoted, Proposal Sent, Won, Lost. The owner can see exactly how many leads are in each stage and what needs attention today.",
+      },
+      {
+        name: 'Invoicing, contracts & payments',
+        detail:
+          "Built-in invoicing connected to Stripe for card payments. Contracts stored and signed digitally. Every invoice tied back to the customer record so the owner sees total revenue per client, outstanding balances, and payment history.",
+      },
+      {
+        name: 'Appointment & meeting scheduling',
+        detail:
+          "Built-in booking calendar (not a separate Calendly subscription) that shows the owner's availability, lets clients book slots, and automatically adds the meeting to Google Calendar with a Zoom or Google Meet link.",
+      },
+      {
+        name: 'Website + app hosting',
+        detail:
+          "We host everything on our infrastructure — the website, the CRM, the landing pages. We handle SSL certificates, uptime monitoring, backups, and updates. The client never has to worry about 'is my site down?' or 'did I renew my hosting?'",
+      },
+      {
+        name: 'Analytics & reporting dashboards',
+        detail:
+          "Visual dashboards showing what's working — how many leads came in this month, which channel converted the most, revenue trends, response times. The owner sees the real health of their business at a glance instead of guessing.",
+      },
+      {
+        name: 'Team access & roles',
+        detail:
+          "If the business has employees (assistants, salespeople, etc.), they each get their own login with permissions set by the owner. Everyone's working in the same system instead of forwarding emails back and forth.",
+      },
     ],
+
+    emailSequencesExplained: {
+      title: "Email Sequences — Why They Matter",
+      intro:
+        "Email sequences are one of the most powerful pieces of Growth System. Most small businesses never use them because setting them up is technical. Here's what they do and why they're huge:",
+      examples: [
+        {
+          name: "Welcome Sequence",
+          description:
+            "Kicks off the moment a lead signs up, books a consultation, or makes a first purchase. 3–5 emails over 1–2 weeks that introduce the business, build trust, set expectations, and warm the lead up. Result: leads who go through a welcome sequence convert 50%+ more often than cold leads.",
+        },
+        {
+          name: "Follow-Up / Nurture Sequence",
+          description:
+            "For leads who expressed interest but didn't buy yet. Sends helpful content, case studies, testimonials, and gentle reminders over weeks or months. Keeps the business top-of-mind so when the lead IS ready, they pick us. Result: converts leads that would have gone cold otherwise.",
+        },
+        {
+          name: "Re-Engagement Sequence",
+          description:
+            "Triggered for contacts who went silent. A short 2–3 email series designed to either wake them back up or let them self-remove from the list. Cleans up the contact base and recovers some 'lost' leads. Result: recovers ~10–15% of ghost leads who just got busy.",
+        },
+        {
+          name: "Post-Purchase Sequence",
+          description:
+            "Runs after a customer buys. Includes onboarding, how-to-use info, reviews request, cross-sell or upsell offers, and referral prompts. Turns one-time buyers into repeat customers and reviewers. Result: repeat business and free word-of-mouth.",
+        },
+        {
+          name: "Abandoned Form / Abandoned Cart Sequence",
+          description:
+            "If someone starts filling out a form, quote request, or checkout and leaves — we trigger a quick 'you forgot something' email. Recovers sales that would have been lost entirely. Result: recovers 15–25% of abandoned submissions.",
+        },
+      ],
+      benefit:
+        "The common thread: email sequences let the business follow up PERFECTLY with every single lead — same exact quality every time, regardless of how busy the owner is. No more 'sorry I forgot to get back to you.' No more leads slipping through the cracks. It's like hiring an assistant whose only job is to follow up tirelessly, but automated.",
+    },
+
+    whyItMatters: [
+      "Manual follow-up is the #1 reason small businesses plateau — every missed follow-up is lost revenue.",
+      "Businesses that respond to leads within 5 minutes are 21x more likely to close than those who take 30+ minutes. Automation makes that possible every time.",
+      "A CRM means nothing gets forgotten — every lead, every promise, every invoice is tracked forever.",
+      "Analytics let the business spend more on what works and cut what doesn't — instead of guessing.",
+      "Email sequences turn one-time visitors into long-term customers without extra effort.",
+      "All tools in one place = one vendor, one login, one bill — instead of juggling 5+ subscriptions.",
+    ],
+
+    clientQuestions: [
+      {
+        q: "What's a CRM and why do I need one?",
+        a: "A CRM (Customer Relationship Management system) is basically a smart database that tracks every person who has ever interacted with your business. Instead of your customer info living in your head, your phone contacts, your email inbox, and random spreadsheets — it all lives in one place. Every email, every invoice, every meeting, every lead. It means nothing gets forgotten, and you can actually SEE your business.",
+      },
+      {
+        q: "I already use [HubSpot / Salesforce / Monday / Airtable]. Why switch?",
+        a: "You don't have to — we can work with what you have. But most of our clients prefer having everything in one connected system we built for them specifically, instead of a generic CRM with 200 features they don't need. If what you have is working, keep it and we'll integrate. If it's not, we'll replace it.",
+      },
+      {
+        q: "Is this hard to learn?",
+        a: "We set it up, pre-load it with your data, and train you (and your team) on how to use it. Most clients are comfortable within a week. And because we BUILT the system, we tailor it to how YOU already work — instead of you having to change how you work to fit some generic tool.",
+      },
+      {
+        q: "What are email sequences exactly?",
+        a: "They're automated series of emails that send automatically based on what a lead does. Example: someone fills out your contact form → they instantly get a welcome email → 2 days later they get a case study → a week later they get a 'want to chat?' email. You set them up once, and they run forever. It's like having an assistant whose only job is to follow up with every single lead, perfectly, forever.",
+      },
+      {
+        q: "How is this different from just having a website?",
+        a: "A website is a storefront — people visit, maybe fill out a form, and it sends you an email. Growth System is the ENTIRE backend: the website sends leads straight into a CRM, automation follows up with them, invoicing and contracts are built in, everything is tracked, and you have dashboards showing exactly how your business is performing. A website tells people you exist. A CRM runs the business.",
+      },
+      {
+        q: "What's AutoDM?",
+        a: "When someone comments on your Instagram or TikTok post with a specific keyword — like 'INFO' or 'PRICE' — they automatically get a private DM with the link, info, or booking prompt you set up. You turn random social engagement into actual leads without ever having to check your DMs.",
+      },
+      {
+        q: "Do I need this or is Digital Presence enough?",
+        a: "Honest answer: if you're a brand new business, Digital Presence is usually the right starting point — get the website and Google listing going first. If you're already getting leads and feel like you're drowning, losing follow-ups, or missing sales — THAT'S when Growth System pays for itself fast.",
+      },
+      {
+        q: "Will this help me scale?",
+        a: "That's literally the point of the word 'Growth' in the name. Right now if you get 10 leads, you handle them. If you get 100, you drop half. The Growth System is infrastructure that doesn't care if you have 10 leads or 10,000 — it follows up with all of them equally. It's how you grow past the ceiling of 'whatever one person can manage.'",
+      },
+      {
+        q: "Is my data safe?",
+        a: "Yes — we use secure, modern hosting (the same infrastructure used by Fortune 500 companies) with encryption, automated backups, and SSL on everything. Your customer data is safer in our system than in a spreadsheet on your laptop.",
+      },
+      {
+        q: "What if I want to leave?",
+        a: "Your data is your data. We'll export it to whatever format you need. We'd rather keep you by doing good work than by locking you in.",
+      },
+    ],
+
     painPoints: [
-      { point: 'Manual follow-ups', pitch: '"You\'re probably spending hours a week texting leads back and trying to remember who you already talked to — we replace all of that with automation."' },
-      { point: 'Leads going cold', pitch: '"Most businesses lose leads because they don\'t follow up fast enough. Our automation hits them within 60 seconds, every single time."' },
-      { point: 'No system at all', pitch: '"If you\'re running [company] off your head and a notes app, growth is going to cap hard. We install the actual infrastructure so you can scale."' },
-      { point: 'Has a CRM but not using it', pitch: '"Having a CRM and using one right are two different things. We set up the automations, templates, and flows that actually make it do work for you."' },
+      {
+        point: "Manual follow-ups eating their time",
+        pitch:
+          '"You\'re probably spending hours a week texting leads back and trying to remember who you already talked to — we replace all of that with automation that runs 24/7."',
+      },
+      {
+        point: "Leads going cold",
+        pitch:
+          '"Most businesses lose leads because they don\'t follow up fast enough. Our automation hits every lead within 60 seconds, every single time, forever."',
+      },
+      {
+        point: "No system, running on memory",
+        pitch:
+          '"If you\'re running [company] off your head and a notes app, growth is going to cap hard. We install the actual infrastructure so you can scale past that ceiling."',
+      },
+      {
+        point: "Has a CRM but not using it",
+        pitch:
+          '"Having a CRM and actually using one are two different things. We set up the automations, templates, and flows that make the system do the work for you instead of just sitting there."',
+      },
     ],
-    objections: [
-      { q: '"What does it cost?"', a: 'Great question — that\'s actually why we save pricing for the call. It depends on what you actually need, and we don\'t want to quote you something that doesn\'t fit.' },
-      { q: '"I use [HubSpot/Salesforce/etc]."', a: 'Cool — we can work with what you have or replace it, whatever makes sense. The goal is the automation layer on top, not just the tool.' },
-      { q: '"This sounds complicated."', a: 'It\'s not for you — we handle the setup and training. By the end, you just see leads coming in and getting handled. That\'s it.' },
-      { q: '"I don\'t have enough leads for this."', a: 'Totally — that\'s actually why the growth system includes lead capture pages. We help you generate leads AND manage them, not just one or the other.' },
-    ],
+
     talkingAngles: [
-      'Automation = hours back in their week',
-      '60-second response time doubles conversion rates',
-      'Everything tied together = visibility on what actually makes money',
-      'Hosting is included = one less vendor, one less password, one less bill',
+      "Automation = hours back in their week, every week",
+      "60-second lead response doubles conversion rates",
+      "Everything connected = visibility into what actually makes money",
+      "Hosting included = one less vendor, password, and bill",
+      "Scales without hiring — the system handles more leads automatically",
     ],
   },
 ];
+
+/* ── Universal intro + golden rules ───────────────────────────────────────── */
+
+const INTRO = {
+  headline: "Vernon Tech & Media — What We Actually Do",
+  body:
+    "We're a creative technology studio that helps small businesses and creators show up online and run smoother. We're not a generic agency — we build real websites, take over social media, and set up the backend tech (CRM, automation, email systems) so businesses grow without the owner burning out.",
+  structure:
+    "Our work is bundled into three packages. Most clients start with one and add more over time. If a lead only needs one piece, that's fine — but the packages are designed to cover the full problem, not just patch a symptom.",
+  flow: [
+    {
+      step: "1",
+      name: "Digital Presence",
+      purpose: "Get them found online — website, SEO, Google Business, Yelp, embedded forms.",
+    },
+    {
+      step: "2",
+      name: "Content Engine",
+      purpose: "Keep their brand visible — full social media management, AI-assisted content, real media.",
+    },
+    {
+      step: "3",
+      name: "Growth System",
+      purpose: "Run their operations — CRM, email automation, AutoDMs, analytics, everything connected.",
+    },
+  ],
+};
+
+const GOLDEN_RULES = [
+  {
+    rule: "Always book the 15-minute call.",
+    detail: "That's the ONE goal of every cold call, every DM, every follow-up email. Not a demo. Not a full pitch. Just 15 minutes.",
+  },
+  {
+    rule: "Never discuss pricing on the cold call.",
+    detail: 'If they ask, say: "Great question — that\'s actually another reason to hop on the call, we\'ll walk through everything and find what fits your scope."',
+  },
+  {
+    rule: "Reference something specific.",
+    detail: "Use their company name, their industry, something you noticed about their site or social. Generic outreach gets ignored.",
+  },
+  {
+    rule: "Lead with what we already built.",
+    detail: '"We made a free demo site for you to check out" is way stronger than "we could build you one." Proof > promise.',
+  },
+  {
+    rule: "Keep it short.",
+    detail: "3–5 sentences max before asking for the 15 minutes. Don't lecture. Don't list 10 features.",
+  },
+  {
+    rule: 'Handle "not interested" with a soft ask.',
+    detail: '"Mind if I send it over anyway? You\'ll have it if anything ever changes."',
+  },
+  {
+    rule: "When in doubt, refer to this page.",
+    detail: "Everything you need to confidently answer any client question is written out in detail per package above.",
+  },
+];
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   COMPONENTS
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 function PackageCard({ pkg }) {
   const [open, setOpen] = useState(pkg.key === 'digital');
@@ -150,7 +598,56 @@ function PackageCard({ pkg }) {
 
       {open && (
         <div style={{ padding: '20px 24px 28px' }}>
+          {/* One-liner */}
           <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.7, margin: '0 0 20px' }}>{pkg.oneLiner}</p>
+
+          {/* Plain English explanation */}
+          {pkg.plainEnglish && (
+            <Section icon={BookOpen} title="Plain-English explanation" accent={pkg.accent}>
+              <p style={{ margin: 0, color: 'var(--text)', fontSize: 13, lineHeight: 1.8 }}>{pkg.plainEnglish}</p>
+            </Section>
+          )}
+
+          {/* Website vs CRM (Growth System only) */}
+          {pkg.websiteVsCRM && (
+            <Section icon={Zap} title={pkg.websiteVsCRM.title} accent={pkg.accent}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="vtm-compare-grid">
+                <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{pkg.websiteVsCRM.website.heading}</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.7 }}>
+                    {pkg.websiteVsCRM.website.points.map((p, i) => <li key={i}>{p}</li>)}
+                  </ul>
+                </div>
+                <div style={{ background: pkg.accent + '10', border: `1px solid ${pkg.accent}40`, borderRadius: 10, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: pkg.accent, marginBottom: 8 }}>{pkg.websiteVsCRM.crm.heading}</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text)', fontSize: 12.5, lineHeight: 1.7 }}>
+                    {pkg.websiteVsCRM.crm.points.map((p, i) => <li key={i}>{p}</li>)}
+                  </ul>
+                </div>
+              </div>
+              <div style={{ marginTop: 12, padding: '12px 14px', background: 'var(--surface-2)', borderLeft: `3px solid ${pkg.accent}`, borderRadius: 6, fontSize: 13, color: 'var(--text)', lineHeight: 1.7, fontStyle: 'italic' }}>
+                {pkg.websiteVsCRM.bottomLine}
+              </div>
+            </Section>
+          )}
+
+          {/* Email sequences explained (Growth System only) */}
+          {pkg.emailSequencesExplained && (
+            <Section icon={MessageCircle} title={pkg.emailSequencesExplained.title} accent={pkg.accent}>
+              <p style={{ margin: '0 0 12px', color: 'var(--text)', fontSize: 13, lineHeight: 1.7 }}>{pkg.emailSequencesExplained.intro}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {pkg.emailSequencesExplained.examples.map((ex, i) => (
+                  <div key={i} style={{ borderLeft: `3px solid ${pkg.accent}80`, paddingLeft: 12 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 13, marginBottom: 3 }}>{ex.name}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.7 }}>{ex.description}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 14, padding: '12px 14px', background: pkg.accent + '12', border: `1px solid ${pkg.accent}35`, borderRadius: 8, fontSize: 13, color: 'var(--text)', lineHeight: 1.7 }}>
+                <strong style={{ color: pkg.accent }}>Why this matters:</strong> {pkg.emailSequencesExplained.benefit}
+              </div>
+            </Section>
+          )}
 
           {/* Who it's for */}
           <Section icon={Users} title="Who it's for" accent={pkg.accent}>
@@ -165,31 +662,42 @@ function PackageCard({ pkg }) {
               {pkg.whatsIncluded.map((item, i) => (
                 <div key={i} style={{ borderLeft: `3px solid ${pkg.accent}40`, paddingLeft: 12 }}>
                   <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 13, marginBottom: 2 }}>{item.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>{item.detail}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.7 }}>{item.detail}</div>
                 </div>
               ))}
             </div>
           </Section>
 
+          {/* Why it matters */}
+          {pkg.whyItMatters && (
+            <Section icon={TrendingUp} title="Why it matters (benefits)" accent={pkg.accent}>
+              <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text)', fontSize: 13, lineHeight: 1.8 }}>
+                {pkg.whyItMatters.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            </Section>
+          )}
+
+          {/* Common client questions */}
+          {pkg.clientQuestions && (
+            <Section icon={MessageCircle} title="Common client questions (with answers)" accent={pkg.accent}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {pkg.clientQuestions.map((qa, i) => (
+                  <div key={i} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Q: {qa.q}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.75 }}><strong style={{ color: pkg.accent }}>A:</strong> {qa.a}</div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
           {/* Pain points */}
-          <Section icon={AlertCircle} title="Common pain points — what to say" accent={pkg.accent}>
+          <Section icon={AlertCircle} title="Common pain points — what to say on cold outreach" accent={pkg.accent}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {pkg.painPoints.map((p, i) => (
                 <div key={i} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: pkg.accent, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>If they have: {p.point}</div>
                   <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, fontStyle: 'italic' }}>{p.pitch}</div>
-                </div>
-              ))}
-            </div>
-          </Section>
-
-          {/* Objections */}
-          <Section icon={AlertCircle} title="Handling objections" accent={pkg.accent}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pkg.objections.map((o, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, alignItems: 'start' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{o.q}</div>
-                  <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>{o.a}</div>
                 </div>
               ))}
             </div>
@@ -229,42 +737,57 @@ export default function Products() {
           <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>Products & Services</div>
         </div>
         <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 0, marginBottom: 24, lineHeight: 1.6 }}>
-          Everything we offer, who it's for, what's included, and how to talk about it on calls.
-          Use this to train yourself before a cold call so you can confidently speak about any service without second-guessing.
+          The full breakdown of every package — written so anyone (a virtual assistant, new hire,
+          or team member) can read through and confidently answer any client or potential-client
+          question. Click each package to expand the full knowledge.
         </p>
 
-        {/* Intro / What we do */}
-        <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #2d2d54)', color: '#fff', borderRadius: 12, padding: '22px 26px', marginBottom: 24 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#ff9b26', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Vernon Tech & Media — What We Do</div>
-          <div style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 12 }}>
-            We're a creative technology studio. We build websites, apps, AI content systems, and marketing automation for small businesses and creators who want to stand out.
+        {/* Intro */}
+        <div style={{ background: 'var(--orange)', color: '#fff', borderRadius: 12, padding: '22px 26px', marginBottom: 24 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8, opacity: 0.9 }}>
+            {INTRO.headline}
           </div>
-          <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--muted)' }}>
-            Our 3 packages below are bundled for how most clients actually buy. If a lead needs just one piece, we can do that too — but the packages are designed to cover the full problem, not just a symptom.
+          <div style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 12 }}>{INTRO.body}</div>
+          <div style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.92, marginBottom: 14 }}>{INTRO.structure}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {INTRO.flow.map(f => (
+              <div key={f.step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: 'rgba(255,255,255,0.12)', borderRadius: 8 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{f.step}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+                  <strong>{f.name}:</strong> {f.purpose}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Packages */}
         {PACKAGES.map(pkg => <PackageCard key={pkg.key} pkg={pkg} />)}
 
-        {/* Universal rules */}
+        {/* Golden rules */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 24px', marginTop: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <AlertCircle size={16} color="#ff5c5c" />
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#ff5c5c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Golden Rules for Every Cold Call</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#ff5c5c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Golden Rules for Every Cold Outreach</span>
           </div>
-          <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--text)', fontSize: 13, lineHeight: 1.9 }}>
-            <li><strong>Always book the 15-minute call.</strong> That's the ONE goal. Not a demo. Not a pitch. Just 15 minutes.</li>
-            <li><strong>Never discuss pricing on the cold call.</strong> If they ask, say: "Great question — that's actually another reason to hop on the call, we'll walk through everything and find what fits."</li>
-            <li><strong>Reference something specific.</strong> Their company name, their industry, something from their notes. Generic = ignored.</li>
-            <li><strong>Lead with what we already built.</strong> "We created a free demo website for you to check out" is stronger than "we could build you one."</li>
-            <li><strong>Keep it short.</strong> 3-5 sentences before asking for the 15 min. Don't lecture, don't list 10 features.</li>
-            <li><strong>Handle "not interested" with a soft ask.</strong> "Mind if I send it over anyway? You\'ll have it if anything changes."</li>
-          </ul>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {GOLDEN_RULES.map((g, i) => (
+              <div key={i} style={{ borderLeft: '3px solid #ff5c5c40', paddingLeft: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>{g.rule}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.7 }}>{g.detail}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ height: 40 }} />
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .vtm-compare-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
