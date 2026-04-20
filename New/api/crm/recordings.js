@@ -6,6 +6,12 @@ const ANTHROPIC_API_KEY  = process.env.ANTHROPIC_API_KEY;
 // ── Claude call analysis ───────────────────────────────────────────────────
 async function analyzeCall(transcript, leadName) {
   if (!ANTHROPIC_API_KEY || !transcript?.trim()) return null;
+  // Guard: very short / garbage transcripts (disconnected, white noise, test calls)
+  // shouldn't waste a Claude call and shouldn't pollute lead notes.
+  const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+  if (wordCount < 15) {
+    return { substantive: false, summary: null, interest_level: null };
+  }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -26,9 +32,12 @@ Lead name: ${leadName || 'Unknown'}
 Transcript:
 ${transcript}
 
+IMPORTANT: If the transcript has no substantive business conversation (e.g. the call was disconnected, the line had audio/technical issues, only white noise, only a brief test greeting, the prospect didn't engage, mumbling, dead air, or anything where no real sales dialogue happened), set "substantive" to false and leave "summary" as null. Do NOT invent a summary for a failed/disconnected call. Only set "substantive" to true when there was an actual back-and-forth conversation worth recording in the lead's history.
+
 Return this exact JSON structure:
 {
-  "summary": "2-3 sentence plain-English summary of the call",
+  "substantive": true | false,
+  "summary": "2-3 sentence plain-English summary of the call (or null if not substantive)",
   "interest_level": "hot" | "warm" | "cold" | "not_interested",
   "interest_reason": "one sentence explaining why",
   "pain_points": ["array", "of", "key", "pain", "points", "mentioned"],
@@ -287,8 +296,8 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify({ summary }),
         });
 
-        // Append to lead notes
-        if (summary.summary && rec.lead_id) {
+        // Append to lead notes (skip if call wasn't substantive, e.g. disconnected / noise)
+        if (summary.substantive !== false && summary.summary && rec.lead_id) {
           try {
             const leadRows = await supaFetch(`crm_leads?id=eq.${rec.lead_id}&select=notes`);
             const existingNotes = leadRows?.[0]?.notes || '';
@@ -433,8 +442,8 @@ module.exports = async function handler(req, res) {
           }),
         });
 
-        // 5.5 Append summary to lead notes field
-        if (summary?.summary) {
+        // 5.5 Append summary to lead notes field (skip if call wasn't substantive)
+        if (summary?.substantive !== false && summary?.summary) {
           try {
             // Fetch current notes
             const leadRows = await supaFetch(`crm_leads?id=eq.${lid}&select=notes`);
