@@ -105,7 +105,7 @@ async function isolateAudio(fileBuffer) {
       'Content-Type': contentType,
     },
     body,
-  }, 90_000); // 90s timeout
+  }, 60_000); // 60s timeout — abort & fall back to raw audio if isolation stalls
 
   if (!res.ok) {
     const err = await res.text();
@@ -357,6 +357,10 @@ module.exports = async function handler(req, res) {
       res.json({ ok: true, id: recording.id, transcript_status: 'processing' });
 
       // ── Async: clean → transcribe → save ──────────────────────────────────
+      // Vercel function maxDuration is 300s. Reserve ~90s for transcription + Claude + DB writes,
+      // so skip audio isolation entirely if <75s elapsed (leaves room for 60s isolation timeout + buffer).
+      const pipelineStart = Date.now();
+      const ISOLATION_BUDGET_MS = 210_000; // only run isolation if we have >90s left before hitting maxDuration
       try {
         if (!ELEVENLABS_API_KEY) throw new Error('ELEVENLABS_API_KEY not configured');
 
@@ -378,6 +382,9 @@ module.exports = async function handler(req, res) {
         let audioIsolated = false;
 
         try {
+          if (Date.now() - pipelineStart > ISOLATION_BUDGET_MS) {
+            throw new Error('Skipping isolation — insufficient time budget remaining');
+          }
           cleanBuffer = await isolateAudio(rawBuffer);
           cleanMime = 'audio/mpeg';
           cleanExt = 'mp3';
