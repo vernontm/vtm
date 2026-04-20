@@ -59,7 +59,7 @@ export default function InlineEdit({
 
   const inputStyle = {
     background: 'var(--surface)',
-    border: '1px solid #4a6cf7',
+    border: '1px solid var(--orange)',
     borderRadius: 4,
     color: 'var(--text)',
     padding: '3px 8px',
@@ -67,7 +67,7 @@ export default function InlineEdit({
     outline: 'none',
     width: '100%',
     minWidth: 80,
-    boxShadow: '0 0 0 2px rgba(74,108,247,0.15)',
+    boxShadow: '0 0 0 2px rgba(255,155,38,0.15)',
   };
 
   if (editing) {
@@ -118,7 +118,7 @@ export default function InlineEdit({
         borderRadius: 4,
         minWidth: 32,
         minHeight: 22,
-        color: value ? '#1a1a2e' : '#b0b0c0',
+        color: value ? 'var(--text)' : 'var(--muted)',
         transition: 'background 0.1s, filter 0.25s ease',
         userSelect: 'none',
         lineHeight: '18px',
