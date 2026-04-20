@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
+import { usePageActions } from '../context/UiContext';
 
 const PROJECT_STATUSES = ['Active', 'In Progress', 'Working on it', 'Not Started', 'Completed', 'On Hold', 'Cancelled', 'Stuck'];
 const ITEM_STATUSES  = ['Not Started', 'Working on it', 'Done', 'Stuck', 'On Hold'];
@@ -223,19 +224,16 @@ export default function Projects() {
     return Math.round(((now - start) / (end - start)) * 100);
   };
 
+  usePageActions(() => (
+    <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New Project</button>
+  ), [openAdd]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <div className="page-header">
-        <div className="flex items-center gap-3">
-          <FolderOpen size={22} style={{ color: '#fdab3d' }} />
-          <div className="page-title">Client Projects</div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input className="search-input" placeholder="Search projects..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Project</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+          <input className="search-input" placeholder="Search projects…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
       </div>
 

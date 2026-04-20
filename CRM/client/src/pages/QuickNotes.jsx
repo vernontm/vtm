@@ -261,7 +261,15 @@ export default function QuickNotes() {
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
 
-      <div style={{ padding: '0 28px 28px' }}>
+      {/* Search bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+          <input className="search-input" placeholder="Search notes…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 28px 28px' }}>
 
         {/* Add note form */}
         {adding && (
@@ -307,19 +315,6 @@ export default function QuickNotes() {
               </button>
             </div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>Tip: ⌘↵ to save quickly</div>
-          </div>
-        )}
-
-        {/* Search */}
-        {notes.length > 0 && (
-          <div style={{ position: 'relative', marginBottom: 20 }}>
-            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search notes..."
-              style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px 8px 32px', color: 'var(--muted)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-            />
           </div>
         )}
 

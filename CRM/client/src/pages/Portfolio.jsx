@@ -402,12 +402,16 @@ export default function Portfolio() {
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      {/* Search + category filter */}
-      <div style={{ padding: '10px 24px', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ position: 'relative', marginRight: 6 }}>
+      {/* Search bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+        <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
           <input className="search-input" placeholder="Search portfolio…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
+      </div>
+
+      {/* Category filter */}
+      <div style={{ padding: '10px 24px', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
         <button
           onClick={() => setFilterCat('all')}
           style={{

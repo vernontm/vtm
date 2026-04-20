@@ -177,13 +177,16 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{ padding:'12px 28px', display:'flex', alignItems:'center', gap:10, background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
-        <div style={{ position:'relative', flex:1, maxWidth:300 }}>
-          <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--muted)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search subscriptions..."
-            style={{ width:'100%', padding:'8px 10px 8px 30px', borderRadius:8, fontSize:12, background:'var(--surface-2)', border:'1px solid var(--border)', color:'var(--text)', outline:'none' }} />
+      {/* Search bar */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 24px', borderBottom:'1px solid var(--border)', background:'var(--bg)' }}>
+        <div style={{ position:'relative' }}>
+          <Search size={13} style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', color:'var(--muted)', pointerEvents:'none' }} />
+          <input className="search-input" placeholder="Search subscriptions…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft:30 }} />
         </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{ padding:'10px 24px', display:'flex', alignItems:'center', gap:10, background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
         {['all','active','paused','cancelled'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{ padding:'6px 14px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', border:'1px solid', textTransform:'capitalize',

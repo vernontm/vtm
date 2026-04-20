@@ -1715,6 +1715,14 @@ export default function Leads() {
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
 
+      {/* ── Search bar ──────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+          <input className="search-input" placeholder="Search leads…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
+        </div>
+      </div>
+
       {/* ── Segment tabs ────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 8, padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
         {[
@@ -1738,10 +1746,6 @@ export default function Leads() {
             </button>
           );
         })}
-        <div style={{ position: 'relative', marginLeft: 'auto' }}>
-          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-          <input className="search-input" placeholder="Search leads…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
-        </div>
       </div>
 
       {/* ── Stats bar ───────────────────────────────────────────────────────── */}

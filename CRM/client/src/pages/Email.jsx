@@ -86,16 +86,22 @@ function HtmlEmail({ html }) {
   const patched = React.useMemo(() => {
     if (!html) return '';
     const base = '<base target="_blank">';
+    const themeStyle = `<style>
+      html,body{background:#fff;color:#222;margin:0;padding:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.55;}
+      body *{color:inherit;}
+      a{color:#1a73e8;}
+      blockquote{color:#555;border-left:3px solid #ddd;margin:10px 0;padding:4px 12px;}
+    </style>`;
     const resizeScript = `<script>
       function postH(){window.parent.postMessage({iframeHeight:document.body.scrollHeight},'*');}
       window.addEventListener('load',function(){postH();setTimeout(postH,500);setTimeout(postH,1500);});
       new MutationObserver(postH).observe(document.body,{childList:true,subtree:true});
     <\/script>`;
-    // Insert base+script right after <head> if present, otherwise prepend
+    // Insert base+style+script right after <head> if present, otherwise prepend
     if (/<head[^>]*>/i.test(html)) {
-      return html.replace(/<head[^>]*>/i, '$&' + base + resizeScript);
+      return html.replace(/<head[^>]*>/i, '$&' + base + themeStyle + resizeScript);
     }
-    return base + resizeScript + html;
+    return base + themeStyle + resizeScript + html;
   }, [html]);
 
   React.useEffect(() => {
@@ -108,7 +114,7 @@ function HtmlEmail({ html }) {
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  return <iframe ref={ref} srcDoc={patched} sandbox="allow-same-origin allow-scripts allow-popups" style={{ width:'100%', border:'none', minHeight:200, borderRadius:8 }} />;
+  return <iframe ref={ref} srcDoc={patched} sandbox="allow-same-origin allow-scripts allow-popups" style={{ width:'100%', border:'none', minHeight:200, borderRadius:8, background:'#fff' }} />;
 }
 
 /* Helper: render body as HTML iframe or plain text with Linkify */

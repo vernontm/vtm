@@ -420,7 +420,15 @@ export default function Invoices() {
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
 
-      <div style={{ padding: '0 28px 28px' }}>
+      {/* Search bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+          <input className="search-input" placeholder="Search invoices…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 28px 28px' }}>
 
         {/* Summary cards */}
         <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 22 }}>
@@ -437,7 +445,7 @@ export default function Invoices() {
           ))}
         </div>
 
-        {/* Tabs + Search */}
+        {/* Tabs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 6 }}>
             {[['all', 'All'], ['stripe', 'Stripe'], ['manual', 'Manual']].map(([key, lbl]) => (
@@ -458,16 +466,6 @@ export default function Invoices() {
                 </span>
               </button>
             ))}
-          </div>
-
-          <div style={{ flex: 1, position: 'relative', minWidth: 200 }}>
-            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search invoices..."
-              style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px 7px 30px', color: 'var(--muted)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-            />
           </div>
         </div>
 
