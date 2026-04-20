@@ -97,7 +97,7 @@ export default function AcademyCommunity() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load community posts</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadPosts} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadPosts} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -120,8 +120,8 @@ export default function AcademyCommunity() {
             onClick={() => setFilter(tab)}
             style={{
               padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              background: filter === tab ? 'var(--orange)' : '#fff',
-              color: filter === tab ? '#fff' : '#7a7f9a',
+              background: filter === tab ? 'var(--orange)' : 'var(--surface)',
+              color: filter === tab ? 'var(--surface)' : '#7a7f9a',
               border: filter === tab ? 'none' : '1px solid var(--border)',
             }}
           >{tab}</button>

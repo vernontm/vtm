@@ -12,9 +12,9 @@ import {
 
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
-const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
 const btnOutline = { padding: '10px 20px', background: 'var(--surface)', color: 'var(--orange)', border: '1px solid var(--orange)', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const btnAI = { padding: '10px 20px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnAI = { padding: '10px 20px', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: 'var(--surface)', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
 const btnDanger = { padding: '6px 12px', background: 'var(--surface)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 };
 const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
@@ -407,10 +407,10 @@ export default function AcademyLessonEdit() {
                 }}
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--orange)'; }}
-                onDragLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7ef'; }}
+                onDragLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = '#e5e7ef';
+                  e.currentTarget.style.borderColor = 'var(--border)';
                   const dt = e.dataTransfer;
                   if (dt.files.length > 0) {
                     const input = fileInputRef.current;
@@ -647,7 +647,7 @@ export default function AcademyLessonEdit() {
                       style={{
                         width: 26, height: 26, borderRadius: 6, border: '2px solid',
                         borderColor: q.correct_answer === oi ? '#22c55e' : 'var(--border)',
-                        background: q.correct_answer === oi ? '#22c55e18' : '#fff',
+                        background: q.correct_answer === oi ? '#22c55e18' : 'var(--surface)',
                         color: q.correct_answer === oi ? '#22c55e' : '#7a7f9a',
                         fontSize: 11, fontWeight: 700, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,

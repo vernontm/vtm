@@ -6,6 +6,7 @@ import {
   ChevronRight, Filter, Trash2,
 } from 'lucide-react';
 import { getNotifications, dismissNotification, dismissAllNotifications, resetDismissed } from '../api';
+import { usePageActions } from '../context/UiContext';
 
 // ── Type config ───────────────────────────────────────────────────────────────
 const TYPE_CONFIG = {
@@ -131,37 +132,14 @@ export default function Notifications() {
     low:    notifications.filter(n => n.priority === 'low').length,
   };
 
+  usePageActions(() => filtered.length > 0 ? (
+    <button onClick={handleDismissAll} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+      <Check size={14} /> Dismiss All
+    </button>
+  ) : null, [filtered.length, handleDismissAll]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="page-title">Notifications</div>
-          {notifications.length > 0 && (
-            <span style={{ background: '#ff5c5c', color: 'var(--text)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
-              {notifications.length}
-            </span>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={load}
-            className="btn-ghost"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
-          {filtered.length > 0 && (
-            <button
-              onClick={handleDismissAll}
-              className="btn-ghost"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-            >
-              <Check size={14} /> Dismiss All
-            </button>
-          )}
-        </div>
-      </div>
 
       <div style={{ padding: '0 28px 28px' }}>
 

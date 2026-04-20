@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Eye, EyeOff, Upload, X, Image, Video, GripVertical, Search, Edit3, Check, ExternalLink } from 'lucide-react';
 import { getPortfolio, createPortfolioItem, updatePortfolioItem, deletePortfolioItem, uploadBlogMedia } from '../api';
+import { usePageActions } from '../context/UiContext';
 import Modal from '../components/Modal';
 
 const CATEGORIES = ['Websites', 'Apps', 'Visuals', 'Graphics', 'Branding', 'Automation', 'Other'];
@@ -395,21 +396,18 @@ export default function Portfolio() {
     setDeleteItem(null);
   };
 
+  usePageActions(() => (
+    <button className="btn-primary" onClick={() => setEditItem({})}><Plus size={15} /> Add Project</button>
+  ), [setEditItem]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <div className="page-header">
-        <div className="page-title">Portfolio</div>
-        <div className="flex items-center gap-3">
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input className="search-input" placeholder="Search projects..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <button className="btn-primary" onClick={() => setEditItem({})}><Plus size={16} /> Add Project</button>
+      {/* Search + category filter */}
+      <div style={{ padding: '10px 24px', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ position: 'relative', marginRight: 6 }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+          <input className="search-input" placeholder="Search portfolio…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
-      </div>
-
-      {/* Category filter */}
-      <div style={{ padding: '0 24px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         <button
           onClick={() => setFilterCat('all')}
           style={{

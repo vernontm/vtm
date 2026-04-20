@@ -18,16 +18,16 @@ import {
 } from 'lucide-react';
 
 const STATUS_COLORS = {
-  draft:     { bg: '#f0f0f5', text: '#8e8ea0', label: 'Draft' },
-  scheduled: { bg: '#e0f2fe', text: '#0ea5e9', label: 'Scheduled' },
-  sending:   { bg: '#fef3c7', text: '#f59e0b', label: 'Sending' },
-  sent:      { bg: '#e8f5e9', text: '#22c55e', label: 'Sent' },
-  partial:   { bg: '#fef3c7', text: '#f59e0b', label: 'Partial (Rollover)' },
-  active:    { bg: '#e8f5e9', text: '#22c55e', label: 'Active' },
-  unsubscribed: { bg: '#fee2e2', text: '#ef4444', label: 'Unsubscribed' },
-  bounced:   { bg: '#fee2e2', text: '#ef4444', label: 'Bounced' },
-  failed:    { bg: '#fee2e2', text: '#ef4444', label: 'Failed' },
-  pending:   { bg: '#f0f0f5', text: '#8e8ea0', label: 'Pending' },
+  draft:     { bg: 'var(--surface-3)', text: 'var(--muted)', label: 'Draft' },
+  scheduled: { bg: 'rgba(14,165,233,0.12)', text: '#0ea5e9', label: 'Scheduled' },
+  sending:   { bg: 'rgba(251,191,36,0.12)', text: '#f59e0b', label: 'Sending' },
+  sent:      { bg: 'rgba(34,197,94,0.12)', text: '#22c55e', label: 'Sent' },
+  partial:   { bg: 'rgba(251,191,36,0.12)', text: '#f59e0b', label: 'Partial (Rollover)' },
+  active:    { bg: 'rgba(34,197,94,0.12)', text: '#22c55e', label: 'Active' },
+  unsubscribed: { bg: 'rgba(239,68,68,0.12)', text: '#ef4444', label: 'Unsubscribed' },
+  bounced:   { bg: 'rgba(239,68,68,0.12)', text: '#ef4444', label: 'Bounced' },
+  failed:    { bg: 'rgba(239,68,68,0.12)', text: '#ef4444', label: 'Failed' },
+  pending:   { bg: 'var(--surface-3)', text: 'var(--muted)', label: 'Pending' },
 };
 
 function StatusPill({ status }) {
@@ -51,7 +51,7 @@ const TABS = [
 const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const inputStyle = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box' };
-const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
+const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: 'var(--surface)', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
 const btnSecondary = { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
 const btnDanger = { ...btnSecondary, color: '#ef4444', border: '1px solid #fecaca' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 };
@@ -127,7 +127,7 @@ function TagSelect({ value, onChange, options = [], placeholder = 'Select tags..
           background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
           boxShadow: '0 8px 20px rgba(10,20,40,0.08)', maxHeight: 260, overflow: 'auto',
         }}>
-          <div style={{ padding: 8, borderBottom: '1px solid #f0f0f5', position: 'sticky', top: 0, background: 'var(--surface)' }}>
+          <div style={{ padding: 8, borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)' }}>
             <input
               autoFocus
               value={query}
@@ -144,7 +144,7 @@ function TagSelect({ value, onChange, options = [], placeholder = 'Select tags..
             <div key={tag} onClick={() => toggle(tag)} style={{
               padding: '8px 12px', fontSize: 13, cursor: 'pointer', display: 'flex',
               justifyContent: 'space-between', alignItems: 'center',
-            }} onMouseEnter={e => e.currentTarget.style.background = '#f8f9fc'}
+            }} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <span>{tag}</span>
             </div>
@@ -152,7 +152,7 @@ function TagSelect({ value, onChange, options = [], placeholder = 'Select tags..
           {query && !options.some(o => o.toLowerCase() === query.toLowerCase()) && (
             <div onClick={addCustom} style={{
               padding: '8px 12px', fontSize: 13, cursor: 'pointer', color: 'var(--orange)', fontWeight: 600,
-              borderTop: '1px solid #f0f0f5',
+              borderTop: '1px solid var(--border)',
             }}>
               + Create "{query.trim()}"
             </div>
@@ -254,7 +254,7 @@ export default function EmailMarketing() {
   const [newClientWebsite, setNewClientWebsite] = useState('');
   const [newClientTone, setNewClientTone] = useState('');
   const [newClientPrimary, setNewClientPrimary] = useState('#E8650A');
-  const [newClientSecondary, setNewClientSecondary] = useState('#1a1a2e');
+  const [newClientSecondary, setNewClientSecondary] = useState('var(--surface-3)');
   const [creatingClient, setCreatingClient] = useState(false);
 
   // Campaign form
@@ -630,7 +630,7 @@ export default function EmailMarketing() {
       if (newId) setSelectedClientId(newId);
       setNewClientOpen(false);
       setNewClientName(''); setNewClientWebsite(''); setNewClientTone('');
-      setNewClientPrimary('#E8650A'); setNewClientSecondary('#1a1a2e');
+      setNewClientPrimary('#E8650A'); setNewClientSecondary('var(--surface-3)');
     } catch (e) { setError('Create client failed: ' + e.message); }
     setCreatingClient(false);
   }
@@ -784,8 +784,8 @@ export default function EmailMarketing() {
                 padding: '8px 16px',
                 fontSize: 13,
                 cursor: 'pointer',
-                color: selectedClientId === c.id ? 'var(--orange)' : '#1a1a2e',
-                background: selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent',
+                color: selectedClientId === c.id ? 'var(--orange)' : 'var(--text)',
+                background: selectedClientId === c.id ? 'rgba(255,155,38,0.06)' : 'transparent',
                 borderLeft: selectedClientId === c.id ? '3px solid var(--orange)' : '3px solid transparent',
                 fontWeight: selectedClientId === c.id ? 600 : 400,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -822,8 +822,8 @@ export default function EmailMarketing() {
               {TABS.map(t => (
                 <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
                   padding: '8px 14px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                  background: activeTab === t.key ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : '#f0f0f5',
-                  color: activeTab === t.key ? '#fff' : 'var(--muted)', transition: 'all 0.15s',
+                  background: activeTab === t.key ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                  color: activeTab === t.key ? 'var(--surface)' : 'var(--muted)', transition: 'all 0.15s',
                 }}>
                   <t.Icon size={14} /> {t.label}
                 </button>
@@ -907,7 +907,7 @@ export default function EmailMarketing() {
                 </thead>
                 <tbody>
                   {viewSendsData.map(s => (
-                    <tr key={s.id} style={{ borderBottom: '1px solid #f0f0f5' }}>
+                    <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '10px', color: 'var(--text)', fontWeight: 500 }}>{s.subject || '-'}</td>
                       <td style={{ padding: '10px', textAlign: 'center' }}><StatusPill status={s.status} /></td>
                       <td style={{ padding: '10px', color: 'var(--muted)', fontSize: 12 }}>{s.sent_at ? new Date(s.sent_at).toLocaleString() : '-'}</td>
@@ -969,7 +969,7 @@ export default function EmailMarketing() {
                 </div>
                 <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
                   <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>Failed</div>
-                  <div style={{ fontSize: 16, color: c.failed_count ? '#ef4444' : '#1a1a2e', fontWeight: 700, marginTop: 4 }}>{c.failed_count || 0}</div>
+                  <div style={{ fontSize: 16, color: c.failed_count ? '#ef4444' : 'var(--surface-3)', fontWeight: 700, marginTop: 4 }}>{c.failed_count || 0}</div>
                 </div>
               </div>
 
@@ -983,7 +983,7 @@ export default function EmailMarketing() {
 
               {/* HTML preview */}
               <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>Email preview</div>
-              <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: '#f5f5f7' }}>
+              <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: 'var(--surface-2)' }}>
                 {rawBody ? (
                   <iframe
                     title="Broadcast preview"
@@ -1096,8 +1096,8 @@ export default function EmailMarketing() {
                   {['welcome', 'blast'].map(t => (
                     <button key={t} onClick={() => setTplType(t)} style={{
                       padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-                      background: tplType === t ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : '#f0f0f5',
-                      color: tplType === t ? '#fff' : 'var(--muted)',
+                      background: tplType === t ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                      color: tplType === t ? 'var(--surface)' : 'var(--muted)',
                     }}>{t}</button>
                   ))}
                 </div>
@@ -1115,7 +1115,7 @@ export default function EmailMarketing() {
               )}
               <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
                 <button onClick={handleAIGenerate} disabled={aiGenLoading} style={{
-                  background: 'linear-gradient(135deg, #E8650A, #f59e0b)', color: '#fff', borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #E8650A, #f59e0b)', color: 'var(--surface)', borderRadius: 8, border: 'none',
                   padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex',
                   alignItems: 'center', gap: 6, opacity: aiGenLoading ? 0.6 : 1,
                 }}>
@@ -1239,11 +1239,11 @@ export default function EmailMarketing() {
           {/* Drag-drop zone */}
           <div
             onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--orange)'; e.currentTarget.style.background = '#eef2ff'; }}
-            onDragLeave={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#f8f9fc'; }}
+            onDragLeave={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = 'var(--surface-2)'; }}
             onDrop={e => {
               e.preventDefault();
               e.currentTarget.style.borderColor = '#c7d2fe';
-              e.currentTarget.style.background = '#f8f9fc';
+              e.currentTarget.style.background = 'var(--surface-2)';
               const f = e.dataTransfer.files?.[0];
               if (f) handleBulkFile(f);
             }}
@@ -1291,7 +1291,7 @@ export default function EmailMarketing() {
                   </thead>
                   <tbody>
                     {bulkPreview.slice(0, 100).map((p, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid #f0f0f5' }}>
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="private-value" style={{ padding: '6px 10px', color: 'var(--text)' }}>{p.email}</td>
                         <td className="private-value" style={{ padding: '6px 10px', color: 'var(--muted)' }}>{p.name || '-'}</td>
                         <td style={{ padding: '6px 10px', color: 'var(--muted)' }}>{(p.tags || []).join(', ') || '-'}</td>
@@ -1365,7 +1365,7 @@ export default function EmailMarketing() {
                     const isEditing = editContactId === c.id;
                     return (
                       <React.Fragment key={c.id}>
-                        <tr style={{ borderBottom: isEditing ? 'none' : '1px solid #f0f0f5', cursor: 'pointer' }} onClick={() => !isEditing && handleViewSends(c)}>
+                        <tr style={{ borderBottom: isEditing ? 'none' : '1px solid var(--border)', cursor: 'pointer' }} onClick={() => !isEditing && handleViewSends(c)}>
                           <td className="private-value" style={{ padding: '10px 10px', fontWeight: 600, color: 'var(--text)' }}>{c.email}</td>
                           <td className="private-value" style={{ padding: '10px 10px', color: 'var(--muted)' }}>{c.name || '-'}</td>
                           <td style={{ padding: '10px 10px' }}>
@@ -1459,8 +1459,8 @@ export default function EmailMarketing() {
                 {['welcome', 'blast'].map(t => (
                   <button key={t} onClick={() => setTplType(t)} style={{
                     padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-                    background: tplType === t ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : '#f0f0f5',
-                    color: tplType === t ? '#fff' : 'var(--muted)',
+                    background: tplType === t ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                    color: tplType === t ? 'var(--surface)' : 'var(--muted)',
                   }}>{t}</button>
                 ))}
               </div>
@@ -1488,7 +1488,7 @@ export default function EmailMarketing() {
               {editingTplId ? 'Update Template' : 'Save Template'}
             </button>
             <button type="button" onClick={() => setAiGenOpen(true)} style={{
-              background: 'linear-gradient(135deg, #E8650A, #f59e0b)', color: '#fff', borderRadius: 8, border: 'none',
+              background: 'linear-gradient(135deg, #E8650A, #f59e0b)', color: 'var(--surface)', borderRadius: 8, border: 'none',
               padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex',
               alignItems: 'center', gap: 6,
             }}>
@@ -1650,8 +1650,8 @@ export default function EmailMarketing() {
                         else setCampTags([...campTags, tag]);
                       }} style={{
                         padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: isSelected ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : '#f0f0f5',
-                        color: isSelected ? '#fff' : '#5a5a6e', border: 'none',
+                        background: isSelected ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                        color: isSelected ? 'var(--surface)' : 'var(--muted)', border: 'none',
                       }}>
                         <Tag size={11} style={{ marginRight: 4 }} />{tag}
                       </button>
@@ -1741,7 +1741,7 @@ export default function EmailMarketing() {
                 <button
                   type="button"
                   onClick={() => setCampShowLivePreview(v => !v)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: campShowLivePreview ? '#1a1a2e' : '#f3f4f6', color: campShowLivePreview ? '#fff' : '#1a1a2e', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: campShowLivePreview ? 'var(--surface-3)' : 'var(--surface-2)', color: campShowLivePreview ? 'var(--surface)' : 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 >
                   <Eye size={13} /> {campShowLivePreview ? 'Hide preview' : 'Show live preview'}
                 </button>
@@ -1787,8 +1787,8 @@ export default function EmailMarketing() {
                       <button key={opt.key} type="button" onClick={() => setCampTriggerType(opt.key)} style={{
                         padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                         display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: campTriggerType === opt.key ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : '#f0f0f5',
-                        color: campTriggerType === opt.key ? '#fff' : 'var(--muted)',
+                        background: campTriggerType === opt.key ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                        color: campTriggerType === opt.key ? 'var(--surface)' : 'var(--muted)',
                       }}><opt.Icon size={12} /> {opt.label}</button>
                     ))}
                   </div>
@@ -1837,7 +1837,7 @@ export default function EmailMarketing() {
         {composer}
 
         {!config && (
-          <div style={{ ...cardStyle, background: '#fef3c7', borderColor: '#fbbf24', marginBottom: 16 }}>
+          <div style={{ ...cardStyle, background: 'rgba(251,191,36,0.12)', borderColor: '#fbbf24', marginBottom: 16 }}>
             <div style={{ fontSize: 13, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Settings size={16} /> Set up your Resend API key in the Settings tab before sending.
             </div>
@@ -1861,7 +1861,7 @@ export default function EmailMarketing() {
               padding: '10px 14px', border: 'none', background: 'transparent',
               fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
               color: campFilter === t.key ? 'var(--orange)' : 'var(--muted)',
-              borderBottom: campFilter === t.key ? '2px solid #1a1a2e' : '2px solid transparent',
+              borderBottom: campFilter === t.key ? '2px solid var(--orange)' : '2px solid transparent',
               marginBottom: -1, display: 'inline-flex', alignItems: 'center', gap: 8,
             }}>
               {t.label}
@@ -1915,9 +1915,9 @@ export default function EmailMarketing() {
                     const dateLabel = c.sent_at || c.scheduled_at || c.updated_at || c.created_at;
                     const d = dateLabel ? new Date(dateLabel) : null;
                     return (
-                      <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f5', transition: 'background 0.1s', cursor: 'pointer' }}
+                      <tr key={c.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s', cursor: 'pointer' }}
                           onClick={() => setViewCampaign(c)}
-                          onMouseEnter={e => e.currentTarget.style.background = '#fafbfd'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2092,8 +2092,8 @@ export default function EmailMarketing() {
               <option value="inactive">Inactive</option>
             </select>
             <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-              <button onClick={() => setSeqView('list')} style={{ padding: '7px 10px', background: seqView === 'list' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="List view">☰</button>
-              <button onClick={() => setSeqView('grid')} style={{ padding: '7px 10px', background: seqView === 'grid' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="Grid view">▦</button>
+              <button onClick={() => setSeqView('list')} style={{ padding: '7px 10px', background: seqView === 'list' ? 'var(--surface-3)' : 'var(--surface)', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="List view">☰</button>
+              <button onClick={() => setSeqView('grid')} style={{ padding: '7px 10px', background: seqView === 'grid' ? 'var(--surface-3)' : 'var(--surface)', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="Grid view">▦</button>
             </div>
             <button onClick={() => setNewSeqOpen(true)} style={{ ...btnPrimary, background: 'var(--surface)' }}>
               <Plus size={14} /> New sequence
@@ -2127,14 +2127,14 @@ export default function EmailMarketing() {
               </thead>
               <tbody>
                 {list.map(s => (
-                  <tr key={s.id} onClick={() => handleOpenSequence(s.id)} style={{ borderBottom: '1px solid #f0f0f5', cursor: 'pointer' }}>
+                  <tr key={s.id} onClick={() => handleOpenSequence(s.id)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text)' }}>{s.name}</td>
                     <td style={{ padding: '12px 10px', color: 'var(--muted)' }}>{s.trigger_tag ? <span style={{ background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>{s.trigger_tag}</span> : '—'}</td>
                     <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--text)' }}>{s.steps_count || 0}</td>
                     <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{s.subscribers || 0}</td>
                     <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--muted)' }}>{(s.open_rate || 0).toFixed(1)}%</td>
                     <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                      <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: s.active ? '#e8f5e9' : '#f0f0f5', color: s.active ? '#22c55e' : '#8e8ea0' }}>
+                      <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: s.active ? 'rgba(34,197,94,0.12)' : 'var(--surface-3)', color: s.active ? '#22c55e' : 'var(--muted)' }}>
                         {s.active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -2315,7 +2315,7 @@ export default function EmailMarketing() {
               <div>
                 <label style={labelStyle}>Secondary color (headings, dark)</label>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input type="color" value={selectedClient?.brand_secondary_color || '#1a1a2e'}
+                  <input type="color" value={selectedClient?.brand_secondary_color || 'var(--surface-3)'}
                     onChange={e => handleBrandColorChange('brand_secondary_color', e.target.value)}
                     style={{ width: 48, height: 36, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
                   <input style={inputStyle} value={selectedClient?.brand_secondary_color || ''}
@@ -2392,8 +2392,8 @@ function SequenceCard({ seq, onOpen, onDelete }) {
         <span style={{
           fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
           padding: '3px 8px', borderRadius: 10,
-          background: seq.active ? '#e8f5e9' : '#f0f0f5',
-          color: seq.active ? '#22c55e' : '#8e8ea0',
+          background: seq.active ? 'rgba(34,197,94,0.12)' : 'var(--surface-3)',
+          color: seq.active ? '#22c55e' : 'var(--muted)',
         }}>
           {seq.active ? 'Active' : 'Inactive'}
         </span>
@@ -2411,7 +2411,7 @@ function SequenceCard({ seq, onOpen, onDelete }) {
       {/* Title row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Mail size={18} color="#1a1a2e" />
+          <Mail size={18} color="var(--text)" />
         </div>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', letterSpacing: -0.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seq.name}</div>
       </div>
@@ -2488,7 +2488,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
 
   const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)' };
   const lbl = { display: 'block', fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
-  const primary = { background: 'var(--surface)', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const primary = { background: 'var(--surface)', color: 'var(--surface)', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
   const secondary = { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
@@ -2504,7 +2504,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)', cursor: 'pointer', fontWeight: 600 }}>
               <span>Active</span>
               <span onClick={() => { setActive(a => !a); setDirty(true); }}
-                style={{ display: 'inline-block', width: 38, height: 22, background: active ? '#1a1a2e' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background 0.15s' }}>
+                style={{ display: 'inline-block', width: 38, height: 22, background: active ? 'var(--surface-3)' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background 0.15s' }}>
                 <span style={{ position: 'absolute', top: 2, left: active ? 18 : 2, width: 18, height: 18, background: 'var(--surface)', borderRadius: 9, transition: 'left 0.15s' }}/>
               </span>
             </label>
@@ -2584,8 +2584,8 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
                   const on = sendDays.includes(d);
                   return (
                     <button key={d} onClick={() => toggleDay(d)} style={{
-                      padding: '6px 10px', borderRadius: 8, border: '1px solid ' + (on ? '#1a1a2e' : '#e5e7ef'),
-                      background: on ? '#1a1a2e' : '#fff', color: on ? '#fff' : '#8e8ea0',
+                      padding: '6px 10px', borderRadius: 8, border: '1px solid ' + (on ? 'var(--surface-3)' : 'var(--border)'),
+                      background: on ? 'var(--surface-3)' : 'var(--surface)', color: on ? 'var(--surface)' : 'var(--muted)',
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     }}>{d}</button>
                   );
@@ -2706,12 +2706,12 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
   }
 
   const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)' };
-  const primary = { background: 'var(--surface)', color: '#fff', borderRadius: 8, border: 'none', padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const primary = { background: 'var(--surface)', color: 'var(--surface)', borderRadius: 8, border: 'none', padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }} onClick={() => setExpanded(e => !e)}>
-        <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--surface)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{index + 1}</div>
+        <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--surface)', color: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{index + 1}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {subject || <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Untitled email</span>}
@@ -2723,7 +2723,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
         <ChevronDown size={16} color="#8e8ea0" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
       </div>
       {expanded && (
-        <div style={{ padding: 14, borderTop: '1px solid #f0f0f5', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: 14, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Send email</span>
             <input type="number" min="0" style={{ ...inp, width: 80 }} value={amount} onChange={e => setAmount(e.target.value)} />
@@ -2812,7 +2812,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
             <button
               type="button"
               onClick={() => setShowPreview(v => !v)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: showPreview ? '#1a1a2e' : '#f3f4f6', color: showPreview ? '#fff' : '#1a1a2e', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: showPreview ? 'var(--surface-3)' : 'var(--surface-2)', color: showPreview ? 'var(--surface)' : 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
             >
               <Eye size={13} /> {showPreview ? 'Hide preview' : 'Show live preview'}
             </button>
@@ -2854,7 +2854,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
 // ══════════════════════════════════════════════════════════════
 // MULTI-TAG PICKER (include/exclude)
 // ══════════════════════════════════════════════════════════════
-function TagMultiPicker({ label, hint, color = '#1a1a2e', values = [], allTags = [], exclude = [], onChange }) {
+function TagMultiPicker({ label, hint, color = 'var(--surface-3)', values = [], allTags = [], exclude = [], onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const wrapRef = useRef(null);
@@ -2926,14 +2926,14 @@ function TagMultiPicker({ label, hint, color = '#1a1a2e', values = [], allTags =
         }}>
           {available.slice(0, 50).map(t => (
             <div key={t} onClick={() => add(t)} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f0f0f5'}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               {t}
             </div>
           ))}
           {canCreate && (
-            <div onClick={() => add(query.trim())} style={{ padding: '8px 12px', fontSize: 13, color: color, cursor: 'pointer', borderTop: available.length ? '1px solid #f0f0f5' : 'none', fontWeight: 600 }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f0f0f5'}
+            <div onClick={() => add(query.trim())} style={{ padding: '8px 12px', fontSize: 13, color: color, cursor: 'pointer', borderTop: available.length ? '1px solid var(--border)' : 'none', fontWeight: 600 }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               + Create "{query.trim()}"
             </div>
@@ -2974,7 +2974,7 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
   }
 
   const btnGhost = { background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-  const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: '#fff', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: 'var(--surface)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
     <div onClick={onClose} style={{
@@ -2998,7 +2998,7 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           {/* Left column */}
           <div style={{ width: 360, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div style={{ padding: 14, borderBottom: '1px solid #f0f0f5' }}>
+            <div style={{ padding: 14, borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', letterSpacing: 0.5, marginBottom: 8 }}>TEMPLATES ({templates.length})</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
                 {templates.length === 0 && (
@@ -3011,7 +3011,7 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
                     style={{
                       textAlign: 'left', padding: '10px 12px', borderRadius: 8,
                       border: selectedId === t.id ? '2px solid var(--orange)' : '1px solid var(--border)',
-                      background: selectedId === t.id ? '#eff3ff' : '#fff',
+                      background: selectedId === t.id ? '#eff3ff' : 'var(--surface)',
                       cursor: 'pointer', fontSize: 12,
                     }}
                   >
@@ -3033,7 +3033,7 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
                 style={{
                   flex: 1, resize: 'none', padding: 12, borderRadius: 8, border: '1px solid var(--border)',
                   fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', lineHeight: 1.6,
-                  background: hasBodyVar ? '#fff' : '#f8f9fc', color: 'var(--text)',
+                  background: hasBodyVar ? 'var(--surface)' : 'var(--surface-2)', color: 'var(--text)',
                 }}
               />
             </div>

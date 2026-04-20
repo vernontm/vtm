@@ -207,7 +207,7 @@ export default function SubscriptionsPage() {
         ) : (
           <table style={{ width:'100%', borderCollapse:'collapse', marginTop:16 }}>
             <thead>
-              <tr style={{ borderBottom:'2px solid #e5e7ef' }}>
+              <tr style={{ borderBottom:'2px solid var(--border-light)' }}>
                 {['Service','Amount','Cycle','Next Renewal','Category','Status',''].map(h => (
                   <th key={h} style={{ textAlign:'left', padding:'10px 12px', fontSize:10, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em' }}>{h}</th>
                 ))}
@@ -215,7 +215,7 @@ export default function SubscriptionsPage() {
             </thead>
             <tbody>
               {filtered.map(sub => (
-                <tr key={sub.id} style={{ borderBottom:'1px solid #f0f2f8' }}
+                <tr key={sub.id} style={{ borderBottom:'1px solid var(--border)' }}
                   onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
                   <td style={{ padding:'12px', fontSize:13, fontWeight:600, color:'var(--text)' }}>
                     {sub.service}

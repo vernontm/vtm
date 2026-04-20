@@ -91,7 +91,7 @@ export default function AcademySettings() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load settings</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadSettings} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadSettings} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -221,7 +221,7 @@ export default function AcademySettings() {
 }
 
 function SettingInput({ settingKey, meta, value, onChange, onSave, saving, saved }) {
-  const btnSave = { padding: '8px 14px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8 };
+  const btnSave = { padding: '8px 14px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8 };
 
   return (
     <div style={{ marginBottom: 16 }}>

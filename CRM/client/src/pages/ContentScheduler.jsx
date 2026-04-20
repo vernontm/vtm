@@ -1023,7 +1023,7 @@ export default function ContentScheduler() {
 
   // ── Render ──
   return (
-    <div className="cs-page" style={{ height: '100%', display: 'flex' }}>
+    <div className="cs-page" style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
       {/* ══════ LEFT SIDEBAR ══════ */}
       <div className="cs-sidebar" style={{
         width: sidebarCollapsed ? 0 : 200, background: 'var(--surface)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--border)',
@@ -1066,7 +1066,7 @@ export default function ContentScheduler() {
         </div>
 
         {/* Sidebar bottom buttons */}
-        <div style={{ padding: '8px 12px 14px', borderTop: '1px solid #f0f0f5', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ padding: '8px 12px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button onClick={openAddClient} style={{
             ...btnGhost, width: '100%', justifyContent: 'center', fontSize: 12, padding: '7px 10px',
           }}>
@@ -1249,7 +1249,7 @@ export default function ContentScheduler() {
                   </div>
                   {bulkUploads.map(u => (
                     <div key={u.id} style={{
-                      padding: '8px 16px', borderBottom: '1px solid #f0f0f5',
+                      padding: '8px 16px', borderBottom: '1px solid var(--border)',
                       display: 'flex', alignItems: 'center', gap: 10,
                     }}>
                       <Film size={14} color={u.status === 'done' ? '#22c55e' : u.status === 'error' ? '#ef4444' : 'var(--orange)'} />
@@ -1292,7 +1292,7 @@ export default function ContentScheduler() {
                   <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 18, padding: '0 18px',
-                      borderBottom: '1px solid #eef0f5', overflowX: 'auto',
+                      borderBottom: '1px solid var(--border)', overflowX: 'auto',
                     }}>
                       {tabs.map(t => {
                         const active = postsTab === t.key;
@@ -1329,7 +1329,7 @@ export default function ContentScheduler() {
                           placeholder="Search a Post"
                           style={{
                             width: '100%', padding: '7px 10px 7px 32px', borderRadius: 8,
-                            border: '1px solid #eef0f5', fontSize: 12, outline: 'none', background: 'var(--surface)',
+                            border: '1px solid var(--border)', fontSize: 12, outline: 'none', background: 'var(--surface)',
                           }}
                         />
                       </div>
@@ -1470,7 +1470,7 @@ export default function ContentScheduler() {
                     {/* Calendar grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
                       {cells.map((day, i) => {
-                        if (day === null) return <div key={`empty-${i}`} style={{ minHeight: 110, background: 'var(--surface-2)', borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none', borderBottom: '1px solid #f0f0f5' }} />;
+                        if (day === null) return <div key={`empty-${i}`} style={{ minHeight: 110, background: 'var(--surface-2)', borderRight: i % 7 !== 6 ? '1px solid var(--border)' : 'none', borderBottom: '1px solid var(--border)' }} />;
 
                         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                         const dayScripts = byDate[dateStr] || [];
@@ -1479,8 +1479,8 @@ export default function ContentScheduler() {
                         return (
                           <div key={day} style={{
                             minHeight: 110, padding: 6,
-                            borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none',
-                            borderBottom: '1px solid #f0f0f5',
+                            borderRight: i % 7 !== 6 ? '1px solid var(--border)' : 'none',
+                            borderBottom: '1px solid var(--border)',
                             background: isToday ? 'rgba(74,108,247,0.04)' : '#fff',
                           }}>
                             <div style={{
@@ -2030,7 +2030,7 @@ export default function ContentScheduler() {
                   <div style={{ maxHeight: 500, overflowY: 'auto' }}>
                     {genResults.map((post, idx) => (
                       <div key={idx} style={{
-                        padding: '14px 20px', borderBottom: '1px solid #f0f0f5',
+                        padding: '14px 20px', borderBottom: '1px solid var(--border)',
                         opacity: post.rejected ? 0.4 : 1,
                         background: post.approved ? 'rgba(34,197,94,0.04)' : post.rejected ? '#fafafa' : '#fff',
                       }}>
@@ -2521,7 +2521,7 @@ export default function ContentScheduler() {
                   <div style={{
                     fontSize: 12, fontWeight: 700, color: 'var(--orange)', textTransform: 'uppercase',
                     letterSpacing: '0.05em', marginBottom: 8, paddingBottom: 6,
-                    borderBottom: '1px solid #f0f0f5',
+                    borderBottom: '1px solid var(--border)',
                   }}>
                     {category}
                   </div>
@@ -2593,7 +2593,7 @@ export default function ContentScheduler() {
                         <p style={{ color: 'var(--muted)', fontSize: 13 }}>Enter a post URL and click Load to see comments.</p>
                       )}
                       {igComments.map((c, i) => (
-                        <div key={c.id || i} style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f5' }}>
+                        <div key={c.id || i} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                             <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>@{c.username || c.from?.username || 'unknown'}</span>
                             <span style={{ fontSize: 11, color: 'var(--muted)' }}>{c.timestamp ? new Date(c.timestamp).toLocaleDateString() : ''}</span>
@@ -2684,7 +2684,7 @@ export default function ContentScheduler() {
                         <p style={{ color: 'var(--muted)', fontSize: 13 }}>Click Refresh to load conversations.</p>
                       )}
                       {dmConversations.map((conv, i) => (
-                        <div key={conv.id || i} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f5' }}>
+                        <div key={conv.id || i} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                           <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>@{conv.username || conv.participants?.[0]?.username || 'Unknown'}</div>
                           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{conv.last_message || conv.snippet || ''}</div>
                         </div>
@@ -2868,7 +2868,7 @@ export default function ContentScheduler() {
                           {autoDMLogs[m.id || m.monitor_id] && (
                             <div style={{ marginTop: 8, maxHeight: 120, overflowY: 'auto', fontSize: 11, color: 'var(--muted)' }}>
                               {(autoDMLogs[m.id || m.monitor_id] || []).map((log, li) => (
-                                <div key={li} style={{ padding: '2px 0', borderBottom: '1px solid #f0f0f5' }}>
+                                <div key={li} style={{ padding: '2px 0', borderBottom: '1px solid var(--border)' }}>
                                   <span style={{ color: 'var(--muted)' }}>{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</span>
                                   {' · '}{log.username ? `@${log.username}` : ''} {log.message || log.action || JSON.stringify(log)}
                                 </div>
@@ -2976,7 +2976,7 @@ export default function ContentScheduler() {
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid #eef0f5' }}>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
                               <th style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Date</th>
                               <th style={{ textAlign: 'right', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Total Impressions</th>
                               {['instagram', 'tiktok', 'youtube', 'facebook'].filter(p => analyticsPlatforms.includes(p)).map(p => (

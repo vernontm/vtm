@@ -94,7 +94,7 @@ export default function AcademyHomework() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load homework</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadHomework} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadHomework} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -117,8 +117,8 @@ export default function AcademyHomework() {
             onClick={() => setActiveTab(tab)}
             style={{
               padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              background: activeTab === tab ? 'var(--orange)' : '#fff',
-              color: activeTab === tab ? '#fff' : '#7a7f9a',
+              background: activeTab === tab ? 'var(--orange)' : 'var(--surface)',
+              color: activeTab === tab ? 'var(--surface)' : '#7a7f9a',
               border: activeTab === tab ? 'none' : '1px solid var(--border)',
             }}
           >{tabLabels[tab]}</button>
@@ -173,14 +173,14 @@ export default function AcademyHomework() {
                 <button
                   onClick={() => handleAction(s.id, 'approved')}
                   disabled={saving === s.id}
-                  style={{ padding: '8px 18px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving === s.id ? 0.6 : 1 }}
+                  style={{ padding: '8px 18px', background: '#22c55e', color: 'var(--surface)', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving === s.id ? 0.6 : 1 }}
                 >
                   <CheckCircle size={14} /> Approve
                 </button>
                 <button
                   onClick={() => handleAction(s.id, 'rejected')}
                   disabled={saving === s.id}
-                  style={{ padding: '8px 18px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving === s.id ? 0.6 : 1 }}
+                  style={{ padding: '8px 18px', background: '#ef4444', color: 'var(--surface)', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving === s.id ? 0.6 : 1 }}
                 >
                   <XCircle size={14} /> Reject
                 </button>

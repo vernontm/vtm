@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pin, Plus, Trash2, Edit2, Check, X, Copy, ExternalLink, Search, StickyNote } from 'lucide-react';
 import { getQuickNotes, createQuickNote, updateQuickNote, deleteQuickNote } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
+import { usePageActions } from '../context/UiContext';
 
 // ── Accent color palette ───────────────────────────────────────────────────────
 const COLORS = ['var(--orange)', '#5b9cf6', '#fdab3d', '#ff5c5c', '#784bd1', '#00d1d1', '#ff7575', '#8e8ea0'];
@@ -248,25 +249,17 @@ export default function QuickNotes() {
   const pinned   = filtered.filter(n => n.pinned);
   const unpinned = filtered.filter(n => !n.pinned);
 
+  usePageActions(() => (
+    <button
+      onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
+      className="btn-primary"
+    >
+      <Plus size={15} /> New Note
+    </button>
+  ), [setAdding]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="page-title">Quick Notes</div>
-          {notes.length > 0 && (
-            <span style={{ background: 'var(--surface-3)', color: 'var(--muted)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
-              {notes.length}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={() => { setAdding(true); setTimeout(() => newTextRef.current?.focus(), 50); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
-        >
-          <Plus size={15} /> New Note
-        </button>
-      </div>
 
       <div style={{ padding: '0 28px 28px' }}>
 

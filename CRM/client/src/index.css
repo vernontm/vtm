@@ -414,7 +414,7 @@ textarea:focus, select:focus {
 .email-sidebar-search { padding: 12px; border-bottom: 1px solid var(--border); }
 .email-sidebar-compose { padding: 12px; border-bottom: 1px solid var(--border); }
 .email-sidebar-labels { flex: 1; overflow-y: auto; padding: 8px 0; }
-.email-sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.email-sidebar-tabs { display: flex; flex-direction: column; }
 .email-sidebar-actions { padding: 10px 12px; border-top: 1px solid var(--border); }
 .email-list-header {
   display: flex; align-items: center; justify-content: space-between;

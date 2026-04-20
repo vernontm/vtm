@@ -15,7 +15,7 @@ const CAT_COLORS = {
   Tools:      { bg: '#784bd122', fg: '#784bd1' },
   Processes:  { bg: '#fdab3d22', fg: '#d97706' },
   Sales:      { bg: 'rgba(255,155,38,0.13)', fg: '#22c55e' },
-  Other:      { bg: '#e5e7ef',   fg: '#8e8ea0' },
+  Other:      { bg: 'var(--border)',   fg: 'var(--muted)' },
 };
 
 function formatDuration(secs) {
@@ -65,7 +65,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
         display: 'flex', flexDirection: 'column',
       }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 18px rgba(74,108,247,0.13)'; e.currentTarget.style.borderColor = 'rgba(255,155,38,0.25)'; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#e5e7ef'; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
     >
       {/* Thumbnail */}
       <div style={{
@@ -83,7 +83,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
             background: '#22c55e', borderRadius: '50%',
             width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Check size={13} color="#fff" strokeWidth={3} />
+            <Check size={13} color="var(--surface)" strokeWidth={3} />
           </div>
         )}
         <div style={{
@@ -92,12 +92,12 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
         }}
           className="card-play-overlay"
         >
-          <PlayCircle size={44} color="#fff" />
+          <PlayCircle size={44} color="var(--surface)" />
         </div>
         {video.duration_seconds > 0 && (
           <div style={{
             position: 'absolute', bottom: 6, right: 8,
-            background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 10, fontWeight: 700,
+            background: 'rgba(0,0,0,0.75)', color: 'var(--surface)', fontSize: 10, fontWeight: 700,
             padding: '2px 6px', borderRadius: 4,
           }}>
             {formatDuration(video.duration_seconds)}
@@ -216,7 +216,7 @@ function PlayerModal({ video, onClose, onProgressSave }) {
         {/* Header */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #1e1e2e', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {video.title}
             </div>
             {video.description && (
@@ -505,7 +505,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
                   onClick={() => fileRef.current.click()}
                   style={{
                     width: '100%', padding: '18px 16px', borderRadius: 10, border: '2px dashed #d1d5db',
-                    background: file ? 'rgba(255,155,38,0.08)' : '#f9fafb', cursor: 'pointer', display: 'flex',
+                    background: file ? 'rgba(255,155,38,0.08)' : 'var(--surface-2)', cursor: 'pointer', display: 'flex',
                     flexDirection: 'column', alignItems: 'center', gap: 6, color: 'var(--muted)',
                     borderColor: file ? 'var(--orange)' : '#d1d5db', transition: 'all 0.15s',
                   }}
@@ -550,7 +550,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
           <button
             onClick={handleSave}
             disabled={uploading}
-            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--orange)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.7 : 1 }}
+            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--orange)', color: 'var(--surface)', fontSize: 13, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.7 : 1 }}
           >
             {uploading ? <><Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Uploading…</> : isEdit ? 'Save Changes' : 'Add Video'}
           </button>
@@ -684,8 +684,8 @@ export default function Training() {
                   onClick={() => setActiveTab(cat)}
                   style={{
                     padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: active ? 700 : 500,
-                    cursor: 'pointer', border: `1px solid ${active ? 'var(--orange)' : '#e5e7ef'}`,
-                    background: active ? 'var(--orange)' : '#fff', color: active ? '#fff' : '#6b7280',
+                    cursor: 'pointer', border: `1px solid ${active ? 'var(--orange)' : 'var(--border)'}`,
+                    background: active ? 'var(--orange)' : 'var(--surface)', color: active ? 'var(--surface)' : '#6b7280',
                     transition: 'all 0.12s',
                   }}
                 >
@@ -711,7 +711,7 @@ export default function Training() {
               {isOwner && totalVideos === 0 && (
                 <button
                   onClick={() => setShowForm(true)}
-                  style={{ marginTop: 12, padding: '9px 20px', borderRadius: 8, background: 'var(--orange)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                  style={{ marginTop: 12, padding: '9px 20px', borderRadius: 8, background: 'var(--orange)', color: 'var(--surface)', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
                 >
                   + Upload First Video
                 </button>

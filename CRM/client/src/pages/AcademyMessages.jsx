@@ -133,7 +133,7 @@ export default function AcademyMessages() {
         <div style={{ ...cardStyle, padding: 40, color: '#ef4444', textAlign: 'center' }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load messages</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadThreads} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadThreads} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -172,7 +172,7 @@ export default function AcademyMessages() {
                   onClick={() => selectThread(t)}
                   style={{
                     padding: '14px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f1f5',
-                    background: isSelected ? 'rgba(255,155,38,0.05)' : '#fff',
+                    background: isSelected ? 'rgba(255,155,38,0.05)' : 'var(--surface)',
                     borderLeft: isSelected ? '3px solid var(--orange)' : '3px solid transparent',
                   }}
                 >
@@ -184,7 +184,7 @@ export default function AcademyMessages() {
                     {(t.unread_count > 0) && <Circle size={7} fill="var(--orange)" color="var(--orange)" />}
                     <span style={{ fontSize: 12, color: '#7a7f9a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.latest_message || t.last_message || t.preview || ''}</span>
                     {(t.unread_count > 0) && (
-                      <span style={{ marginLeft: 'auto', background: 'var(--orange)', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{t.unread_count}</span>
+                      <span style={{ marginLeft: 'auto', background: 'var(--orange)', color: 'var(--surface)', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{t.unread_count}</span>
                     )}
                   </div>
                 </div>
@@ -220,7 +220,7 @@ export default function AcademyMessages() {
                       <div style={{
                         maxWidth: '70%', padding: '10px 14px', borderRadius: 12,
                         background: isAdmin ? 'var(--orange)' : 'var(--surface-2)',
-                        color: isAdmin ? '#fff' : '#1a1a2e',
+                        color: isAdmin ? 'var(--surface)' : 'var(--surface-3)',
                       }}>
                         <div style={{ fontSize: 13, lineHeight: 1.5 }}>{m.message || m.text}</div>
                         <div style={{ fontSize: 10, marginTop: 4, opacity: 0.7 }}>{formatMessageTime(m.created_at || m.time)}</div>
@@ -244,7 +244,7 @@ export default function AcademyMessages() {
                   onClick={handleSend}
                   disabled={sending || !messageText.trim()}
                   style={{
-                    padding: '10px 16px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10,
+                    padding: '10px 16px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 10,
                     cursor: sending || !messageText.trim() ? 'default' : 'pointer',
                     display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13,
                     opacity: sending || !messageText.trim() ? 0.6 : 1,

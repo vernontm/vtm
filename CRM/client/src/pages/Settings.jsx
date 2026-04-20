@@ -140,14 +140,6 @@ export default function Settings() {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 24px 60px' }}>
-      {/* Header */}
-      <div className="page-header" style={{ paddingLeft: 0, paddingRight: 0 }}>
-        <div className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <SettingsIcon size={20} />
-          Settings
-        </div>
-      </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ── Business Profile ─────────────────────────────────────────────── */}

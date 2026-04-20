@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Trash2, Phone, Mail } from 'lucide-react';
+import { usePageActions } from '../context/UiContext';
 import { getContacts, createContact, updateContact, deleteContact } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -99,16 +100,16 @@ export default function Contacts() {
     return colors[name.charCodeAt(0) % colors.length];
   };
 
+  usePageActions(() => (
+    <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New Contact</button>
+  ), [openAdd]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <div className="page-header">
-        <div className="page-title">Contacts</div>
-        <div className="flex items-center gap-3">
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input className="search-input" placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Contact</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+          <input className="search-input" placeholder="Search contacts…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
       </div>
 
@@ -255,11 +256,6 @@ export default function Contacts() {
                 </td>
               </tr>
             ))}
-            <tr>
-              <td colSpan={8} style={{ padding: 0 }}>
-                <div className="add-row" onClick={openAdd}><Plus size={14} /> Add Contact</div>
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>

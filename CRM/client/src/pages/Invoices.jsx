@@ -3,6 +3,7 @@ import {
   FileText, CreditCard, Trash2, XCircle, ExternalLink,
   RefreshCw, ChevronDown, ChevronUp, Search, Plus, X,
 } from 'lucide-react';
+import { usePageActions } from '../context/UiContext';
 import {
   getInvoices, getManualInvoices, deleteInvoice, voidInvoice,
   deleteManualInvoice, updateManualInvoice, refreshInvoice,
@@ -410,29 +411,14 @@ export default function Invoices() {
   const thStyle = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 14px', textAlign: 'left', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
   const tdStyle = { padding: '12px 14px', fontSize: 13, color: 'var(--muted)', verticalAlign: 'middle' };
 
+  usePageActions(() => (
+    <button onClick={() => setShowCreate(true)} className="btn-primary">
+      <Plus size={15} /> Create Invoice
+    </button>
+  ), [setShowCreate]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="page-title">Invoices</div>
-          <span style={{ background: 'var(--surface-3)', color: 'var(--muted)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
-            {allRows.length}
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={load} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-            <RefreshCw size={14} /> Refresh
-          </button>
-          <button onClick={() => setShowCreate(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600,
-            padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-            background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', border: 'none', color: '#fff',
-          }}>
-            <Plus size={14} /> Create Invoice
-          </button>
-        </div>
-      </div>
 
       <div style={{ padding: '0 28px 28px' }}>
 

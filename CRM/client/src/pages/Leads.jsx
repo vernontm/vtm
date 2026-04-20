@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square, ListPlus, Loader, FileText,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
-import { useUi } from '../context/UiContext';
+import { useUi, usePageActions } from '../context/UiContext';
 import { supabase } from '../lib/supabase';
 import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts, personalizeScript } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
@@ -1691,34 +1691,29 @@ export default function Leads() {
     getMeetingStats().then(s => setMeetingStats(s || { meets_7d: 0, meets_30d: 0 })).catch(() => {});
   }, []);
 
+  // Register Header action buttons
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  usePageActions(() => (
+    <>
+      <button
+        onClick={() => exportCSV(filtered)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 13, background: 'var(--surface)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}
+        title="Export current view to CSV"
+      >
+        <Download size={13} /> Export
+      </button>
+      <button
+        onClick={() => setShowImport(true)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 13, background: 'var(--surface)', cursor: 'pointer', fontFamily: 'var(--font-display)' }}
+      >
+        <Upload size={13} /> Import
+      </button>
+      <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New Lead</button>
+    </>
+  ), [filtered, setShowImport, openAdd]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="page-title">Leads</div>
-          <span style={{ fontSize: 12, color: 'var(--muted)', padding: '2px 10px', background: 'var(--border-light)', borderRadius: 12 }}>
-            {leads.length}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input className="search-input" placeholder="Search leads..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <button
-            className="btn-ghost"
-            onClick={() => exportCSV(filtered)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 13, background: 'var(--surface)', cursor: 'pointer' }}
-            title="Export current view to CSV"
-          >
-            <Download size={14} /> Export
-          </button>
-          <button className="btn-ghost" onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>
-            <Upload size={14} /> Import
-          </button>
-          <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Lead</button>
-        </div>
-      </div>
 
       {/* ── Segment tabs ────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 8, padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
@@ -1743,6 +1738,10 @@ export default function Leads() {
             </button>
           );
         })}
+        <div style={{ position: 'relative', marginLeft: 'auto' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+          <input className="search-input" placeholder="Search leads…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
+        </div>
       </div>
 
       {/* ── Stats bar ───────────────────────────────────────────────────────── */}

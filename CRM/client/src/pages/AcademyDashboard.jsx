@@ -59,7 +59,7 @@ export default function AcademyDashboard() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load dashboard</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadStats} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadStats} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: 'var(--surface)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -139,7 +139,7 @@ export default function AcademyDashboard() {
         {recentEnrollments.length > 0 ? (
           <div>
             {recentEnrollments.map((e, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: i % 2 === 0 ? '#f5f7fa' : '#fff', borderRadius: 8, marginBottom: 4 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: i % 2 === 0 ? '#f5f7fa' : 'var(--surface)', borderRadius: 8, marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Users size={14} color="var(--orange)" />

@@ -148,12 +148,12 @@ export default function Sidebar() {
               background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 4px 14px rgba(255,155,38,0.3)',
-              overflow: 'hidden',
+              overflow: 'hidden', padding: 4,
             }}>
               <img
-                src={import.meta.env.BASE_URL + 'vtm-icon.png'}
+                src={import.meta.env.BASE_URL + 'vtm-logo.svg'}
                 alt="VTM"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 onError={e => { e.currentTarget.style.display = 'none'; }}
               />
             </div>

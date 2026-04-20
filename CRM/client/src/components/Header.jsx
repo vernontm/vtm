@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Search, RefreshCw } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
+import { useUi } from '../context/UiContext';
 import { getNotifications } from '../api';
 import GlobalSearch from './GlobalSearch';
 
@@ -51,6 +52,7 @@ export default function Header() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { triggerRefresh } = useRefresh();
+  const { pageActions } = useUi();
 
   const [searchOpen,  setSearchOpen]  = useState(false);
   const [notifCount,  setNotifCount]  = useState(0);
@@ -121,8 +123,16 @@ export default function Header() {
           )}
         </div>
 
-        {/* ── Right: search · bell · refresh ── */}
+        {/* ── Right: page actions · search · bell · refresh ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+
+          {/* Page-specific action buttons injected by current route */}
+          {pageActions && (
+            <>
+              {pageActions}
+              <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+            </>
+          )}
 
           {/* Search */}
           <button
