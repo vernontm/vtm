@@ -9,7 +9,7 @@ import {
 import { useRecorder } from '../context/RecorderContext';
 import { useUi, usePageActions } from '../context/UiContext';
 import { supabase } from '../lib/supabase';
-import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts, personalizeScript } from '../api';
+import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts, personalizeScript, deleteRecording } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 import Modal from '../components/Modal';
@@ -443,7 +443,7 @@ function fmtDateTime(dateStr) {
     ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-function ActivityTimeline({ lead, convos, recordings }) {
+function ActivityTimeline({ lead, convos, recordings, onRecordingDeleted }) {
   // Build unified event list
   const events = useMemo(() => {
     const list = [];
@@ -563,7 +563,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
                           );
                         })()}
                         {/* Full player + detail card */}
-                        <RecordingCard recording={ev.recording} />
+                        <RecordingCard recording={ev.recording} onDeleted={onRecordingDeleted} />
                       </div>
                     ) : ev.type === 'meeting' ? (
                       <div style={{ marginTop: 4, padding: '10px 12px', background: 'rgba(59,130,246,0.08)', borderRadius: 8, border: '1px solid rgba(59,130,246,0.25)' }}>
@@ -613,7 +613,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
 }
 
 // ─── Recording audio player card ──────────────────────────────────────────────
-function RecordingCard({ recording: rawR }) {
+function RecordingCard({ recording: rawR, onDeleted }) {
   // Supabase jsonb can occasionally arrive as a string — parse defensively
   const r = useMemo(() => {
     if (!rawR) return rawR;
@@ -628,6 +628,19 @@ function RecordingCard({ recording: rawR }) {
   const [duration, setDuration]   = useState(r.duration_seconds || 0);
   const [summary, setSummary]     = useState(r.summary || null);
   const [summarizing, setSummarizing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this recording? This will permanently remove the audio file and transcript.')) return;
+    setDeleting(true);
+    try {
+      await deleteRecording(r.id);
+      onDeleted?.(r.id);
+    } catch (e) {
+      alert(`Delete failed: ${e.message}`);
+      setDeleting(false);
+    }
+  };
 
   const handleSummarize = async () => {
     setSummarizing(true);
@@ -763,6 +776,19 @@ function RecordingCard({ recording: rawR }) {
           }}>
             {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
           </span>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            aria-label="Delete recording"
+            style={{
+              background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+              padding: '3px 6px', cursor: deleting ? 'wait' : 'pointer',
+              color: deleting ? 'var(--muted)' : '#f87171',
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            <Trash2 size={11} />
+          </button>
         </div>
       </div>
 
@@ -1130,7 +1156,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, scripts, onPrev, onNext, hasPrev, hasNext, onScriptSaved }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, onRecordingDeleted, scripts, onPrev, onNext, hasPrev, hasNext, onScriptSaved }) {
   const { startRecording, stopRecording, isRecordingLead, status: recStatus, elapsed } = useRecorder();
   const isRec = isRecordingLead(lead.id);
   const [draft, setDraft]   = useState({ ...lead });
@@ -1367,7 +1393,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
           <CallScriptWidget lead={lead} scripts={scripts} onScriptSaved={onScriptSaved} />
 
           {/* Activity Timeline */}
-          <ActivityTimeline lead={lead} convos={convos} recordings={recordings} />
+          <ActivityTimeline lead={lead} convos={convos} recordings={recordings} onRecordingDeleted={onRecordingDeleted} />
         </div>
 
         <div style={{
@@ -1744,6 +1770,10 @@ export default function Leads() {
   }, [detailLead, allCommLog]);
 
   const [detailRecordings, setDetailRecordings] = useState([]);
+  const reloadDetailRecordings = () => {
+    if (!detailLead) return;
+    getLeadRecordings(detailLead.id).then(r => setDetailRecordings(r || [])).catch(() => {});
+  };
   useEffect(() => {
     if (!detailLead) { setDetailRecordings([]); return; }
     getLeadRecordings(detailLead.id).then(r => setDetailRecordings(r || [])).catch(() => {});
@@ -2239,6 +2269,7 @@ export default function Leads() {
             lastFollowUp={lastFollowUps[detailLead.id]}
             convos={detailConvos}
             recordings={detailRecordings}
+            onRecordingDeleted={reloadDetailRecordings}
             scripts={scripts}
             onPrev={hasPrev ? () => setDetailLead(filtered[idx - 1]) : undefined}
             onNext={hasNext ? () => setDetailLead(filtered[idx + 1]) : undefined}

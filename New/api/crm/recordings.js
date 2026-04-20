@@ -493,11 +493,39 @@ module.exports = async function handler(req, res) {
       return; // already responded
     }
 
-    // DELETE
+    // DELETE — removes the DB row AND the audio file from storage
     if (req.method === 'DELETE') {
       if (!id) return res.status(400).json({ error: 'id required' });
+
+      // Fetch storage_path so we can delete the file too
+      const rows = await supaFetch(`crm_lead_recordings?id=eq.${id}&select=storage_path`);
+      const storagePath = rows?.[0]?.storage_path;
+
+      // Delete the row first
       await supaFetch(`crm_lead_recordings?id=eq.${id}`, { method: 'DELETE' });
-      return res.json({ ok: true });
+
+      // Best-effort storage cleanup — don't fail the request if this errors
+      if (storagePath) {
+        try {
+          const delRes = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/lead-recordings/${storagePath}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'apikey': SERVICE_KEY,
+                'Authorization': `Bearer ${SERVICE_KEY}`,
+              },
+            }
+          );
+          if (!delRes.ok) {
+            console.warn('Storage delete non-OK:', delRes.status, await delRes.text());
+          }
+        } catch (e) {
+          console.warn('Storage delete failed:', e.message);
+        }
+      }
+
+      return res.json({ ok: true, storage_deleted: !!storagePath });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
