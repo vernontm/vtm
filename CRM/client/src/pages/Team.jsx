@@ -39,9 +39,9 @@ const ALL_PAGES = [
 const GROUPS = ['Workspace', 'Tools', 'Academy'];
 
 const GROUP_COLORS = {
-  Workspace: { bg: '#e8f0ff', fg: '#4a6cf7' },
-  Tools:     { bg: '#e6faf2', fg: '#059669' },
-  Academy:   { bg: '#fef3c7', fg: '#b45309' },
+  Workspace: { bg: 'rgba(74,108,247,0.15)',  fg: '#7ba7ff' },
+  Tools:     { bg: 'rgba(5,150,105,0.15)',   fg: '#34d399' },
+  Academy:   { bg: 'rgba(180,83,9,0.15)',    fg: '#fb923c' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,12 +81,12 @@ async function apiFetch(path, options = {}) {
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
-const PAGE_BG   = '#f5f7fa';
-const CARD_BG   = '#ffffff';
-const TEXT      = '#1a1a2e';
-const TEXT_MUTED= '#8e8ea0';
-const ACCENT    = '#4a6cf7';
-const BORDER    = '#e5e7ef';
+const PAGE_BG   = 'var(--bg)';
+const CARD_BG   = 'var(--surface)';
+const TEXT      = 'var(--text)';
+const TEXT_MUTED= 'var(--muted)';
+const ACCENT    = 'var(--orange)';
+const BORDER    = 'var(--border)';
 
 const INPUT_STYLE = {
   width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 14,
@@ -107,7 +107,7 @@ const BTN_GHOST = {
 };
 
 const BTN_DANGER = {
-  ...BTN_GHOST, border: '1px solid #fecaca', color: '#ef4444', background: '#fff5f5',
+  ...BTN_GHOST, border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', background: 'rgba(239,68,68,0.1)',
 };
 
 // ─── PermissionCheckboxes (shared by invite + edit modals) ───────────────────
@@ -341,7 +341,7 @@ function InviteModal({ onClose, onSaved }) {
       }
     >
       {error && (
-        <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 6, background: '#fef2f2', color: '#ef4444', fontSize: 13 }}>
+        <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -421,7 +421,7 @@ function EditModal({ member, onClose, onSaved }) {
       }
     >
       {error && (
-        <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 6, background: '#fef2f2', color: '#ef4444', fontSize: 13 }}>
+        <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', fontSize: 13 }}>
           {error}
         </div>
       )}
@@ -497,8 +497,8 @@ function MemberCard({ member, onEdit, onRemove, onViewAs, allClients }) {
           <span style={{
             fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
             padding: '2px 7px', borderRadius: 4,
-            background: isOwnerRole ? '#fef3c7' : '#e8f0ff',
-            color:      isOwnerRole ? '#b45309' : ACCENT,
+            background: isOwnerRole ? 'rgba(180,83,9,0.15)' : 'rgba(74,108,247,0.15)',
+            color:      isOwnerRole ? '#fb923c' : ACCENT,
           }}>
             {member.role || 'admin'}
           </span>
@@ -506,8 +506,8 @@ function MemberCard({ member, onEdit, onRemove, onViewAs, allClients }) {
           {member.invite_status && (
             <span style={{
               fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4,
-              background: member.invite_status === 'active' ? '#d1fae5' : '#fef9c3',
-              color:      member.invite_status === 'active' ? '#065f46' : '#92400e',
+              background: member.invite_status === 'active' ? 'rgba(34,197,94,0.15)' : 'rgba(253,171,61,0.15)',
+              color:      member.invite_status === 'active' ? '#4ade80' : '#fdab3d',
             }}>
               {member.invite_status}
             </span>
@@ -729,7 +729,7 @@ export default function Team() {
         {fetchError && (
           <div style={{
             marginBottom: 20, padding: '10px 14px', borderRadius: 8,
-            background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', fontSize: 13,
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', fontSize: 13,
           }}>
             Failed to load team: {fetchError}.{' '}
             <button onClick={fetchMembers} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 700, padding: 0 }}>

@@ -125,7 +125,7 @@ export default function Sidebar() {
       <aside
         style={{
           width: 230, minWidth: 230,
-          background: 'var(--surface)',
+          background: 'var(--bg)',
           borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column',
         }}

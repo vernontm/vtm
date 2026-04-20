@@ -134,7 +134,7 @@ function PackageCard({ pkg }) {
       {/* Header */}
       <div
         onClick={() => setOpen(o => !o)}
-        style={{ padding: '18px 22px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, borderBottom: open ? '1px solid #e5e7ef' : 'none', background: open ? '#f9fafb' : '#fff' }}
+        style={{ padding: '18px 22px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, borderBottom: open ? '1px solid var(--border)' : 'none', background: open ? 'var(--surface-2)' : 'var(--surface)' }}
       >
         <div style={{ width: 48, height: 48, borderRadius: 12, background: pkg.accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: pkg.accent, flexShrink: 0 }}>
           <Icon size={24} />
@@ -225,7 +225,7 @@ export default function Products() {
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-          <Package size={24} color="#4a6cf7" />
+          <Package size={24} color="var(--orange)" />
           <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>Products & Services</div>
         </div>
         <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 0, marginBottom: 24, lineHeight: 1.6 }}>

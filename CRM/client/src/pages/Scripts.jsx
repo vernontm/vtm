@@ -7,13 +7,13 @@ import { useTeam } from '../context/TeamContext';
 const CATEGORIES = ['General', 'Cold Call', 'Follow Up', 'Discovery', 'Closing', 'Objection Handling', 'Other'];
 
 const CAT_COLORS = {
-  'General':             { bg: '#4a6cf722', fg: '#4a6cf7' },
+  'General':             { bg: 'rgba(74,108,247,0.15)', fg: '#7ba7ff' },
   'Cold Call':           { bg: '#784bd122', fg: '#784bd1' },
   'Follow Up':           { bg: '#fdab3d22', fg: '#d97706' },
   'Discovery':           { bg: '#00d1d122', fg: '#00a8a8' },
   'Closing':             { bg: '#22c55e22', fg: '#16a34a' },
   'Objection Handling':  { bg: '#ff5c5c22', fg: '#ff5c5c' },
-  'Other':               { bg: '#e5e7ef',   fg: '#8e8ea0' },
+  'Other':               { bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af' },
 };
 
 // ── Script Form (inline) ───────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
     const parts = text.split(/(\[[^\]]+\])/g);
     return parts.map((part, i) =>
       /^\[.+\]$/.test(part)
-        ? <mark key={i} style={{ background: '#fef3c7', color: '#92400e', borderRadius: 3, padding: '0 2px', fontWeight: 600 }}>{part}</mark>
+        ? <mark key={i} style={{ background: 'rgba(253,171,61,0.2)', color: '#fdab3d', borderRadius: 3, padding: '0 2px', fontWeight: 600 }}>{part}</mark>
         : part
     );
   }
@@ -117,9 +117,9 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
       {/* Row header */}
       <div
         onClick={() => setExpanded(e => !e)}
-        style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', transition: 'background 0.1s', background: expanded ? '#f9fafb' : '#fff' }}
-        onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = '#f9fafb'; }}
-        onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = '#fff'; }}
+        style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', transition: 'background 0.1s', background: expanded ? 'var(--surface-2)' : 'var(--surface)' }}
+        onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = 'var(--surface-2)'; }}
+        onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = 'var(--surface)'; }}
       >
         <span style={{ color: 'var(--muted)', flexShrink: 0 }}>
           {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
@@ -142,7 +142,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
           <button
             onClick={handleCopy}
             title="Copy script"
-            style={{ background: copied ? '#22c55e15' : '#f5f7fa', border: `1px solid ${copied ? '#22c55e40' : '#e5e7ef'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 9px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: copied ? '#16a34a' : '#6b7280', fontWeight: 600, transition: 'all 0.15s' }}
+            style={{ background: copied ? 'rgba(34,197,94,0.1)' : 'var(--surface-2)', border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 9px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: copied ? '#4ade80' : 'var(--muted)', fontWeight: 600, transition: 'all 0.15s' }}
           >
             {copied ? <Check size={11} /> : <Copy size={11} />}
             {copied ? 'Copied!' : 'Copy'}
@@ -159,7 +159,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
               <button
                 onClick={() => onDelete(script)}
                 title="Delete"
-                style={{ background: '#fff5f5', border: '1px solid #ff5c5c30', borderRadius: 6, cursor: 'pointer', padding: '4px 7px', display: 'flex', alignItems: 'center', color: '#ff5c5c' }}
+                style={{ background: 'rgba(255,92,92,0.1)', border: '1px solid rgba(255,92,92,0.2)', borderRadius: 6, cursor: 'pointer', padding: '4px 7px', display: 'flex', alignItems: 'center', color: '#ff5c5c' }}
               >
                 <Trash2 size={12} />
               </button>
@@ -181,7 +181,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
           <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               onClick={handleCopy}
-              style={{ padding: '6px 14px', borderRadius: 7, border: `1px solid ${copied ? '#22c55e40' : '#e5e7ef'}`, background: copied ? '#22c55e15' : '#fff', color: copied ? '#16a34a' : '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+              style={{ padding: '6px 14px', borderRadius: 7, border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, background: copied ? 'rgba(34,197,94,0.1)' : 'var(--surface-2)', color: copied ? '#4ade80' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? 'Copied to clipboard!' : 'Copy full script'}
@@ -250,7 +250,7 @@ export default function Scripts() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <FileText size={22} color="#4a6cf7" />
+          <FileText size={22} color="var(--orange)" />
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Call Scripts</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>Scripts for the team to use during calls</div>
@@ -271,7 +271,7 @@ export default function Scripts() {
       {showAdd && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
           <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Plus size={14} color="#4a6cf7" />
+            <Plus size={14} color="var(--orange)" />
             <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>New Script</span>
           </div>
           <ScriptForm onSave={handleAdd} onCancel={() => setShowAdd(false)} />
@@ -299,7 +299,7 @@ export default function Scripts() {
                 <button
                   key={cat}
                   onClick={() => setActiveTab(cat)}
-                  style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: active ? 700 : 500, cursor: 'pointer', border: `1px solid ${active ? '#4a6cf7' : '#e5e7ef'}`, background: active ? '#4a6cf7' : '#fff', color: active ? '#fff' : '#6b7280', transition: 'all 0.12s' }}
+                  style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: active ? 700 : 500, cursor: 'pointer', border: `1px solid ${active ? 'var(--orange)' : 'var(--border)'}`, background: active ? 'var(--orange)' : 'var(--surface-2)', color: active ? '#fff' : 'var(--muted)', transition: 'all 0.12s' }}
                 >
                   {cat}
                 </button>
@@ -335,8 +335,8 @@ export default function Scripts() {
           filtered.map(script =>
             editScript?.id === script.id ? (
               <div key={script.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <div style={{ padding: '12px 20px', background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Edit2 size={13} color="#4a6cf7" />
+                <div style={{ padding: '12px 20px', background: 'rgba(255,155,38,0.08)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Edit2 size={13} color="var(--orange)" />
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--orange)' }}>Editing: {script.title}</span>
                 </div>
                 <ScriptForm initial={editScript} onSave={handleEdit} onCancel={() => setEditScript(null)} />
@@ -356,8 +356,8 @@ export default function Scripts() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'var(--surface)', border: '1px solid #4a6cf7', color: 'var(--text)', padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Check size={14} color="#4a6cf7" /> {toast}
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'var(--surface)', border: '1px solid var(--orange)', color: 'var(--text)', padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Check size={14} color="var(--orange)" /> {toast}
         </div>
       )}
     </div>
