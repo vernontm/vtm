@@ -8,12 +8,12 @@ const CATEGORIES = ['General', 'Cold Call', 'Follow Up', 'Discovery', 'Closing',
 
 const CAT_COLORS = {
   'General':             { bg: 'rgba(74,108,247,0.15)', fg: '#7ba7ff' },
-  'Cold Call':           { bg: '#784bd122', fg: '#784bd1' },
-  'Follow Up':           { bg: '#fdab3d22', fg: '#d97706' },
-  'Discovery':           { bg: '#00d1d122', fg: '#00a8a8' },
-  'Closing':             { bg: '#22c55e22', fg: '#16a34a' },
-  'Objection Handling':  { bg: '#ff5c5c22', fg: '#ff5c5c' },
-  'Other':               { bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af' },
+  'Cold Call':           { bg: 'rgba(120,75,209,0.18)', fg: '#b38cff' },
+  'Follow Up':           { bg: 'rgba(253,171,61,0.18)', fg: '#fdab3d' },
+  'Discovery':           { bg: 'rgba(0,209,209,0.18)',  fg: '#4de3e3' },
+  'Closing':             { bg: 'rgba(34,197,94,0.18)',  fg: '#4ade80' },
+  'Objection Handling':  { bg: 'rgba(255,92,92,0.18)',  fg: '#ff8484' },
+  'Other':               { bg: 'rgba(107,114,128,0.18)', fg: '#b5bbc7' },
 };
 
 // ── Script Form (inline) ───────────────────────────────────────────────────────
