@@ -2109,19 +2109,19 @@ export default function Leads() {
                       onClick={e => e.stopPropagation()}
                     >
                       {lead.email && (
-                        <button title="Send email" onClick={() => handleEmail(lead)}
+                        <button aria-label="Send email" onClick={() => handleEmail(lead)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                           <Mail size={14} />
                         </button>
                       )}
                       {lead.phone && (
-                        <a href={`tel:${lead.phone}`} title="Call"
+                        <a href={`tel:${lead.phone}`} aria-label="Call"
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center', textDecoration: 'none' }}
                           onClick={e => e.stopPropagation()}>
                           <Phone size={14} />
                         </a>
                       )}
-                      <button title="Interested" onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'up' ? null : 'up')}
+                      <button aria-label="Interested" onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'up' ? null : 'up')}
                         style={{
                           background: lead.interest === 'up' ? 'rgba(74,108,247,0.12)' : 'none',
                           border: 'none', borderRadius: 5, cursor: 'pointer', padding: '5px 7px',
@@ -2130,7 +2130,7 @@ export default function Leads() {
                         }}>
                         <ThumbsUp size={13} />
                       </button>
-                      <button title="Not interested" onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'down' ? null : 'down')}
+                      <button aria-label="Not interested" onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'down' ? null : 'down')}
                         style={{
                           background: lead.interest === 'down' ? 'rgba(255,92,92,0.12)' : 'none',
                           border: 'none', borderRadius: 5, cursor: 'pointer', padding: '5px 7px',
@@ -2140,13 +2140,13 @@ export default function Leads() {
                         <ThumbsDown size={13} />
                       </button>
                       {lead.status !== 'Won' && (
-                        <button title="Move to Contacts" onClick={() => openConvert(lead)}
+                        <button aria-label="Move to Contacts" onClick={() => openConvert(lead)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                           <UserPlus size={14} />
                         </button>
                       )}
                       {lead.email && (
-                        <button title="Add to Email List" onClick={() => setEmailListLead(lead)}
+                        <button aria-label="Add to Email List" onClick={() => setEmailListLead(lead)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
                           onMouseEnter={e => { e.currentTarget.style.color = 'var(--orange)'; e.currentTarget.style.background = 'rgba(255,155,38,0.08)'; }}
                           onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
@@ -2154,7 +2154,7 @@ export default function Leads() {
                           <ListPlus size={14} />
                         </button>
                       )}
-                      <button title="Delete" onClick={() => openDelete(lead)}
+                      <button aria-label="Delete" onClick={() => openDelete(lead)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                         <Trash2 size={14} />
                       </button>
