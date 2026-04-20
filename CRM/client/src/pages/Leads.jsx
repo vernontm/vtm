@@ -4,6 +4,7 @@ import {
   Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check,
   ThumbsUp, ThumbsDown, Send, Clock, Download, Calendar as CalendarIcon,
   ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square, ListPlus, Loader, FileText,
+  PhoneCall, PhoneOff, Voicemail,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
 import { useUi, usePageActions } from '../context/UiContext';
@@ -1162,6 +1163,25 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
     await onFieldSave(lead.id, 'call_completed', next);
   };
 
+  const [showOutcomeMenu, setShowOutcomeMenu] = useState(false);
+
+  async function handleLogCall(outcome) {
+    const now = new Date().toISOString();
+    const updates = {
+      last_call_date: now,
+      last_call_outcome: outcome,
+      last_contact_date: now,
+      call_completed: true,
+    };
+    // Auto-move to Follow Up if they didn't answer (unless already terminal)
+    if (outcome === 'no_answer' && !['Won', 'Not Interested', 'Converted'].includes(draft.status)) {
+      updates.status = 'Follow Up';
+    }
+    Object.entries(updates).forEach(([k, v]) => set(k, v));
+    await onSaveAll(lead.id, updates);
+    setShowOutcomeMenu(false);
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
@@ -1231,6 +1251,56 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                   {isRec ? <Square size={11} fill="#fff" /> : <Mic size={12} />}
                   {isRec ? `Recording · ${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,'0')}` : recStatus === 'requesting' ? 'Starting…' : recStatus === 'saving' ? 'Saving…' : 'Record Call'}
                 </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowOutcomeMenu(v => !v)}
+                    title="Log a call outcome"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600,
+                      border: '1px solid var(--border)',
+                      background: 'var(--surface-3)', color: 'var(--text)',
+                    }}
+                  >
+                    <PhoneCall size={12} /> Log Call <ChevronDown size={11} />
+                  </button>
+                  {showOutcomeMenu && (
+                    <>
+                      <div
+                        onClick={() => setShowOutcomeMenu(false)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 10 }}
+                      />
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 11,
+                        background: 'var(--surface)', border: '1px solid var(--border)',
+                        borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                        minWidth: 180, overflow: 'hidden',
+                      }}>
+                        {[
+                          { key: 'answered',  label: 'Answered',    icon: PhoneCall,  color: '#4ade80' },
+                          { key: 'no_answer', label: 'No Answer',   icon: PhoneOff,   color: '#f87171' },
+                          { key: 'voicemail', label: 'Left Voicemail', icon: Voicemail, color: '#fdab3d' },
+                          { key: 'declined',  label: 'Declined',    icon: PhoneOff,   color: 'var(--muted)' },
+                        ].map(({ key, label, icon: Icon, color }) => (
+                          <button
+                            key={key}
+                            onClick={() => handleLogCall(key)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                              padding: '10px 14px', border: 'none', background: 'transparent',
+                              cursor: 'pointer', fontSize: 12, color: 'var(--text)', textAlign: 'left',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <Icon size={13} style={{ color }} /> {label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 {lead.email && (
                   <button
                     onClick={() => onAddToList(lead)}

@@ -141,7 +141,49 @@ router.get('/', (req, res) => {
       });
     });
 
-  // ── Rule 7: Active pipeline deal going cold ───────────────────────────────
+  // ── Rule 7a: Follow-up due (13 days since last call, status = Follow Up) ──
+  leads
+    .filter(l => l.status === 'Follow Up' && l.last_call_date)
+    .forEach(l => {
+      const age = daysAgo(l.last_call_date);
+      if (age < 13) return;
+      results.push({
+        id:          `followup_${l.id}_${l.last_call_date}`,
+        type:        'followup_due',
+        priority:    age >= 20 ? 'high' : 'medium',
+        title:       `Follow up with ${l.name}`,
+        message:     `Marked as "Follow Up" — ${age} days since last call. Reach out today.${l.company ? ` (${l.company})` : ''}`,
+        link:        '/leads',
+        entity_id:   l.id,
+        entity_name: l.name,
+        entity_type: 'lead',
+        days:        age,
+      });
+    });
+
+  // ── Rule 7b: No-answer retry (call went unanswered, circle back) ──────────
+  leads
+    .filter(l => l.last_call_outcome === 'no_answer' && l.last_call_date)
+    .filter(l => !['Won', 'Not Interested', 'Converted'].includes(l.status))
+    .forEach(l => {
+      const age = daysAgo(l.last_call_date);
+      if (age < 3) return; // let 3 days pass before nagging
+      if (age >= 13 && l.status === 'Follow Up') return; // avoid duplicate w/ Rule 7a
+      results.push({
+        id:          `no_answer_${l.id}_${l.last_call_date}`,
+        type:        'no_answer_retry',
+        priority:    age >= 7 ? 'high' : 'medium',
+        title:       `No answer — retry ${l.name}`,
+        message:     `${l.name}${l.company ? ` (${l.company})` : ''} didn't answer ${age}d ago. Try calling again.`,
+        link:        '/leads',
+        entity_id:   l.id,
+        entity_name: l.name,
+        entity_type: 'lead',
+        days:        age,
+      });
+    });
+
+  // ── Rule 8: Active pipeline deal going cold ───────────────────────────────
   deals
     .filter(d => ['Discovery', 'Proposal', 'Negotiation'].includes(d.stage))
     .forEach(d => {
