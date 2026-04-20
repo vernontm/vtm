@@ -36,12 +36,12 @@ function ScriptForm({ initial, onSave, onCancel }) {
 
   const inputStyle = {
     width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
-    color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef',
+    color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)',
     outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
   };
 
   return (
-    <div style={{ padding: '16px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7ef' }}>
+    <div style={{ padding: '16px 20px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
       {error && (
         <div style={{ marginBottom: 12, background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#ff5c5c' }}>
           {error}
@@ -49,18 +49,18 @@ function ScriptForm({ initial, onSave, onCancel }) {
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10, marginBottom: 10 }}>
         <div>
-          <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Script Title *</label>
+          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Script Title *</label>
           <input style={inputStyle} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Initial Cold Call Opener" autoFocus />
         </div>
         <div>
-          <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Category</label>
+          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Category</label>
           <select style={inputStyle} value={category} onChange={e => setCategory(e.target.value)}>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       </div>
       <div style={{ marginBottom: 12 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Script *</label>
+        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Script *</label>
         <textarea
           style={{ ...inputStyle, resize: 'vertical', minHeight: 160, lineHeight: 1.65 }}
           maxLength={10000}
@@ -72,14 +72,14 @@ function ScriptForm({ initial, onSave, onCancel }) {
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button
           onClick={onCancel}
-          style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#fff', color: '#6b7280', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
+          style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
-          style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}
+          style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--orange)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}
         >
           {saving ? <Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={13} />}
           {saving ? 'Saving…' : initial ? 'Save Changes' : 'Add Script'}
@@ -113,7 +113,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
   }
 
   return (
-    <div style={{ borderBottom: '1px solid #e5e7ef' }}>
+    <div style={{ borderBottom: '1px solid var(--border)' }}>
       {/* Row header */}
       <div
         onClick={() => setExpanded(e => !e)}
@@ -121,11 +121,11 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
         onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = '#f9fafb'; }}
         onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = '#fff'; }}
       >
-        <span style={{ color: '#8e8ea0', flexShrink: 0 }}>
+        <span style={{ color: 'var(--muted)', flexShrink: 0 }}>
           {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
         </span>
         <FileText size={15} color={catStyle.fg} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#1a1a2e', minWidth: 0 }}>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: 'var(--text)', minWidth: 0 }}>
           {script.title}
         </span>
         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 8, background: catStyle.bg, color: catStyle.fg, flexShrink: 0 }}>
@@ -133,7 +133,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
         </span>
         {/* Preview when collapsed */}
         {!expanded && (
-          <span style={{ fontSize: 12, color: '#8e8ea0', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
             {script.content.slice(0, 100)}{script.content.length > 100 ? '…' : ''}
           </span>
         )}
@@ -152,7 +152,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
               <button
                 onClick={() => onEdit(script)}
                 title="Edit"
-                style={{ background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', padding: '4px 7px', display: 'flex', alignItems: 'center', color: '#6b7280' }}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '4px 7px', display: 'flex', alignItems: 'center', color: 'var(--muted)' }}
               >
                 <Edit2 size={12} />
               </button>
@@ -170,10 +170,10 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
 
       {/* Expanded content */}
       {expanded && (
-        <div style={{ padding: '0 20px 20px 48px', background: '#f9fafb' }}>
+        <div style={{ padding: '0 20px 20px 48px', background: 'var(--surface-2)' }}>
           <pre style={{
-            margin: 0, padding: '16px', background: '#fff', border: '1px solid #e5e7ef',
-            borderRadius: 10, fontSize: 13, color: '#374151', lineHeight: 1.75,
+            margin: 0, padding: '16px', background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 10, fontSize: 13, color: 'var(--text)', lineHeight: 1.75,
             whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit',
           }}>
             {renderScript(script.content)}
@@ -186,7 +186,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? 'Copied to clipboard!' : 'Copy full script'}
             </button>
-            <span style={{ fontSize: 11, color: '#9ca3af' }}>{script.content.length} characters · {script.content.split(/\s+/).filter(Boolean).length} words</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{script.content.length} characters · {script.content.split(/\s+/).filter(Boolean).length} words</span>
           </div>
         </div>
       )}
@@ -245,15 +245,15 @@ export default function Scripts() {
   });
 
   return (
-    <div style={{ padding: 24, minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ padding: 24, minHeight: '100%', background: 'var(--bg)' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <FileText size={22} color="#4a6cf7" />
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>Call Scripts</div>
-            <div style={{ fontSize: 12, color: '#8e8ea0' }}>Scripts for the team to use during calls</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Call Scripts</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>Scripts for the team to use during calls</div>
           </div>
         </div>
         {isOwner && !showAdd && !editScript && (
@@ -269,24 +269,24 @@ export default function Scripts() {
 
       {/* Add Script form */}
       {showAdd && (
-        <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Plus size={14} color="#4a6cf7" />
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>New Script</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>New Script</span>
           </div>
           <ScriptForm onSave={handleAdd} onCancel={() => setShowAdd(false)} />
         </div>
       )}
 
       {/* Main card */}
-      <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
 
         {/* Toolbar */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 140 }}>
-            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input
-              style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 7, fontSize: 13, color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 7, fontSize: 13, color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }}
               placeholder="Search scripts…"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -306,18 +306,18 @@ export default function Scripts() {
               );
             })}
           </div>
-          <span style={{ fontSize: 12, color: '#9ca3af', flexShrink: 0 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0 }}>
             {filtered.length} script{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
 
         {/* Script rows */}
         {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, color: '#8e8ea0', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, color: 'var(--muted)', gap: 10 }}>
             <Loader size={17} style={{ animation: 'spin 0.7s linear infinite' }} /> Loading scripts…
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8e8ea0' }}>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)' }}>
             <FileText size={40} style={{ opacity: 0.2, marginBottom: 14 }} />
             <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
               {scripts.length === 0 ? 'No scripts yet' : 'No scripts match your search'}
@@ -325,7 +325,7 @@ export default function Scripts() {
             {isOwner && scripts.length === 0 && (
               <button
                 onClick={() => setShowAdd(true)}
-                style={{ marginTop: 12, padding: '9px 20px', borderRadius: 8, background: '#4a6cf7', color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                style={{ marginTop: 12, padding: '9px 20px', borderRadius: 8, background: 'var(--orange)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
               >
                 + Add First Script
               </button>
@@ -334,10 +334,10 @@ export default function Scripts() {
         ) : (
           filtered.map(script =>
             editScript?.id === script.id ? (
-              <div key={script.id} style={{ borderBottom: '1px solid #e5e7ef' }}>
-                <div style={{ padding: '12px 20px', background: '#f0f4ff', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div key={script.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <div style={{ padding: '12px 20px', background: '#f0f4ff', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Edit2 size={13} color="#4a6cf7" />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#4a6cf7' }}>Editing: {script.title}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--orange)' }}>Editing: {script.title}</span>
                 </div>
                 <ScriptForm initial={editScript} onSave={handleEdit} onCancel={() => setEditScript(null)} />
               </div>
@@ -356,7 +356,7 @@ export default function Scripts() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: '#fff', border: '1px solid #4a6cf7', color: '#1a1a2e', padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'var(--surface)', border: '1px solid #4a6cf7', color: 'var(--text)', padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Check size={14} color="#4a6cf7" /> {toast}
         </div>
       )}

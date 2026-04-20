@@ -343,8 +343,8 @@ export default function GlobalAgent() {
   return (
     <div style={{
       flexShrink: 0,
-      borderTop: '1px solid #e5e7ef',
-      background: '#fff',
+      borderTop: '1px solid var(--border)',
+      background: 'var(--surface)',
       display: 'flex',
       flexDirection: 'column',
       transition: 'height 0.25s ease',
@@ -367,7 +367,7 @@ export default function GlobalAgent() {
                   const icon = typeof q === 'object' ? q.icon : null;
                   return (
                     <button key={i} onClick={() => handleSend(label)} style={{
-                      padding: '4px 10px', borderRadius: 7, border: '1px solid #e5e7ef',
+                      padding: '4px 10px', borderRadius: 7, border: '1px solid var(--border)',
                       background: '#f8f9fc', fontSize: 11, color: '#5a5a6e', cursor: 'pointer',
                       fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4,
                     }}>
@@ -383,7 +383,7 @@ export default function GlobalAgent() {
               <div key={i} style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '75%', position: 'relative', display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <div style={{
                   padding: '6px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap',
-                  background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : msg.role === 'system' ? '#f0f2f8' : '#f8f9fc',
+                  background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : msg.role === 'system' ? 'var(--surface-3)' : '#f8f9fc',
                   color: msg.role === 'user' ? '#fff' : '#1a1a2e',
                   border: msg.role === 'user' ? 'none' : '1px solid #e5e7ef',
                 }}>
@@ -411,12 +411,12 @@ export default function GlobalAgent() {
 
             {/* Draft preview */}
             {draft && (
-              <div style={{ background: '#f8f9fc', border: '1px solid #e5e7ef', borderRadius: 10, padding: 10, maxWidth: '85%' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, letterSpacing: 0.5 }}>DRAFT</div>
+              <div style={{ background: '#f8f9fc', border: '1px solid var(--border)', borderRadius: 10, padding: 10, maxWidth: '85%' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, letterSpacing: 0.5 }}>DRAFT</div>
                 <div style={{ fontSize: 11, color: '#5a5a6e' }}><strong>To:</strong> {draft.to_name} &lt;{draft.to_email}&gt;</div>
                 <div style={{ fontSize: 11, color: '#5a5a6e', marginBottom: 4 }}><strong>Subject:</strong> {draft.subject}</div>
                 <div style={{
-                  fontSize: 11, color: '#1a1a2e', background: '#fff', border: '1px solid #e5e7ef',
+                  fontSize: 11, color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 6, padding: '6px 8px', lineHeight: 1.5, whiteSpace: 'pre-wrap',
                   maxHeight: 80, overflow: 'auto',
                 }}>
@@ -431,8 +431,8 @@ export default function GlobalAgent() {
                     {sending ? <><Loader size={10} className="spin" /> Sending...</> : <><Check size={11} /> Approve & Send</>}
                   </button>
                   <button onClick={handleEdit} style={{
-                    padding: '5px 10px', borderRadius: 6, border: '1px solid #e5e7ef', background: '#fff', cursor: 'pointer',
-                    color: '#4a6cf7', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3,
+                    padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer',
+                    color: 'var(--orange)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3,
                   }}>
                     <Edit3 size={10} /> Edit
                   </button>
@@ -450,8 +450,8 @@ export default function GlobalAgent() {
             {loading && (
               <div style={{
                 alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 10,
-                background: '#f8f9fc', border: '1px solid #e5e7ef',
-                fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 5,
+                background: '#f8f9fc', border: '1px solid var(--border)',
+                fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5,
               }}>
                 <Loader size={11} className="spin" />
                 {ctx.type === 'email' ? 'Generating email...' : ctx.type === 'content' ? 'Running across accounts...' : ctx.type === 'youtube' ? 'Working on YouTube...' : 'Thinking...'}
@@ -466,20 +466,20 @@ export default function GlobalAgent() {
       {(attachments.length > 0 || attachError) && (
         <div style={{
           display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
-          padding: '6px 14px 0', background: '#fff',
+          padding: '6px 14px 0', background: 'var(--surface)',
         }}>
           {attachments.map((a, i) => (
             <div key={i} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '3px 6px 3px 8px', borderRadius: 6,
-              background: '#eef2ff', border: '1px solid #dbe2ff',
-              fontSize: 10, color: '#4a6cf7', fontWeight: 600, maxWidth: 220,
+              background: 'var(--accent-dim)', border: '1px solid #dbe2ff',
+              fontSize: 10, color: 'var(--orange)', fontWeight: 600, maxWidth: 220,
             }}>
               {a.kind === 'image' ? <ImageIcon size={10} /> : <FileText size={10} />}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
               <button onClick={() => removeAttachment(i)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                color: '#4a6cf7', display: 'flex', alignItems: 'center',
+                color: 'var(--orange)', display: 'flex', alignItems: 'center',
               }}>
                 <X size={10} />
               </button>
@@ -495,11 +495,11 @@ export default function GlobalAgent() {
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 14px',
-        background: '#fff',
+        background: 'var(--surface)',
       }}>
         {/* Toggle expand */}
         <button onClick={() => setExpanded(!expanded)} style={{
-          background: 'none', border: 'none', cursor: 'pointer', color: '#4a6cf7',
+          background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)',
           display: 'flex', alignItems: 'center', padding: 2,
         }}>
           {expanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -508,7 +508,7 @@ export default function GlobalAgent() {
         {/* Agent icon + context label */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <MessageSquare size={14} color="#4a6cf7" />
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#4a6cf7' }}>{ctx.label}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--orange)' }}>{ctx.label}</span>
         </div>
 
         {/* Hidden file input */}
@@ -544,7 +544,7 @@ export default function GlobalAgent() {
           onFocus={() => { if (!expanded && messages.length === 0) setExpanded(true); }}
           placeholder={PLACEHOLDERS[ctx.type] || PLACEHOLDERS.general}
           style={{
-            flex: 1, padding: '7px 12px', borderRadius: 8, border: '1px solid #e5e7ef',
+            flex: 1, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)',
             fontSize: 12, outline: 'none', fontFamily: 'inherit', background: '#f8f9fc',
             minWidth: 0,
           }}
@@ -564,8 +564,8 @@ export default function GlobalAgent() {
         {/* Clear */}
         {messages.length > 0 && (
           <button onClick={clearChat} style={{
-            background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer',
-            color: '#8e8ea0', fontSize: 10, padding: '4px 8px', fontWeight: 500, flexShrink: 0,
+            background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer',
+            color: 'var(--muted)', fontSize: 10, padding: '4px 8px', fontWeight: 500, flexShrink: 0,
           }}>
             Clear
           </button>

@@ -100,12 +100,12 @@ export default function Contacts() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <div className="page-header">
         <div className="page-title">Contacts</div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input className="search-input" placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Contact</button>
@@ -122,9 +122,9 @@ export default function Contacts() {
       {/* ── Mobile card view ── */}
       <div className="mobile-cards">
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No contacts yet.</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts yet.</div>
         ) : filtered.map(contact => (
           <div key={contact.id} className="mobile-card">
             <div className="mobile-card-row primary">
@@ -140,13 +140,13 @@ export default function Contacts() {
             </div>
             {contact.email && (
               <div className="mobile-card-row">
-                <Mail size={12} style={{ color: '#4a6cf7', flexShrink: 0 }} />
+                <Mail size={12} style={{ color: 'var(--orange)', flexShrink: 0 }} />
                 <span className="private-value">{contact.email}</span>
               </div>
             )}
             {contact.phone && (
               <div className="mobile-card-row">
-                <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />
+                <Phone size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />
                 <span className="private-value">{contact.phone}</span>
               </div>
             )}
@@ -160,13 +160,13 @@ export default function Contacts() {
             <div className="mobile-card-actions">
               {contact.email && (
                 <a href={gmailLink(contact.email)} target="_blank" rel="noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#4a6cf7', textDecoration: 'none' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', textDecoration: 'none' }}>
                   <Mail size={12} /> Email
                 </a>
               )}
               {contact.phone && (
                 <a href={`tel:${contact.phone}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#8e8ea0', textDecoration: 'none' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>
                   <Phone size={12} /> Call
                 </a>
               )}
@@ -196,9 +196,9 @@ export default function Contacts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No contacts yet.</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts yet.</td></tr>
             ) : filtered.map(contact => (
               <tr key={contact.id} style={{ background: selectedIds.has(contact.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
                 <td>
@@ -227,7 +227,7 @@ export default function Contacts() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {contact.email && (
                       <a href={gmailLink(contact.email)} target="_blank" rel="noreferrer" title="Compose in Gmail" style={{ display: 'flex', flexShrink: 0 }}>
-                        <Mail size={13} style={{ color: '#4a6cf7' }} />
+                        <Mail size={13} style={{ color: 'var(--orange)' }} />
                       </a>
                     )}
                     <CopyCell value={contact.email}>
@@ -237,7 +237,7 @@ export default function Contacts() {
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {contact.phone && <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />}
+                    {contact.phone && <Phone size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
                     <CopyCell value={contact.phone}>
                       <InlineEdit value={contact.phone} type="tel" onSave={val => handleFieldSave(contact.id, 'phone', val)} placeholder="Add phone" privacy="phone" />
                     </CopyCell>
@@ -245,7 +245,7 @@ export default function Contacts() {
                 </td>
                 <td><InlineEdit value={contact.company} onSave={val => handleFieldSave(contact.id, 'company', val)} placeholder="Company" /></td>
                 <td><InlineEdit value={contact.title} onSave={val => handleFieldSave(contact.id, 'title', val)} placeholder="Title" /></td>
-                <td style={{ color: '#8e8ea0', fontSize: 12, paddingLeft: 8 }}>
+                <td style={{ color: 'var(--muted)', fontSize: 12, paddingLeft: 8 }}>
                   {contact.created_at ? new Date(contact.created_at).toLocaleDateString() : '—'}
                 </td>
                 <td>
@@ -307,7 +307,7 @@ export default function Contacts() {
       )}
       {modal === 'delete' && (
         <Modal title="Delete Contact" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong>? This cannot be undone.</p>
+          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong>? This cannot be undone.</p>
         </Modal>
       )}
     </div>

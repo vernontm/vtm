@@ -26,7 +26,7 @@ const LABEL_CONFIG = {
   favorite:    { icon: Star,          color: '#f5a623', label: 'Favorite' },
   'follow-up': { icon: Flag,          color: '#784bd1', label: 'Follow Up' },
   important:   { icon: AlertTriangle, color: '#ff5c5c', label: 'Important' },
-  spam:        { icon: Ban,           color: '#8e8ea0', label: 'Spam' },
+  spam:        { icon: Ban,           color: 'var(--muted)', label: 'Spam' },
 };
 
 /* ── linkify + wrap helper (renders images/videos/YouTube inline) ─────────── */

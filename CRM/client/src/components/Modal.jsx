@@ -24,7 +24,7 @@ export default function Modal({ title, onClose, children, onSubmit, submitLabel 
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
       <div className="modal-content">
         <div className="flex items-center justify-between mb-5">
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{title}</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{title}</h2>
           <button onClick={onClose} disabled={submitting} className="btn-ghost" style={{ padding: '4px', opacity: submitting ? 0.5 : 1 }}>
             <X size={18} />
           </button>

@@ -230,7 +230,7 @@ export default function Sidebar() {
                   <Icon size={15} />
                   <span style={{ flex: 1 }}>{label}</span>
                   {to === '/email' && emailCount > 0 && (
-                    <span style={{ background: 'var(--orange)', color: '#111', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
+                    <span style={{ background: 'var(--orange)', color: 'var(--text)', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
                       {emailCount}
                     </span>
                   )}

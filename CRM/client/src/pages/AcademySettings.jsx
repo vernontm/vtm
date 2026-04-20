@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Save, ToggleLeft, ToggleRight, Info, Loader2, Check } from 'lucide-react';
 import { getAcademySettings, updateAcademySetting } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
-const labelStyle = { fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' };
-const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' };
+const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'block' };
+const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' };
 const hintStyle = { fontSize: 11, color: '#7a7f9a', marginTop: 4, marginBottom: 0, lineHeight: 1.4 };
 
 const booleanKeys = ['community_enabled', 'messaging_enabled'];
@@ -91,7 +91,7 @@ export default function AcademySettings() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load settings</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadSettings} style={{ marginTop: 12, padding: '8px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadSettings} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -117,7 +117,7 @@ export default function AcademySettings() {
         <div>
           {/* Video Settings */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a2e', marginBottom: 16 }}>Video Settings</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>Video Settings</div>
             <SettingInput
               settingKey="still_watching_interval"
               meta={settingMeta.still_watching_interval}
@@ -131,7 +131,7 @@ export default function AcademySettings() {
 
           {/* Stripe */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a2e', marginBottom: 16 }}>Stripe Integration</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>Stripe Integration</div>
             <SettingInput
               settingKey="stripe_price_id"
               meta={settingMeta.stripe_price_id}
@@ -145,7 +145,7 @@ export default function AcademySettings() {
 
           {/* Welcome Message */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a2e', marginBottom: 16 }}>Welcome Message</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>Welcome Message</div>
             <SettingInput
               settingKey="welcome_message"
               meta={settingMeta.welcome_message}
@@ -161,14 +161,14 @@ export default function AcademySettings() {
         <div>
           {/* Feature Toggles */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a2e', marginBottom: 8 }}>Feature Toggles</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>Feature Toggles</div>
             {booleanKeys.map(key => {
               const meta = settingMeta[key];
               const isOn = isTruthy(settings[key]);
               return (
                 <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid #f0f1f5' }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{meta.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{meta.label}</div>
                     <div style={{ fontSize: 12, color: '#7a7f9a', marginTop: 2 }}>{meta.hint}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -189,7 +189,7 @@ export default function AcademySettings() {
           {/* Extra settings from API */}
           {extraKeys.length > 0 && (
             <div style={cardStyle}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a2e', marginBottom: 16 }}>Other Settings</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>Other Settings</div>
               {extraKeys.map(key => (
                 <SettingInput
                   key={key}
@@ -208,7 +208,7 @@ export default function AcademySettings() {
           <div style={{ ...cardStyle, background: '#4a6cf708' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Info size={16} color="#4a6cf7" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>Configuration Note</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Configuration Note</span>
             </div>
             <p style={{ fontSize: 12, color: '#7a7f9a', margin: 0, lineHeight: 1.6 }}>
               Changes to settings will apply immediately across the academy. Disabling features will hide them from the student portal but will not delete any data.
@@ -221,7 +221,7 @@ export default function AcademySettings() {
 }
 
 function SettingInput({ settingKey, meta, value, onChange, onSave, saving, saved }) {
-  const btnSave = { padding: '8px 14px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8 };
+  const btnSave = { padding: '8px 14px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8 };
 
   return (
     <div style={{ marginBottom: 16 }}>

@@ -155,11 +155,11 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
   );
 
   return (
-    <div style={{ border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: 'var(--surface)' }}>
       {/* Toolbar */}
       <div style={{
         display: 'flex', alignItems: 'center', padding: '6px 8px',
-        borderBottom: '1px solid #e5e7ef', background: '#fafbfd',
+        borderBottom: '1px solid var(--border)', background: '#fafbfd',
         flexWrap: 'wrap', gap: 2,
       }}>
         {mode === 'rich' && (
@@ -227,7 +227,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
             padding: '18px 24px',
             fontSize: 15,
             lineHeight: 1.6,
-            color: '#1a1a2e',
+            color: 'var(--text)',
             outline: 'none',
             overflowY: 'auto',
           }}
@@ -246,7 +246,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
             fontSize: 13,
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
             lineHeight: 1.5,
-            color: '#1a1a2e',
+            color: 'var(--text)',
             border: 'none',
             outline: 'none',
             resize: 'vertical',
@@ -257,10 +257,10 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
       )}
       {mode === 'preview' && (
         <div
-          style={{ minHeight: height, padding: 24, background: '#f5f7fa', overflowY: 'auto' }}
+          style={{ minHeight: height, padding: 24, background: 'var(--bg)', overflowY: 'auto' }}
         >
           <div
-            style={{ maxWidth: 600, margin: '0 auto', background: '#fff', padding: '32px 28px', borderRadius: 12, boxShadow: '0 2px 8px rgba(10,20,40,0.06)' }}
+            style={{ maxWidth: 600, margin: '0 auto', background: 'var(--surface)', padding: '32px 28px', borderRadius: 12, boxShadow: '0 2px 8px rgba(10,20,40,0.06)' }}
             dangerouslySetInnerHTML={{ __html: sanitize(htmlSource) || '<p style="color:#b0b0c0">Nothing to preview yet.</p>' }}
           />
         </div>

@@ -60,7 +60,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
     <div
       onClick={onClick}
       style={{
-        background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12,
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
         overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s',
         display: 'flex', flexDirection: 'column',
       }}
@@ -115,14 +115,14 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
       {/* Info */}
       <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.3, flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3, flex: 1 }}>
             {video.title}
           </div>
           {isOwner && (
             <div style={{ display: 'flex', gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => onEdit(video)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, color: '#8e8ea0', borderRadius: 4 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, color: 'var(--muted)', borderRadius: 4 }}
                 title="Edit"
               >
                 <Edit2 size={12} />
@@ -138,7 +138,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
           )}
         </div>
         {video.description && (
-          <div style={{ fontSize: 11, color: '#8e8ea0', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {video.description}
           </div>
         )}
@@ -147,7 +147,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
             {video.category}
           </span>
           {pct > 0 && !completed && (
-            <span style={{ fontSize: 10, color: '#8e8ea0' }}>{pct}% watched</span>
+            <span style={{ fontSize: 10, color: 'var(--muted)' }}>{pct}% watched</span>
           )}
           {completed && (
             <span style={{ fontSize: 10, color: '#22c55e', fontWeight: 700 }}>✓ Completed</span>
@@ -271,7 +271,7 @@ function PlayerModal({ video, onClose, onProgressSave }) {
               )}
             </div>
             {video.description && (
-              <p style={{ fontSize: 13, color: '#8e8ea0', lineHeight: 1.6, marginTop: 10 }}>{video.description}</p>
+              <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, marginTop: 10 }}>{video.description}</p>
             )}
           </div>
         </div>
@@ -392,7 +392,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
 
   const inputStyle = {
     width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
-    color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef',
+    color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)',
     outline: 'none', boxSizing: 'border-box',
   };
 
@@ -401,14 +401,14 @@ function VideoFormModal({ existing, onClose, onSave }) {
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 520, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 520, overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Upload size={16} color="#4a6cf7" />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{isEdit ? 'Edit Video' : 'Upload Training Video'}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{isEdit ? 'Edit Video' : 'Upload Training Video'}</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={17} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={17} /></button>
         </div>
 
         {/* Form */}
@@ -420,12 +420,12 @@ function VideoFormModal({ existing, onClose, onSave }) {
           )}
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Title *</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Title *</label>
             <input style={inputStyle} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. How to use the CRM" autoFocus />
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Description</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Description</label>
             <textarea
               style={{ ...inputStyle, resize: 'vertical', minHeight: 70 }}
               value={description}
@@ -435,7 +435,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Category</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Category</label>
             <select style={inputStyle} value={category} onChange={e => setCategory(e.target.value)}>
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -445,8 +445,8 @@ function VideoFormModal({ existing, onClose, onSave }) {
             <>
               {/* URL input — primary recommended option */}
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>
-                  YouTube / Vimeo / Direct URL <span style={{ fontWeight: 400, color: '#9ca3af' }}>(recommended)</span>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>
+                  YouTube / Vimeo / Direct URL <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(recommended)</span>
                 </label>
                 <input
                   style={inputStyle}
@@ -455,7 +455,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
                   placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
                   autoFocus
                 />
-                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 5, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.5 }}>
                   💡 Upload the video to YouTube (unlisted) or Vimeo, then paste the link here. This gives the best playback experience and no file size limits.
                 </div>
 
@@ -465,7 +465,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
                     <img
                       src={previewThumb}
                       alt="Thumbnail preview"
-                      style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7ef', display: 'block' }}
+                      style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', display: 'block' }}
                       onError={e => { e.currentTarget.style.display = 'none'; }}
                     />
                   </div>
@@ -473,7 +473,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
 
                 {/* Manual thumbnail URL override */}
                 <div style={{ marginTop: 10 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
                     Custom thumbnail URL <span style={{ fontWeight: 400 }}>(optional — overrides auto-detected)</span>
                   </label>
                   <input
@@ -488,7 +488,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
               {/* Divider */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
-                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>OR UPLOAD A SMALL FILE</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>OR UPLOAD A SMALL FILE</span>
                 <div style={{ flex: 1, height: 1, background: '#e5e7ef' }} />
               </div>
 
@@ -506,7 +506,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
                   style={{
                     width: '100%', padding: '18px 16px', borderRadius: 10, border: '2px dashed #d1d5db',
                     background: file ? '#4a6cf710' : '#f9fafb', cursor: 'pointer', display: 'flex',
-                    flexDirection: 'column', alignItems: 'center', gap: 6, color: '#6b7280',
+                    flexDirection: 'column', alignItems: 'center', gap: 6, color: 'var(--muted)',
                     borderColor: file ? '#4a6cf7' : '#d1d5db', transition: 'all 0.15s',
                   }}
                 >
@@ -515,7 +515,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
                     {file ? file.name : 'Click to choose a video file'}
                   </span>
                   {file && (
-                    <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                       {(file.size / 1024 / 1024).toFixed(1)} MB
                     </span>
                   )}
@@ -532,11 +532,11 @@ function VideoFormModal({ existing, onClose, onSave }) {
           {uploading && uploadPct > 0 && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 11, color: '#6b7280' }}>Uploading…</span>
-                <span style={{ fontSize: 11, color: '#4a6cf7', fontWeight: 700 }}>{uploadPct}%</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Uploading…</span>
+                <span style={{ fontSize: 11, color: 'var(--orange)', fontWeight: 700 }}>{uploadPct}%</span>
               </div>
               <div style={{ height: 6, background: '#e5e7ef', borderRadius: 3 }}>
-                <div style={{ height: '100%', width: `${uploadPct}%`, background: '#4a6cf7', borderRadius: 3, transition: 'width 0.2s' }} />
+                <div style={{ height: '100%', width: `${uploadPct}%`, background: 'var(--orange)', borderRadius: 3, transition: 'width 0.2s' }} />
               </div>
             </div>
           )}
@@ -544,13 +544,13 @@ function VideoFormModal({ existing, onClose, onSave }) {
 
         {/* Footer */}
         <div style={{ padding: '0 20px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#fff', color: '#6b7280', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={uploading}
-            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 13, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.7 : 1 }}
+            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--orange)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.7 : 1 }}
           >
             {uploading ? <><Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Uploading…</> : isEdit ? 'Save Changes' : 'Add Video'}
           </button>
@@ -623,15 +623,15 @@ export default function Training() {
   const inProgressCount = videos.filter(v => v.progress?.watched_seconds > 0 && !v.progress?.completed).length;
 
   return (
-    <div style={{ padding: 24, minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ padding: 24, minHeight: '100%', background: 'var(--bg)' }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <BookOpen size={22} color="#4a6cf7" />
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>Training</div>
-            <div style={{ fontSize: 12, color: '#8e8ea0' }}>Internal video library for the team</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Training</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>Internal video library for the team</div>
           </div>
         </div>
         {isOwner && (
@@ -649,26 +649,26 @@ export default function Training() {
       {totalVideos > 0 && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           {[
-            { label: 'Total Videos', value: totalVideos, color: '#4a6cf7' },
+            { label: 'Total Videos', value: totalVideos, color: 'var(--orange)' },
             { label: 'Completed',    value: completedCount, color: '#22c55e' },
             { label: 'In Progress',  value: inProgressCount, color: '#fdab3d' },
           ].map(({ label, value, color }) => (
-            <div key={label} style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 10, padding: '12px 18px', flex: '1 1 120px', minWidth: 120 }}>
+            <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 18px', flex: '1 1 120px', minWidth: 120 }}>
               <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
-              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
       )}
 
       {/* ── Search + Category tabs ── */}
-      <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, marginBottom: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Search */}
           <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input
-              style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 7, fontSize: 13, color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 7, fontSize: 13, color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }}
               placeholder="Search videos…"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -699,11 +699,11 @@ export default function Training() {
         {/* ── Video grid ── */}
         <div style={{ padding: 16 }}>
           {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: '#8e8ea0', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: 'var(--muted)', gap: 10 }}>
               <Loader size={18} style={{ animation: 'spin 0.7s linear infinite' }} /> Loading videos…
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8e8ea0' }}>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)' }}>
               <Video size={40} style={{ opacity: 0.2, marginBottom: 14 }} />
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
                 {totalVideos === 0 ? 'No training videos yet' : 'No videos match your search'}
@@ -711,7 +711,7 @@ export default function Training() {
               {isOwner && totalVideos === 0 && (
                 <button
                   onClick={() => setShowForm(true)}
-                  style={{ marginTop: 12, padding: '9px 20px', borderRadius: 8, background: '#4a6cf7', color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                  style={{ marginTop: 12, padding: '9px 20px', borderRadius: 8, background: 'var(--orange)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
                 >
                   + Upload First Video
                 </button>
@@ -756,7 +756,7 @@ export default function Training() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
-          background: '#fff', border: '1px solid #4a6cf7', color: '#1a1a2e',
+          background: 'var(--surface)', border: '1px solid #4a6cf7', color: 'var(--text)',
           padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>

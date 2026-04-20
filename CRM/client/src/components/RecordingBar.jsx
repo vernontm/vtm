@@ -18,7 +18,7 @@ export default function RecordingBar() {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9000,
-      background: isSaving ? '#1a1a2e' : '#C00000',
+      background: isSaving ? '#1a1a2e' : '#f87171',
       color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 20px', height: 44,
@@ -30,7 +30,7 @@ export default function RecordingBar() {
         {!isSaving && (
           <span style={{
             display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-            background: '#fff',
+            background: 'var(--surface)',
             boxShadow: '0 0 0 0 rgba(255,255,255,0.6)',
             animation: 'recPulse 1.2s infinite',
           }} />

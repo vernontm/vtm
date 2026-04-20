@@ -127,10 +127,10 @@ export default function Blog() {
   // ── Editor View ──────────────────────────────────────────────────────────────
   if (editing) {
     return (
-      <div style={{ padding: '24px 32px', maxWidth: 900, color: '#1a1a2e' }}>
+      <div style={{ padding: '24px 32px', maxWidth: 900, color: 'var(--text)' }}>
         {/* Header */}
         <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Inter, sans-serif' }}>
+          <h1 style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--font-display)' }}>
             {editing.id ? 'Edit Post' : 'New Post'}
           </h1>
           <div className="flex items-center gap-2">
@@ -191,7 +191,7 @@ export default function Blog() {
               onChange={e => set('content', e.target.value)}
               placeholder="Write your post content (HTML supported)…"
               rows={12}
-              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'Inter, sans-serif', fontSize: 12 }}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--font-display)', fontSize: 12 }}
             />
           </div>
 
@@ -204,7 +204,7 @@ export default function Blog() {
                 <input type="file" accept="image/*,video/*" onChange={handleUpload} style={{ display: 'none' }} />
               </label>
               {editing.media_url && (
-                <div className="flex items-center gap-2" style={{ fontSize: 12, color: '#8e8ea0' }}>
+                <div className="flex items-center gap-2" style={{ fontSize: 12, color: 'var(--muted)' }}>
                   {editing.media_type === 'video' ? <Video size={14} /> : <Image size={14} />}
                   <span style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {editing.media_url.split('/').pop()}
@@ -216,7 +216,7 @@ export default function Blog() {
               )}
             </div>
             {editing.media_url && editing.media_type === 'image' && (
-              <img src={editing.media_url} alt="" style={{ maxWidth: 300, maxHeight: 200, borderRadius: 8, marginTop: 8, border: '1px solid #e5e7ef' }} />
+              <img src={editing.media_url} alt="" style={{ maxWidth: 300, maxHeight: 200, borderRadius: 8, marginTop: 8, border: '1px solid var(--border)' }} />
             )}
           </div>
 
@@ -241,7 +241,7 @@ export default function Blog() {
               onChange={e => set('code_block', e.target.value)}
               placeholder="Paste code here…"
               rows={6}
-              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'Inter, sans-serif', fontSize: 12 }}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--font-display)', fontSize: 12 }}
             />
           </div>
 
@@ -254,12 +254,12 @@ export default function Blog() {
                 <input type="file" onChange={handleFileUpload} style={{ display: 'none' }} />
               </label>
               {editing.file_url && (
-                <div className="flex items-center gap-2" style={{ fontSize: 12, color: '#8e8ea0' }}>
+                <div className="flex items-center gap-2" style={{ fontSize: 12, color: 'var(--muted)' }}>
                   <Paperclip size={14} />
                   <span style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {editing.file_name || editing.file_url.split('/').pop()}
                   </span>
-                  <a href={editing.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#4a6cf7', display: 'flex' }}>
+                  <a href={editing.file_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--orange)', display: 'flex' }}>
                     <Download size={14} />
                   </a>
                   <button onClick={() => { set('file_url', ''); set('file_name', ''); }} style={{ color: '#ff5c5c', background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -275,11 +275,11 @@ export default function Blog() {
 
           {/* Toggles */}
           <div className="flex items-center gap-6" style={{ marginTop: 4 }}>
-            <label className="flex items-center gap-2" style={{ cursor: 'pointer', fontSize: 13, color: '#1a1a2e' }}>
+            <label className="flex items-center gap-2" style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
               <input type="checkbox" checked={editing.published} onChange={e => set('published', e.target.checked)} style={{ accentColor: '#4a6cf7' }} />
               Published
             </label>
-            <label className="flex items-center gap-2" style={{ cursor: 'pointer', fontSize: 13, color: '#1a1a2e' }}>
+            <label className="flex items-center gap-2" style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
               <input type="checkbox" checked={editing.gated} onChange={e => set('gated', e.target.checked)} style={{ accentColor: '#4a6cf7' }} />
               Gated (require email)
             </label>
@@ -291,12 +291,12 @@ export default function Blog() {
 
   // ── List View ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '24px 32px', color: '#1a1a2e' }}>
+    <div style={{ padding: '24px 32px', color: 'var(--text)' }}>
       {/* Header */}
       <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Inter, sans-serif' }}>Blog Posts</h1>
-          <p style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2, fontFamily: 'Inter, sans-serif' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)' }}>Blog Posts</h1>
+          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, fontFamily: 'var(--font-display)' }}>
             {posts.length} post{posts.length !== 1 ? 's' : ''} · {posts.filter(p => p.published).length} published
           </p>
         </div>
@@ -308,7 +308,7 @@ export default function Blog() {
       {/* Filters */}
       <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -325,7 +325,7 @@ export default function Blog() {
               background: filter === f ? 'rgba(74,108,247,0.15)' : 'transparent',
               color: filter === f ? '#4a6cf7' : '#8e8ea0',
               border: filter === f ? '1px solid rgba(74,108,247,0.3)' : '1px solid transparent',
-              fontFamily: 'Inter, sans-serif',
+              fontFamily: 'var(--font-display)',
             }}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -334,7 +334,7 @@ export default function Blog() {
       </div>
 
       {loadError && (
-        <div style={{ margin: '12px 0', padding: '12px 16px', background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, fontSize: 13, color: '#ff5c5c', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ margin: '12px 0', padding: '12px 16px', background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, fontSize: 13, color: '#ff5c5c', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-display)' }}>
           <span>Couldn't load blog posts: {loadError}</span>
           <button onClick={load} style={{ padding: '6px 14px', borderRadius: 6, background: '#ff5c5c', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Retry</button>
         </div>
@@ -342,14 +342,14 @@ export default function Blog() {
 
       {/* Loading */}
       {loading && (
-        <div style={{ textAlign: 'center', padding: 40, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>Loading…</div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>Loading…</div>
       )}
 
       {/* Empty */}
       {!loading && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: 60 }}>
           <FileText size={40} style={{ color: '#e5e7ef', margin: '0 auto 12px' }} />
-          <p style={{ color: '#8e8ea0', fontSize: 14 }}>No posts found</p>
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>No posts found</p>
           <button onClick={handleNew} style={{ ...btnStyle('rgba(74,108,247,0.15)', '#4a6cf7'), marginTop: 12 }}>
             <Plus size={14} /> Create your first post
           </button>
@@ -363,7 +363,7 @@ export default function Blog() {
             <div
               key={post.id}
               style={{
-                background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12, padding: 16,
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16,
                 cursor: 'pointer', transition: 'border-color 0.15s',
               }}
               onClick={() => handleEdit(post)}
@@ -377,8 +377,8 @@ export default function Blog() {
                   {post.category && (
                     <span style={{
                       fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                      background: 'rgba(74,108,247,0.1)', color: '#4a6cf7',
-                      fontFamily: 'Inter, sans-serif',
+                      background: 'rgba(255,155,38,0.1)', color: 'var(--orange)',
+                      fontFamily: 'var(--font-display)',
                     }}>
                       {post.category}
                     </span>
@@ -388,20 +388,20 @@ export default function Blog() {
                   fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
                   background: post.published ? 'rgba(34,197,94,0.1)' : 'rgba(122,120,112,0.1)',
                   color: post.published ? '#22c55e' : '#8e8ea0',
-                  fontFamily: 'Inter, sans-serif',
+                  fontFamily: 'var(--font-display)',
                 }}>
                   {post.published ? 'Published' : 'Draft'}
                 </span>
               </div>
 
               {/* Title */}
-              <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, lineHeight: 1.3, fontFamily: 'Inter, sans-serif' }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, lineHeight: 1.3, fontFamily: 'var(--font-display)' }}>
                 {post.title || 'Untitled'}
               </h3>
 
               {/* Description */}
               {post.description && (
-                <p style={{ fontSize: 12, color: '#8e8ea0', lineHeight: 1.4, marginBottom: 8,
+                <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4, marginBottom: 8,
                   overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                 }}>
                   {post.description}
@@ -410,12 +410,12 @@ export default function Blog() {
 
               {/* Media preview */}
               {post.media_url && post.media_type === 'image' && (
-                <img src={post.media_url} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, marginBottom: 8, border: '1px solid #e5e7ef' }} />
+                <img src={post.media_url} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, marginBottom: 8, border: '1px solid var(--border)' }} />
               )}
 
               {/* Footer */}
               <div className="flex items-center justify-between" style={{ marginTop: 8 }}>
-                <span style={{ fontSize: 10, color: '#8e8ea0', fontFamily: 'Inter, sans-serif' }}>
+                <span style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>
                   {post.created_at ? new Date(post.created_at).toLocaleDateString() : ''}
                 </span>
                 <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
@@ -445,13 +445,13 @@ export default function Blog() {
 // ── Shared styles ────────────────────────────────────────────────────────────
 const inputStyle = {
   width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13,
-  background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e',
-  outline: 'none', fontFamily: 'Inter, sans-serif',
+  background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)',
+  outline: 'none', fontFamily: 'var(--font-display)',
 };
 
 const labelStyle = {
-  display: 'block', fontSize: 11, fontWeight: 600, color: '#8e8ea0',
-  marginBottom: 4, fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em',
+  display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+  marginBottom: 4, fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '0.05em',
 };
 
 function btnStyle(bg, color) {
@@ -459,11 +459,11 @@ function btnStyle(bg, color) {
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
     background: bg, color: color, border: '1px solid ' + (color === '#4a6cf7' ? 'rgba(74,108,247,0.3)' : '#e5e7ef'),
-    cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+    cursor: 'pointer', fontFamily: 'var(--font-display)',
   };
 }
 
 const iconBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-  color: '#8e8ea0', transition: 'color 0.15s',
+  color: 'var(--muted)', transition: 'color 0.15s',
 };

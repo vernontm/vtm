@@ -9,7 +9,7 @@ function ActionBtn({ icon, label, onClick, color }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        background: hov ? '#f0f2f8' : 'none',
+        background: hov ? 'var(--surface-3)' : 'none',
         border: 'none',
         cursor: 'pointer',
         color: color || '#8e8ea0',
@@ -67,8 +67,8 @@ export default function SelectionBar({
       bottom: 24,
       left: '50%',
       transform: 'translateX(-50%)',
-      background: '#ffffff',
-      border: '1px solid #e5e7ef',
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
       borderRadius: 14,
       padding: '8px 14px',
       display: 'flex',
@@ -79,13 +79,13 @@ export default function SelectionBar({
       whiteSpace: 'nowrap',
     }}>
       <div style={{
-        background: '#4a6cf7',
+        background: 'var(--orange)',
         borderRadius: '50%',
         width: 26, height: 26,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 12, fontWeight: 700, color: '#ffffff', flexShrink: 0,
       }}>{count}</div>
-      <span style={{ color: '#8e8ea0', fontSize: 13, paddingLeft: 6, paddingRight: 10 }}>
+      <span style={{ color: 'var(--muted)', fontSize: 13, paddingLeft: 6, paddingRight: 10 }}>
         {count === 1 ? '1 item selected' : `${count} items selected`}
       </span>
 
@@ -97,7 +97,7 @@ export default function SelectionBar({
           {showMoveTo && (
             <div style={{
               position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
-              background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
               overflow: 'hidden', minWidth: 160, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
             }}>
               {moveToOptions.map(opt => (
@@ -107,9 +107,9 @@ export default function SelectionBar({
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
                     padding: '8px 14px', background: 'none', border: 'none',
-                    color: '#1a1a2e', fontSize: 13, cursor: 'pointer',
+                    color: 'var(--text)', fontSize: 13, cursor: 'pointer',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f0f2f8'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
                   {opt.label}
@@ -137,7 +137,7 @@ export default function SelectionBar({
           color: '#b0b0c0', padding: '4px 6px', borderRadius: 6,
           display: 'flex', alignItems: 'center',
         }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#1a1a2e'; e.currentTarget.style.background = '#f0f2f8'; }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#1a1a2e'; e.currentTarget.style.background = 'var(--surface-3)'; }}
         onMouseLeave={e => { e.currentTarget.style.color = '#b0b0c0'; e.currentTarget.style.background = 'none'; }}
         title="Clear selection"
       >

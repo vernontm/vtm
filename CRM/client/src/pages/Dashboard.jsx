@@ -31,7 +31,7 @@ function fmtDate(iso) {
 
 function Card({ children, style }) {
   return (
-    <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, padding: '20px 22px', ...style }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', ...style }}>
       {children}
     </div>
   );
@@ -44,10 +44,10 @@ function CardHeader({ icon: Icon, title, color = '#4a6cf7', linkTo, linkLabel })
         <div style={{ width: 30, height: 30, borderRadius: 8, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={15} color={color} />
         </div>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{title}</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{title}</span>
       </div>
       {linkTo && (
-        <Link to={linkTo} style={{ fontSize: 12, color: '#4a6cf7', textDecoration: 'none', fontWeight: 600 }}>
+        <Link to={linkTo} style={{ fontSize: 12, color: 'var(--orange)', textDecoration: 'none', fontWeight: 600 }}>
           {linkLabel || 'View All'} →
         </Link>
       )}
@@ -58,7 +58,7 @@ function CardHeader({ icon: Icon, title, color = '#4a6cf7', linkTo, linkLabel })
 function StatMini({ icon: Icon, label, value, color = '#4a6cf7' }) {
   return (
     <div style={{
-      background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12,
+      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
       padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12,
     }}>
       <div style={{
@@ -68,8 +68,8 @@ function StatMini({ icon: Icon, label, value, color = '#4a6cf7' }) {
         <Icon size={17} color={color} />
       </div>
       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.1 }}>{value}</div>
-        <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2 }}>{label}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
       </div>
     </div>
   );
@@ -117,7 +117,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8ea0', fontSize: 15 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 15 }}>
         Loading dashboard...
       </div>
     );
@@ -129,16 +129,16 @@ export default function Dashboard() {
   const pendingDrafts = drafts.length;
 
   return (
-    <div className="dashboard-page" style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: '#f5f7fa' }}>
+    <div className="dashboard-page" style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: 'var(--bg)' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>Dashboard</div>
-          <div style={{ fontSize: 13, color: '#8e8ea0', marginTop: 2 }}>Vernon Tech & Media — What needs your attention</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Dashboard</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>Vernon Tech & Media — What needs your attention</div>
         </div>
         <button onClick={handleRefresh} style={{
-          display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff',
-          border: '1px solid #e5e7ef', borderRadius: 8, color: '#8e8ea0',
+          display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)',
+          border: '1px solid var(--border)', borderRadius: 8, color: 'var(--muted)',
           padding: '8px 14px', cursor: 'pointer', fontSize: 13,
         }}>
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
@@ -159,22 +159,22 @@ export default function Dashboard() {
         <div style={{ marginBottom: 22 }}>
           {/* Revenue Stats Row */}
           <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
-            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Stripe Balance</div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Stripe Balance</div>
               <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>${stats.stripeRevenue.available?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-              {stats.stripeRevenue.pending > 0 && <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>${stats.stripeRevenue.pending.toFixed(2)} pending</div>}
+              {stats.stripeRevenue.pending > 0 && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>${stats.stripeRevenue.pending.toFixed(2)} pending</div>}
             </div>
-            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Last 30 Days</div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#4a6cf7' }}>${stats.stripeRevenue.last30Days?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{stats.stripeRevenue.last30Count} payment{stats.stripeRevenue.last30Count !== 1 ? 's' : ''}</div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Last 30 Days</div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--orange)' }}>${stats.stripeRevenue.last30Days?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{stats.stripeRevenue.last30Count} payment{stats.stripeRevenue.last30Count !== 1 ? 's' : ''}</div>
             </div>
-            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>12-Month Revenue</div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>${stats.stripeRevenue.total?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>12-Month Revenue</div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>${stats.stripeRevenue.total?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
             </div>
-            <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pipeline Value</div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pipeline Value</div>
               <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#784bd1' }}>${(stats?.pipelineValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function Dashboard() {
                     <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                       <div title={`$${m.revenue.toLocaleString()}`} style={{
                         width: '100%', height: h, borderRadius: '4px 4px 0 0',
-                        background: m.revenue > 0 ? 'linear-gradient(180deg, #4a6cf7, #6e8efb)' : '#f0f2f8',
+                        background: m.revenue > 0 ? 'linear-gradient(180deg, #4a6cf7, #6e8efb)' : 'var(--surface-3)',
                         transition: 'height 0.3s ease',
                       }} />
                       <span style={{ fontSize: 8, color: '#b0b0c0', whiteSpace: 'nowrap' }}>{m.label}</span>
@@ -206,7 +206,7 @@ export default function Dashboard() {
             <Card>
               <CardHeader icon={CreditCard} title="Recent Payments" color="#22c55e" linkTo="/invoices" />
               {(stats.stripeRevenue.recentPayments || []).length === 0 ? (
-                <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No recent payments</div>
+                <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No recent payments</div>
               ) : (
                 (stats.stripeRevenue.recentPayments || []).slice(0, 6).map(p => (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #f0f2f8' }}>
@@ -214,16 +214,16 @@ export default function Dashboard() {
                       <DollarSign size={13} color="#22c55e" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="private-value" style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div className="private-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.customer}
                       </div>
-                      <div className="private-value" style={{ fontSize: 10, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div className="private-value" style={{ fontSize: 10, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.description || p.email || ''}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div className="private-value" style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>+${p.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                      <div style={{ fontSize: 10, color: '#8e8ea0' }}>{timeAgo(p.date)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>{timeAgo(p.date)}</div>
                     </div>
                   </div>
                 ))
@@ -237,12 +237,12 @@ export default function Dashboard() {
       {pendingDrafts > 0 && (
         <Link to="/email" style={{ textDecoration: 'none' }}>
           <div style={{
-            background: 'rgba(74,108,247,0.06)', border: '1px solid rgba(74,108,247,0.15)',
+            background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(74,108,247,0.15)',
             borderRadius: 12, padding: '14px 20px', marginBottom: 20,
             display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
           }}>
             <Sparkles size={18} color="#4a6cf7" />
-            <span style={{ fontSize: 14, color: '#4a6cf7', fontWeight: 600, flex: 1 }}>
+            <span style={{ fontSize: 14, color: 'var(--orange)', fontWeight: 600, flex: 1 }}>
               {pendingDrafts} auto-drafted email{pendingDrafts > 1 ? 's' : ''} waiting for your review
             </span>
             <ArrowRight size={16} color="#4a6cf7" />
@@ -257,7 +257,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader icon={Star} title="Recent Leads" color="#f5a623" linkTo="/leads" />
           {recentLeads.length === 0 ? (
-            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No leads yet</div>
+            <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No leads yet</div>
           ) : (
             recentLeads.map(lead => (
               <div key={lead.id} style={{
@@ -272,14 +272,14 @@ export default function Dashboard() {
                   {(lead.name || '?')[0].toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {lead.name || 'Unknown'}
                   </div>
-                  <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {lead.email || lead.company || lead.lead_source || ''}
                   </div>
                 </div>
-                <div style={{ fontSize: 11, color: '#8e8ea0', flexShrink: 0 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
                   {timeAgo(lead.created_at)}
                 </div>
               </div>
@@ -291,7 +291,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader icon={Mail} title="Drafts to Review" color="#4a6cf7" linkTo="/email" />
           {drafts.length === 0 ? (
-            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
               <CheckSquare size={20} style={{ opacity: 0.3, marginBottom: 6, display: 'block', margin: '0 auto 6px' }} />
               All caught up — no pending drafts
             </div>
@@ -308,15 +308,15 @@ export default function Dashboard() {
                   <Sparkles size={13} color="#4a6cf7" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.lead_name || email.to_email || 'Unknown'}
                   </div>
-                  <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.subject || '(no subject)'}
                   </div>
                 </div>
                 {email.follow_up_date && (
-                  <div style={{ fontSize: 10, color: '#4a6cf7', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                  <div style={{ fontSize: 10, color: 'var(--orange)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                     <Clock size={10} /> Follow-up
                   </div>
                 )}
@@ -329,7 +329,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader icon={Calendar} title="Upcoming Meetings" color="#784bd1" linkTo="/meetings" />
           {meetings.length === 0 ? (
-            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No upcoming meetings</div>
+            <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No upcoming meetings</div>
           ) : (
             meetings.map(m => (
               <div key={m.google_event_id || m.id} style={{
@@ -337,8 +337,8 @@ export default function Dashboard() {
                 padding: '10px 0', borderBottom: '1px solid #f0f2f8',
               }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{m.title}</div>
-                  <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{fmtDate(m.start_time)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{m.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{fmtDate(m.start_time)}</div>
                 </div>
                 {m.meet_link && (
                   <button
@@ -361,7 +361,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader icon={FolderOpen} title="Active Projects" color="#00b8d4" linkTo="/projects" />
           {projects.length === 0 ? (
-            <div style={{ color: '#8e8ea0', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No active projects</div>
+            <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No active projects</div>
           ) : (
             projects.map(p => (
               <div key={p.id} style={{
@@ -375,10 +375,10 @@ export default function Dashboard() {
                   <FolderOpen size={14} color="#00b8d4" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
                   </div>
-                  <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0' }}>
+                  <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)' }}>
                     {p.client || p.status || ''}
                   </div>
                 </div>
@@ -399,20 +399,20 @@ export default function Dashboard() {
         <Card style={{ marginTop: 14 }}>
           <CardHeader icon={Users} title="Academy" color="#E8650A" linkTo="/academy" linkLabel="Manage" />
           <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Students</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e' }}>{academyStats.total_students || 0}</div>
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Students</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{academyStats.total_students || 0}</div>
             </div>
-            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Subscribers</div>
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Subscribers</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#22c55e' }}>{academyStats.active_subscribers || 0}</div>
             </div>
-            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>MRR</div>
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>MRR</div>
               <div className="private-value" style={{ fontSize: 20, fontWeight: 800, color: '#E8650A' }}>${(academyStats.mrr || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             </div>
-            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pending HW</div>
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pending HW</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: academyStats.pending_homework > 0 ? '#ef4444' : '#1a1a2e' }}>{academyStats.pending_homework || 0}</div>
             </div>
           </div>

@@ -63,7 +63,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12,
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
         width: 680, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
       }}>
@@ -71,7 +71,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px 14px', borderBottom: '1px solid #e5e7ef', flexShrink: 0,
+          padding: '16px 20px 14px', borderBottom: '1px solid var(--border)', flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Inbox size={16} color="#ff9b26" />
@@ -119,7 +119,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
 
           {!loading && !error && threads.length === 0 && (
             <div style={{ textAlign: 'center', padding: 48, color: '#4a4845', fontSize: 13 }}>
-              No threads found in <strong style={{ color: '#8e8ea0' }}>{labelName}</strong>.<br />
+              No threads found in <strong style={{ color: 'var(--muted)' }}>{labelName}</strong>.<br />
               <span style={{ fontSize: 11, marginTop: 6, display: 'block' }}>
                 Threads appear here automatically once you send or draft an email via the CRM.
               </span>
@@ -135,7 +135,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 12,
                 padding: '12px 20px', textDecoration: 'none',
-                borderBottom: '1px solid #e5e7ef',
+                borderBottom: '1px solid var(--border)',
                 background: 'transparent',
                 transition: 'background 0.1s',
               }}
@@ -162,7 +162,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
                 </div>
 
                 {/* Row 2: subject */}
-                <div style={{ fontSize: 12, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
                   {t.subject}
                   {t.messageCount > 1 && (
                     <span style={{ fontSize: 10, color: '#4a4845', marginLeft: 6 }}>({t.messageCount})</span>
@@ -194,7 +194,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '7px 18px', borderRadius: 6, fontSize: 12, fontWeight: 600,
                   cursor: loadingMore ? 'not-allowed' : 'pointer',
-                  background: '#e8ecf4', border: '1px solid #e5e7ef', color: '#8e8ea0',
+                  background: '#e8ecf4', border: '1px solid var(--border)', color: 'var(--muted)',
                   opacity: loadingMore ? 0.7 : 1,
                 }}
               >
@@ -210,7 +210,7 @@ export default function GmailInboxModal({ onClose, labelName = 'VernonTM' }) {
         {/* Footer */}
         {!loading && threads.length > 0 && (
           <div style={{
-            padding: '10px 20px', borderTop: '1px solid #e5e7ef', flexShrink: 0,
+            padding: '10px 20px', borderTop: '1px solid var(--border)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <span style={{ fontSize: 11, color: '#4a4845' }}>

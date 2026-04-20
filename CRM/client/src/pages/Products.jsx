@@ -130,7 +130,7 @@ function PackageCard({ pkg }) {
   const Icon = pkg.icon;
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
       {/* Header */}
       <div
         onClick={() => setOpen(o => !o)}
@@ -140,21 +140,21 @@ function PackageCard({ pkg }) {
           <Icon size={24} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: '#1a1a2e', marginBottom: 2 }}>{pkg.name}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>{pkg.name}</div>
           <div style={{ fontSize: 12, color: pkg.accent, fontWeight: 600 }}>{pkg.tagline}</div>
         </div>
-        <div style={{ color: '#8e8ea0' }}>
+        <div style={{ color: 'var(--muted)' }}>
           {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
         </div>
       </div>
 
       {open && (
         <div style={{ padding: '20px 24px 28px' }}>
-          <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.7, margin: '0 0 20px' }}>{pkg.oneLiner}</p>
+          <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.7, margin: '0 0 20px' }}>{pkg.oneLiner}</p>
 
           {/* Who it's for */}
           <Section icon={Users} title="Who it's for" accent={pkg.accent}>
-            <ul style={{ margin: 0, paddingLeft: 18, color: '#4b5563', fontSize: 13, lineHeight: 1.8 }}>
+            <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--muted)', fontSize: 13, lineHeight: 1.8 }}>
               {pkg.whoItsFor.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
           </Section>
@@ -164,8 +164,8 @@ function PackageCard({ pkg }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pkg.whatsIncluded.map((item, i) => (
                 <div key={i} style={{ borderLeft: `3px solid ${pkg.accent}40`, paddingLeft: 12 }}>
-                  <div style={{ fontWeight: 700, color: '#1a1a2e', fontSize: 13, marginBottom: 2 }}>{item.name}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>{item.detail}</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 13, marginBottom: 2 }}>{item.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>{item.detail}</div>
                 </div>
               ))}
             </div>
@@ -175,9 +175,9 @@ function PackageCard({ pkg }) {
           <Section icon={AlertCircle} title="Common pain points — what to say" accent={pkg.accent}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {pkg.painPoints.map((p, i) => (
-                <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 8, padding: '10px 14px' }}>
+                <div key={i} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: pkg.accent, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>If they have: {p.point}</div>
-                  <div style={{ fontSize: 13, color: '#1a1a2e', lineHeight: 1.6, fontStyle: 'italic' }}>{p.pitch}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, fontStyle: 'italic' }}>{p.pitch}</div>
                 </div>
               ))}
             </div>
@@ -188,8 +188,8 @@ function PackageCard({ pkg }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pkg.objections.map((o, i) => (
                 <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, alignItems: 'start' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{o.q}</div>
-                  <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6 }}>{o.a}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{o.q}</div>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>{o.a}</div>
                 </div>
               ))}
             </div>
@@ -197,7 +197,7 @@ function PackageCard({ pkg }) {
 
           {/* Talking angles */}
           <Section icon={Lightbulb} title="Key talking angles" accent={pkg.accent}>
-            <ul style={{ margin: 0, paddingLeft: 18, color: '#4b5563', fontSize: 13, lineHeight: 1.8 }}>
+            <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--muted)', fontSize: 13, lineHeight: 1.8 }}>
               {pkg.talkingAngles.map((t, i) => <li key={i}>{t}</li>)}
             </ul>
           </Section>
@@ -221,14 +221,14 @@ function Section({ icon: Icon, title, accent, children }) {
 
 export default function Products() {
   return (
-    <div style={{ padding: 24, minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ padding: 24, minHeight: '100%', background: 'var(--bg)' }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
           <Package size={24} color="#4a6cf7" />
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#1a1a2e' }}>Products & Services</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>Products & Services</div>
         </div>
-        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 0, marginBottom: 24, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 0, marginBottom: 24, lineHeight: 1.6 }}>
           Everything we offer, who it's for, what's included, and how to talk about it on calls.
           Use this to train yourself before a cold call so you can confidently speak about any service without second-guessing.
         </p>
@@ -248,12 +248,12 @@ export default function Products() {
         {PACKAGES.map(pkg => <PackageCard key={pkg.key} pkg={pkg} />)}
 
         {/* Universal rules */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: '20px 24px', marginTop: 24 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 24px', marginTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <AlertCircle size={16} color="#ff5c5c" />
             <span style={{ fontSize: 13, fontWeight: 700, color: '#ff5c5c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Golden Rules for Every Cold Call</span>
           </div>
-          <ul style={{ margin: 0, paddingLeft: 20, color: '#374151', fontSize: 13, lineHeight: 1.9 }}>
+          <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--text)', fontSize: 13, lineHeight: 1.9 }}>
             <li><strong>Always book the 15-minute call.</strong> That's the ONE goal. Not a demo. Not a pitch. Just 15 minutes.</li>
             <li><strong>Never discuss pricing on the cold call.</strong> If they ask, say: "Great question — that's actually another reason to hop on the call, we'll walk through everything and find what fits."</li>
             <li><strong>Reference something specific.</strong> Their company name, their industry, something from their notes. Generic = ignored.</li>

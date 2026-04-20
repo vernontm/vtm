@@ -15,7 +15,7 @@ function CategorySlider({ value, onChange }) {
           style={{
             padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
             cursor: 'pointer', transition: 'all 0.15s', border: 'none',
-            background: value === cat.toLowerCase() ? '#4a6cf7' : '#f0f2f8',
+            background: value === cat.toLowerCase() ? '#4a6cf7' : 'var(--surface-3)',
             color: value === cat.toLowerCase() ? '#fff' : '#8e8ea0',
           }}
         >
@@ -29,12 +29,12 @@ function CategorySlider({ value, onChange }) {
 function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
   return (
     <div style={{
-      background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12,
+      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
       overflow: 'hidden', transition: 'box-shadow 0.15s',
       opacity: item.visible ? 1 : 0.5,
     }}>
       {/* Media preview */}
-      <div style={{ position: 'relative', height: 180, background: '#f0f2f8', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: 180, background: 'var(--surface-3)', overflow: 'hidden' }}>
         {item.media_url ? (
           item.media_type === 'video' ? (
             <video src={item.media_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
@@ -68,9 +68,9 @@ function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
 
       {/* Info */}
       <div style={{ padding: '12px 14px' }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>{item.title}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{item.title}</div>
         {item.description && (
-          <div style={{ fontSize: 12, color: '#8e8ea0', lineHeight: 1.5, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 8 }}>
             {item.description.length > 80 ? item.description.slice(0, 80) + '...' : item.description}
           </div>
         )}
@@ -94,8 +94,8 @@ function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
             onClick={() => onEdit(item)}
             style={{
               display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px',
-              borderRadius: 6, border: '1px solid #e5e7ef', cursor: 'pointer',
-              background: 'none', color: '#8e8ea0', fontSize: 11,
+              borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer',
+              background: 'none', color: 'var(--muted)', fontSize: 11,
             }}
           >
             <Edit3 size={11} /> Edit
@@ -188,19 +188,19 @@ function EditModal({ item, onClose, onSave }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
+      <div style={{ background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
         onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #e5e7ef' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{item ? 'Edit Project' : 'Add Project'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={18} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{item ? 'Edit Project' : 'Add Project'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={18} /></button>
         </div>
 
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Media Upload */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Media</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, display: 'block' }}>Media</label>
             {form.media_url ? (
-              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
+              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                 {form.media_type === 'video' ? (
                   <video src={form.media_url} style={{ width: '100%', maxHeight: 200, objectFit: 'cover' }} controls />
                 ) : (
@@ -217,7 +217,7 @@ function EditModal({ item, onClose, onSave }) {
               <label style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                 padding: 24, border: '2px dashed #e5e7ef', borderRadius: 10, cursor: 'pointer',
-                color: '#8e8ea0', fontSize: 13, transition: 'border-color 0.15s',
+                color: 'var(--muted)', fontSize: 13, transition: 'border-color 0.15s',
               }}>
                 <input type="file" accept="image/*,video/*" onChange={handleUpload} style={{ display: 'none' }} />
                 {uploading ? (
@@ -235,38 +235,38 @@ function EditModal({ item, onClose, onSave }) {
 
           {/* Title */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Title *</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, display: 'block' }}>Title *</label>
             <input
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               placeholder="Project title"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13, background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Description</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, display: 'block' }}>Description</label>
             <textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               placeholder="Brief description of the project..."
               rows={3}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13, background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box' }}
             />
           </div>
 
           {/* Category */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Category</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, display: 'block' }}>Category</label>
             <CategorySlider value={form.category} onChange={cat => setForm(f => ({ ...f, category: cat }))} />
           </div>
 
           {/* Thumbnail Upload */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Display Image (Thumbnail)</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, display: 'block' }}>Display Image (Thumbnail)</label>
             {form.thumbnail_url ? (
-              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
+              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                 <img src={form.thumbnail_url} alt="" style={{ width: '100%', maxHeight: 140, objectFit: 'cover' }} />
                 <button
                   onClick={() => setForm(f => ({ ...f, thumbnail_url: '' }))}
@@ -279,7 +279,7 @@ function EditModal({ item, onClose, onSave }) {
               <label style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 padding: 16, border: '2px dashed #e5e7ef', borderRadius: 10, cursor: 'pointer',
-                color: '#8e8ea0', fontSize: 12, transition: 'border-color 0.15s',
+                color: 'var(--muted)', fontSize: 12, transition: 'border-color 0.15s',
               }}>
                 <input type="file" accept="image/*" onChange={handleThumbUpload} style={{ display: 'none' }} />
                 {uploadingThumb ? <span>Uploading...</span> : (
@@ -294,16 +294,16 @@ function EditModal({ item, onClose, onSave }) {
 
           {/* Project URL */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 6, display: 'block' }}>Project URL</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, display: 'block' }}>Project URL</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input
                 value={form.link_url}
                 onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))}
                 placeholder="https://vernontm.com/portfolio/pickapaint"
-                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' }}
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
               />
               {form.link_url && (
-                <a href={form.link_url} target="_blank" rel="noopener noreferrer" style={{ color: '#4a6cf7', display: 'flex' }}>
+                <a href={form.link_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--orange)', display: 'flex' }}>
                   <ExternalLink size={16} />
                 </a>
               )}
@@ -330,14 +330,14 @@ function EditModal({ item, onClose, onSave }) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', gap: 10, padding: '16px 24px', borderTop: '1px solid #e5e7ef', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 10, padding: '16px 24px', borderTop: '1px solid var(--border)', justifyContent: 'flex-end' }}>
           <button onClick={onClose} className="btn-ghost">Cancel</button>
           <button
             onClick={handleSubmit}
             disabled={saving || !form.title.trim()}
             style={{
               padding: '9px 20px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer',
-              background: '#4a6cf7', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600,
+              background: 'var(--orange)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600,
               opacity: saving || !form.title.trim() ? 0.5 : 1,
             }}
           >
@@ -396,12 +396,12 @@ export default function Portfolio() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <div className="page-header">
         <div className="page-title">Portfolio</div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input className="search-input" placeholder="Search projects..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="btn-primary" onClick={() => setEditItem({})}><Plus size={16} /> Add Project</button>
@@ -440,9 +440,9 @@ export default function Portfolio() {
       {/* Grid */}
       <div style={{ padding: '0 24px 24px' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
             {items.length === 0 ? 'No portfolio projects yet. Click "Add Project" to create one.' : 'No projects match your filter.'}
           </div>
         ) : (
@@ -472,7 +472,7 @@ export default function Portfolio() {
       {/* Delete Confirm */}
       {deleteItem && (
         <Modal title="Delete Project" onClose={() => setDeleteItem(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{deleteItem.title}</strong>? This cannot be undone.</p>
+          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{deleteItem.title}</strong>? This cannot be undone.</p>
         </Modal>
       )}
     </div>

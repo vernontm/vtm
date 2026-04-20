@@ -79,7 +79,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
     }}>
       <div onClick={e => e.stopPropagation()} style={{
         width: '94vw', maxWidth: 1200, height: '92vh', maxHeight: 820,
-        background: '#fff', borderRadius: 14, overflow: 'hidden',
+        background: 'var(--surface)', borderRadius: 14, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 30px 80px rgba(10,20,40,0.35)',
       }}>
@@ -89,7 +89,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
           padding: '14px 20px', borderBottom: '1px solid #eef0f5',
           background: 'linear-gradient(180deg,#fff,#fafbfe)',
         }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Edit Post</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Edit Post</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button style={btnIcon} title="Tags"><Tag size={14} /> Tags</button>
             <button style={btnIcon} title="Help"><HelpCircle size={14} /></button>
@@ -110,7 +110,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
             }>
               <div style={{
                 display: 'flex', gap: 10, flexWrap: 'wrap',
-                padding: 14, background: '#fff', borderRadius: 10, border: '1px solid #eef0f5',
+                padding: 14, background: 'var(--surface)', borderRadius: 10, border: '1px solid #eef0f5',
               }}>
                 {mediaUrls.length === 0 && (
                   <div style={{ color: '#b0b0c0', fontSize: 12, padding: 20 }}>No media yet.</div>
@@ -164,11 +164,11 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   width: '100%', minHeight: 180, maxHeight: 260,
                   padding: '14px 16px', borderRadius: 10, border: '1px solid #eef0f5',
                   fontSize: 13, lineHeight: 1.55, resize: 'vertical', outline: 'none',
-                  fontFamily: 'inherit', background: '#fff', color: '#1a1a2e',
+                  fontFamily: 'inherit', background: 'var(--surface)', color: 'var(--text)',
                 }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingLeft: 4 }}>
-                <div style={{ display: 'flex', gap: 8, color: '#8e8ea0' }}>
+                <div style={{ display: 'flex', gap: 8, color: 'var(--muted)' }}>
                   <IconBtn title="Emoji"><Smile size={14} /></IconBtn>
                   <IconBtn title="Mention"><AtSign size={14} /></IconBtn>
                   <IconBtn title="Hashtag"><Hash size={14} /></IconBtn>
@@ -178,7 +178,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                 <div style={{ fontSize: 11, color: '#b0b0c0' }}>{captionCharCount}</div>
               </div>
               {hashtags && (
-                <div style={{ marginTop: 8, fontSize: 12, color: '#4a6cf7', paddingLeft: 4 }}>{hashtags}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--orange)', paddingLeft: 4 }}>{hashtags}</div>
               )}
             </Section>
 
@@ -192,9 +192,9 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   borderBottom: igOpen ? '1px solid #eef0f5' : 'none',
                 }}
               >
-                <ChevronDown size={16} style={{ transform: igOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', color: '#8e8ea0' }} />
+                <ChevronDown size={16} style={{ transform: igOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', color: 'var(--muted)' }} />
                 <Instagram size={16} color="#E1306C" />
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>Instagram Options</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Instagram Options</span>
               </button>
               {igOpen && (
                 <div style={{ padding: 16 }}>
@@ -242,7 +242,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '6px 4px 0',
                     }}>
-                      <div style={{ display: 'flex', gap: 8, color: '#8e8ea0' }}>
+                      <div style={{ display: 'flex', gap: 8, color: 'var(--muted)' }}>
                         <IconBtn title="Emoji"><Smile size={13} /></IconBtn>
                         <IconBtn title="Mention"><AtSign size={13} /></IconBtn>
                         <IconBtn title="Hashtag"><Hash size={13} /></IconBtn>
@@ -277,12 +277,12 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
           {/* RIGHT — preview */}
           <div style={{
             flex: 1, overflowY: 'auto', padding: '22px 24px',
-            background: '#fff', borderLeft: '1px solid #eef0f5',
+            background: 'var(--surface)', borderLeft: '1px solid #eef0f5',
           }}>
             <div style={{
               maxWidth: 400, margin: '0 auto',
               border: '1px solid #eef0f5', borderRadius: 10, overflow: 'hidden',
-              background: '#fff', fontFamily: 'system-ui, sans-serif',
+              background: 'var(--surface)', fontFamily: 'system-ui, sans-serif',
             }}>
               {/* IG header */}
               <div style={{
@@ -295,19 +295,19 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                 }}>
                   <div className="private-value" style={{
                     width: 26, height: 26, borderRadius: '50%',
-                    background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700, color: '#1a1a2e',
+                    background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700, color: 'var(--text)',
                   }}>
                     {(client?.instagram_handle || client?.business_name || 'IG').slice(0, 1).toUpperCase()}
                   </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div className="private-value" style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>
+                  <div className="private-value" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
                     {client?.instagram_handle || client?.business_name || 'your_account'}
                   </div>
-                  <div style={{ fontSize: 10, color: '#8e8ea0' }}>Now{location ? ` · ${location}` : ''}</div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)' }}>Now{location ? ` · ${location}` : ''}</div>
                 </div>
-                <div style={{ color: '#8e8ea0', fontSize: 18 }}>···</div>
+                <div style={{ color: 'var(--muted)', fontSize: 18 }}>···</div>
               </div>
 
               {/* Media */}
@@ -335,7 +335,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
               </div>
 
               {/* IG action icons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px 4px', color: '#1a1a2e' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px 4px', color: 'var(--text)' }}>
                 <span style={{ fontSize: 18 }}>♡</span>
                 <span style={{ fontSize: 18 }}>💬</span>
                 <span style={{ fontSize: 18 }}>▷</span>
@@ -343,11 +343,11 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
               </div>
 
               {/* Caption preview */}
-              <div style={{ padding: '4px 12px 12px', fontSize: 12, lineHeight: 1.5, color: '#1a1a2e' }}>
+              <div style={{ padding: '4px 12px 12px', fontSize: 12, lineHeight: 1.5, color: 'var(--text)' }}>
                 <strong>{client?.instagram_handle || 'your_account'}</strong>{' '}
                 <span style={{ whiteSpace: 'pre-wrap' }}>
                   {(caption || 'Your caption will appear here.').slice(0, 140)}
-                  {caption.length > 140 ? <span style={{ color: '#8e8ea0' }}>... See more</span> : null}
+                  {caption.length > 140 ? <span style={{ color: 'var(--muted)' }}>... See more</span> : null}
                 </span>
               </div>
 
@@ -360,11 +360,11 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   <div style={{
                     width: 24, height: 24, borderRadius: '50%', background: '#f4f6fb',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, color: '#8e8ea0', flexShrink: 0,
+                    fontSize: 10, color: 'var(--muted)', flexShrink: 0,
                   }}>@</div>
-                  <div style={{ fontSize: 11, color: '#1a1a2e', lineHeight: 1.45 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text)', lineHeight: 1.45 }}>
                     <strong>{client?.instagram_handle || 'your_account'}</strong> {firstComment}
-                    <div style={{ fontSize: 10, color: '#8e8ea0', marginTop: 2 }}>Now · Like · Reply</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>Now · Like · Reply</div>
                   </div>
                 </div>
               )}
@@ -375,10 +375,10 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
         {/* Footer */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 20px', borderTop: '1px solid #eef0f5', background: '#fff',
+          padding: '12px 20px', borderTop: '1px solid #eef0f5', background: 'var(--surface)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Calendar size={13} color="#4a6cf7" />
               Scheduled for:
             </label>
@@ -429,7 +429,7 @@ function Section({ title, right, children }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>{title}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
         {right}
       </div>
       {children}
@@ -441,11 +441,11 @@ function IconBtn({ children, title }) {
   return (
     <button title={title} style={{
       width: 26, height: 26, borderRadius: 6, border: 'none',
-      background: 'transparent', color: '#8e8ea0', cursor: 'pointer',
+      background: 'transparent', color: 'var(--muted)', cursor: 'pointer',
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 13, fontWeight: 600,
     }}
-      onMouseEnter={e => (e.currentTarget.style.background = '#f0f2f8')}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       {children}
@@ -455,22 +455,22 @@ function IconBtn({ children, title }) {
 
 const btnIcon = {
   padding: '7px 12px', borderRadius: 8, border: '1px solid #eef0f5',
-  background: '#fff', color: '#5a5a6e', fontSize: 12, fontWeight: 600,
+  background: 'var(--surface)', color: '#5a5a6e', fontSize: 12, fontWeight: 600,
   cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
 };
 
 const btnGhostSm = {
   padding: '5px 8px', borderRadius: 6, border: '1px solid #eef0f5',
-  background: '#fff', color: '#8e8ea0', fontSize: 11, fontWeight: 600,
+  background: 'var(--surface)', color: 'var(--muted)', fontSize: 11, fontWeight: 600,
   cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
 };
 
 const cardBox = {
-  background: '#fff', borderRadius: 10, border: '1px solid #eef0f5',
+  background: 'var(--surface)', borderRadius: 10, border: '1px solid #eef0f5',
   marginBottom: 12,
 };
 
 const lblStyle = {
-  display: 'block', fontSize: 11, fontWeight: 700, color: '#1a1a2e',
+  display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text)',
   marginBottom: 6, letterSpacing: 0.1,
 };

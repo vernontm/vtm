@@ -5,7 +5,7 @@ import { searchAll } from '../api';
 
 const CATEGORIES = [
   { key: 'leads',    label: 'Leads',    icon: Star,      color: '#f5a623', route: '/leads'    },
-  { key: 'contacts', label: 'Contacts', icon: Users,     color: '#4a6cf7', route: '/contacts' },
+  { key: 'contacts', label: 'Contacts', icon: Users,     color: 'var(--orange)', route: '/contacts' },
   { key: 'deals',    label: 'Deals',    icon: Briefcase, color: '#22c55e', route: '/deals'    },
   { key: 'accounts', label: 'Accounts', icon: Building2, color: '#784bd1', route: '/accounts' },
   { key: 'projects', label: 'Projects', icon: FolderOpen, color: '#00b8d4', route: '/projects' },
@@ -37,7 +37,7 @@ function ResultRow({ result, isActive, onHover, onClick }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 14px', cursor: 'pointer', borderRadius: 7, margin: '2px 6px',
-        background: isActive ? '#f0f2f8' : 'transparent',
+        background: isActive ? 'var(--surface-3)' : 'transparent',
         transition: 'background 0.1s',
       }}
     >
@@ -48,10 +48,10 @@ function ResultRow({ result, isActive, onHover, onClick }) {
         <Icon size={14} color={color} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {result.name}
         </div>
-        {sub && <div style={{ fontSize: 11, color: '#8e8ea0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
+        {sub && <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
       </div>
       {badge && (
         <div style={{
@@ -129,11 +129,11 @@ export default function GlobalSearch({ onClose }) {
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14,
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,
         width: 560, maxWidth: '92vw', boxShadow: '0 24px 80px rgba(0,0,0,0.1)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: '70vh',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid #e5e7ef', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           {loading
             ? <Loader size={16} color="#8e8ea0" style={{ flexShrink: 0, animation: 'spin 0.7s linear infinite' }} />
             : <Search size={16} color="#8e8ea0" style={{ flexShrink: 0 }} />
@@ -141,7 +141,7 @@ export default function GlobalSearch({ onClose }) {
           <input
             ref={inputRef} value={query} onChange={handleChange} onKeyDown={handleKeyDown}
             placeholder="Search leads, contacts, deals, projects..."
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: '#1a1a2e', caretColor: '#4a6cf7' }}
+            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: 'var(--text)', caretColor: '#4a6cf7' }}
           />
           {query && (
             <button onClick={() => { setQuery(''); setResults(null); inputRef.current?.focus(); }}
@@ -149,7 +149,7 @@ export default function GlobalSearch({ onClose }) {
               <X size={15} />
             </button>
           )}
-          <div style={{ fontSize: 11, color: '#8e8ea0', background: '#f0f2f8', border: '1px solid #e5e7ef', borderRadius: 5, padding: '2px 6px', flexShrink: 0 }}>ESC</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 6px', flexShrink: 0 }}>ESC</div>
         </div>
 
         <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -174,7 +174,7 @@ export default function GlobalSearch({ onClose }) {
           )}
 
           {noResults && (
-            <div style={{ textAlign: 'center', padding: '32px 16px', color: '#8e8ea0' }}>
+            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--muted)' }}>
               <Search size={32} style={{ opacity: 0.2, marginBottom: 10 }} />
               <div style={{ fontSize: 14, fontWeight: 600 }}>No results for "{query}"</div>
               <div style={{ fontSize: 12, marginTop: 4 }}>Try a name, email, company, or deal name</div>
@@ -203,7 +203,7 @@ export default function GlobalSearch({ onClose }) {
             <div style={{ padding: '8px 14px 12px', borderTop: '1px solid #f0f2f8', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
               {CATEGORIES.filter(cat => (results[cat.key] || []).length > 0).map(cat => (
                 <button key={cat.key} onClick={() => { navigate(`${cat.route}?search=${encodeURIComponent(query)}`); onClose(); }}
-                  style={{ background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: '#8e8ea0', cursor: 'pointer' }}
+                  style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}
                   onMouseEnter={e => { e.currentTarget.style.color = '#4a6cf7'; e.currentTarget.style.borderColor = '#4a6cf7'; }}
                   onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.borderColor = '#e5e7ef'; }}
                 >
@@ -216,8 +216,8 @@ export default function GlobalSearch({ onClose }) {
 
         <div style={{ padding: '7px 16px', borderTop: '1px solid #f0f2f8', display: 'flex', gap: 14, flexShrink: 0 }}>
           {[['↑↓', 'Navigate'], ['↵', 'Go to page'], ['ESC', 'Close']].map(([key, label]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#8e8ea0' }}>
-              <span style={{ background: '#f0f2f8', border: '1px solid #e5e7ef', borderRadius: 4, padding: '1px 5px', fontFamily: 'monospace', fontSize: 10 }}>{key}</span>
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--muted)' }}>
+              <span style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px', fontFamily: 'monospace', fontSize: 10 }}>{key}</span>
               {label}
             </div>
           ))}

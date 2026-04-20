@@ -58,10 +58,10 @@ export default function InlineEdit({
   };
 
   const inputStyle = {
-    background: '#ffffff',
+    background: 'var(--surface)',
     border: '1px solid #4a6cf7',
     borderRadius: 4,
-    color: '#1a1a2e',
+    color: 'var(--text)',
     padding: '3px 8px',
     fontSize: 13,
     outline: 'none',
@@ -123,7 +123,7 @@ export default function InlineEdit({
         userSelect: 'none',
         lineHeight: '18px',
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f2f8')}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-3)')}
       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
     >
       {display || placeholder}

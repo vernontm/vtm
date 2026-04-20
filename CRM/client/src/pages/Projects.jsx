@@ -48,7 +48,7 @@ function SubitemRow({ item, onFieldSave, onDelete }) {
             <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`}
                target="_blank" rel="noreferrer" title="Open link"
                style={{ display: 'flex', flexShrink: 0 }}>
-              <ExternalLink size={12} style={{ color: '#4a6cf7' }} />
+              <ExternalLink size={12} style={{ color: 'var(--orange)' }} />
             </a>
           )}
           <InlineEdit value={item.link} onSave={v => onFieldSave(item.id, 'link', v)} placeholder="https://..." />
@@ -224,7 +224,7 @@ export default function Projects() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <div className="page-header">
         <div className="flex items-center gap-3">
           <FolderOpen size={22} style={{ color: '#fdab3d' }} />
@@ -232,7 +232,7 @@ export default function Projects() {
         </div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input className="search-input" placeholder="Search projects..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Project</button>
@@ -242,14 +242,14 @@ export default function Projects() {
       {/* ── Mobile card view ── */}
       <div className="mobile-cards">
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</div>
         ) : groups.map(({ label, items }) => (
           <React.Fragment key={label}>
             {items.length > 0 && (
               <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))} style={{ margin: '4px 0' }}>
                 {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                 <span style={{ color: label === 'Completed' ? '#4a6cf7' : '#fdab3d' }}>{label}</span>
-                <span style={{ background: '#e5e7ef', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#8e8ea0' }}>{items.length}</span>
+                <span style={{ background: 'var(--border-light)', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: 'var(--muted)' }}>{items.length}</span>
               </div>
             )}
             {!collapsed[label] && items.map(project => {
@@ -272,14 +272,14 @@ export default function Projects() {
                   {(project.start_date || project.end_date) && (
                     <div className="mobile-card-row">
                       <span className="mobile-card-label">Timeline</span>
-                      <Calendar size={11} style={{ color: '#8e8ea0' }} />
+                      <Calendar size={11} style={{ color: 'var(--muted)' }} />
                       <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
                     </div>
                   )}
                   {project.value > 0 && (
                     <div className="mobile-card-row">
                       <span className="mobile-card-label">Value</span>
-                      <DollarSign size={12} style={{ color: '#4a6cf7' }} />
+                      <DollarSign size={12} style={{ color: 'var(--orange)' }} />
                       <span className="private-value" style={{ fontWeight: 600 }}>{Number(project.value).toLocaleString()}</span>
                     </div>
                   )}
@@ -287,9 +287,9 @@ export default function Projects() {
                     <div className="mobile-card-row">
                       <span className="mobile-card-label">Progress</span>
                       <div style={{ flex: 1, height: 6, background: '#e5e7ef', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ width: `${pct}%`, height: '100%', background: '#4a6cf7', borderRadius: 3 }} />
+                        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--orange)', borderRadius: 3 }} />
                       </div>
-                      <span style={{ fontSize: 11, color: '#8e8ea0' }}>{pct}%</span>
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>{pct}%</span>
                     </div>
                   )}
                   {project.notes && (
@@ -324,16 +324,16 @@ export default function Projects() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
             ) : groups.map(({ label, items }) => (
               <React.Fragment key={label}>
                 {/* Group header */}
                 <tr>
-                  <td colSpan={10} style={{ padding: 0, background: '#ffffff' }}>
+                  <td colSpan={10} style={{ padding: 0, background: 'var(--surface)' }}>
                     <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))}>
                       {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                       <span style={{ color: label === 'Completed' ? '#4a6cf7' : '#fdab3d' }}>{label}</span>
-                      <span style={{ background: '#e5e7ef', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#8e8ea0' }}>{items.length}</span>
+                      <span style={{ background: 'var(--border-light)', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: 'var(--muted)' }}>{items.length}</span>
                     </div>
                   </td>
                 </tr>
@@ -356,7 +356,7 @@ export default function Projects() {
                             />
                             <button
                               onClick={() => toggleExpand(project.id)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '2px 2px', display: 'flex', alignItems: 'center' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '2px 2px', display: 'flex', alignItems: 'center' }}
                               title={isExp ? 'Collapse' : 'Expand subitems'}
                             >
                               {isExp ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
@@ -367,7 +367,7 @@ export default function Projects() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <InlineEdit value={project.name} onSave={v => handleProjectField(project.id, 'name', v)} placeholder="Project name" privacy="name" />
                             {isExp && items_.length > 0 && (
-                              <span style={{ background: '#e5e7ef', borderRadius: 10, padding: '0px 6px', fontSize: 11, color: '#8e8ea0', flexShrink: 0 }}>
+                              <span style={{ background: 'var(--border-light)', borderRadius: 10, padding: '0px 6px', fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
                                 {items_.length}
                               </span>
                             )}
@@ -380,10 +380,10 @@ export default function Projects() {
                           <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
                         </td>
                         <td>
-                          <div style={{ fontSize: 12, color: '#8e8ea0' }}>
+                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
                             {project.start_date || project.end_date ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Calendar size={11} style={{ color: '#8e8ea0' }} />
+                                <Calendar size={11} style={{ color: 'var(--muted)' }} />
                                 <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
                               </div>
                             ) : <span style={{ color: '#555880' }}>—</span>}
@@ -391,7 +391,7 @@ export default function Projects() {
                         </td>
                         <td>
                           <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <DollarSign size={13} style={{ color: '#4a6cf7', flexShrink: 0 }} />
+                            <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
                             <InlineEdit value={String(project.value || '')} type="number" onSave={v => handleProjectField(project.id, 'value', v)} placeholder="0" />
                           </div>
                         </td>
@@ -404,7 +404,7 @@ export default function Projects() {
                                 transition: 'width 0.3s',
                               }} />
                             </div>
-                            <span style={{ fontSize: 11, color: '#8e8ea0', width: 28 }}>{pct}%</span>
+                            <span style={{ fontSize: 11, color: 'var(--muted)', width: 28 }}>{pct}%</span>
                           </div>
                         </td>
                         <td>
@@ -424,13 +424,13 @@ export default function Projects() {
                           {/* Subitem header row */}
                           <tr style={{ background: '#13152b' }}>
                             <td></td>
-                            <td style={{ paddingLeft: 36, fontSize: 11, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 6, paddingBottom: 6 }}>Subitem</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date</td>
+                            <td style={{ paddingLeft: 36, fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 6, paddingBottom: 6 }}>Subitem</td>
+                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner</td>
+                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</td>
+                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date</td>
                             <td></td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Text</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Link</td>
+                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Text</td>
+                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Link</td>
                             <td></td>
                           </tr>
 
@@ -461,10 +461,10 @@ export default function Projects() {
                 {!collapsed[label] && items.length > 0 && (
                   <tr className="sum-row">
                     <td colSpan={4}></td>
-                    <td style={{ color: '#8e8ea0', fontSize: 12 }}>Total</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>Total</td>
                     <td>
                       <div className="private-value flex items-center gap-1">
-                        <DollarSign size={13} style={{ color: '#4a6cf7' }} />
+                        <DollarSign size={13} style={{ color: 'var(--orange)' }} />
                         <span>{formatMoney(items.reduce((s, p) => s + (p.value || 0), 0))}</span>
                       </div>
                     </td>
@@ -538,7 +538,7 @@ export default function Projects() {
 
       {modal === 'delete' && (
         <Modal title="Delete Project" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong> and all its subitems? This cannot be undone.</p>
+          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong> and all its subitems? This cannot be undone.</p>
         </Modal>
       )}
     </div>

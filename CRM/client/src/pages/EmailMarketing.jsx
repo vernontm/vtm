@@ -50,13 +50,13 @@ const TABS = [
 
 const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const inputStyle = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', width: '100%', boxSizing: 'border-box' };
-const btnPrimary = { background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
-const btnSecondary = { background: '#f8f9fc', border: '1px solid #e5e7ef', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
+const inputStyle = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box' };
+const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
+const btnSecondary = { background: '#f8f9fc', border: '1px solid var(--border)', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
 const btnDanger = { ...btnSecondary, color: '#ef4444', border: '1px solid #fecaca' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: 20 };
-const sectionTitle = { fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 };
-const labelStyle = { fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 };
+const sectionTitle = { fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 };
+const labelStyle = { fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' };
 
 const DYNAMIC_VARS = [
   { token: '{{name}}', label: 'Name' },
@@ -100,8 +100,8 @@ function TagSelect({ value, onChange, options = [], placeholder = 'Select tags..
       <div
         onClick={() => setOpen(o => !o)}
         style={{
-          minHeight: 36, padding: '5px 30px 5px 8px', borderRadius: 8, border: '1px solid #e5e7ef',
-          background: '#fff', cursor: 'pointer', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+          minHeight: 36, padding: '5px 30px 5px 8px', borderRadius: 8, border: '1px solid var(--border)',
+          background: 'var(--surface)', cursor: 'pointer', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
           fontSize: 13, position: 'relative',
         }}
       >
@@ -111,34 +111,34 @@ function TagSelect({ value, onChange, options = [], placeholder = 'Select tags..
         {selected.map(tag => (
           <span key={tag} style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 12, background: '#eef2ff', color: '#4a6cf7',
+            padding: '3px 8px', borderRadius: 12, background: 'var(--accent-dim)', color: 'var(--orange)',
             fontSize: 11, fontWeight: 600,
           }}>
             {tag}
             <span role="button" onClick={(e) => { e.stopPropagation(); removeSelected(tag); }} style={{ cursor: 'pointer', opacity: 0.7 }}>×</span>
           </span>
         ))}
-        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0', fontSize: 10 }}>▾</span>
+        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', fontSize: 10 }}>▾</span>
       </div>
 
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 40,
-          background: '#fff', border: '1px solid #e5e7ef', borderRadius: 10,
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
           boxShadow: '0 8px 20px rgba(10,20,40,0.08)', maxHeight: 260, overflow: 'auto',
         }}>
-          <div style={{ padding: 8, borderBottom: '1px solid #f0f0f5', position: 'sticky', top: 0, background: '#fff' }}>
+          <div style={{ padding: 8, borderBottom: '1px solid #f0f0f5', position: 'sticky', top: 0, background: 'var(--surface)' }}>
             <input
               autoFocus
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
               placeholder="Search or create tag..."
-              style={{ width: '100%', padding: '6px 8px', border: '1px solid #e5e7ef', borderRadius: 6, fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
           {filtered.length === 0 && !query && (
-            <div style={{ padding: 10, fontSize: 12, color: '#8e8ea0', textAlign: 'center' }}>No more tags</div>
+            <div style={{ padding: 10, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>No more tags</div>
           )}
           {filtered.map(tag => (
             <div key={tag} onClick={() => toggle(tag)} style={{
@@ -151,7 +151,7 @@ function TagSelect({ value, onChange, options = [], placeholder = 'Select tags..
           ))}
           {query && !options.some(o => o.toLowerCase() === query.toLowerCase()) && (
             <div onClick={addCustom} style={{
-              padding: '8px 12px', fontSize: 13, cursor: 'pointer', color: '#4a6cf7', fontWeight: 600,
+              padding: '8px 12px', fontSize: 13, cursor: 'pointer', color: 'var(--orange)', fontWeight: 600,
               borderTop: '1px solid #f0f0f5',
             }}>
               + Create "{query.trim()}"
@@ -170,7 +170,7 @@ function VarButtons({ onInsert }) {
       {DYNAMIC_VARS.map(v => (
         <button key={v.token} type="button" onClick={() => onInsert(v.token)} style={{
           padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
-          background: '#eef2ff', color: '#4a6cf7', border: '1px solid #c7d2fe',
+          background: 'var(--accent-dim)', color: 'var(--orange)', border: '1px solid #c7d2fe',
         }}>
           + {v.label}
         </button>
@@ -749,19 +749,19 @@ export default function EmailMarketing() {
   // ══════════════════════════════════════════════════════════════
 
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif', height: '100%', minHeight: '100vh', display: 'flex', background: '#f8f9fc' }}>
+    <div style={{ fontFamily: 'var(--font-display)', height: '100%', minHeight: '100vh', display: 'flex', background: '#f8f9fc' }}>
       {/* ══════ LEFT CLIENT SIDEBAR ══════ */}
       <div style={{
-        width: 220, background: '#fff', borderRight: '1px solid #e5e7ef',
+        width: 220, background: 'var(--surface)', borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
         <div style={{ padding: '18px 16px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Mail size={18} color="#4a6cf7" />
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Email Marketing</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Email Marketing</span>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px' }}>
-          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
             Clients
           </div>
           {clients.length === 0 && (
@@ -770,7 +770,7 @@ export default function EmailMarketing() {
           <div style={{ padding: '4px 12px 10px' }}>
             <button onClick={() => setNewClientOpen(true)} style={{
               width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px dashed #c7d2fe',
-              background: '#eef2ff', color: '#4a6cf7', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: 'var(--accent-dim)', color: 'var(--orange)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
               <Plus size={13} /> New Client
@@ -802,10 +802,10 @@ export default function EmailMarketing() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar with client name + tabs + status */}
         <div style={{
-          background: '#fff', borderBottom: '1px solid #e5e7ef', padding: '14px 24px',
+          background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '14px 24px',
           display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flexShrink: 0,
         }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a1a2e' }}>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>
             {selectedClient ? <span className="private-value">{selectedClient.business_name}</span> : 'Select a Client'}
           </h2>
           {selectedClientId && (
@@ -841,14 +841,14 @@ export default function EmailMarketing() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px', minWidth: 0 }}>
           {loading && (
-            <div style={{ textAlign: 'center', padding: 40, color: '#8e8ea0' }}>
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
               <Loader size={24} style={{ animation: 'spin 1s linear infinite' }} />
               <div style={{ marginTop: 8, fontSize: 13 }}>Loading...</div>
             </div>
           )}
 
           {!selectedClientId && !loading && (
-            <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+            <div style={{ textAlign: 'center', padding: 60, color: 'var(--muted)' }}>
               <Mail size={48} strokeWidth={1} />
               <div style={{ marginTop: 12, fontSize: 15, fontWeight: 600 }}>Select a client from the sidebar</div>
             </div>
@@ -883,32 +883,32 @@ export default function EmailMarketing() {
           position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 700, width: '100%', maxHeight: '80vh', overflow: 'auto', padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 12, maxWidth: 700, width: '100%', maxHeight: '80vh', overflow: 'auto', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Send History</div>
-                <div className="private-value" style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2 }}>{viewSendsContact.email}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Send History</div>
+                <div className="private-value" style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{viewSendsContact.email}</div>
               </div>
               <button onClick={() => setViewSendsContact(null)} style={btnSecondary}><X size={14} /></button>
             </div>
             {loadingSends ? (
-              <div style={{ textAlign: 'center', padding: 30, color: '#8e8ea0' }}><Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /></div>
+              <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)' }}><Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /></div>
             ) : viewSendsData.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 30, color: '#8e8ea0', fontSize: 13 }}>No sends to this contact yet.</div>
+              <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: 13 }}>No sends to this contact yet.</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #e5e7ef' }}>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Subject</th>
-                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Sent</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Opened</th>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Subject</th>
+                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Sent</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Opened</th>
                   </tr>
                 </thead>
                 <tbody>
                   {viewSendsData.map(s => (
                     <tr key={s.id} style={{ borderBottom: '1px solid #f0f0f5' }}>
-                      <td style={{ padding: '10px', color: '#1a1a2e', fontWeight: 500 }}>{s.subject || '-'}</td>
+                      <td style={{ padding: '10px', color: 'var(--text)', fontWeight: 500 }}>{s.subject || '-'}</td>
                       <td style={{ padding: '10px', textAlign: 'center' }}><StatusPill status={s.status} /></td>
                       <td style={{ padding: '10px', color: '#5a5a6e', fontSize: 12 }}>{s.sent_at ? new Date(s.sent_at).toLocaleString() : '-'}</td>
                       <td style={{ padding: '10px', color: '#5a5a6e', fontSize: 12 }}>{s.opened_at ? new Date(s.opened_at).toLocaleString() : '-'}</td>
@@ -937,13 +937,13 @@ export default function EmailMarketing() {
             position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
           }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 900, width: '100%', maxHeight: '90vh', overflow: 'auto', padding: 24 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 12, maxWidth: 900, width: '100%', maxHeight: '90vh', overflow: 'auto', padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Broadcast</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', wordBreak: 'break-word' }}>{c.subject}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Broadcast</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', wordBreak: 'break-word' }}>{c.subject}</div>
                   {c.preview_text && (
-                    <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 4 }}>{c.preview_text}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{c.preview_text}</div>
                   )}
                 </div>
                 <button onClick={() => setViewCampaign(null)} style={btnSecondary}><X size={14} /></button>
@@ -951,24 +951,24 @@ export default function EmailMarketing() {
 
               {/* Stats row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 16 }}>
-                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Status</div>
+                <div style={{ background: '#fafbfd', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>Status</div>
                   <div style={{ marginTop: 6 }}><StatusPill status={c.status} /></div>
                 </div>
-                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>{c.sent_at ? 'Sent' : c.scheduled_at ? 'Scheduled' : 'Updated'}</div>
-                  <div style={{ fontSize: 13, color: '#1a1a2e', fontWeight: 600, marginTop: 6 }}>{d ? d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-'}</div>
+                <div style={{ background: '#fafbfd', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>{c.sent_at ? 'Sent' : c.scheduled_at ? 'Scheduled' : 'Updated'}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, marginTop: 6 }}>{d ? d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-'}</div>
                 </div>
-                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Recipients</div>
-                  <div style={{ fontSize: 16, color: '#1a1a2e', fontWeight: 700, marginTop: 4 }}>{recipients || '-'}</div>
+                <div style={{ background: '#fafbfd', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>Recipients</div>
+                  <div style={{ fontSize: 16, color: 'var(--text)', fontWeight: 700, marginTop: 4 }}>{recipients || '-'}</div>
                 </div>
-                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Opened</div>
-                  <div style={{ fontSize: 16, color: '#1a1a2e', fontWeight: 700, marginTop: 4 }}>{c.opened_count || 0} <span style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 500 }}>({openRate})</span></div>
+                <div style={{ background: '#fafbfd', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>Opened</div>
+                  <div style={{ fontSize: 16, color: 'var(--text)', fontWeight: 700, marginTop: 4 }}>{c.opened_count || 0} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>({openRate})</span></div>
                 </div>
-                <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 8, padding: 12 }}>
-                  <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase' }}>Failed</div>
+                <div style={{ background: '#fafbfd', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>Failed</div>
                   <div style={{ fontSize: 16, color: c.failed_count ? '#ef4444' : '#1a1a2e', fontWeight: 700, marginTop: 4 }}>{c.failed_count || 0}</div>
                 </div>
               </div>
@@ -982,17 +982,17 @@ export default function EmailMarketing() {
               )}
 
               {/* HTML preview */}
-              <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>Email preview</div>
-              <div style={{ border: '1px solid #e5e7ef', borderRadius: 8, overflow: 'hidden', background: '#f5f5f7' }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>Email preview</div>
+              <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: '#f5f5f7' }}>
                 {rawBody ? (
                   <iframe
                     title="Broadcast preview"
                     srcDoc={previewHtml}
                     sandbox=""
-                    style={{ width: '100%', height: 500, border: 0, background: '#fff' }}
+                    style={{ width: '100%', height: 500, border: 0, background: 'var(--surface)' }}
                   />
                 ) : (
-                  <div style={{ padding: 30, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>No body content.</div>
+                  <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No body content.</div>
                 )}
               </div>
 
@@ -1021,9 +1021,9 @@ export default function EmailMarketing() {
           position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 480, width: '100%', padding: 22 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 12, maxWidth: 480, width: '100%', padding: 22 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Create New Client</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Create New Client</div>
               <button onClick={() => setNewClientOpen(false)} disabled={creatingClient} style={btnSecondary}><X size={13} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1044,7 +1044,7 @@ export default function EmailMarketing() {
                   <label style={labelStyle}>Primary Color</label>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input type="color" value={newClientPrimary} onChange={e => setNewClientPrimary(e.target.value)}
-                      style={{ width: 44, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                      style={{ width: 44, height: 36, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
                     <input style={inputStyle} value={newClientPrimary} onChange={e => setNewClientPrimary(e.target.value)} />
                   </div>
                 </div>
@@ -1052,12 +1052,12 @@ export default function EmailMarketing() {
                   <label style={labelStyle}>Secondary Color</label>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input type="color" value={newClientSecondary} onChange={e => setNewClientSecondary(e.target.value)}
-                      style={{ width: 44, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                      style={{ width: 44, height: 36, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
                     <input style={inputStyle} value={newClientSecondary} onChange={e => setNewClientSecondary(e.target.value)} />
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                 Logo and brand bible can be added from Settings after creation.
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
@@ -1079,14 +1079,14 @@ export default function EmailMarketing() {
           position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 520, width: '100%', padding: 22 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 12, maxWidth: 520, width: '100%', padding: 22 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Sparkles size={16} color="#E8650A" /> Generate Template with AI
               </div>
               <button onClick={() => setAiGenOpen(false)} disabled={aiGenLoading} style={btnSecondary}><X size={13} /></button>
             </div>
-            <div style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
               Uses <strong className="private-value">{selectedClient?.business_name}</strong>'s brand bible, logo, and colors to produce a ready-to-send HTML template.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1143,7 +1143,7 @@ export default function EmailMarketing() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={sectionTitle} >Add Contact</div>
             <button type="button" onClick={() => setShowMoreFields(s => !s)} style={{
-              background: 'transparent', border: 'none', color: '#4a6cf7', fontSize: 12, fontWeight: 600,
+              background: 'transparent', border: 'none', color: 'var(--orange)', fontSize: 12, fontWeight: 600,
               cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
             }}>
               <ChevronDown size={13} style={{ transform: showMoreFields ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
@@ -1213,7 +1213,7 @@ export default function EmailMarketing() {
           )}
 
           {campaigns.some(c => c.auto_trigger_enabled) && (
-            <div style={{ marginTop: 10, fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Info size={12} /> Auto-trigger campaigns active: new contacts with matching tags will receive them automatically.
             </div>
           )}
@@ -1268,10 +1268,10 @@ export default function EmailMarketing() {
           )}
 
           {bulkPreview.length > 0 && (
-            <div style={{ marginTop: 12, border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
-              <div style={{ padding: '8px 12px', background: '#f8f9fc', fontSize: 12, fontWeight: 600, color: '#1a1a2e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ padding: '8px 12px', background: '#f8f9fc', fontSize: 12, fontWeight: 600, color: 'var(--text)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Preview · {bulkPreview.length} contact{bulkPreview.length === 1 ? '' : 's'} ready</span>
-                <span style={{ color: '#8e8ea0', fontWeight: 500 }}>
+                <span style={{ color: 'var(--muted)', fontWeight: 500 }}>
                   {(() => {
                     const existingEmails = new Set(contacts.map(c => (c.email || '').toLowerCase()));
                     const dupes = bulkPreview.filter(p => existingEmails.has(p.email)).length;
@@ -1281,18 +1281,18 @@ export default function EmailMarketing() {
               </div>
               <div style={{ maxHeight: 220, overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                  <thead style={{ position: 'sticky', top: 0, background: '#fff' }}>
-                    <tr style={{ borderBottom: '1px solid #e5e7ef' }}>
-                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Email</th>
-                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Name</th>
-                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Tags</th>
-                      <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Location</th>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)' }}>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Email</th>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Name</th>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Tags</th>
+                      <th style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Location</th>
                     </tr>
                   </thead>
                   <tbody>
                     {bulkPreview.slice(0, 100).map((p, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f0f0f5' }}>
-                        <td className="private-value" style={{ padding: '6px 10px', color: '#1a1a2e' }}>{p.email}</td>
+                        <td className="private-value" style={{ padding: '6px 10px', color: 'var(--text)' }}>{p.email}</td>
                         <td className="private-value" style={{ padding: '6px 10px', color: '#5a5a6e' }}>{p.name || '-'}</td>
                         <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{(p.tags || []).join(', ') || '-'}</td>
                         <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{[p.city, p.state, p.country].filter(Boolean).join(', ') || '-'}</td>
@@ -1301,7 +1301,7 @@ export default function EmailMarketing() {
                   </tbody>
                 </table>
                 {bulkPreview.length > 100 && (
-                  <div style={{ padding: 8, fontSize: 11, color: '#8e8ea0', textAlign: 'center' }}>+{bulkPreview.length - 100} more...</div>
+                  <div style={{ padding: 8, fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>+{bulkPreview.length - 100} more...</div>
                 )}
               </div>
             </div>
@@ -1336,7 +1336,7 @@ export default function EmailMarketing() {
           )}
 
           {contacts.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 30, color: '#8e8ea0' }}>
+            <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)' }}>
               <Users size={32} strokeWidth={1} />
               <div style={{ marginTop: 8, fontSize: 13 }}>No contacts yet. Add some above.</div>
             </div>
@@ -1346,17 +1346,17 @@ export default function EmailMarketing() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #e5e7ef' }}>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Email</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Name</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Tags</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Birthday</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Code</th>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Signed Up</th>
-                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Sent</th>
-                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Opened</th>
-                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Status</th>
-                    <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Actions</th>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Email</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Name</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Tags</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Birthday</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Code</th>
+                    <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Signed Up</th>
+                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Sent</th>
+                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Opened</th>
+                    <th style={{ textAlign: 'center', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Status</th>
+                    <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1366,7 +1366,7 @@ export default function EmailMarketing() {
                     return (
                       <React.Fragment key={c.id}>
                         <tr style={{ borderBottom: isEditing ? 'none' : '1px solid #f0f0f5', cursor: 'pointer' }} onClick={() => !isEditing && handleViewSends(c)}>
-                          <td className="private-value" style={{ padding: '10px 10px', fontWeight: 600, color: '#1a1a2e' }}>{c.email}</td>
+                          <td className="private-value" style={{ padding: '10px 10px', fontWeight: 600, color: 'var(--text)' }}>{c.email}</td>
                           <td className="private-value" style={{ padding: '10px 10px', color: '#5a5a6e' }}>{c.name || '-'}</td>
                           <td style={{ padding: '10px 10px' }}>
                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -1383,7 +1383,7 @@ export default function EmailMarketing() {
                             {c.signed_up_at ? new Date(c.signed_up_at).toLocaleDateString() : '-'}
                           </td>
                           <td style={{ padding: '10px 10px', textAlign: 'center', color: '#22c55e', fontWeight: 600 }}>{stats.sent}</td>
-                          <td style={{ padding: '10px 10px', textAlign: 'center', color: '#4a6cf7', fontWeight: 600 }}>{stats.opened}</td>
+                          <td style={{ padding: '10px 10px', textAlign: 'center', color: 'var(--orange)', fontWeight: 600 }}>{stats.opened}</td>
                           <td style={{ padding: '10px 10px', textAlign: 'center' }}><StatusPill status={c.status} /></td>
                           <td style={{ padding: '10px 10px', textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
                             <button onClick={() => isEditing ? setEditContactId(null) : startEditContact(c)} style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, marginRight: 4 }}>
@@ -1505,17 +1505,17 @@ export default function EmailMarketing() {
         <div style={cardStyle}>
           <div style={sectionTitle}>Templates ({templates.length})</div>
           {templates.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 30, color: '#8e8ea0' }}>
+            <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)' }}>
               <FileText size={32} strokeWidth={1} />
               <div style={{ marginTop: 8, fontSize: 13 }}>No templates yet. Create one above.</div>
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {templates.map(t => (
-              <div key={t.id} style={{ border: '1px solid #e5e7ef', borderRadius: 10, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <div key={t.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                  <div style={{ fontWeight: 600, color: '#1a1a2e', fontSize: 13 }}>{t.name}</div>
-                  <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>{t.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                     Subject: {t.subject} &middot; <span style={{ textTransform: 'capitalize' }}>{t.template_type}</span>
                   </div>
                 </div>
@@ -1558,12 +1558,12 @@ export default function EmailMarketing() {
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
       }}>
         <div onClick={e => e.stopPropagation()} style={{
-          background: '#fff', borderRadius: 14, maxWidth: 840, width: '100%', maxHeight: '94vh',
+          background: 'var(--surface)', borderRadius: 14, maxWidth: 840, width: '100%', maxHeight: '94vh',
           overflow: 'auto', padding: 0, display: 'flex', flexDirection: 'column',
         }}>
           {/* Composer header */}
-          <div style={{ padding: '16px 22px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Edit3 size={16} /> New Broadcast
             </div>
             <button onClick={() => setShowComposer(false)} style={btnSecondary}><X size={14} /></button>
@@ -1571,9 +1571,9 @@ export default function EmailMarketing() {
 
           <div style={{ padding: 22 }}>
             {/* Template picker — top of composer */}
-            <div style={{ marginBottom: 16, padding: 12, background: '#f8f9fc', border: '1px solid #e5e7ef', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ marginBottom: 16, padding: 12, background: '#f8f9fc', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <FileText size={14} color="#4a6cf7" />
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>Start from template</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Start from template</label>
               <select
                 value={campTemplateId}
                 onChange={(e) => {
@@ -1604,7 +1604,7 @@ export default function EmailMarketing() {
                     },
                   });
                 }}
-                style={{ flex: 1, minWidth: 200, padding: '8px 10px', border: '1px solid #e5e7ef', borderRadius: 8, fontSize: 13, background: '#fff', color: '#1a1a2e', cursor: 'pointer' }}
+                style={{ flex: 1, minWidth: 200, padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}
               >
                 <option value="">-- Select a template --</option>
                 {templates.map(t => (
@@ -1612,7 +1612,7 @@ export default function EmailMarketing() {
                 ))}
               </select>
               {templates.length === 0 && (
-                <span style={{ fontSize: 11, color: '#8e8ea0' }}>No templates yet — create one in the Templates tab.</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>No templates yet — create one in the Templates tab.</span>
               )}
             </div>
 
@@ -1667,7 +1667,7 @@ export default function EmailMarketing() {
             <div style={{ marginTop: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <label style={{ ...labelStyle, marginBottom: 0 }}>
-                  Body {campTemplateHtml && <span style={{ fontWeight: 500, color: '#8e8ea0', fontSize: 11 }}>(editable slot only)</span>}
+                  Body {campTemplateHtml && <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11 }}>(editable slot only)</span>}
                 </label>
                 {!campTemplateHtml && (
                   <button
@@ -1689,7 +1689,7 @@ export default function EmailMarketing() {
                         if (preview_text && !campPreview) setCampPreview(preview_text);
                       },
                     })}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                   >
                     <FileText size={12} /> Use template
                   </button>
@@ -1699,11 +1699,11 @@ export default function EmailMarketing() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
                   <FileText size={13} color="#2563eb" />
                   <span style={{ color: '#1e3a8a' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
-                  <span style={{ color: '#64748b', fontSize: 11 }}>— only the body paragraph below is editable.</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only the body paragraph below is editable.</span>
                   <button
                     type="button"
                     onClick={() => { setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName(''); }}
-                    style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                   >
                     <X size={11} /> Remove
                   </button>
@@ -1741,14 +1741,14 @@ export default function EmailMarketing() {
                 <button
                   type="button"
                   onClick={() => setCampShowLivePreview(v => !v)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: campShowLivePreview ? '#1a1a2e' : '#f3f4f6', color: campShowLivePreview ? '#fff' : '#1a1a2e', border: '1px solid #e5e7ef', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: campShowLivePreview ? '#1a1a2e' : '#f3f4f6', color: campShowLivePreview ? '#fff' : '#1a1a2e', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 >
                   <Eye size={13} /> {campShowLivePreview ? 'Hide preview' : 'Show live preview'}
                 </button>
-                <span style={{ fontSize: 11, color: '#8e8ea0' }}>See exactly how the email will look as you type.</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>See exactly how the email will look as you type.</span>
               </div>
               {campShowLivePreview && (
-                <div style={{ marginTop: 10, border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#0a0a0a' }}>
+                <div style={{ marginTop: 10, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: '#0a0a0a' }}>
                   <iframe
                     title="Live email preview"
                     srcDoc={(() => {
@@ -1772,8 +1772,8 @@ export default function EmailMarketing() {
             </div>
 
             {/* Auto-trigger */}
-            <div style={{ marginTop: 16, padding: 12, background: '#f8f9fc', borderRadius: 8, border: '1px solid #e5e7ef' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
+            <div style={{ marginTop: 16, padding: 12, background: '#f8f9fc', borderRadius: 8, border: '1px solid var(--border)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                 <input type="checkbox" checked={campAutoTrigger} onChange={e => setCampAutoTrigger(e.target.checked)} />
                 Automate (trigger on tag or birthday)
               </label>
@@ -1846,16 +1846,16 @@ export default function EmailMarketing() {
 
         {/* Header: title + New Broadcast */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 6 }}>
-            Broadcasts <span style={{ color: '#8e8ea0', fontWeight: 500, fontSize: 16 }}>{campaigns.length}</span>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            Broadcasts <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 16 }}>{campaigns.length}</span>
           </div>
-          <button onClick={() => { setShowComposer(true); }} style={{ ...btnPrimary, background: '#1a1a2e', padding: '10px 18px' }}>
+          <button onClick={() => { setShowComposer(true); }} style={{ ...btnPrimary, background: 'var(--surface)', padding: '10px 18px' }}>
             <Plus size={14} /> New Broadcast
           </button>
         </div>
 
         {/* Status tabs */}
-        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e5e7ef', marginBottom: 14, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', marginBottom: 14, overflowX: 'auto' }}>
           {statusTabs.map(t => (
             <button key={t.key} onClick={() => t.jumpTo ? setActiveTab(t.jumpTo) : setCampFilter(t.key)} style={{
               padding: '10px 14px', border: 'none', background: 'transparent',
@@ -1888,23 +1888,23 @@ export default function EmailMarketing() {
 
         {/* Broadcast table */}
         {filtered.length === 0 ? (
-          <div style={{ ...cardStyle, textAlign: 'center', padding: 50, color: '#8e8ea0' }}>
+          <div style={{ ...cardStyle, textAlign: 'center', padding: 50, color: 'var(--muted)' }}>
             <Send size={32} strokeWidth={1} />
             <div style={{ marginTop: 8, fontSize: 13 }}>No broadcasts in this view.</div>
           </div>
         ) : (
-          <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #e5e7ef', background: '#fafbfd' }}>
-                    <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Subject line</th>
-                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Date</th>
-                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Recipients</th>
-                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Opened</th>
-                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Open rate</th>
-                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Failed</th>
-                    <th style={{ textAlign: 'center', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: '#8e8ea0' }}>Status</th>
+                  <tr style={{ borderBottom: '1px solid var(--border)', background: '#fafbfd' }}>
+                    <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Subject line</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Date</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Recipients</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Opened</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Open rate</th>
+                    <th style={{ textAlign: 'right', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Failed</th>
+                    <th style={{ textAlign: 'center', padding: '12px 12px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Status</th>
                     <th style={{ padding: '12px 16px' }}></th>
                   </tr>
                 </thead>
@@ -1925,9 +1925,9 @@ export default function EmailMarketing() {
                               ? (c.trigger_type === 'birthday' ? <Cake size={14} color="#f59e0b" /> : <Zap size={14} color="#f59e0b" />)
                               : <FileText size={14} color="#b0b0c0" />}
                             <div>
-                              <div style={{ fontWeight: 600, color: '#1a1a2e' }}>{c.subject}</div>
+                              <div style={{ fontWeight: 600, color: 'var(--text)' }}>{c.subject}</div>
                               {c.preview_text && (
-                                <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2, maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {c.preview_text}
                                 </div>
                               )}
@@ -1938,13 +1938,13 @@ export default function EmailMarketing() {
                           {d ? (
                             <>
                               <div>{d.toLocaleString('en-US', { weekday: 'short' })} {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
-                              <div style={{ color: '#8e8ea0' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                              <div style={{ color: 'var(--muted)' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                             </>
                           ) : '-'}
                         </td>
-                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#1a1a2e', fontWeight: 600 }}>{recipients || '-'}</td>
-                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#1a1a2e' }}>{c.opened_count || '-'}</td>
-                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#1a1a2e' }}>{openRate}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{recipients || '-'}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: 'var(--text)' }}>{c.opened_count || '-'}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: 'var(--text)' }}>{openRate}</td>
                         <td style={{ padding: '14px 12px', textAlign: 'right', color: c.failed_count ? '#ef4444' : '#b0b0c0' }}>{c.failed_count || '-'}</td>
                         <td style={{ padding: '14px 12px', textAlign: 'center' }}><StatusPill status={c.status} /></td>
                         <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
@@ -2070,16 +2070,16 @@ export default function EmailMarketing() {
     else if (seqSort === 'subs') list.sort((a,b) => (b.subscribers||0) - (a.subscribers||0));
 
     const pillSelect = {
-      background: '#fff', border: '1px solid #e5e7ef', borderRadius: 999,
-      padding: '6px 14px', fontSize: 13, color: '#1a1a2e', cursor: 'pointer',
-      fontFamily: 'Inter, sans-serif', outline: 'none', fontWeight: 500,
+      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999,
+      padding: '6px 14px', fontSize: 13, color: 'var(--text)', cursor: 'pointer',
+      fontFamily: 'var(--font-display)', outline: 'none', fontWeight: 500,
     };
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#1a1a2e', letterSpacing: -0.5 }}>Sequences</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>Sequences</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <select value={seqSort} onChange={e => setSeqSort(e.target.value)} style={pillSelect}>
               <option value="alpha">Alphabetical</option>
@@ -2091,11 +2091,11 @@ export default function EmailMarketing() {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            <div style={{ display: 'inline-flex', border: '1px solid #e5e7ef', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
               <button onClick={() => setSeqView('list')} style={{ padding: '7px 10px', background: seqView === 'list' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: '#5a5a6e' }} title="List view">☰</button>
               <button onClick={() => setSeqView('grid')} style={{ padding: '7px 10px', background: seqView === 'grid' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: '#5a5a6e' }} title="Grid view">▦</button>
             </div>
-            <button onClick={() => setNewSeqOpen(true)} style={{ ...btnPrimary, background: '#1a1a2e' }}>
+            <button onClick={() => setNewSeqOpen(true)} style={{ ...btnPrimary, background: 'var(--surface)' }}>
               <Plus size={14} /> New sequence
             </button>
           </div>
@@ -2103,7 +2103,7 @@ export default function EmailMarketing() {
 
         {/* Empty */}
         {list.length === 0 ? (
-          <div style={{ ...cardStyle, textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+          <div style={{ ...cardStyle, textAlign: 'center', padding: 60, color: 'var(--muted)' }}>
             <Zap size={36} strokeWidth={1} />
             <div style={{ marginTop: 10, fontSize: 14 }}>No sequences yet. Create one to automate multi-email drips.</div>
           </div>
@@ -2112,26 +2112,26 @@ export default function EmailMarketing() {
             {list.map(s => <SequenceCard key={s.id} seq={s} onOpen={() => handleOpenSequence(s.id)} onDelete={() => handleDeleteSequence(s.id)} />)}
           </div>
         ) : (
-          <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#fafbfd', borderBottom: '1px solid #e5e7ef' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Name</th>
-                  <th style={{ textAlign: 'left', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Trigger</th>
-                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Emails</th>
-                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Subs</th>
-                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Open rate</th>
-                  <th style={{ textAlign: 'center', padding: '12px 10px', fontSize: 11, color: '#8e8ea0', fontWeight: 600 }}>Status</th>
+                <tr style={{ background: '#fafbfd', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Name</th>
+                  <th style={{ textAlign: 'left', padding: '12px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Trigger</th>
+                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Emails</th>
+                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Subs</th>
+                  <th style={{ textAlign: 'right', padding: '12px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Open rate</th>
+                  <th style={{ textAlign: 'center', padding: '12px 10px', fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Status</th>
                   <th style={{ padding: '12px 16px' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {list.map(s => (
                   <tr key={s.id} onClick={() => handleOpenSequence(s.id)} style={{ borderBottom: '1px solid #f0f0f5', cursor: 'pointer' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#1a1a2e' }}>{s.name}</td>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text)' }}>{s.name}</td>
                     <td style={{ padding: '12px 10px', color: '#5a5a6e' }}>{s.trigger_tag ? <span style={{ background: '#f0f0f5', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>{s.trigger_tag}</span> : '—'}</td>
-                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#1a1a2e' }}>{s.steps_count || 0}</td>
-                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#1a1a2e', fontWeight: 600 }}>{s.subscribers || 0}</td>
+                    <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--text)' }}>{s.steps_count || 0}</td>
+                    <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{s.subscribers || 0}</td>
                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#5a5a6e' }}>{(s.open_rate || 0).toFixed(1)}%</td>
                     <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                       <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: s.active ? '#e8f5e9' : '#f0f0f5', color: s.active ? '#22c55e' : '#8e8ea0' }}>
@@ -2151,7 +2151,7 @@ export default function EmailMarketing() {
         {/* New sequence modal */}
         {newSeqOpen && (
           <div onClick={() => !savingSeq && setNewSeqOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 460, width: '100%', padding: 24 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 12, maxWidth: 460, width: '100%', padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>New sequence</div>
                 <button onClick={() => setNewSeqOpen(false)} style={btnSecondary}><X size={14} /></button>
@@ -2162,7 +2162,7 @@ export default function EmailMarketing() {
               <label style={labelStyle}>Trigger tag (optional)</label>
               <input style={inputStyle} placeholder="e.g. newsletter" value={newSeqTag} onChange={e => setNewSeqTag(e.target.value)} list="all-tags-seq" />
               <datalist id="all-tags-seq">{allKnownTags.map(t => <option key={t} value={t} />)}</datalist>
-              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>Contacts with this tag will be auto-enrolled when the sequence is active.</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Contacts with this tag will be auto-enrolled when the sequence is active.</div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
                 <button onClick={() => setNewSeqOpen(false)} style={btnSecondary}>Cancel</button>
                 <button onClick={handleCreateSequence} disabled={savingSeq || !newSeqName.trim()} style={{ ...btnPrimary, opacity: (savingSeq || !newSeqName.trim()) ? 0.6 : 1 }}>
@@ -2201,7 +2201,7 @@ export default function EmailMarketing() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={cardStyle}>
           <div style={sectionTitle}>Add / Update Tag Description</div>
-          <div style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
             Describe each tag so the AI agent knows what kind of email to craft when you say "write an email for <code>newsletter</code>".
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -2225,7 +2225,7 @@ export default function EmailMarketing() {
         <div style={cardStyle}>
           <div style={sectionTitle}>All Tags ({tagContexts.length})</div>
           {tagContexts.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 30, color: '#8e8ea0' }}>
+            <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)' }}>
               <BookOpen size={32} strokeWidth={1} />
               <div style={{ marginTop: 8, fontSize: 13 }}>No tags yet — add tags to contacts or create descriptions above.</div>
             </div>
@@ -2307,7 +2307,7 @@ export default function EmailMarketing() {
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input type="color" value={selectedClient?.brand_primary_color || '#E8650A'}
                     onChange={e => handleBrandColorChange('brand_primary_color', e.target.value)}
-                    style={{ width: 48, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                    style={{ width: 48, height: 36, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
                   <input style={inputStyle} value={selectedClient?.brand_primary_color || ''}
                     onChange={e => handleBrandColorChange('brand_primary_color', e.target.value)} />
                 </div>
@@ -2317,12 +2317,12 @@ export default function EmailMarketing() {
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input type="color" value={selectedClient?.brand_secondary_color || '#1a1a2e'}
                     onChange={e => handleBrandColorChange('brand_secondary_color', e.target.value)}
-                    style={{ width: 48, height: 36, border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
+                    style={{ width: 48, height: 36, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
                   <input style={inputStyle} value={selectedClient?.brand_secondary_color || ''}
                     onChange={e => handleBrandColorChange('brand_secondary_color', e.target.value)} />
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: '#8e8ea0', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
                 These values plus the client's brand bible are used when you click <strong>Generate with AI</strong> on a template.
               </div>
             </div>
@@ -2353,12 +2353,12 @@ function TagContextRow({ tc, onUpdate, onDelete }) {
   const [savingEdit, setSavingEdit] = useState(false);
   const dirty = desc !== (tc.description || '');
   return (
-    <div style={{ border: '1px solid #e5e7ef', borderRadius: 10, padding: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
       <div style={{ minWidth: 140, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: '#e0f2fe', color: '#0ea5e9' }}>
           <Tag size={11} style={{ marginRight: 4 }} />{tc.tag}
         </span>
-        <span style={{ fontSize: 11, color: '#8e8ea0' }}>{tc.contact_count || 0} contacts</span>
+        <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tc.contact_count || 0} contacts</span>
       </div>
       <input style={{ ...inputStyle, flex: 1, minWidth: 200 }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe this audience..." />
       <button disabled={!dirty || savingEdit} onClick={async () => { setSavingEdit(true); await onUpdate(tc.tag, desc); setSavingEdit(false); }}
@@ -2381,7 +2381,7 @@ function SequenceCard({ seq, onOpen, onDelete }) {
   const dayLabel = seq.total_days === 1 ? '1 day' : `${seq.total_days || 0} day`;
   return (
     <div onClick={onOpen} style={{
-      background: '#fff', border: '1px solid #e5e7ef', borderRadius: 12, padding: 20,
+      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20,
       cursor: 'pointer', transition: 'box-shadow 0.15s, transform 0.15s',
       display: 'flex', flexDirection: 'column',
     }}
@@ -2398,10 +2398,10 @@ function SequenceCard({ seq, onOpen, onDelete }) {
           {seq.active ? 'Active' : 'Inactive'}
         </span>
         <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => setMenuOpen(o => !o)} style={{ background: 'transparent', border: 'none', padding: 4, cursor: 'pointer', color: '#8e8ea0', fontSize: 18, lineHeight: 1 }}>⋮</button>
+          <button onClick={() => setMenuOpen(o => !o)} style={{ background: 'transparent', border: 'none', padding: 4, cursor: 'pointer', color: 'var(--muted)', fontSize: 18, lineHeight: 1 }}>⋮</button>
           {menuOpen && (
-            <div style={{ position: 'absolute', right: 0, top: 26, background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8, boxShadow: '0 4px 16px rgba(10,20,40,0.1)', zIndex: 5, minWidth: 140 }}>
-              <button onClick={() => { setMenuOpen(false); onOpen(); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: '#1a1a2e' }}>Edit</button>
+            <div style={{ position: 'absolute', right: 0, top: 26, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(10,20,40,0.1)', zIndex: 5, minWidth: 140 }}>
+              <button onClick={() => { setMenuOpen(false); onOpen(); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>Edit</button>
               <button onClick={() => { setMenuOpen(false); onDelete(); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ef4444' }}>Delete</button>
             </div>
           )}
@@ -2413,10 +2413,10 @@ function SequenceCard({ seq, onOpen, onDelete }) {
         <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Mail size={18} color="#1a1a2e" />
         </div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', letterSpacing: -0.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seq.name}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', letterSpacing: -0.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seq.name}</div>
       </div>
 
-      <div style={{ fontSize: 13, color: '#8e8ea0', fontStyle: 'italic', marginTop: 14 }}>
+      <div style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', marginTop: 14 }}>
         A {dayLabel} sequence with {emailsLabel}
       </div>
 
@@ -2433,8 +2433,8 @@ function SequenceCard({ seq, onOpen, onDelete }) {
 function MetricCol({ label, value }) {
   return (
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 700, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+      <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
     </div>
   );
 }
@@ -2486,26 +2486,26 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
     setDirty(false);
   }
 
-  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', width: '100%', boxSizing: 'border-box', background: '#ffffff', color: '#1a1a2e' };
-  const lbl = { display: 'block', fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
-  const primary = { background: '#1a1a2e', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
-  const secondary = { background: '#f8f9fc', border: '1px solid #e5e7ef', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)' };
+  const lbl = { display: 'block', fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
+  const primary = { background: 'var(--surface)', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const secondary = { background: '#f8f9fc', border: '1px solid var(--border)', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: 900, width: '100%', maxHeight: '92vh', overflow: 'auto', padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 12, maxWidth: 900, width: '100%', maxHeight: '92vh', overflow: 'auto', padding: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sequence</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sequence</div>
             <input value={name} onChange={e => { setName(e.target.value); setDirty(true); }}
-              style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', border: 'none', outline: 'none', width: '100%', padding: 0, fontFamily: 'Inter, sans-serif', marginTop: 2 }} />
+              style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', border: 'none', outline: 'none', width: '100%', padding: 0, fontFamily: 'var(--font-display)', marginTop: 2 }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#5a5a6e', cursor: 'pointer', fontWeight: 600 }}>
               <span>Active</span>
               <span onClick={() => { setActive(a => !a); setDirty(true); }}
                 style={{ display: 'inline-block', width: 38, height: 22, background: active ? '#1a1a2e' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background 0.15s' }}>
-                <span style={{ position: 'absolute', top: 2, left: active ? 18 : 2, width: 18, height: 18, background: '#fff', borderRadius: 9, transition: 'left 0.15s' }}/>
+                <span style={{ position: 'absolute', top: 2, left: active ? 18 : 2, width: 18, height: 18, background: 'var(--surface)', borderRadius: 9, transition: 'left 0.15s' }}/>
               </span>
             </label>
             <button onClick={onClose} style={secondary}><X size={14} /></button>
@@ -2522,8 +2522,8 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
         </div>
 
         {/* Settings */}
-        <div style={{ background: '#fafbfd', border: '1px solid #e5e7ef', borderRadius: 10, padding: 16, marginBottom: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>Qualification rules</div>
+        <div style={{ background: '#fafbfd', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>Qualification rules</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 14 }}>
             <TagMultiPicker
               label="Contact must have ALL of these tags"
@@ -2549,10 +2549,10 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
               <label style={lbl}>Send time window</label>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <input type="time" value={winStart} onChange={e => { setWinStart(e.target.value); setDirty(true); }} style={{ ...inp, width: 120 }} />
-                <span style={{ fontSize: 12, color: '#8e8ea0' }}>to</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>to</span>
                 <input type="time" value={winEnd} onChange={e => { setWinEnd(e.target.value); setDirty(true); }} style={{ ...inp, width: 120 }} />
                 {(winStart || winEnd) && (
-                  <button onClick={() => { setWinStart(''); setWinEnd(''); setDirty(true); }} style={{ background: 'transparent', border: 'none', color: '#8e8ea0', fontSize: 11, cursor: 'pointer', padding: '4px 6px' }}>Clear</button>
+                  <button onClick={() => { setWinStart(''); setWinEnd(''); setDirty(true); }} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: 11, cursor: 'pointer', padding: '4px 6px' }}>Clear</button>
                 )}
               </div>
               <select value={winTz} onChange={e => { setWinTz(e.target.value); setDirty(true); }} style={{ ...inp, marginTop: 6 }}>
@@ -2571,7 +2571,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
                 <option value="Australia/Sydney">Australia/Sydney</option>
                 <option value="UTC">UTC</option>
               </select>
-              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
                 {winStart && winEnd
                   ? `Sends only between ${winStart} and ${winEnd}. Emails due outside the window wait until it reopens.`
                   : 'Leave empty to allow sending any time of day.'}
@@ -2601,7 +2601,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
               <Users size={14} /> Enroll matching contacts
             </button>
             <div style={{ flex: 1 }} />
-            <button onClick={onDelete} style={{ background: '#fff', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={onDelete} style={{ background: 'var(--surface)', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Trash2 size={14} /> Delete sequence
             </button>
           </div>
@@ -2609,11 +2609,11 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
 
         {/* Steps */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Emails in this sequence</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Emails in this sequence</div>
           <button onClick={onAddStep} style={primary}><Plus size={14} /> Add email</button>
         </div>
         {(seq.steps || []).length === 0 ? (
-          <div style={{ border: '1px dashed #e5e7ef', borderRadius: 10, padding: 28, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>
+          <div style={{ border: '1px dashed #e5e7ef', borderRadius: 10, padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
             No emails yet. Click "Add email" to create the first one.
           </div>
         ) : (
@@ -2630,9 +2630,9 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
 
 function MetricBox({ label, value }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 10, padding: 12 }}>
-      <div style={{ fontSize: 10, color: '#8e8ea0', fontWeight: 700, letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginTop: 4 }}>{value}</div>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 12 }}>
+      <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>{value}</div>
     </div>
   );
 }
@@ -2705,18 +2705,18 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
     setSaving(false);
   }
 
-  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e5e7ef', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', background: '#ffffff', color: '#1a1a2e' };
-  const primary = { background: '#1a1a2e', color: '#fff', borderRadius: 8, border: 'none', padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)' };
+  const primary = { background: 'var(--surface)', color: '#fff', borderRadius: 8, border: 'none', padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: 'pointer' }} onClick={() => setExpanded(e => !e)}>
-        <div style={{ width: 28, height: 28, borderRadius: 14, background: '#1a1a2e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{index + 1}</div>
+        <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--surface)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{index + 1}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {subject || <span style={{ color: '#b0b0c0', fontStyle: 'italic' }}>Untitled email</span>}
           </div>
-          <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
             {index === 0 && amount === 0 ? 'Sends immediately after enrollment' : `Sends ${amount} ${unit} after ${index === 0 ? 'enrollment' : 'previous email'}`}
           </div>
         </div>
@@ -2740,7 +2740,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
           {/* Template picker dropdown */}
           {templates && templates.length > 0 && (
             <div>
-              <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 }}>Start from template</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 }}>Start from template</div>
               <select
                 value={tplId}
                 onChange={e => applyTemplate(e.target.value)}
@@ -2759,11 +2759,11 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12 }}>
               <FileText size={13} color="#2563eb" />
               <span style={{ color: '#1e3a8a' }}>Using template: <strong>{tplName || 'Template'}</strong></span>
-              <span style={{ color: '#64748b', fontSize: 11 }}>— only the body below is editable.</span>
+              <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only the body below is editable.</span>
               <button
                 type="button"
                 onClick={() => { setTplId(''); setTplHtml(null); setTplName(''); }}
-                style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
               >
                 <X size={11} /> Remove
               </button>
@@ -2812,14 +2812,14 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
             <button
               type="button"
               onClick={() => setShowPreview(v => !v)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: showPreview ? '#1a1a2e' : '#f3f4f6', color: showPreview ? '#fff' : '#1a1a2e', border: '1px solid #e5e7ef', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: showPreview ? '#1a1a2e' : '#f3f4f6', color: showPreview ? '#fff' : '#1a1a2e', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
             >
               <Eye size={13} /> {showPreview ? 'Hide preview' : 'Show live preview'}
             </button>
-            <span style={{ fontSize: 11, color: '#8e8ea0' }}>See how the email will look to subscribers.</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>See how the email will look to subscribers.</span>
           </div>
           {showPreview && (
-            <div style={{ border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden', background: '#0a0a0a' }}>
+            <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: '#0a0a0a' }}>
               <iframe
                 title="Step live preview"
                 srcDoc={(() => {
@@ -2838,7 +2838,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => onDelete()} style={{ background: '#fff', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => onDelete()} style={{ background: 'var(--surface)', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
               <Trash2 size={12} />
             </button>
             <button onClick={save} disabled={saving} style={{ ...primary, opacity: saving ? 0.6 : 1 }}>
@@ -2885,13 +2885,13 @@ function TagMultiPicker({ label, hint, color = '#1a1a2e', values = [], allTags =
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 }}>{label}</div>
       <div
         onClick={() => setOpen(true)}
         style={{
           display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
           minHeight: 38, padding: '6px 10px',
-          background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8, cursor: 'text',
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'text',
         }}
       >
         {values.map(v => (
@@ -2915,17 +2915,17 @@ function TagMultiPicker({ label, hint, color = '#1a1a2e', values = [], allTags =
             else if (e.key === 'Backspace' && !query && values.length) remove(values[values.length - 1]);
           }}
           placeholder={values.length ? '' : 'Click to add tags...'}
-          style={{ flex: 1, minWidth: 120, border: 'none', outline: 'none', fontSize: 13, background: 'transparent', padding: '4px 0', fontFamily: 'Inter, sans-serif' }}
+          style={{ flex: 1, minWidth: 120, border: 'none', outline: 'none', fontSize: 13, background: 'transparent', padding: '4px 0', fontFamily: 'var(--font-display)' }}
         />
       </div>
       {open && (available.length > 0 || canCreate) && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, zIndex: 20,
-          background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8,
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
           boxShadow: '0 4px 16px rgba(10,20,40,0.08)', maxHeight: 220, overflowY: 'auto',
         }}>
           {available.slice(0, 50).map(t => (
-            <div key={t} onClick={() => add(t)} style={{ padding: '8px 12px', fontSize: 13, color: '#1a1a2e', cursor: 'pointer' }}
+            <div key={t} onClick={() => add(t)} style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#f0f0f5'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               {t}
@@ -2940,7 +2940,7 @@ function TagMultiPicker({ label, hint, color = '#1a1a2e', values = [], allTags =
           )}
         </div>
       )}
-      {hint && <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 6 }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>{hint}</div>}
     </div>
   );
 }
@@ -2973,8 +2973,8 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
     return raw.replace(/\{\{body\}\}/g, esc || '<span style="opacity:0.4">[your message here]</span>');
   }
 
-  const btnGhost = { background: '#fff', border: '1px solid #e5e7ef', color: '#1a1a2e', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-  const btnPrimary = { background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', color: '#fff', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const btnGhost = { background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+  const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: '#fff', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
     <div onClick={onClose} style={{
@@ -2982,14 +2982,14 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: '#fff', borderRadius: 14, width: '100%', maxWidth: 1100, height: '90vh',
+        background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 1100, height: '90vh',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid #e5e7ef' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Use a template</div>
-            <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>Type your message — the rest of the email stays on-brand.</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Use a template</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Type your message — the rest of the email stays on-brand.</div>
           </div>
           <button onClick={onClose} style={btnGhost}><X size={14} /></button>
         </div>
@@ -2997,12 +2997,12 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
         {/* Body split: left = list + body textarea, right = preview */}
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           {/* Left column */}
-          <div style={{ width: 360, borderRight: '1px solid #e5e7ef', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div style={{ width: 360, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div style={{ padding: 14, borderBottom: '1px solid #f0f0f5' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', letterSpacing: 0.5, marginBottom: 8 }}>TEMPLATES ({templates.length})</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', letterSpacing: 0.5, marginBottom: 8 }}>TEMPLATES ({templates.length})</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
                 {templates.length === 0 && (
-                  <div style={{ fontSize: 12, color: '#8e8ea0', padding: 10, textAlign: 'center' }}>No templates yet. Create one in the Templates tab.</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', padding: 10, textAlign: 'center' }}>No templates yet. Create one in the Templates tab.</div>
                 )}
                 {templates.map(t => (
                   <button
@@ -3015,14 +3015,14 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
                       cursor: 'pointer', fontSize: 12,
                     }}
                   >
-                    <div style={{ fontWeight: 700, color: '#1a1a2e' }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject || '(no subject)'}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text)' }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject || '(no subject)'}</div>
                   </button>
                 ))}
               </div>
             </div>
             <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', letterSpacing: 0.5, marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', letterSpacing: 0.5, marginBottom: 8 }}>
                 YOUR MESSAGE {hasBodyVar ? '' : '(template has no editable section)'}
               </div>
               <textarea
@@ -3031,9 +3031,9 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
                 onChange={e => setBodyText(e.target.value)}
                 placeholder={hasBodyVar ? 'Type the paragraph that goes in the editable slot...' : 'This template is fully hard-coded.'}
                 style={{
-                  flex: 1, resize: 'none', padding: 12, borderRadius: 8, border: '1px solid #e5e7ef',
-                  fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', lineHeight: 1.6,
-                  background: hasBodyVar ? '#fff' : '#f8f9fc', color: '#1a1a2e',
+                  flex: 1, resize: 'none', padding: 12, borderRadius: 8, border: '1px solid var(--border)',
+                  fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', lineHeight: 1.6,
+                  background: hasBodyVar ? '#fff' : '#f8f9fc', color: 'var(--text)',
                 }}
               />
             </div>
@@ -3041,29 +3041,29 @@ function TemplatePickerModal({ templates, onClose, onApply, initialTemplateId })
 
           {/* Right column: preview */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: '#f0f0f5' }}>
-            <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 8, background: '#fff' }}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)' }}>
               <Eye size={14} color="#8e8ea0" />
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>Preview</div>
-              {selected && <div style={{ fontSize: 11, color: '#8e8ea0' }}>— {selected.subject}</div>}
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>Preview</div>
+              {selected && <div style={{ fontSize: 11, color: 'var(--muted)' }}>— {selected.subject}</div>}
             </div>
             <div style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
               {selected ? (
                 <iframe
                   title="Template preview"
                   srcDoc={renderHtml()}
-                  style={{ width: '100%', height: '100%', border: 0, background: '#fff' }}
+                  style={{ width: '100%', height: '100%', border: 0, background: 'var(--surface)' }}
                   sandbox=""
                 />
               ) : (
-                <div style={{ padding: 40, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>Select a template to preview</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Select a template to preview</div>
               )}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderTop: '1px solid #e5e7ef', background: '#fafbfd' }}>
-          <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderTop: '1px solid var(--border)', background: '#fafbfd' }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
             {hasBodyVar ? 'Your message replaces the {{body}} slot. Everything else stays as-is.' : 'No editable slot — template will be applied as-is.'}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

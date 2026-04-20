@@ -98,15 +98,15 @@ export default function Accounts() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <Building2 size={22} style={{ color: '#4a6cf7' }} />
+          <Building2 size={22} style={{ color: 'var(--orange)' }} />
           <div className="page-title">Accounts</div>
         </div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input className="search-input" placeholder="Search accounts..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Account</button>
@@ -136,9 +136,9 @@ export default function Accounts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No accounts yet.</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No accounts yet.</td></tr>
             ) : filtered.map(account => (
               <tr key={account.id} style={{ background: selectedIds.has(account.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
                 <td>
@@ -167,7 +167,7 @@ export default function Accounts() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {account.email && (
                       <a href={gmailLink(account.email)} target="_blank" rel="noreferrer" title="Compose in Gmail" style={{ display: 'flex', flexShrink: 0 }}>
-                        <Mail size={13} style={{ color: '#4a6cf7' }} />
+                        <Mail size={13} style={{ color: 'var(--orange)' }} />
                       </a>
                     )}
                     <InlineEdit value={account.email} type="email" onSave={val => handleFieldSave(account.id, 'email', val)} placeholder="Add email" />
@@ -175,13 +175,13 @@ export default function Accounts() {
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {account.phone && <Phone size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />}
+                    {account.phone && <Phone size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
                     <InlineEdit value={account.phone} type="tel" onSave={val => handleFieldSave(account.id, 'phone', val)} placeholder="Add phone" />
                   </div>
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {account.website && <Globe size={12} style={{ color: '#8e8ea0', flexShrink: 0 }} />}
+                    {account.website && <Globe size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
                     <InlineEdit value={account.website} onSave={val => handleFieldSave(account.id, 'website', val)} placeholder="website.com" />
                   </div>
                 </td>
@@ -253,7 +253,7 @@ export default function Accounts() {
       )}
       {modal === 'delete' && (
         <Modal title="Delete Account" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong>? This cannot be undone.</p>
+          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong>? This cannot be undone.</p>
         </Modal>
       )}
     </div>

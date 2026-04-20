@@ -218,19 +218,19 @@ export default function ComposeModal({ onClose, onComplete }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12,
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
         width: 620, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
       }}>
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '18px 20px 14px', borderBottom: '1px solid #e5e7ef',
-          position: 'sticky', top: 0, background: '#ffffff', zIndex: 2,
+          padding: '18px 20px 14px', borderBottom: '1px solid var(--border)',
+          position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 2,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <PenLine size={16} color="#ff9b26" />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Compose Email</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Compose Email</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a4845', padding: 4 }}>
             <X size={16} />
@@ -249,9 +249,9 @@ export default function ComposeModal({ onClose, onComplete }) {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 6,
-                background: '#f5f7fa', border: '1px solid #e5e7ef',
+                background: 'var(--bg)', border: '1px solid var(--border)',
               }}>
-                <span style={{ fontWeight: 600, color: '#1a1a2e', fontSize: 13, flex: 1 }}>{selectedLead.full_name}</span>
+                <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, flex: 1 }}>{selectedLead.full_name}</span>
                 <span style={{ color: '#4a4845', fontSize: 13 }}>{selectedLead.email}</span>
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 8, textTransform: 'uppercase',
@@ -272,25 +272,25 @@ export default function ComposeModal({ onClose, onComplete }) {
                     value={toInput}
                     onChange={e => { setToInput(e.target.value); setShowSugg(true); }}
                     onFocus={() => { if (toInput.trim()) setShowSugg(true); }}
-                    style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: 6, fontSize: 13, color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: 6, fontSize: 13, color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 {showSuggestions && suggestions.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999, marginTop: 2, background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)', overflow: 'auto', maxHeight: 240 }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999, marginTop: 2, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.5)', overflow: 'auto', maxHeight: 240 }}>
                     {suggestions.map(l => (
                       <div key={l.id} onMouseDown={() => pickLead(l)}
                         style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}
                         onMouseEnter={e => e.currentTarget.style.background = '#e8ecf4'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
-                        <span style={{ fontWeight: 600, color: '#1a1a2e', flex: 1 }}>{l.full_name}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text)', flex: 1 }}>{l.full_name}</span>
                         <span style={{ color: '#4a4845' }}>{l.email}</span>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 8, textTransform: 'uppercase', color: SEGMENT_COLORS[l.lead_segment] || SEGMENT_COLORS.cold, background: (SEGMENT_COLORS[l.lead_segment] || SEGMENT_COLORS.cold) + '20' }}>{l.lead_segment || 'cold'}</span>
                       </div>
                     ))}
                     {toInput.includes('@') && (
-                      <div style={{ padding: '8px 12px', fontSize: 11, color: '#4a4845', borderTop: '1px solid #e5e7ef', fontStyle: 'italic' }}>
-                        Or press Tab / click outside to send to <strong style={{ color: '#8e8ea0' }}>{toInput}</strong> directly
+                      <div style={{ padding: '8px 12px', fontSize: 11, color: '#4a4845', borderTop: '1px solid var(--border)', fontStyle: 'italic' }}>
+                        Or press Tab / click outside to send to <strong style={{ color: 'var(--muted)' }}>{toInput}</strong> directly
                       </div>
                     )}
                   </div>
@@ -306,13 +306,13 @@ export default function ComposeModal({ onClose, onComplete }) {
 
           {/* ── Gmail History (only when lead is selected) ─────────────────── */}
           {selectedLead && (
-            <div style={{ background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 8, padding: '12px 14px' }}>
+            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#4a4845' }}>Gmail History</span>
                 <button
                   onClick={handleSync}
                   disabled={syncing}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer', background: '#e8ecf4', border: '1px solid #e5e7ef', color: '#ff9b26', opacity: syncing ? 0.7 : 1 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer', background: '#e8ecf4', border: '1px solid var(--border)', color: '#ff9b26', opacity: syncing ? 0.7 : 1 }}
                 >
                   <RefreshCw size={11} style={{ animation: syncing ? 'spin 0.7s linear infinite' : 'none' }} />
                   {syncing ? 'Syncing…' : 'Sync Gmail'}
@@ -336,7 +336,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#ff9b26', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                         📤 Last Sent to Lead
                       </div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 2 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 2 }}>
                         {syncResult.last_sent_subject || '(no subject)'}
                       </div>
                       {syncResult.last_sent_at && (
@@ -357,7 +357,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                           onChange={e => setSentContext(e.target.value)}
                           placeholder="Additional context for this follow-up… (optional)"
                           rows={2}
-                          style={{ width: '100%', padding: '7px 10px', borderRadius: 5, fontSize: 11, color: '#8e8ea0', background: '#0f1830', border: '1px solid #1e3a5f', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 8 }}
+                          style={{ width: '100%', padding: '7px 10px', borderRadius: 5, fontSize: 11, color: 'var(--muted)', background: '#0f1830', border: '1px solid #1e3a5f', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 8 }}
                         />
                         <button
                           onClick={() => handleCreateEmail('sent')}
@@ -390,7 +390,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 2 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 2 }}>
                         {syncResult.last_reply_subject || '(no subject)'}
                       </div>
                       {syncResult.last_reply_at && (
@@ -411,7 +411,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                           onChange={e => setReplyContext(e.target.value)}
                           placeholder="Additional context for this reply… (optional)"
                           rows={2}
-                          style={{ width: '100%', padding: '7px 10px', borderRadius: 5, fontSize: 11, color: '#8e8ea0', background: '#0f1a12', border: '1px solid #1e4028', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 8 }}
+                          style={{ width: '100%', padding: '7px 10px', borderRadius: 5, fontSize: 11, color: 'var(--muted)', background: '#0f1a12', border: '1px solid #1e4028', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 8 }}
                         />
                         <button
                           onClick={() => handleCreateEmail('reply')}
@@ -452,7 +452,7 @@ export default function ComposeModal({ onClose, onComplete }) {
             <select
               value={emailType}
               onChange={e => setEmailType(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: 6, fontSize: 13, color: '#8e8ea0', background: '#f5f7fa', border: '1px solid #e5e7ef', cursor: 'pointer', outline: 'none' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 6, fontSize: 13, color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer', outline: 'none' }}
             >
               {EMAIL_TYPE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
@@ -499,7 +499,7 @@ export default function ComposeModal({ onClose, onComplete }) {
               value={subject}
               onChange={e => setSubject(e.target.value)}
               placeholder="Write your subject line…"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 13, color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 13, color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -513,12 +513,12 @@ export default function ComposeModal({ onClose, onComplete }) {
               onChange={e => setBody(e.target.value)}
               placeholder="Write your email… or use Create Email above to AI-generate it."
               rows={10}
-              style={{ width: '100%', padding: '12px 14px', borderRadius: 6, fontSize: 13, color: '#8e8ea0', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 6, fontSize: 13, color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border)', outline: 'none', resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit', boxSizing: 'border-box' }}
             />
           </div>
 
           {/* ── Global context / notes ────────────────────────────────────────── */}
-          <div style={{ borderTop: '1px solid #e5e7ef', paddingTop: 16 }}>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <MessageSquare size={13} color="#4a4845" />
               <label style={{ fontSize: 11, fontWeight: 700, color: '#4a4845', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -533,7 +533,7 @@ export default function ComposeModal({ onClose, onComplete }) {
               onChange={e => setContext(e.target.value)}
               placeholder="e.g. They mentioned interest in TikTok automation. Keep it under 150 words…"
               rows={3}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 6, fontSize: 12, color: '#8e8ea0', background: '#f5f7fa', border: '1px solid #e5e7ef', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 6, fontSize: 12, color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border)', outline: 'none', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -548,7 +548,7 @@ export default function ComposeModal({ onClose, onComplete }) {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button
               onClick={onClose}
-              style={{ padding: '8px 16px', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'none', border: '1px solid #e5e7ef', color: '#4a4845' }}
+              style={{ padding: '8px 16px', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: 'none', border: '1px solid var(--border)', color: '#4a4845' }}
             >
               Cancel
             </button>

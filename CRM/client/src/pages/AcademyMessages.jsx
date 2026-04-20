@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Search, Circle, Loader2 } from 'lucide-react';
 import { getAcademyThreads, getAcademyThread, sendAcademyMessage } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 0, marginBottom: 16, overflow: 'hidden' };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 0, marginBottom: 16, overflow: 'hidden' };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
-const searchStyle = { width: '100%', padding: '10px 14px 10px 38px', border: 'none', borderBottom: '1px solid #e5e7ef', fontSize: 13, color: '#1a1a2e', outline: 'none', background: '#fff', boxSizing: 'border-box' };
+const searchStyle = { width: '100%', padding: '10px 14px 10px 38px', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 13, color: 'var(--text)', outline: 'none', background: 'var(--surface)', boxSizing: 'border-box' };
 
 function formatTime(dateStr) {
   if (!dateStr) return '';
@@ -133,7 +133,7 @@ export default function AcademyMessages() {
         <div style={{ ...cardStyle, padding: 40, color: '#ef4444', textAlign: 'center' }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load messages</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadThreads} style={{ marginTop: 12, padding: '8px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadThreads} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -151,7 +151,7 @@ export default function AcademyMessages() {
 
       <div style={{ ...cardStyle, display: 'flex', height: 520 }}>
         {/* Left panel - thread list */}
-        <div style={{ width: 300, borderRight: '1px solid #e5e7ef', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: 300, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ position: 'relative' }}>
             <Search size={16} color="#7a7f9a" style={{ position: 'absolute', left: 12, top: 11 }} />
             <input
@@ -177,14 +177,14 @@ export default function AcademyMessages() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }} className="private-value">{t.student_name || t.full_name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }} className="private-value">{t.student_name || t.full_name}</span>
                     <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatTime(t.latest_at || t.last_message_at || t.updated_at)}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {(t.unread_count > 0) && <Circle size={7} fill="#4a6cf7" color="#4a6cf7" />}
                     <span style={{ fontSize: 12, color: '#7a7f9a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.latest_message || t.last_message || t.preview || ''}</span>
                     {(t.unread_count > 0) && (
-                      <span style={{ marginLeft: 'auto', background: '#4a6cf7', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{t.unread_count}</span>
+                      <span style={{ marginLeft: 'auto', background: 'var(--orange)', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{t.unread_count}</span>
                     )}
                   </div>
                 </div>
@@ -201,8 +201,8 @@ export default function AcademyMessages() {
             </div>
           ) : (
             <>
-              <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }} className="private-value">{selectedThread.student_name || selectedThread.full_name}</span>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }} className="private-value">{selectedThread.student_name || selectedThread.full_name}</span>
               </div>
 
               <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -231,9 +231,9 @@ export default function AcademyMessages() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div style={{ padding: '12px 20px', borderTop: '1px solid #e5e7ef', display: 'flex', gap: 10 }}>
+              <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
                 <input
-                  style={{ flex: 1, padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, outline: 'none' }}
+                  style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, outline: 'none' }}
                   placeholder="Type a message..."
                   value={messageText}
                   onChange={e => setMessageText(e.target.value)}
@@ -244,7 +244,7 @@ export default function AcademyMessages() {
                   onClick={handleSend}
                   disabled={sending || !messageText.trim()}
                   style={{
-                    padding: '10px 16px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 10,
+                    padding: '10px 16px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10,
                     cursor: sending || !messageText.trim() ? 'default' : 'pointer',
                     display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13,
                     opacity: sending || !messageText.trim() ? 0.6 : 1,

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Users, Pin, Trash2, MessageCircle, Loader2 } from 'lucide-react';
 import { getAcademyCommunityPosts, deleteAcademyPost, pinAcademyPost } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
 
 function formatDate(dateStr) {
@@ -97,7 +97,7 @@ export default function AcademyCommunity() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load community posts</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadPosts} style={{ marginTop: 12, padding: '8px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadPosts} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -134,12 +134,12 @@ export default function AcademyCommunity() {
         <div key={post.id} style={{ ...cardStyle, borderLeft: post.pinned ? '3px solid #f59e0b' : undefined, opacity: actionLoading === post.id ? 0.6 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: 12, flex: 1 }}>
-              <div className="private-value" style={{ width: 38, height: 38, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#4a6cf7', flexShrink: 0 }}>
+              <div className="private-value" style={{ width: 38, height: 38, borderRadius: 10, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
                 {getInitials(post.author_name)}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{post.author_name}</span>
+                  <span className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{post.author_name}</span>
                   <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatDate(post.created_at)}</span>
                   {post.pinned && (
                     <span style={{ padding: '2px 8px', borderRadius: 5, fontSize: 10, fontWeight: 600, background: '#f59e0b18', color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -168,7 +168,7 @@ export default function AcademyCommunity() {
               <button
                 onClick={() => handleDelete(post.id)}
                 disabled={actionLoading === post.id}
-                style={{ background: '#f5f7fa', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
+                style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
                 title="Delete post"
               >
                 <Trash2 size={14} color="#ef4444" />

@@ -52,10 +52,10 @@ function PaymentBadge({ dealId, allInvoices, onRefresh }) {
       <span style={{ fontSize: 11, fontWeight: 600, color, background: color + '22', borderRadius: 12, padding: '2px 8px', whiteSpace: 'nowrap' }}>{label}</span>
       {latestUrl && (
         <a href={latestUrl} target="_blank" rel="noreferrer" title="View on Stripe">
-          <ExternalLink size={11} style={{ color: '#8e8ea0' }} />
+          <ExternalLink size={11} style={{ color: 'var(--muted)' }} />
         </a>
       )}
-      <button onClick={() => onRefresh(inv)} title="Refresh" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 2, display: 'flex' }}>
+      <button onClick={() => onRefresh(inv)} title="Refresh" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 2, display: 'flex' }}>
         <RefreshCw size={11} />
       </button>
     </div>
@@ -102,30 +102,30 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, width: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
-        <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CreditCard size={18} style={{ color: '#4a6cf7' }} />
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Send Invoice (Stripe)</span>
-          <span style={{ fontSize: 13, color: '#8e8ea0' }}>— {deal.name}</span>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, width: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+        <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CreditCard size={18} style={{ color: 'var(--orange)' }} />
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Send Invoice (Stripe)</span>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>— {deal.name}</span>
         </div>
         <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Email *</label>
+              <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Customer Email *</label>
               <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="client@email.com" />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Name</label>
+              <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Customer Name</label>
               <input className="form-input" value={custName} onChange={e => setCustName(e.target.value)} />
             </div>
           </div>
           <div>
-            <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Description</label>
+            <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Description</label>
             <input className="form-input" value={desc} onChange={e => setDesc(e.target.value)} />
           </div>
           {showStructureToggle && (
             <div>
-              <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 8 }}>Payment Structure</label>
+              <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Payment Structure</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                   <button key={val} onClick={() => setStructure(val)} style={{
@@ -141,22 +141,22 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
           )}
           {structure === 'single' && (
             <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#8e8ea0', fontSize: 13 }}>Total invoice amount</span>
-              <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
+              <span style={{ color: 'var(--muted)', fontSize: 13 }}>Total invoice amount</span>
+              <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
             </div>
           )}
           {structure === 'two_phase' && (
             <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 1 (sent now)</span>
+                <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 1 (sent now)</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="range" min={10} max={90} value={pct1} onChange={e => setPct1(Number(e.target.value))} style={{ width: 80 }} />
-                  <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
+                  <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                 </div>
               </div>
               <div style={{ height: 1, background: '#e5e7ef' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
+                <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
                 <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 14 }}>${amount2.toLocaleString()} ({100 - pct1}%)</span>
               </div>
             </div>
@@ -164,15 +164,15 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
           {structure === 'phase2' && (
             <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (remaining balance)</span>
+                <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 2 (remaining balance)</span>
                 <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 16 }}>${amount2.toLocaleString()}</span>
               </div>
-              <div style={{ color: '#8e8ea0', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
+              <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
             </div>
           )}
           {err && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{err}</div>}
         </div>
-        <div style={{ padding: '14px 22px', borderTop: '1px solid #e5e7ef', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={send} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Send size={14} />
@@ -291,20 +291,20 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
 
   const inp = {
     width: '100%', boxSizing: 'border-box',
-    background: '#f5f7fa', border: '1px solid #e5e7ef', borderRadius: 6,
-    padding: '7px 10px', fontSize: 12, color: '#1a1a2e', outline: 'none',
+    background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6,
+    padding: '7px 10px', fontSize: 12, color: 'var(--text)', outline: 'none',
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: 20 }}>
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 14, width: '100%', maxWidth: 780, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, width: '100%', maxWidth: 780, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
 
         {/* Header */}
-        <div style={{ padding: '16px 22px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-          {mode === 'manual' ? <FileText size={18} style={{ color: '#4a6cf7' }} /> : <CreditCard size={18} style={{ color: '#4a6cf7' }} />}
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Invoice</span>
-          <span style={{ fontSize: 13, color: '#8e8ea0' }}>— {deal.name}</span>
-          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7ef', marginLeft: 8 }}>
+        <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          {mode === 'manual' ? <FileText size={18} style={{ color: 'var(--orange)' }} /> : <CreditCard size={18} style={{ color: 'var(--orange)' }} />}
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Invoice</span>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>— {deal.name}</span>
+          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', marginLeft: 8 }}>
             {[['manual', FileText, 'Manual Invoice'], ['stripe', CreditCard, 'Send via Stripe']].map(([m, Icon, label]) => (
               <button key={m} onClick={() => setMode(m)} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
@@ -318,7 +318,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               </button>
             ))}
           </div>
-          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}>
             <X size={18} />
           </button>
         </div>
@@ -331,21 +331,21 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
-                  <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Email *</label>
+                  <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Customer Email *</label>
                   <input className="form-input" type="email" value={strEmail} onChange={e => setStrEmail(e.target.value)} placeholder="client@email.com" />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Customer Name</label>
+                  <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Customer Name</label>
                   <input className="form-input" value={strName} onChange={e => setStrName(e.target.value)} />
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 5 }}>Description</label>
+                <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Description</label>
                 <input className="form-input" value={strDesc} onChange={e => setStrDesc(e.target.value)} />
               </div>
               {showStructureToggle && (
                 <div>
-                  <label style={{ fontSize: 12, color: '#8e8ea0', display: 'block', marginBottom: 8 }}>Payment Structure</label>
+                  <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Payment Structure</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {[['single', '💳 1 Full Payment'], ['two_phase', '📊 2 Phases']].map(([val, lbl]) => (
                       <button key={val} onClick={() => setStructure(val)} style={{
@@ -361,22 +361,22 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               )}
               {structure === 'single' && (
                 <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#8e8ea0', fontSize: 13 }}>Total invoice amount</span>
-                  <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 13 }}>Total invoice amount</span>
+                  <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 16 }}>${(deal.value || 0).toLocaleString()}</span>
                 </div>
               )}
               {structure === 'two_phase' && (
                 <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 1 (sent now)</span>
+                    <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 1 (sent now)</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input type="range" min={10} max={90} value={pct1} onChange={e => setPct1(Number(e.target.value))} style={{ width: 80 }} />
-                      <span style={{ color: '#4a6cf7', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
+                      <span style={{ color: 'var(--orange)', fontWeight: 700, fontSize: 14, minWidth: 100, textAlign: 'right' }}>${amount1.toLocaleString()} ({pct1}%)</span>
                     </div>
                   </div>
                   <div style={{ height: 1, background: '#e5e7ef' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
+                    <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 2 (after Phase 1 paid)</span>
                     <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 14 }}>${amount2.toLocaleString()} ({100 - pct1}%)</span>
                   </div>
                 </div>
@@ -384,10 +384,10 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               {structure === 'phase2' && (
                 <div style={{ background: '#161830', borderRadius: 8, padding: '12px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#8e8ea0', fontSize: 13 }}>Phase 2 (remaining balance)</span>
+                    <span style={{ color: 'var(--muted)', fontSize: 13 }}>Phase 2 (remaining balance)</span>
                     <span style={{ color: '#fdab3d', fontWeight: 700, fontSize: 16 }}>${amount2.toLocaleString()}</span>
                   </div>
-                  <div style={{ color: '#8e8ea0', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
+                  <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 6 }}>Phase 1 has been paid ✓</div>
                 </div>
               )}
               {strErr && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{strErr}</div>}
@@ -400,29 +400,29 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {/* Invoice meta */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 4 }}>Invoice Date</label>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Invoice Date</label>
               <input style={inp} type="date" value={form.invoice_date} onChange={e => setField('invoice_date', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 4 }}>Due Date</label>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Due Date</label>
               <input style={inp} type="date" value={form.due_date} onChange={e => setField('due_date', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 4 }}>Invoice # (auto-assigned)</label>
-              <input style={{ ...inp, color: '#8e8ea0' }} value={form.invoice_number || 'Will be assigned on save'} readOnly />
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Invoice # (auto-assigned)</label>
+              <input style={{ ...inp, color: 'var(--muted)' }} value={form.invoice_number || 'Will be assigned on save'} readOnly />
             </div>
           </div>
 
           {/* From + Bill To */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>From</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>From</div>
               <input style={inp} placeholder="Company name" value={form.from_name} onChange={e => setField('from_name', e.target.value)} />
               <input style={inp} placeholder="Your email" value={form.from_email} onChange={e => setField('from_email', e.target.value)} />
               <input style={inp} placeholder="Phone (optional)" value={form.from_phone} onChange={e => setField('from_phone', e.target.value)} />
             </div>
             <div style={{ background: '#161830', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Bill To</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Bill To</div>
               <input style={inp} placeholder="Client name" value={form.bill_to_name} onChange={e => setField('bill_to_name', e.target.value)} />
               <input style={inp} placeholder="Client email" value={form.bill_to_email} onChange={e => setField('bill_to_email', e.target.value)} />
               <input style={inp} placeholder="Address (optional)" value={form.bill_to_address} onChange={e => setField('bill_to_address', e.target.value)} />
@@ -431,10 +431,10 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
 
           {/* Line Items */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Line Items</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Line Items</div>
             <div style={{ background: '#161830', borderRadius: 8, overflow: 'hidden' }}>
               {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 32px', gap: 8, padding: '8px 12px', borderBottom: '1px solid #e5e7ef', fontSize: 11, color: '#8e8ea0', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 100px 32px', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                 <span>Description</span><span>Qty</span><span>Rate ($)</span><span>Amount</span><span></span>
               </div>
               {form.items.map((item, idx) => (
@@ -442,14 +442,14 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                   <input style={{ ...inp, padding: '5px 8px' }} placeholder="Description" value={item.description} onChange={e => updateItem(idx, 'description', e.target.value)} />
                   <input style={{ ...inp, padding: '5px 8px' }} type="number" min="1" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} />
                   <input style={{ ...inp, padding: '5px 8px' }} type="number" min="0" step="0.01" value={item.rate} onChange={e => updateItem(idx, 'rate', e.target.value)} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4a6cf7' }}>${((item.qty || 1) * (parseFloat(item.rate) || 0)).toLocaleString()}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--orange)' }}>${((item.qty || 1) * (parseFloat(item.rate) || 0)).toLocaleString()}</span>
                   <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', padding: 0 }}>
                     <X size={13} />
                   </button>
                 </div>
               ))}
               <div style={{ padding: '8px 12px' }}>
-                <button onClick={addItem} style={{ background: 'none', border: '1px dashed #e5e7ef', borderRadius: 6, cursor: 'pointer', color: '#4a6cf7', fontSize: 12, padding: '5px 12px', width: '100%' }}>
+                <button onClick={addItem} style={{ background: 'none', border: '1px dashed #e5e7ef', borderRadius: 6, cursor: 'pointer', color: 'var(--orange)', fontSize: 12, padding: '5px 12px', width: '100%' }}>
                   + Add Item
                 </button>
               </div>
@@ -457,8 +457,8 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
             {/* Total */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, paddingRight: 44 }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 3 }}>Total</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#4a6cf7' }}>${subtotal.toLocaleString()}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 3 }}>Total</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--orange)' }}>${subtotal.toLocaleString()}</div>
               </div>
             </div>
           </div>
@@ -466,7 +466,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {/* Payment Instructions + Notes */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 6 }}>Payment Instructions</label>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>Payment Instructions</label>
               <textarea
                 style={{ ...inp, minHeight: 80, resize: 'vertical', lineHeight: 1.5 }}
                 placeholder="e.g. Please pay via Zelle to: 5551234567 or venmo.com/yourname"
@@ -475,7 +475,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: '#8e8ea0', display: 'block', marginBottom: 6 }}>Notes</label>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>Notes</label>
               <textarea
                 style={{ ...inp, minHeight: 80, resize: 'vertical', lineHeight: 1.5 }}
                 placeholder="Thank you for your business!"
@@ -488,7 +488,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {err && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{err}</div>}
 
           {saved && (
-            <div style={{ color: '#4a6cf7', fontSize: 13, background: '#4a6cf715', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ color: 'var(--orange)', fontSize: 13, background: '#4a6cf715', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
               <Check size={14} /> Invoice #{saved.invoice_number} saved successfully
             </div>
           )}
@@ -496,7 +496,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 22px', borderTop: '1px solid #e5e7ef', display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <button className="btn-ghost" onClick={onClose}>Close</button>
           {mode === 'stripe' ? (
             <button onClick={sendStripe} disabled={strLoading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -756,12 +756,12 @@ export default function Deals() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <div className="page-header">
         <div className="page-title">Projects</div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input className="search-input" placeholder="Search deals..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="btn-primary" onClick={() => openAdd()}><Plus size={16} /> New Deal</button>
@@ -787,15 +787,15 @@ export default function Deals() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
             ) : groups.map(({ label, items, stages }) => (
               <React.Fragment key={label}>
                 <tr>
-                  <td colSpan={11} style={{ padding: 0, background: '#ffffff' }}>
+                  <td colSpan={11} style={{ padding: 0, background: 'var(--surface)' }}>
                     <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))}>
                       {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                       <span style={{ color: groupLabelColor(label) }}>{label}</span>
-                      <span style={{ background: '#e5e7ef', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: '#8e8ea0' }}>{items.length}</span>
+                      <span style={{ background: 'var(--border-light)', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: 'var(--muted)' }}>{items.length}</span>
                     </div>
                   </td>
                 </tr>
@@ -828,9 +828,9 @@ export default function Deals() {
                           placeholder="Task name…"
                           style={{
                             display: 'block', marginTop: 4, width: '100%',
-                            background: '#f0f2f8', border: '1px solid rgba(74,108,247,0.4)',
-                            borderRadius: 5, outline: 'none', color: '#1a1a2e',
-                            fontSize: 12, padding: '3px 8px', fontFamily: 'Inter, sans-serif',
+                            background: 'var(--surface-3)', border: '1px solid rgba(74,108,247,0.4)',
+                            borderRadius: 5, outline: 'none', color: 'var(--text)',
+                            fontSize: 12, padding: '3px 8px', fontFamily: 'var(--font-display)',
                           }}
                         />
                       ) : hoveredDeal === deal.id ? (
@@ -839,8 +839,8 @@ export default function Deals() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: 4, marginTop: 4,
                             background: 'none', border: 'none', cursor: 'pointer',
-                            color: '#8e8ea0', fontSize: 11, padding: 0,
-                            fontFamily: 'Inter, sans-serif', transition: 'color 0.15s',
+                            color: 'var(--muted)', fontSize: 11, padding: 0,
+                            fontFamily: 'var(--font-display)', transition: 'color 0.15s',
                           }}
                           onMouseEnter={e => e.currentTarget.style.color = '#4a6cf7'}
                           onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
@@ -852,12 +852,12 @@ export default function Deals() {
                     <td>
                       <StatusBadge status={deal.stage} options={STAGES} onChange={s => handleStageChange(deal, s)} />
                     </td>
-                    <td style={{ fontSize: 12, color: '#8e8ea0' }}>
+                    <td style={{ fontSize: 12, color: 'var(--muted)' }}>
                       <InlineEdit value={deal.created_date || ''} type="date" onSave={val => handleFieldSave(deal.id, 'created_date', val)} placeholder={formatDate(deal.created_date)} />
                     </td>
                     <td>
                       <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <DollarSign size={13} style={{ color: '#4a6cf7', flexShrink: 0 }} />
+                        <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
                         <InlineEdit value={String(deal.value || '')} type="number" onSave={val => handleFieldSave(deal.id, 'value', val)} placeholder="0" />
                       </div>
                     </td>
@@ -881,7 +881,7 @@ export default function Deals() {
                         <button
                           onClick={() => setManualDeal(deal)}
                           title="Create or Send Invoice"
-                          style={{ background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, cursor: 'pointer', color: '#4a6cf7', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
+                          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--orange)', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
                           onMouseEnter={e => e.currentTarget.style.background = '#4a6cf722'}
                           onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
@@ -909,10 +909,10 @@ export default function Deals() {
                 ))}
                 {!collapsed[label] && items.length > 0 && (
                   <tr className="sum-row">
-                    <td colSpan={3} style={{ textAlign: 'right', color: '#8e8ea0', fontSize: 12 }}>Total</td>
+                    <td colSpan={3} style={{ textAlign: 'right', color: 'var(--muted)', fontSize: 12 }}>Total</td>
                     <td></td>
-                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#4a6cf7' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.value || 0), 0))}</span></div></td>
-                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: '#4a6cf7' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.amount_paid || 0), 0))}</span></div></td>
+                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: 'var(--orange)' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.value || 0), 0))}</span></div></td>
+                    <td><div className="private-value flex items-center gap-1"><DollarSign size={13} style={{ color: 'var(--orange)' }} /><span>{formatMoney(items.reduce((s, d) => s + (d.amount_paid || 0), 0))}</span></div></td>
                     <td colSpan={5}></td>
                   </tr>
                 )}
@@ -1010,7 +1010,7 @@ export default function Deals() {
 
       {modal === 'delete' && (
         <Modal title="Delete Deal" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong>? This cannot be undone.</p>
+          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong>? This cannot be undone.</p>
         </Modal>
       )}
     </div>

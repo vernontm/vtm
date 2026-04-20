@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardCheck, CheckCircle, Clock, XCircle, X, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { getAcademyHomework, updateAcademyHomework } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
 
 const tabs = ['All', 'pending', 'approved', 'rejected'];
@@ -94,7 +94,7 @@ export default function AcademyHomework() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load homework</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadHomework} style={{ marginTop: 12, padding: '8px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadHomework} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ export default function AcademyHomework() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}><span className="private-value">{s.student_name}</span></span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}><span className="private-value">{s.student_name}</span></span>
                 <span style={{
                   padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                   background: statusColor(s.status) + '18', color: statusColor(s.status),
@@ -143,7 +143,7 @@ export default function AcademyHomework() {
                   <StatusIcon status={s.status} /> {s.status}
                 </span>
               </div>
-              <div style={{ fontSize: 12, color: '#4a6cf7', fontWeight: 500, marginBottom: 6 }}>{s.lesson_title}</div>
+              <div style={{ fontSize: 12, color: 'var(--orange)', fontWeight: 500, marginBottom: 6 }}>{s.lesson_title}</div>
               <p style={{ fontSize: 13, color: '#7a7f9a', margin: 0, lineHeight: 1.5 }}>
                 {expandedId === s.id ? s.submission_text : (s.submission_text || '').slice(0, 150) + ((s.submission_text || '').length > 150 ? '...' : '')}
               </p>
@@ -152,7 +152,7 @@ export default function AcademyHomework() {
               <span style={{ fontSize: 11, color: '#7a7f9a' }}>{formatDate(s.created_at)}</span>
               <button
                 onClick={() => toggleExpand(s.id, s.admin_feedback)}
-                style={{ background: '#f5f7fa', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
+                style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
               >
                 {expandedId === s.id ? <ChevronUp size={14} color="#4a6cf7" /> : <ChevronDown size={14} color="#4a6cf7" />}
               </button>
@@ -162,12 +162,12 @@ export default function AcademyHomework() {
           {/* Expanded feedback form */}
           {expandedId === s.id && (
             <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f1f5' }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' }}>Admin Feedback</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'block' }}>Admin Feedback</label>
               <textarea
                 value={feedbackText}
                 onChange={e => setFeedbackText(e.target.value)}
                 placeholder="Write your feedback for the student..."
-                style={{ width: '100%', minHeight: 80, padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                style={{ width: '100%', minHeight: 80, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 <button
@@ -186,7 +186,7 @@ export default function AcademyHomework() {
                 </button>
                 <button
                   onClick={() => { setExpandedId(null); setFeedbackText(''); }}
-                  style={{ padding: '8px 18px', background: '#f5f7fa', color: '#7a7f9a', border: '1px solid #e5e7ef', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '8px 18px', background: 'var(--bg)', color: '#7a7f9a', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                 >Cancel</button>
               </div>
             </div>

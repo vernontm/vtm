@@ -10,16 +10,16 @@ import {
   transcribeLessonMedia,
 } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const btnPrimary = { padding: '10px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const btnOutline = { padding: '10px 20px', background: '#fff', color: '#4a6cf7', border: '1px solid #4a6cf7', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnOutline = { padding: '10px 20px', background: 'var(--surface)', color: 'var(--orange)', border: '1px solid #4a6cf7', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
 const btnAI = { padding: '10px 20px', background: 'linear-gradient(135deg, #8b5cf6, #4a6cf7)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const btnDanger = { padding: '6px 12px', background: '#fff', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const btnDanger = { padding: '6px 12px', background: 'var(--surface)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
-const labelStyle = { fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' };
-const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' };
+const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'block' };
+const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' };
 
 const EMPTY_QUESTION = { question: '', options: ['', '', '', ''], correct_answer: 0 };
 
@@ -377,7 +377,7 @@ export default function AcademyLessonEdit() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Upload size={16} color="#4a6cf7" />
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
                   Lesson Media ({contentItems.length})
                 </span>
               </div>
@@ -402,7 +402,7 @@ export default function AcademyLessonEdit() {
               <div
                 style={{
                   padding: 32, textAlign: 'center', color: '#7a7f9a', fontSize: 13,
-                  background: '#f5f7fa', borderRadius: 10, border: '2px dashed #e5e7ef',
+                  background: 'var(--bg)', borderRadius: 10, border: '2px dashed #e5e7ef',
                   cursor: 'pointer', transition: 'border-color 0.2s',
                 }}
                 onClick={() => fileInputRef.current?.click()}
@@ -437,7 +437,7 @@ export default function AcademyLessonEdit() {
                     return (
                       <div key={item.id} style={{
                         display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '10px 14px', background: '#f5f7fa', borderRadius: 10,
+                        padding: '10px 14px', background: 'var(--bg)', borderRadius: 10,
                       }}>
                         {/* Thumbnail / icon */}
                         {isImage && item.storage_url ? (
@@ -446,7 +446,7 @@ export default function AcademyLessonEdit() {
                           }} />
                         ) : isVideo && item.storage_url ? (
                           <div style={{
-                            width: 48, height: 48, borderRadius: 8, background: '#1a1a2e',
+                            width: 48, height: 48, borderRadius: 8, background: 'var(--surface)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                           }}>
                             <Film size={20} color="#4a6cf7" />
@@ -463,7 +463,7 @@ export default function AcademyLessonEdit() {
                         {/* Info */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
-                            fontSize: 13, fontWeight: 500, color: '#1a1a2e',
+                            fontSize: 13, fontWeight: 500, color: 'var(--text)',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>
                             {item.file_name || 'Unnamed file'}
@@ -471,7 +471,7 @@ export default function AcademyLessonEdit() {
                           <div style={{ fontSize: 11, color: '#7a7f9a', display: 'flex', gap: 12, marginTop: 2 }}>
                             <span style={{
                               padding: '1px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                              background: '#4a6cf718', color: '#4a6cf7', textTransform: 'uppercase',
+                              background: '#4a6cf718', color: 'var(--orange)', textTransform: 'uppercase',
                             }}>
                               {item.content_type}
                             </span>
@@ -513,7 +513,7 @@ export default function AcademyLessonEdit() {
                             href={item.storage_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ fontSize: 12, color: '#4a6cf7', textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}
+                            style={{ fontSize: 12, color: 'var(--orange)', textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             Preview
@@ -535,7 +535,7 @@ export default function AcademyLessonEdit() {
                 <div
                   style={{
                     padding: 14, textAlign: 'center', color: '#7a7f9a', fontSize: 12,
-                    background: '#f5f7fa', borderRadius: 10, border: '2px dashed #e5e7ef',
+                    background: 'var(--bg)', borderRadius: 10, border: '2px dashed #e5e7ef',
                     cursor: 'pointer', transition: 'border-color 0.2s',
                   }}
                   onClick={() => fileInputRef.current?.click()}
@@ -558,7 +558,7 @@ export default function AcademyLessonEdit() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Sparkles size={16} color="#8b5cf6" />
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>AI Tools</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>AI Tools</span>
               </div>
               <button
                 style={{ ...btnAI, opacity: generating ? 0.6 : 1 }}
@@ -595,9 +595,9 @@ export default function AcademyLessonEdit() {
 
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 14px', background: '#f5f7fa', borderRadius: 10,
+              padding: '10px 14px', background: 'var(--bg)', borderRadius: 10,
             }}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e' }}>Free Preview</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Free Preview</span>
               <button
                 onClick={() => updateField('is_free_preview', !form.is_free_preview)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 20 }}
@@ -615,26 +615,26 @@ export default function AcademyLessonEdit() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <HelpCircle size={16} color="#22c55e" />
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>Quiz Builder ({quiz.length})</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Quiz Builder ({quiz.length})</span>
               </div>
               <button style={btnOutline} onClick={addQuestion}><Plus size={14} /> Add Question</button>
             </div>
 
             {quiz.length === 0 ? (
-              <div style={{ padding: 20, textAlign: 'center', color: '#7a7f9a', fontSize: 13, background: '#f5f7fa', borderRadius: 10 }}>
+              <div style={{ padding: 20, textAlign: 'center', color: '#7a7f9a', fontSize: 13, background: 'var(--bg)', borderRadius: 10 }}>
                 No quiz questions yet. Add one or use AI to generate.
               </div>
             ) : quiz.map((q, qi) => (
-              <div key={qi} style={{ background: '#f5f7fa', borderRadius: 10, padding: 14, marginBottom: 10 }}>
+              <div key={qi} style={{ background: 'var(--bg)', borderRadius: 10, padding: 14, marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#4a6cf7' }}>Question {qi + 1}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--orange)' }}>Question {qi + 1}</span>
                   <button onClick={() => removeQuestion(qi)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                     <Trash2 size={14} color="#ef4444" />
                   </button>
                 </div>
 
                 <input
-                  style={{ ...inputStyle, marginBottom: 10, background: '#fff' }}
+                  style={{ ...inputStyle, marginBottom: 10, background: 'var(--surface)' }}
                   placeholder="Question text..."
                   value={q.question}
                   onChange={(e) => updateQuestion(qi, 'question', e.target.value)}
@@ -656,7 +656,7 @@ export default function AcademyLessonEdit() {
                       {letter}
                     </button>
                     <input
-                      style={{ ...inputStyle, background: '#fff' }}
+                      style={{ ...inputStyle, background: 'var(--surface)' }}
                       placeholder={`Option ${letter}`}
                       value={(q.options && q.options[oi]) || ''}
                       onChange={(e) => updateOption(qi, oi, e.target.value)}

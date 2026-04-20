@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Users, Search, Eye, X, Loader2, Mail, Calendar, BookOpen } from 'lucide-react';
 import { getAcademyStudents, getAcademyStudent } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
-const thStyle = { textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#7a7f9a', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e5e7ef' };
-const tdStyle = { padding: '12px 14px', fontSize: 13, color: '#1a1a2e', borderBottom: '1px solid #f0f1f5' };
-const searchStyle = { width: '100%', maxWidth: 360, padding: '10px 14px 10px 38px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', background: '#fff' };
+const thStyle = { textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#7a7f9a', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)' };
+const tdStyle = { padding: '12px 14px', fontSize: 13, color: 'var(--text)', borderBottom: '1px solid #f0f1f5' };
+const searchStyle = { width: '100%', maxWidth: 360, padding: '10px 14px 10px 38px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', background: 'var(--surface)' };
 
 const statusColors = { active: '#22c55e', cancelled: '#ef4444', trialing: '#f59e0b', inactive: '#7a7f9a' };
 
@@ -102,7 +102,7 @@ export default function AcademyStudents() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load students</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadStudents} style={{ marginTop: 12, padding: '8px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadStudents} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -151,7 +151,7 @@ export default function AcademyStudents() {
                 <td style={tdStyle}>{formatDate(s.created_at)}</td>
                 <td style={{ ...tdStyle, minWidth: 120 }}><ProgressBar value={s.completed_lessons} /></td>
                 <td style={{ ...tdStyle, textAlign: 'right' }}>
-                  <button onClick={e => { e.stopPropagation(); viewStudent(s); }} style={{ background: '#f5f7fa', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Eye size={14} color="#4a6cf7" /></button>
+                  <button onClick={e => { e.stopPropagation(); viewStudent(s); }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Eye size={14} color="#4a6cf7" /></button>
                 </td>
               </tr>
             ))}
@@ -161,9 +161,9 @@ export default function AcademyStudents() {
 
       {/* Student Detail Side Panel */}
       {selectedStudent && (
-        <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 420, background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Student Details</h2>
+        <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 420, background: 'var(--surface)', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Student Details</h2>
             <button onClick={closeDetail} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={18} color="#7a7f9a" /></button>
           </div>
           <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
@@ -174,11 +174,11 @@ export default function AcademyStudents() {
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#4a6cf7' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: '#4a6cf718', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>
                     {(selectedStudent.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}><span className="private-value">{selectedStudent.full_name}</span></div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}><span className="private-value">{selectedStudent.full_name}</span></div>
                     <StatusBadge status={selectedStudent.subscription_status} />
                   </div>
                 </div>
@@ -186,26 +186,26 @@ export default function AcademyStudents() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Mail size={14} color="#7a7f9a" />
-                    <span style={{ fontSize: 13, color: '#1a1a2e' }}>{selectedStudent.email}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text)' }}>{selectedStudent.email}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Calendar size={14} color="#7a7f9a" />
-                    <span style={{ fontSize: 13, color: '#1a1a2e' }}>Enrolled {formatDate(selectedStudent.created_at)}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text)' }}>Enrolled {formatDate(selectedStudent.created_at)}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <BookOpen size={14} color="#7a7f9a" />
-                    <span style={{ fontSize: 13, color: '#1a1a2e' }}>Progress: {selectedStudent.completed_lessons || 0}%</span>
+                    <span style={{ fontSize: 13, color: 'var(--text)' }}>Progress: {selectedStudent.completed_lessons || 0}%</span>
                   </div>
                 </div>
 
                 {detail && typeof detail === 'object' && (
                   <div style={{ marginTop: 24 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e', marginBottom: 12 }}>Additional Info</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>Additional Info</div>
                     {detail.completed_lessons_list && detail.completed_lessons_list.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: '#7a7f9a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Completed Lessons</div>
                         {detail.completed_lessons_list.map((lesson, i) => (
-                          <div key={i} style={{ fontSize: 13, color: '#1a1a2e', padding: '6px 0', borderBottom: '1px solid #f0f1f5' }}>{lesson.title || lesson}</div>
+                          <div key={i} style={{ fontSize: 13, color: 'var(--text)', padding: '6px 0', borderBottom: '1px solid #f0f1f5' }}>{lesson.title || lesson}</div>
                         ))}
                       </div>
                     )}

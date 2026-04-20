@@ -91,19 +91,19 @@ const BORDER    = '#e5e7ef';
 const INPUT_STYLE = {
   width: '100%', padding: '8px 12px', borderRadius: 7, fontSize: 14,
   color: TEXT, background: PAGE_BG, border: `1px solid ${BORDER}`,
-  outline: 'none', boxSizing: 'border-box', fontFamily: 'Inter, sans-serif',
+  outline: 'none', boxSizing: 'border-box', fontFamily: 'var(--font-display)',
 };
 
 const BTN_PRIMARY = {
   padding: '8px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
   background: ACCENT, color: '#fff', fontSize: 14, fontWeight: 600,
-  fontFamily: 'Inter, sans-serif',
+  fontFamily: 'var(--font-display)',
 };
 
 const BTN_GHOST = {
   padding: '6px 12px', borderRadius: 7, border: `1px solid ${BORDER}`,
   cursor: 'pointer', background: 'transparent', color: TEXT, fontSize: 13,
-  fontFamily: 'Inter, sans-serif',
+  fontFamily: 'var(--font-display)',
 };
 
 const BTN_DANGER = {
@@ -484,7 +484,7 @@ function MemberCard({ member, onEdit, onRemove, onViewAs, allClients }) {
         width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
         background: avatarColor(member.name || member.email),
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fff', fontWeight: 700, fontSize: 15, fontFamily: 'Inter, sans-serif',
+        color: '#fff', fontWeight: 700, fontSize: 15, fontFamily: 'var(--font-display)',
       }}>
         {getInitials(member.name || member.email)}
       </div>
@@ -550,11 +550,11 @@ function MemberCard({ member, onEdit, onRemove, onViewAs, allClients }) {
               : restrictedClients.map(c => (
                 <span key={c.id} style={{
                   fontSize: 11, padding: '2px 7px', borderRadius: 4,
-                  background: '#f0f4ff', color: '#4a6cf7', fontWeight: 500,
+                  background: '#f0f4ff', color: 'var(--orange)', fontWeight: 500,
                 }}>
                   {c.business_name}
                   {member.default_client_id === c.id && (
-                    <span style={{ marginLeft: 3, color: '#94a3b8' }}>★</span>
+                    <span style={{ marginLeft: 3, color: 'var(--muted)' }}>★</span>
                   )}
                 </span>
               ))
@@ -708,7 +708,7 @@ export default function Team() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: PAGE_BG, fontFamily: 'var(--font-display)' }}>
       {/* Page content */}
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
 

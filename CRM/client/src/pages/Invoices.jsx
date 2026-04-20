@@ -12,15 +12,15 @@ import {
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
   open:          { bg: '#fdab3d22', color: '#fdab3d', label: 'Open' },
-  paid:          { bg: '#4a6cf722', color: '#4a6cf7', label: 'Paid' },
-  void:          { bg: '#8e8ea022', color: '#8e8ea0', label: 'Void' },
+  paid:          { bg: '#4a6cf722', color: 'var(--orange)', label: 'Paid' },
+  void:          { bg: '#8e8ea022', color: 'var(--muted)', label: 'Void' },
   uncollectible: { bg: '#ff5c5c22', color: '#ff5c5c', label: 'Uncollectible' },
-  draft:         { bg: '#4a6cf722', color: '#4a6cf7', label: 'Draft' },
-  cancelled:     { bg: '#8e8ea022', color: '#8e8ea0', label: 'Cancelled' },
+  draft:         { bg: '#4a6cf722', color: 'var(--orange)', label: 'Draft' },
+  cancelled:     { bg: '#8e8ea022', color: 'var(--muted)', label: 'Cancelled' },
 };
 
 function StatusBadge({ status }) {
-  const s = STATUS_STYLE[status] || { bg: '#e5e7ef', color: '#8e8ea0', label: status };
+  const s = STATUS_STYLE[status] || { bg: '#e5e7ef', color: 'var(--muted)', label: status };
   return (
     <span style={{ background: s.bg, color: s.color, borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
       {s.label}
@@ -41,11 +41,11 @@ function TypeBadge({ type }) {
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12, padding: 28, width: 360, textAlign: 'center' }}>
-        <p style={{ color: '#8e8ea0', fontSize: 14, marginBottom: 24 }}>{message}</p>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 28, width: 360, textAlign: 'center' }}>
+        <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>{message}</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={onCancel} className="btn-ghost" style={{ flex: 1 }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, background: '#ff5c5c', color: '#1a1a2e', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+          <button onClick={onConfirm} style={{ flex: 1, background: '#ff5c5c', color: 'var(--text)', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
             Confirm
           </button>
         </div>
@@ -116,18 +116,18 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
 
   const inputStyle = {
     width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13,
-    background: '#f5f7fa', border: '1px solid #e5e7ef', color: '#1a1a2e',
+    background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)',
     outline: 'none', boxSizing: 'border-box',
   };
-  const labelStyle = { fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' };
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#fff', borderRadius: 14, width: 520, maxHeight: '85vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 14, width: 520, maxHeight: '85vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #e5e7ef' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Create Invoice</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={18} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Create Invoice</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={18} /></button>
         </div>
 
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -216,7 +216,7 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
                 </div>
               ))}
               <button onClick={addItem} style={{
-                display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#4a6cf7',
+                display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)',
                 background: 'none', border: '1px dashed #4a6cf740', borderRadius: 6, padding: '6px 10px',
                 cursor: 'pointer', fontWeight: 500, alignSelf: 'flex-start',
               }}>
@@ -228,19 +228,19 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
           {/* Total */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0', borderTop: '1px solid #f0f2f8' }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 500 }}>Total</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Total</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', gap: 10, padding: '16px 24px', borderTop: '1px solid #e5e7ef', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 10, padding: '16px 24px', borderTop: '1px solid var(--border)', justifyContent: 'flex-end' }}>
           <button onClick={onClose} className="btn-ghost">Cancel</button>
           <button onClick={handleSave} disabled={saving || !form.bill_to_name}
             style={{
               padding: '9px 20px', borderRadius: 8, cursor: saving ? 'wait' : 'pointer',
-              background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none',
+              background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', border: 'none',
               color: '#fff', fontSize: 13, fontWeight: 600,
               opacity: saving || !form.bill_to_name ? 0.5 : 1,
             }}>
@@ -407,16 +407,16 @@ export default function Invoices() {
     draft:  manualInvoices.filter(r => r.status === 'draft').reduce((s, r) => s + (r.total || 0), 0),
   };
 
-  const thStyle = { fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 14px', textAlign: 'left', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
-  const tdStyle = { padding: '12px 14px', fontSize: 13, color: '#8e8ea0', verticalAlign: 'middle' };
+  const thStyle = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 14px', textAlign: 'left', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
+  const tdStyle = { padding: '12px 14px', fontSize: 13, color: 'var(--muted)', verticalAlign: 'middle' };
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       {/* Header */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="page-title">Invoices</div>
-          <span style={{ background: '#e5e7ef', color: '#8e8ea0', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
+          <span style={{ background: '#e5e7ef', color: 'var(--muted)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
             {allRows.length}
           </span>
         </div>
@@ -427,7 +427,7 @@ export default function Invoices() {
           <button onClick={() => setShowCreate(true)} style={{
             display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600,
             padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-            background: 'linear-gradient(135deg, #4a6cf7, #6e8efb)', border: 'none', color: '#fff',
+            background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', border: 'none', color: '#fff',
           }}>
             <Plus size={14} /> Create Invoice
           </button>
@@ -439,14 +439,14 @@ export default function Invoices() {
         {/* Summary cards */}
         <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 22 }}>
           {[
-            { label: 'Total Collected', value: `$${totals.all.toLocaleString()}`, color: '#4a6cf7', note: 'paid invoices' },
+            { label: 'Total Collected', value: `$${totals.all.toLocaleString()}`, color: 'var(--orange)', note: 'paid invoices' },
             { label: 'Outstanding',     value: `$${totals.open.toLocaleString()}`, color: '#fdab3d', note: 'open / unpaid' },
-            { label: 'Draft',           value: `$${totals.draft.toLocaleString()}`, color: '#4a6cf7', note: 'manual drafts' },
+            { label: 'Draft',           value: `$${totals.draft.toLocaleString()}`, color: 'var(--orange)', note: 'manual drafts' },
           ].map(({ label, value, color, note }) => (
-            <div key={label} style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 20px' }}>
+            <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px' }}>
               <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#8e8ea0', marginTop: 2 }}>{label}</div>
-              <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{note}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{note}</div>
             </div>
           ))}
         </div>
@@ -467,7 +467,7 @@ export default function Invoices() {
                 }}
               >
                 {lbl}
-                <span style={{ marginLeft: 5, background: '#e5e7ef', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>
+                <span style={{ marginLeft: 5, background: 'var(--border-light)', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>
                   {key === 'all' ? allRows.length : allRows.filter(r => r._type === key).length}
                 </span>
               </button>
@@ -475,28 +475,28 @@ export default function Invoices() {
           </div>
 
           <div style={{ flex: 1, position: 'relative', minWidth: 200 }}>
-            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search invoices..."
-              style={{ width: '100%', background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8, padding: '7px 10px 7px 30px', color: '#8e8ea0', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px 7px 30px', color: 'var(--muted)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
         </div>
 
         {/* Table */}
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 60, fontSize: 14 }}>Loading invoices...</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60, fontSize: 14 }}>Loading invoices...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
             <FileText size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#8e8ea0' }}>No invoices found</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--muted)' }}>No invoices found</div>
           </div>
         ) : (
-          <div style={{ background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: '#ffffff', borderBottom: '1px solid #e5e7ef' }}>
+              <thead style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
                 <tr>
                   <th style={thStyle} onClick={() => toggleSort('_number')}>#<SortIcon k="_number" /></th>
                   <th style={thStyle}>Type</th>
@@ -517,7 +517,7 @@ export default function Invoices() {
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : '#4a6cf722', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: '#4a6cf7' }} />}
+                          {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: 'var(--orange)' }} />}
                         </div>
                         <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{inv._number}</span>
                       </div>
@@ -528,23 +528,23 @@ export default function Invoices() {
 
                     {/* Client */}
                     <td style={tdStyle}>
-                      <div style={{ fontWeight: 600, color: '#1a1a2e' }}>{inv._client}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{inv._client}</div>
                       {inv._type === 'stripe' && inv.email && inv.email !== inv._client && (
-                        <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{inv.email}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{inv.email}</div>
                       )}
                       {inv._type === 'manual' && inv.bill_to_email && (
-                        <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{inv.bill_to_email}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{inv.bill_to_email}</div>
                       )}
                       {(inv.description) && (
-                        <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>{inv.description}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{inv.description}</div>
                       )}
                     </td>
 
                     {/* Amount */}
-                    <td className="private-value" style={{ ...tdStyle, fontWeight: 700, color: '#1a1a2e' }}>
+                    <td className="private-value" style={{ ...tdStyle, fontWeight: 700, color: 'var(--text)' }}>
                       ${inv._amount.toLocaleString()}
                       {inv._type === 'stripe' && inv.phase_number && inv.total_phases > 1 && (
-                        <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 400 }}>Phase {inv.phase_number}/{inv.total_phases}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>Phase {inv.phase_number}/{inv.total_phases}</div>
                       )}
                     </td>
 
@@ -552,10 +552,10 @@ export default function Invoices() {
                     <td style={tdStyle}><StatusBadge status={inv.status} /></td>
 
                     {/* Date */}
-                    <td style={{ ...tdStyle, color: '#8e8ea0', fontSize: 12 }}>
+                    <td style={{ ...tdStyle, color: 'var(--muted)', fontSize: 12 }}>
                       {inv._date ? new Date(inv._date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                       {inv.status === 'paid' && inv.paid_at && (
-                        <div style={{ fontSize: 11, color: '#4a6cf7', marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: 'var(--orange)', marginTop: 2 }}>
                           Paid {new Date(inv.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </div>
                       )}
@@ -573,7 +573,7 @@ export default function Invoices() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="View on Stripe"
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#4a6cf7', background: '#4a6cf718', border: '1px solid #4a6cf740', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: '#4a6cf718', border: '1px solid #4a6cf740', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
                               >
                                 <ExternalLink size={12} /> View
                               </a>
@@ -582,7 +582,7 @@ export default function Invoices() {
                               onClick={() => handleRefreshStripe(inv)}
                               title="Refresh status from Stripe"
                               disabled={refreshingId === inv.id}
-                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#8e8ea0' }}
+                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--muted)' }}
                             >
                               <RefreshCw size={12} style={{ animation: refreshingId === inv.id ? 'spin 0.8s linear infinite' : 'none' }} />
                             </button>
@@ -598,7 +598,7 @@ export default function Invoices() {
                             <button
                               onClick={() => handleDeleteStripe(inv)}
                               title="Remove record"
-                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #e5e7ef', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#8e8ea0' }}
+                              style={{ display: 'flex', alignItems: 'center', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--muted)' }}
                               onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
                               onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
                             >
@@ -661,7 +661,7 @@ export default function Invoices() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-          background: toast.error ? '#ff5c5c' : '#4a6cf7', color: '#1a1a2e',
+          background: toast.error ? '#ff5c5c' : '#4a6cf7', color: 'var(--text)',
           borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600,
           zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
         }}>

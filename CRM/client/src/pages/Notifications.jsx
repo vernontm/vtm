@@ -13,15 +13,15 @@ const TYPE_CONFIG = {
   payment_partial:  { label: 'Balance Owed',       icon: CreditCard,    color: '#fdab3d' },
   project_overdue:  { label: 'Project Overdue',    icon: FolderOpen,    color: '#ff5c5c' },
   project_due_soon: { label: 'Due Soon',           icon: Clock,         color: '#fdab3d' },
-  stale_lead:       { label: 'Stale Lead',         icon: Users,         color: '#8e8ea0' },
+  stale_lead:       { label: 'Stale Lead',         icon: Users,         color: 'var(--muted)' },
   invoice_unpaid:   { label: 'Invoice Unpaid',     icon: CreditCard,    color: '#fdab3d' },
-  deal_cold:        { label: 'Deal Going Cold',    icon: TrendingDown,  color: '#4a6cf7' },
+  deal_cold:        { label: 'Deal Going Cold',    icon: TrendingDown,  color: 'var(--orange)' },
 };
 
 const PRIORITY_CONFIG = {
   high:   { label: 'High',   color: '#ff5c5c', bg: '#ff5c5c18' },
   medium: { label: 'Medium', color: '#fdab3d', bg: '#fdab3d18' },
-  low:    { label: 'Low',    color: '#8e8ea0', bg: '#8e8ea018' },
+  low:    { label: 'Low',    color: 'var(--muted)', bg: '#8e8ea018' },
 };
 
 const ALL_TYPES = ['All', ...Object.keys(TYPE_CONFIG)];
@@ -39,7 +39,7 @@ function NotificationCard({ n, onDismiss }) {
 
   return (
     <div style={{
-      background: '#ffffff', border: `1px solid #e5e7ef`,
+      background: 'var(--surface)', border: `1px solid #e5e7ef`,
       borderLeft: `3px solid ${pc.color}`,
       borderRadius: 10, padding: '14px 16px',
       display: 'flex', alignItems: 'flex-start', gap: 12,
@@ -53,19 +53,19 @@ function NotificationCard({ n, onDismiss }) {
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{n.title}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{n.title}</span>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: pc.color, background: pc.bg, borderRadius: 6, padding: '2px 7px' }}>
             {pc.label}
           </span>
-          <span style={{ fontSize: 10, color: '#8e8ea0', background: '#ffffff', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: 10, color: 'var(--muted)', background: 'var(--surface)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             {tc.label}
           </span>
         </div>
-        <p style={{ fontSize: 13, color: '#8e8ea0', margin: 0, lineHeight: 1.5 }}>{n.message}</p>
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>{n.message}</p>
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link
             to={n.link}
-            style={{ fontSize: 12, color: '#4a6cf7', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+            style={{ fontSize: 12, color: 'var(--orange)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
           >
             View {n.entity_type} <ChevronRight size={12} />
           </Link>
@@ -76,7 +76,7 @@ function NotificationCard({ n, onDismiss }) {
       <button
         onClick={handleDismiss}
         title="Dismiss"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, flexShrink: 0, display: 'flex' }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4, flexShrink: 0, display: 'flex' }}
         onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
         onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
       >
@@ -132,13 +132,13 @@ export default function Notifications() {
   };
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       {/* Header */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="page-title">Notifications</div>
           {notifications.length > 0 && (
-            <span style={{ background: '#ff5c5c', color: '#1a1a2e', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
+            <span style={{ background: '#ff5c5c', color: 'var(--text)', borderRadius: 12, padding: '2px 9px', fontSize: 12, fontWeight: 700 }}>
               {notifications.length}
             </span>
           )}
@@ -170,7 +170,7 @@ export default function Notifications() {
           {[
             { key: 'high',   label: 'High Priority',   color: '#ff5c5c', icon: AlertTriangle },
             { key: 'medium', label: 'Medium Priority',  color: '#fdab3d', icon: Clock },
-            { key: 'low',    label: 'Low Priority',     color: '#8e8ea0', icon: Bell },
+            { key: 'low',    label: 'Low Priority',     color: 'var(--muted)', icon: Bell },
           ].map(({ key, label, color, icon: Icon }) => (
             <button
               key={key}
@@ -185,8 +185,8 @@ export default function Notifications() {
             >
               <Icon size={20} style={{ color }} />
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>{counts[key]}</div>
-                <div style={{ fontSize: 12, color: '#8e8ea0' }}>{label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{counts[key]}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
               </div>
             </button>
           ))}
@@ -216,7 +216,7 @@ export default function Notifications() {
               >
                 {tc && <Filter size={11} />}
                 {t === 'All' ? 'All Types' : tc?.label}
-                <span style={{ background: '#e5e7ef', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>{count}</span>
+                <span style={{ background: 'var(--border-light)', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>{count}</span>
               </button>
             );
           })}
@@ -224,14 +224,14 @@ export default function Notifications() {
 
         {/* List */}
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 60, fontSize: 14 }}>Loading notifications...</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60, fontSize: 14 }}>Loading notifications...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
             <Bell size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#8e8ea0', marginBottom: 8 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--muted)', marginBottom: 8 }}>
               {notifications.length === 0 ? 'All clear!' : 'No notifications match this filter'}
             </div>
-            <div style={{ fontSize: 13, color: '#8e8ea0', marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
               {notifications.length === 0 ? 'No action items at the moment. Check back later.' : 'Try clearing the filters above.'}
             </div>
             {notifications.length === 0 && (
@@ -251,7 +251,7 @@ export default function Notifications() {
         {/* Reset dismissed link */}
         {notifications.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <button onClick={handleReset} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', fontSize: 12 }}>
+            <button onClick={handleReset} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 12 }}>
               Reset dismissed notifications
             </button>
           </div>

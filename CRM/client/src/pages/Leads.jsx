@@ -80,7 +80,7 @@ function ProductNeedChip({ value, onChange }) {
           display: 'inline-flex', alignItems: 'center', gap: 4,
           padding: value ? '3px 9px' : '3px 8px', borderRadius: 10,
           fontSize: 11, fontWeight: 600,
-          background: value ? style.bg : '#f0f2f8',
+          background: value ? style.bg : 'var(--surface-3)',
           color: value ? style.fg : '#8e8ea0',
           border: value ? 'none' : '1px dashed #c0c0c8',
           cursor: 'pointer', lineHeight: 1.4, maxWidth: 150,
@@ -96,7 +96,7 @@ function ProductNeedChip({ value, onChange }) {
             onClick={e => e.stopPropagation()}
             style={{
               position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 51,
-              background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
               boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 200,
               maxHeight: 320, overflowY: 'auto',
             }}
@@ -131,7 +131,7 @@ function ProductNeedChip({ value, onChange }) {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
                   borderRadius: 5, fontSize: 12, color: '#ff5c5c', background: 'transparent',
-                  border: 'none', cursor: 'pointer', width: '100%', borderTop: '1px solid #e5e7ef', marginTop: 2,
+                  border: 'none', cursor: 'pointer', width: '100%', borderTop: '1px solid var(--border)', marginTop: 2,
                 }}
               >
                 <X size={11} /> Clear
@@ -179,7 +179,7 @@ function PlatformChip({ value, onChange }) {
           display: 'inline-flex', alignItems: 'center', gap: 4,
           padding: value ? '3px 9px' : '3px 8px',
           borderRadius: 10, fontSize: 11, fontWeight: 600,
-          background: value ? style.bg : '#f0f2f8',
+          background: value ? style.bg : 'var(--surface-3)',
           color: value ? style.fg : '#8e8ea0',
           border: value ? 'none' : '1px dashed #c0c0c8',
           cursor: 'pointer', lineHeight: 1.4, maxWidth: 120,
@@ -195,7 +195,7 @@ function PlatformChip({ value, onChange }) {
             onClick={e => e.stopPropagation()}
             style={{
               position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 51,
-              background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
               boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 160,
               display: 'grid', gap: 2, maxHeight: 320, overflowY: 'auto',
             }}
@@ -226,7 +226,7 @@ function PlatformChip({ value, onChange }) {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
                   borderRadius: 5, fontSize: 12, color: '#ff5c5c', background: 'transparent',
-                  border: 'none', cursor: 'pointer', textAlign: 'left', borderTop: '1px solid #e5e7ef', marginTop: 2,
+                  border: 'none', cursor: 'pointer', textAlign: 'left', borderTop: '1px solid var(--border)', marginTop: 2,
                 }}
               >
                 <X size={11} /> Clear
@@ -262,7 +262,7 @@ function StatusPill({ value, onChange }) {
             onClick={e => e.stopPropagation()}
             style={{
               position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 51,
-              background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
               boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 170,
               display: 'grid', gap: 2,
             }}
@@ -382,7 +382,7 @@ const DETAIL_SECTIONS = [
 
 const inputStyle = {
   width: '100%', padding: '6px 9px', borderRadius: 5, fontSize: 12,
-  color: '#1a1a2e', background: '#ffffff', border: '1px solid #e5e7ef',
+  color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)',
   outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
 };
 
@@ -413,10 +413,10 @@ function CollapsibleSection({ title, defaultOpen = true, children }) {
           padding: '10px 0', gap: 8,
         }}
       >
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {title}
         </span>
-        <ChevronDown size={13} style={{ color: '#8e8ea0', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }} />
+        <ChevronDown size={13} style={{ color: 'var(--muted)', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }} />
       </button>
       {open && <div style={{ paddingBottom: 12 }}>{children}</div>}
     </div>
@@ -425,8 +425,8 @@ function CollapsibleSection({ title, defaultOpen = true, children }) {
 
 // ─── Activity Timeline ────────────────────────────────────────────────────────
 const ACTIVITY_ICONS = {
-  call:      { icon: '📞', color: '#C00000', bg: '#FEE2E2' },
-  email:     { icon: '✉️',  color: '#4a6cf7', bg: '#EEF4FF' },
+  call:      { icon: '📞', color: '#f87171', bg: '#FEE2E2' },
+  email:     { icon: '✉️',  color: 'var(--orange)', bg: '#EEF4FF' },
   recording: { icon: '🎙️', color: '#7C3AED', bg: '#EDE9FE' },
   meeting:   { icon: '📅', color: '#0369A1', bg: '#E0F2FE' },
   note:      { icon: '📝', color: '#B45309', bg: '#FEF3C7' },
@@ -509,11 +509,11 @@ function ActivityTimeline({ lead, convos, recordings }) {
   return (
     <CollapsibleSection title="Activity" defaultOpen={true}>
       {events.length === 0 ? (
-        <div style={{ fontSize: 12, color: '#c0c0c0', fontStyle: 'italic' }}>No activity yet.</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>No activity yet.</div>
       ) : (
         <div style={{ position: 'relative', paddingLeft: 20 }}>
           {/* Vertical line */}
-          <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, background: '#e5e7ef', borderRadius: 1 }} />
+          <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, background: 'var(--border-light)', borderRadius: 1 }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {events.map((ev, idx) => {
@@ -534,7 +534,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
                   {/* Content */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>{ev.title}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{ev.title}</span>
                       {ev.interestLevel && INTEREST_STYLES[ev.interestLevel] && (
                         <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 6,
                           background: INTEREST_STYLES[ev.interestLevel].bg,
@@ -544,7 +544,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 10, color: '#8e8ea0', marginBottom: ev.body ? 4 : 0 }}>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: ev.body ? 4 : 0 }}>
                       {fmtDateTime(ev.date)}
                     </div>
                     {ev.recording ? (
@@ -568,14 +568,14 @@ function ActivityTimeline({ lead, convos, recordings }) {
                       <div style={{ marginTop: 4, padding: '10px 12px', background: '#EFF6FF', borderRadius: 8, border: '1px solid #BFDBFE' }}>
                         {/* Meeting details */}
                         {ev.metadata?.start_time && (
-                          <div style={{ fontSize: 11, color: '#1E40AF', marginBottom: 4, fontWeight: 600 }}>
+                          <div style={{ fontSize: 11, color: 'var(--blue)', marginBottom: 4, fontWeight: 600 }}>
                             📅 {new Date(ev.metadata.start_time).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                             {ev.metadata.duration_minutes ? ` · ${ev.metadata.duration_minutes}min` : ''}
                           </div>
                         )}
                         {ev.metadata?.attendees?.length > 0 && (
-                          <div style={{ fontSize: 11, color: '#374151', marginBottom: ev.metadata?.meet_link ? 6 : 0 }}>
-                            <span style={{ color: '#8e8ea0' }}>Attendees: </span>
+                          <div style={{ fontSize: 11, color: 'var(--text)', marginBottom: ev.metadata?.meet_link ? 6 : 0 }}>
+                            <span style={{ color: 'var(--muted)' }}>Attendees: </span>
                             {ev.metadata.attendees.join(', ')}
                           </div>
                         )}
@@ -584,7 +584,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
                             href={ev.metadata.meet_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ fontSize: 11, color: '#4a6cf7', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, textDecoration: 'none' }}
+                            style={{ fontSize: 11, color: 'var(--orange)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, textDecoration: 'none' }}
                           >
                             🎥 Join Google Meet ↗
                           </a>
@@ -710,15 +710,15 @@ function RecordingCard({ recording: rawR }) {
   const progress = duration > 0 ? currentTime / duration : 0;
 
   return (
-    <div style={{ padding: '10px 12px', background: '#f5f7fa', borderRadius: 8, border: '1px solid #e5e7ef' }}>
+    <div style={{ padding: '10px 12px', background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
       {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#C00000', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#f87171', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Mic size={10} /> Call
           </span>
-          {r.duration_seconds > 0 && <span style={{ fontSize: 10, color: '#8e8ea0' }}>{fmt(r.duration_seconds)}</span>}
-          <span style={{ fontSize: 10, color: '#8e8ea0' }}>
+          {r.duration_seconds > 0 && <span style={{ fontSize: 10, color: 'var(--muted)' }}>{fmt(r.duration_seconds)}</span>}
+          <span style={{ fontSize: 10, color: 'var(--muted)' }}>
             {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
           {r.audio_cleaned && (
@@ -734,7 +734,7 @@ function RecordingCard({ recording: rawR }) {
               disabled={summarizing}
               style={{
                 fontSize: 10, padding: '3px 9px', borderRadius: 8, fontWeight: 700, border: 'none',
-                background: summarizing ? '#e5e7ef' : '#4a6cf7', color: summarizing ? '#8e8ea0' : '#fff',
+                background: summarizing ? 'var(--surface-3)' : 'var(--orange)', color: summarizing ? 'var(--muted)' : '#fff',
                 cursor: summarizing ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 4,
               }}
             >
@@ -747,8 +747,8 @@ function RecordingCard({ recording: rawR }) {
               disabled={summarizing}
               title="Re-analyze with AI"
               style={{
-                fontSize: 10, padding: '3px 8px', borderRadius: 8, fontWeight: 700, border: '1px solid #e5e7ef',
-                background: summarizing ? '#e5e7ef' : '#f5f7fa', color: summarizing ? '#8e8ea0' : '#8e8ea0',
+                fontSize: 10, padding: '3px 8px', borderRadius: 8, fontWeight: 700, border: '1px solid var(--border)',
+                background: 'var(--surface-2)', color: 'var(--muted)',
                 cursor: summarizing ? 'wait' : 'pointer',
               }}
             >
@@ -772,7 +772,7 @@ function RecordingCard({ recording: rawR }) {
           disabled={loading}
           style={{
             width: 30, height: 30, borderRadius: '50%', border: 'none', cursor: loading ? 'wait' : 'pointer',
-            background: '#4a6cf7', color: '#fff',
+            background: 'var(--orange)', color: '#fff',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}
         >
@@ -784,16 +784,16 @@ function RecordingCard({ recording: rawR }) {
           onClick={handleSeek}
           style={{ flex: 1, height: 4, background: '#e5e7ef', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
         >
-          <div style={{ width: `${progress * 100}%`, height: '100%', background: '#4a6cf7', borderRadius: 2, transition: 'width 0.1s' }} />
+          <div style={{ width: `${progress * 100}%`, height: '100%', background: 'var(--orange)', borderRadius: 2, transition: 'width 0.1s' }} />
         </div>
 
-        <span style={{ fontSize: 10, color: '#8e8ea0', fontVariantNumeric: 'tabular-nums', minWidth: 36 }}>
+        <span style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums', minWidth: 36 }}>
           {fmt(currentTime)}{duration > 0 ? ` / ${fmt(duration)}` : ''}
         </span>
 
         <button
           onClick={handleStop}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 2, display: 'flex', alignItems: 'center' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 2, display: 'flex', alignItems: 'center' }}
           title="Stop"
         >
           <Square size={10} />
@@ -812,7 +812,7 @@ function RecordingCard({ recording: rawR }) {
 
       {/* AI Summary */}
       {summary && (
-        <div style={{ marginTop: 10, borderTop: '1px solid #e5e7ef', paddingTop: 10 }}>
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
           {/* Interest + sentiment row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
             {summary.interest_level && (() => {
@@ -846,14 +846,14 @@ function RecordingCard({ recording: rawR }) {
 
           {/* Summary text */}
           {summary.summary && (
-            <p style={{ fontSize: 12, color: '#1a1a2e', margin: '0 0 8px', lineHeight: 1.6, fontWeight: 500 }}>
+            <p style={{ fontSize: 12, color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.6, fontWeight: 500 }}>
               {summary.summary}
             </p>
           )}
 
           {/* Interest reason */}
           {summary.interest_reason && (
-            <p style={{ fontSize: 11, color: '#8e8ea0', margin: '0 0 8px', lineHeight: 1.5, fontStyle: 'italic' }}>
+            <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.5, fontStyle: 'italic' }}>
               {summary.interest_reason}
             </p>
           )}
@@ -861,7 +861,7 @@ function RecordingCard({ recording: rawR }) {
           {/* Pain points */}
           {summary.pain_points?.length > 0 && (
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Pain Points</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Pain Points</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {summary.pain_points.map((p, i) => (
                   <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#FEF3C7', color: '#B45309' }}>{p}</span>
@@ -873,10 +873,10 @@ function RecordingCard({ recording: rawR }) {
           {/* Next steps */}
           {summary.next_steps?.length > 0 && (
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Next Steps</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Next Steps</div>
               <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {summary.next_steps.map((s, i) => (
-                  <li key={i} style={{ fontSize: 11, color: '#1a1a2e', lineHeight: 1.5 }}>{s}</li>
+                  <li key={i} style={{ fontSize: 11, color: 'var(--text)', lineHeight: 1.5 }}>{s}</li>
                 ))}
               </ul>
             </div>
@@ -885,10 +885,10 @@ function RecordingCard({ recording: rawR }) {
           {/* Topics */}
           {summary.topics?.length > 0 && (
             <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Topics</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Topics</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {summary.topics.map((t, i) => (
-                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#EEF4FF', color: '#4a6cf7' }}>{t}</span>
+                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#EEF4FF', color: 'var(--orange)' }}>{t}</span>
                 ))}
               </div>
             </div>
@@ -899,7 +899,7 @@ function RecordingCard({ recording: rawR }) {
       {/* Transcript */}
       {r.transcript && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', cursor: 'pointer', userSelect: 'none', borderTop: '1px solid #e5e7ef', paddingTop: 8 }}>
+          <summary style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
             Full Transcript
           </summary>
           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -917,11 +917,11 @@ function RecordingCard({ recording: rawR }) {
                     }}>
                       {match[1]}
                     </span>
-                    <span style={{ fontSize: 12, color: '#1a1a2e', lineHeight: 1.6 }}>{match[2]}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6 }}>{match[2]}</span>
                   </div>
                 );
               }
-              return <p key={i} style={{ fontSize: 12, color: '#1a1a2e', margin: 0, lineHeight: 1.6 }}>{line}</p>;
+              return <p key={i} style={{ fontSize: 12, color: 'var(--text)', margin: 0, lineHeight: 1.6 }}>{line}</p>;
             })}
           </div>
         </details>
@@ -959,14 +959,14 @@ function ScriptBrowseRow({ script }) {
         onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = '#fff'; }}
       >
         <ChevronRight size={14} color="#8e8ea0" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', flex: 1 }}>📞 {script.title}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', flex: 1 }}>📞 {script.title}</span>
         {script.service && (
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#4a6cf720', color: '#4a6cf7' }}>{script.service}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#4a6cf720', color: 'var(--orange)' }}>{script.service}</span>
         )}
       </div>
       {expanded && (
-        <div style={{ padding: '0 20px 16px 44px', background: '#f9fafb' }}>
-          <pre style={{ margin: 0, padding: '14px 16px', background: '#fff', border: '1px solid #e5e7ef', borderRadius: 8, fontSize: 12, color: '#374151', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit' }}>
+        <div style={{ padding: '0 20px 16px 44px', background: 'var(--surface-2)' }}>
+          <pre style={{ margin: 0, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit' }}>
             {renderScript(script.content)}
           </pre>
           <button
@@ -1058,29 +1058,29 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
 
   if (!lead.product_need) {
     return (
-      <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 18px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>📞 Call Script</div>
-        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>Assign a Product / Need to this lead to load the matching call script.</div>
+      <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 18px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>📞 Call Script</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>Assign a Product / Need to this lead to load the matching call script.</div>
       </div>
     );
   }
 
   if (!script) {
     return (
-      <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, padding: '16px 18px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>📞 Call Script</div>
-        <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>No script found for "{lead.product_need}".</div>
+      <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 18px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>📞 Call Script</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>No script found for "{lead.product_need}".</div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#f9fafb', border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #e5e7ef', background: '#fff', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           <span style={{ fontSize: 15 }}>📞</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{script.title}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{script.title}</span>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           {/* AI Personalize toggle */}
@@ -1110,7 +1110,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
 
       {/* AI mode badge */}
       {showAi && aiScript && (
-        <div style={{ padding: '6px 16px', background: '#4a6cf710', borderBottom: '1px solid #4a6cf720', fontSize: 11, color: '#4a6cf7', fontWeight: 600 }}>
+        <div style={{ padding: '6px 16px', background: '#4a6cf710', borderBottom: '1px solid #4a6cf720', fontSize: 11, color: 'var(--orange)', fontWeight: 600 }}>
           ⚡ AI-personalized for {lead.name || lead.company} — based on their notes & situation
         </div>
       )}
@@ -1121,7 +1121,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
 
       {/* Script body */}
       <div style={{ padding: '14px 16px', maxHeight: 400, overflowY: 'auto' }}>
-        <pre style={{ margin: 0, fontSize: 12, color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit' }}>
+        <pre style={{ margin: 0, fontSize: 12, color: 'var(--text)', lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit' }}>
           {renderScript(displayText)}
         </pre>
       </div>
@@ -1166,22 +1166,22 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
       <div style={{
-        position: 'relative', width: 560, background: '#ffffff',
-        borderLeft: '1px solid #e5e7ef', overflowY: 'auto',
+        position: 'relative', width: 560, background: 'var(--surface)',
+        borderLeft: '1px solid var(--border)', overflowY: 'auto',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
         display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #e5e7ef', position: 'sticky', top: 0, background: '#ffffff', zIndex: 2 }}>
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <Avatar name={draft.name} />
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }} className="private-value">
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }} className="private-value">
                     {draft.name || 'Unnamed Lead'}
                   </div>
                   {draft.company && (
-                    <div style={{ fontSize: 11, color: '#8e8ea0' }} className="private-value">{draft.company}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }} className="private-value">{draft.company}</div>
                   )}
                 </div>
               </div>
@@ -1196,7 +1196,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
                       fontSize: 12, fontWeight: 600, border: 'none',
-                      background: '#4a6cf7', color: '#fff',
+                      background: 'var(--orange)', color: '#fff',
                     }}
                   >
                     <Send size={12} /> Email
@@ -1207,8 +1207,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
-                    fontSize: 12, fontWeight: 600, border: '1px solid #e5e7ef',
-                    background: '#f0f2f8', color: '#1a1a2e',
+                    fontSize: 12, fontWeight: 600, border: '1px solid var(--border)',
+                    background: 'var(--surface-3)', color: 'var(--text)',
                   }}
                 >
                   <CalendarIcon size={12} /> Schedule Meeting
@@ -1237,15 +1237,15 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
-                      fontSize: 12, fontWeight: 600, border: '1px solid #e5e7ef',
-                      background: '#f0f2f8', color: '#1a1a2e',
+                      fontSize: 12, fontWeight: 600, border: '1px solid var(--border)',
+                      background: 'var(--surface-3)', color: 'var(--text)',
                     }}
                   >
                     <ListPlus size={12} /> Add to Email List
                   </button>
                 )}
                 {lastFollowUp && (
-                  <span style={{ fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Clock size={11} /> Last: {formatFollowUp(lastFollowUp)}
                   </span>
                 )}
@@ -1256,7 +1256,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                 onClick={onPrev}
                 disabled={!hasPrev}
                 title="Previous lead"
-                style={{ background: hasPrev ? '#f5f7fa' : 'transparent', border: '1px solid #e5e7ef', borderRadius: 6, cursor: hasPrev ? 'pointer' : 'not-allowed', color: hasPrev ? '#1a1a2e' : '#d0d0d8', padding: '6px 7px', display: 'flex', alignItems: 'center' }}
+                style={{ background: hasPrev ? '#f5f7fa' : 'transparent', border: '1px solid var(--border)', borderRadius: 6, cursor: hasPrev ? 'pointer' : 'not-allowed', color: hasPrev ? '#1a1a2e' : '#d0d0d8', padding: '6px 7px', display: 'flex', alignItems: 'center' }}
               >
                 <ChevronLeft size={15} />
               </button>
@@ -1264,11 +1264,11 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                 onClick={onNext}
                 disabled={!hasNext}
                 title="Next lead"
-                style={{ background: hasNext ? '#f5f7fa' : 'transparent', border: '1px solid #e5e7ef', borderRadius: 6, cursor: hasNext ? 'pointer' : 'not-allowed', color: hasNext ? '#1a1a2e' : '#d0d0d8', padding: '6px 7px', display: 'flex', alignItems: 'center' }}
+                style={{ background: hasNext ? '#f5f7fa' : 'transparent', border: '1px solid var(--border)', borderRadius: 6, cursor: hasNext ? 'pointer' : 'not-allowed', color: hasNext ? '#1a1a2e' : '#d0d0d8', padding: '6px 7px', display: 'flex', alignItems: 'center' }}
               >
                 <ChevronRight size={15} />
               </button>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4, marginLeft: 4 }}>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4, marginLeft: 4 }}>
                 <X size={20} />
               </button>
             </div>
@@ -1285,7 +1285,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {section.fields.map(({ key, label }) => (
                   <div key={key} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 12, color: '#8e8ea0', paddingTop: 8 }}>{label}</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 8 }}>{label}</span>
                     <EditableField fieldKey={key} value={draft[key]} onChange={val => set(key, val)} />
                   </div>
                 ))}
@@ -1302,7 +1302,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
 
         <div style={{
           position: 'sticky', bottom: 0, padding: '12px 24px',
-          background: '#ffffff', borderTop: '1px solid #e5e7ef',
+          background: 'var(--surface)', borderTop: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
           <button
@@ -1320,7 +1320,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
           </button>
           <button
             onClick={onClose}
-            style={{ padding: '9px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 13, background: 'none', border: '1px solid #e5e7ef', color: '#8e8ea0' }}
+            style={{ padding: '9px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 13, background: 'none', border: '1px solid var(--border)', color: 'var(--muted)' }}
           >
             Close
           </button>
@@ -1386,7 +1386,7 @@ function EmailListModal({ lead, onClose, onSuccess }) {
 
   const inputStyle = {
     width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
-    color: '#1a1a2e', background: '#f5f7fa', border: '1px solid #e5e7ef',
+    color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)',
     outline: 'none', boxSizing: 'border-box',
   };
 
@@ -1395,23 +1395,23 @@ function EmailListModal({ lead, onClose, onSuccess }) {
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <ListPlus size={16} color="#4a6cf7" />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>Add to Email List</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Add to Email List</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0' }}><X size={17} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={17} /></button>
         </div>
 
         {/* Body */}
         <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Lead info */}
-          <div style={{ background: '#f5f7fa', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{lead.name || 'Unnamed'}</div>
-              <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 1 }}>{lead.email || <span style={{ color: '#ff5c5c' }}>No email on file</span>}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{lead.name || 'Unnamed'}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{lead.email || <span style={{ color: '#ff5c5c' }}>No email on file</span>}</div>
             </div>
           </div>
 
@@ -1422,7 +1422,7 @@ function EmailListModal({ lead, onClose, onSuccess }) {
           )}
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Select Email List *</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Select Email List *</label>
             <select style={inputStyle} value={clientId} onChange={e => setClientId(e.target.value)}>
               <option value="">— Choose a list —</option>
               {clients.map(c => (
@@ -1432,8 +1432,8 @@ function EmailListModal({ lead, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>
-              Tags <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional, comma-separated)</span>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>
+              Tags <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional, comma-separated)</span>
             </label>
             <input
               style={inputStyle}
@@ -1446,13 +1446,13 @@ function EmailListModal({ lead, onClose, onSuccess }) {
 
         {/* Footer */}
         <div style={{ padding: '0 20px 18px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#fff', color: '#6b7280', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
             Cancel
           </button>
           <button
             onClick={handleAdd}
             disabled={saving || !lead.email}
-            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#4a6cf7', color: '#fff', fontSize: 13, fontWeight: 700, cursor: (saving || !lead.email) ? 'not-allowed' : 'pointer', opacity: (saving || !lead.email) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--orange)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: (saving || !lead.email) ? 'not-allowed' : 'pointer', opacity: (saving || !lead.email) ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {saving ? 'Adding…' : <><ListPlus size={13} /> Add to List</>}
           </button>
@@ -1692,28 +1692,28 @@ export default function Leads() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100%', background: '#f5f7fa' }}>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="page-title">Leads</div>
-          <span style={{ fontSize: 12, color: '#8e8ea0', padding: '2px 10px', background: '#e5e7ef', borderRadius: 12 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)', padding: '2px 10px', background: 'var(--border-light)', borderRadius: 12 }}>
             {leads.length}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#8e8ea0' }} />
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input className="search-input" placeholder="Search leads..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button
             className="btn-ghost"
             onClick={() => exportCSV(filtered)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8e8ea0', border: '1px solid #e5e7ef', padding: '6px 12px', borderRadius: 6, fontSize: 13, background: '#fff', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 13, background: 'var(--surface)', cursor: 'pointer' }}
             title="Export current view to CSV"
           >
             <Download size={14} /> Export
           </button>
-          <button className="btn-ghost" onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8e8ea0', border: '1px solid #e5e7ef', padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>
+          <button className="btn-ghost" onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 13 }}>
             <Upload size={14} /> Import
           </button>
           <button className="btn-primary" onClick={openAdd}><Plus size={16} /> New Lead</button>
@@ -1721,7 +1721,7 @@ export default function Leads() {
       </div>
 
       {/* ── Segment tabs ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', background: '#fff', borderBottom: '1px solid #e5e7ef' }}>
+      <div style={{ display: 'flex', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         {[
           { key: 'inbound', label: 'Inbound', emoji: '📥', accent: '#E8650A', bg: '#fff5f0', owner: 'Ray' },
           { key: 'cold',    label: 'Cold Calls', emoji: '❄️', accent: '#0369A1', bg: '#E0F2FE', owner: 'Stephanie' },
@@ -1757,7 +1757,7 @@ export default function Leads() {
           { label: 'Leads Won',        value: won,                      icon: '🏆', color: '#047857', bg: '#D1FAE5' },
         ];
         return (
-          <div style={{ padding: '12px 20px', background: '#fff', borderBottom: '1px solid #f0f2f8', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid #f0f2f8', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {stats.map(s => (
               <div key={s.label} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
@@ -1780,7 +1780,7 @@ export default function Leads() {
       })()}
 
       {/* Filter tabs */}
-      <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', borderBottom: '1px solid #e5e7ef', background: '#ffffff' }}>
+      <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         {FILTER_TABS.map(tab => {
           const active = activeTab === tab;
           const count = statusCounts[tab] || 0;
@@ -1799,7 +1799,7 @@ export default function Leads() {
               }}
             >
               {tab}
-              <span style={{ fontSize: 10, color: active ? '#4a6cf7' : '#b0b0c0', background: active ? '#fff' : '#f0f2f8', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>
+              <span style={{ fontSize: 10, color: active ? '#4a6cf7' : '#b0b0c0', background: active ? '#fff' : 'var(--surface-3)', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>
                 {count}
               </span>
             </button>
@@ -1809,7 +1809,7 @@ export default function Leads() {
           <select
             value={sort}
             onChange={e => setSort(e.target.value)}
-            style={{ background: '#ffffff', border: '1px solid #e5e7ef', color: '#8e8ea0', borderRadius: 6, fontSize: 12, padding: '5px 8px', cursor: 'pointer', outline: 'none' }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 6, fontSize: 12, padding: '5px 8px', cursor: 'pointer', outline: 'none' }}
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
@@ -1822,9 +1822,9 @@ export default function Leads() {
       {/* Mobile cards */}
       <div className="mobile-cards">
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</div>
         ) : paged.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>No leads in this view.</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No leads in this view.</div>
         ) : paged.map(lead => {
           const st = STATUS_STYLES[lead.status] || STATUS_STYLES['New'];
           const pst = PLATFORM_STYLES[lead.lead_source] || null;
@@ -1833,8 +1833,8 @@ export default function Leads() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                 <Avatar name={lead.name} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="private-value" style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{lead.name || '—'}</div>
-                  {lead.company && <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0' }}>{lead.company}</div>}
+                  <div className="private-value" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{lead.name || '—'}</div>
+                  {lead.company && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)' }}>{lead.company}</div>}
                 </div>
                 <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: st.bg, color: st.fg }}>
                   {lead.status || 'New'}
@@ -1842,12 +1842,12 @@ export default function Leads() {
               </div>
               {lead.phone && (
                 <div className="mobile-card-row">
-                  <Phone size={12} style={{ color: '#8e8ea0' }} /> <span className="private-value">{lead.phone}</span>
+                  <Phone size={12} style={{ color: 'var(--muted)' }} /> <span className="private-value">{lead.phone}</span>
                 </div>
               )}
               {lead.email && (
                 <div className="mobile-card-row">
-                  <Mail size={12} style={{ color: '#4a6cf7' }} /> <span className="private-value">{lead.email}</span>
+                  <Mail size={12} style={{ color: 'var(--orange)' }} /> <span className="private-value">{lead.email}</span>
                 </div>
               )}
               {pst && (
@@ -1868,7 +1868,7 @@ export default function Leads() {
       </div>
 
       {/* Desktop table */}
-      <div className="table-container desktop-table" style={{ background: '#ffffff', margin: 20, borderRadius: 10, border: '1px solid #e5e7ef', overflow: 'hidden' }}>
+      <div className="table-container desktop-table" style={{ background: 'var(--surface)', margin: 20, borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
         <table>
           <thead>
             <tr>
@@ -1891,9 +1891,9 @@ export default function Leads() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
             ) : paged.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', color: '#8e8ea0', padding: 40 }}>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
                 No leads in this view. {activeTab === 'All Leads' && 'Click "New Lead" to add one.'}
               </td></tr>
             ) : paged.map(lead => (
@@ -1930,15 +1930,15 @@ export default function Leads() {
                             style={{
                               width: 28, height: 28, borderRadius: '50%', border: 'none',
                               cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
-                              background: active ? '#FEE2E2' : '#f0f2f8',
-                              color: active ? '#C00000' : '#8e8ea0',
+                              background: active ? '#FEE2E2' : 'var(--surface-3)',
+                              color: active ? '#f87171' : '#8e8ea0',
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                               transition: 'all 0.15s',
                               boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
                               animation: active ? 'recPulse 1.2s infinite' : 'none',
                             }}
-                            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#C00000'; } }}
-                            onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#f0f2f8'; e.currentTarget.style.color = '#8e8ea0'; } }}
+                            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#f87171'; } }}
+                            onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'var(--surface-3)'; e.currentTarget.style.color = '#8e8ea0'; } }}
                           >
                             {active ? <MicOff size={12} /> : <Mic size={12} />}
                           </button>
@@ -1958,7 +1958,7 @@ export default function Leads() {
                             AI…
                           </span>
                         ) : count > 0 && (
-                          <span style={{ fontSize: 9, fontWeight: 700, color: '#8e8ea0', background: '#f0f2f8', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--muted)', background: 'var(--surface-3)', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
                             {count}
                           </span>
                         )}
@@ -1971,7 +1971,7 @@ export default function Leads() {
                     <Avatar name={lead.name} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{lead.name || '—'}</div>
+                        <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{lead.name || '—'}</div>
                         <span style={{
                           fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
                           background: (lead.assigned_to || 'Ray') === 'Stephanie' ? '#E0F2FE' : '#FFF5F0',
@@ -1981,18 +1981,18 @@ export default function Leads() {
                           {lead.assigned_to || 'Ray'}
                         </span>
                       </div>
-                      {lead.company && <div className="private-value" style={{ fontSize: 11, color: '#8e8ea0' }}>{lead.company}</div>}
+                      {lead.company && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)' }}>{lead.company}</div>}
                     </div>
                   </div>
                 </td>
                 <td>
                   <CopyCell value={lead.phone}>
-                    <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.phone || '—'}</span>
+                    <span className="private-value" style={{ fontSize: 12, color: 'var(--muted)' }}>{lead.phone || '—'}</span>
                   </CopyCell>
                 </td>
                 <td>
                   <CopyCell value={lead.email}>
-                    <span className="private-value" style={{ fontSize: 12, color: '#8e8ea0' }}>{lead.email || '—'}</span>
+                    <span className="private-value" style={{ fontSize: 12, color: 'var(--muted)' }}>{lead.email || '—'}</span>
                   </CopyCell>
                 </td>
                 <td onClick={e => e.stopPropagation()}>
@@ -2015,11 +2015,11 @@ export default function Leads() {
                 </td>
                 <td>
                   {lastFollowUps[lead.id] ? (
-                    <span style={{ fontSize: 11, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Clock size={10} /> {formatFollowUp(lastFollowUps[lead.id])}
                     </span>
                   ) : (
-                    <span style={{ fontSize: 11, color: '#c0c0c0' }}>—</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>
                   )}
                 </td>
 
@@ -2029,7 +2029,7 @@ export default function Leads() {
                       className="lead-action-bar"
                       style={{
                         display: 'flex', alignItems: 'center', gap: 2,
-                        background: '#ffffff', border: '1px solid #e5e7ef',
+                        background: 'var(--surface)', border: '1px solid var(--border)',
                         borderRadius: 8, padding: '3px 4px',
                         boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
                       }}
@@ -2037,13 +2037,13 @@ export default function Leads() {
                     >
                       {lead.email && (
                         <button title="Send email" onClick={() => handleEmail(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a6cf7', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                           <Mail size={14} />
                         </button>
                       )}
                       {lead.phone && (
                         <a href={`tel:${lead.phone}`} title="Call"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4a6cf7', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center', textDecoration: 'none' }}
                           onClick={e => e.stopPropagation()}>
                           <Phone size={14} />
                         </a>
@@ -2068,13 +2068,13 @@ export default function Leads() {
                       </button>
                       {lead.status !== 'Won' && (
                         <button title="Move to Contacts" onClick={() => openConvert(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                           <UserPlus size={14} />
                         </button>
                       )}
                       {lead.email && (
                         <button title="Add to Email List" onClick={() => setEmailListLead(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
                           onMouseEnter={e => { e.currentTarget.style.color = '#4a6cf7'; e.currentTarget.style.background = '#4a6cf710'; }}
                           onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
                         >
@@ -2082,7 +2082,7 @@ export default function Leads() {
                         </button>
                       )}
                       <button title="Delete" onClick={() => openDelete(lead)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -2097,39 +2097,39 @@ export default function Leads() {
         {!loading && filtered.length > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 16px', borderTop: '1px solid #e5e7ef', background: '#fafbfc',
+            padding: '12px 16px', borderTop: '1px solid var(--border)', background: '#fafbfc',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#8e8ea0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
               Rows Per Page
               <select
                 value={pageSize}
                 onChange={e => setPageSize(Number(e.target.value))}
-                style={{ background: '#fff', border: '1px solid #e5e7ef', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer', outline: 'none' }}
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer', outline: 'none' }}
               >
                 {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
-            <div style={{ fontSize: 12, color: '#8e8ea0' }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
               {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button onClick={() => setPage(1)} disabled={page === 1}
-                style={{ padding: '4px 8px', border: '1px solid #e5e7ef', background: '#fff', borderRadius: 5, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? '#c0c0c0' : '#8e8ea0', fontSize: 12 }}>
+                style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'var(--surface)', borderRadius: 5, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? 'var(--muted)' : '#8e8ea0', fontSize: 12 }}>
                 «
               </button>
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                style={{ padding: '4px 8px', border: '1px solid #e5e7ef', background: '#fff', borderRadius: 5, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? '#c0c0c0' : '#8e8ea0', fontSize: 12 }}>
+                style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'var(--surface)', borderRadius: 5, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? 'var(--muted)' : '#8e8ea0', fontSize: 12 }}>
                 <ChevronLeft size={12} />
               </button>
-              <span style={{ padding: '4px 10px', fontSize: 12, color: '#1a1a2e', fontWeight: 600 }}>
+              <span style={{ padding: '4px 10px', fontSize: 12, color: 'var(--text)', fontWeight: 600 }}>
                 {page} / {totalPages}
               </span>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                style={{ padding: '4px 8px', border: '1px solid #e5e7ef', background: '#fff', borderRadius: 5, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? '#c0c0c0' : '#8e8ea0', fontSize: 12 }}>
+                style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'var(--surface)', borderRadius: 5, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? 'var(--muted)' : '#8e8ea0', fontSize: 12 }}>
                 <ChevronRight size={12} />
               </button>
               <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
-                style={{ padding: '4px 8px', border: '1px solid #e5e7ef', background: '#fff', borderRadius: 5, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? '#c0c0c0' : '#8e8ea0', fontSize: 12 }}>
+                style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'var(--surface)', borderRadius: 5, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? 'var(--muted)' : '#8e8ea0', fontSize: 12 }}>
                 »
               </button>
             </div>
@@ -2310,12 +2310,12 @@ export default function Leads() {
       )}
       {modal === 'delete' && (
         <Modal title="Delete Lead" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: '#8e8ea0' }}>Delete <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong>? This cannot be undone.</p>
+          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong>? This cannot be undone.</p>
         </Modal>
       )}
       {modal === 'convert' && (
         <Modal title="Move to Contacts" onClose={() => setModal(null)} onSubmit={handleConvert} submitLabel="Convert to Contact">
-          <p style={{ color: '#8e8ea0' }}>Move <strong style={{ color: '#1a1a2e' }}>{selected?.name}</strong> to Contacts?</p>
+          <p style={{ color: 'var(--muted)' }}>Move <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong> to Contacts?</p>
         </Modal>
       )}
 
@@ -2333,7 +2333,7 @@ export default function Leads() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
-          background: '#fff', border: '1px solid #4a6cf7', color: '#1a1a2e',
+          background: 'var(--surface)', border: '1px solid #4a6cf7', color: 'var(--text)',
           padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
         }}>
@@ -2349,7 +2349,7 @@ export default function Leads() {
             position: 'fixed', bottom: 24, right: 24, zIndex: 9000,
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '11px 18px', borderRadius: 30, fontWeight: 700, fontSize: 13,
-            background: '#1a1a2e', color: '#fff', border: 'none', cursor: 'pointer',
+            background: 'var(--surface)', color: '#fff', border: 'none', cursor: 'pointer',
             boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
           }}
         >
@@ -2361,17 +2361,17 @@ export default function Leads() {
       {scriptsModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}>
           <div onClick={() => setScriptsModalOpen(false)} style={{ position: 'absolute', inset: 0 }} />
-          <div style={{ position: 'relative', width: 520, maxHeight: '85vh', background: '#fff', borderRadius: '12px 12px 0 0', boxShadow: '0 -8px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', alignItems: 'center', gap: 10, background: '#1a1a2e' }}>
+          <div style={{ position: 'relative', width: 520, maxHeight: '85vh', background: 'var(--surface)', borderRadius: '12px 12px 0 0', boxShadow: '0 -8px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)' }}>
               <FileText size={16} color="#ff9b26" />
               <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', flex: 1 }}>Call Scripts</span>
-              <button onClick={() => setScriptsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 4 }}>
+              <button onClick={() => setScriptsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 }}>
                 <X size={16} />
               </button>
             </div>
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {scripts.length === 0 ? (
-                <div style={{ padding: 32, textAlign: 'center', color: '#8e8ea0', fontSize: 13 }}>No scripts found.</div>
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>No scripts found.</div>
               ) : scripts.map(s => <ScriptBrowseRow key={s.id} script={s} />)}
             </div>
           </div>
@@ -2382,7 +2382,7 @@ export default function Leads() {
       <div style={{ position: 'fixed', bottom: 24, right: detailLead ? 24 : 140, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
         {processedNotifs.map(n => (
           <div key={n.id} style={{
-            background: '#1a1a2e', color: '#fff', borderRadius: 10,
+            background: 'var(--surface)', color: '#fff', borderRadius: 10,
             padding: '12px 16px', minWidth: 260, maxWidth: 340,
             boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
             display: 'flex', alignItems: 'flex-start', gap: 12,
@@ -2396,7 +2396,7 @@ export default function Leads() {
               </div>
             </div>
             <button onClick={() => setProcessedNotifs(ns => ns.filter(x => x.id !== n.id))}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8ea0', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>
               <X size={14} />
             </button>
           </div>

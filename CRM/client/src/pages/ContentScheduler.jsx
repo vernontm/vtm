@@ -45,13 +45,13 @@ const PUBLISH_STATUS = {
 };
 
 const ALL_PLATFORMS = [
-  { key: 'tiktok',     label: 'TikTok',     color: '#000' },
+  { key: 'tiktok',     label: 'TikTok',     color: 'var(--text)' },
   { key: 'instagram',  label: 'Instagram',  color: '#E1306C' },
   { key: 'facebook',   label: 'Facebook',   color: '#1877F2' },
   { key: 'threads',    label: 'Threads',    color: '#1a1a1a' },
   { key: 'youtube',    label: 'YouTube',    color: '#FF0000' },
   { key: 'linkedin',   label: 'LinkedIn',   color: '#0A66C2' },
-  { key: 'x',          label: 'X',          color: '#000' },
+  { key: 'x',          label: 'X',          color: 'var(--text)' },
   { key: 'pinterest',  label: 'Pinterest',  color: '#E60023' },
 ];
 
@@ -996,8 +996,8 @@ export default function ContentScheduler() {
   // ── Styles ──
   const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 10,
-    border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 14,
-    color: '#1a1a2e', outline: 'none', fontFamily: 'inherit',
+    border: '1px solid var(--border)', background: '#f8f9fc', fontSize: 14,
+    color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
   };
   const btnPrimary = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -1007,37 +1007,37 @@ export default function ContentScheduler() {
   };
   const btnGhost = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
-    padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7ef',
-    background: 'transparent', color: '#1a1a2e', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+    padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)',
+    background: 'transparent', color: 'var(--text)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
   };
   const modalOverlay = {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
   const modalBox = {
-    background: '#fff', borderRadius: 16, padding: 28, width: '90%', maxWidth: 520,
+    background: 'var(--surface)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 520,
     maxHeight: '85vh', overflow: 'auto',
   };
-  const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-  const thStyle = { padding: '8px 10px', textAlign: 'left', color: '#8e8ea0', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' };
+  const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+  const thStyle = { padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' };
 
   // ── Render ──
   return (
     <div className="cs-page" style={{ height: '100%', display: 'flex' }}>
       {/* ══════ LEFT SIDEBAR ══════ */}
       <div className="cs-sidebar" style={{
-        width: sidebarCollapsed ? 0 : 200, background: '#fff', borderRight: sidebarCollapsed ? 'none' : '1px solid #e5e7ef',
+        width: sidebarCollapsed ? 0 : 200, background: 'var(--surface)', borderRight: sidebarCollapsed ? 'none' : '1px solid #e5e7ef',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
         overflow: 'hidden', transition: 'width 0.2s ease',
       }}>
         {/* Sidebar header */}
-        <div style={{ padding: '18px 16px 10px', fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>
+        <div style={{ padding: '18px 16px 10px', fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
           Content Scheduler
         </div>
 
         {/* Client list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px' }}>
-          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
             Clients
           </div>
           {clients.length === 0 && (
@@ -1085,7 +1085,7 @@ export default function ContentScheduler() {
       {/* ══════ SECTIONS SIDEBAR ══════ */}
       {client && (
         <div className="cs-sections" style={{
-          width: 56, background: '#fafbfd', borderRight: '1px solid #e5e7ef',
+          width: 56, background: '#fafbfd', borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0,
           paddingTop: 8, gap: 4,
         }}>
@@ -1095,7 +1095,7 @@ export default function ContentScheduler() {
             title={sidebarCollapsed ? 'Show clients' : 'Hide clients'}
             style={{
               width: 42, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: 'transparent', color: '#8e8ea0', display: 'flex',
+              background: 'transparent', color: 'var(--muted)', display: 'flex',
               alignItems: 'center', justifyContent: 'center', marginBottom: 4,
               transition: 'color 0.15s',
             }}
@@ -1122,12 +1122,12 @@ export default function ContentScheduler() {
       <div className="cs-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar */}
         <div className="cs-topbar" style={{
-          padding: '12px 20px', borderBottom: '1px solid #e5e7ef', background: '#fff',
+          padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
           flexWrap: 'wrap', gap: 8,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a1a2e' }}>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>
               {client ? <span className="private-value">{client.business_name}</span> : 'Select a Client'}
             </h2>
             {client && (
@@ -1146,7 +1146,7 @@ export default function ContentScheduler() {
             {client && activeSection === 'content' && (
               <>
                 {/* View toggle: List / Day / Week / Month */}
-                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7ef' }}>
+                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
                   {['list', 'day', 'week', 'month'].map(v => (
                     <button key={v} onClick={() => setViewMode(v)} style={{
                       padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
@@ -1175,14 +1175,14 @@ export default function ContentScheduler() {
           {client && showProfile && (
             <div style={{ ...cardStyle }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13, marginBottom: 10 }} className="cs-profile-grid">
-                <div><span style={{ color: '#8e8ea0' }}>Industry:</span> {client.industry || '-'}</div>
-                <div><span style={{ color: '#8e8ea0' }}>Tone:</span> {client.preferred_tone || '-'}</div>
-                <div><span style={{ color: '#8e8ea0' }}>Website:</span> {client.website_url || '-'}</div>
+                <div><span style={{ color: 'var(--muted)' }}>Industry:</span> {client.industry || '-'}</div>
+                <div><span style={{ color: 'var(--muted)' }}>Tone:</span> {client.preferred_tone || '-'}</div>
+                <div><span style={{ color: 'var(--muted)' }}>Website:</span> {client.website_url || '-'}</div>
               </div>
 
               {client.brand_bible && (
                 <div style={{ padding: 12, background: '#f8f9fc', borderRadius: 10, fontSize: 12, color: '#555', maxHeight: 100, overflow: 'auto' }}>
-                  <strong style={{ color: '#1a1a2e' }}>Brand Bible:</strong> {client.brand_bible.slice(0, 300)}{client.brand_bible.length > 300 ? '...' : ''}
+                  <strong style={{ color: 'var(--text)' }}>Brand Bible:</strong> {client.brand_bible.slice(0, 300)}{client.brand_bible.length > 300 ? '...' : ''}
                 </div>
               )}
             </div>
@@ -1190,7 +1190,7 @@ export default function ContentScheduler() {
 
           {/* ── No client selected ── */}
           {!client && (
-            <div style={{ ...cardStyle, textAlign: 'center', padding: '60px 20px', color: '#8e8ea0' }}>
+            <div style={{ ...cardStyle, textAlign: 'center', padding: '60px 20px', color: 'var(--muted)' }}>
               Select a client from the sidebar to manage their content schedule.
             </div>
           )}
@@ -1224,10 +1224,10 @@ export default function ContentScheduler() {
                   <Film size={18} color="#fff" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 2 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
                     Bulk Video Upload
                   </p>
-                  <p style={{ fontSize: 11, color: '#8e8ea0' }}>
+                  <p style={{ fontSize: 11, color: 'var(--muted)' }}>
                     Drag & drop video files here. Each video will be transcribed and auto-generate title, caption, hashtags & first comment using the client's brand bible.
                   </p>
                 </div>
@@ -1237,8 +1237,8 @@ export default function ContentScheduler() {
               {/* Bulk Upload Progress */}
               {bulkUploads.length > 0 && (
                 <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
-                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7ef', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
                       Bulk Processing ({bulkUploads.filter(u => u.status === 'done').length}/{bulkUploads.length} complete)
                     </span>
                     {bulkUploads.every(u => u.status === 'done' || u.status === 'error') && (
@@ -1253,10 +1253,10 @@ export default function ContentScheduler() {
                       display: 'flex', alignItems: 'center', gap: 10,
                     }}>
                       <Film size={14} color={u.status === 'done' ? '#22c55e' : u.status === 'error' ? '#ef4444' : '#4a6cf7'} />
-                      <span style={{ fontSize: 12, color: '#1a1a2e', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {u.name}
                       </span>
-                      <span style={{ fontSize: 11, color: '#8e8ea0', flexShrink: 0, minWidth: 80, textAlign: 'right' }}>
+                      <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0, minWidth: 80, textAlign: 'right' }}>
                         {u.status === 'queued' && 'Queued...'}
                         {u.status === 'uploading' && 'Uploading...'}
                         {u.status === 'transcribing' && 'Transcribing...'}
@@ -1266,7 +1266,7 @@ export default function ContentScheduler() {
                       </span>
                       {u.status !== 'done' && u.status !== 'error' && (
                         <div style={{ width: 60, height: 4, borderRadius: 2, background: '#e5e7ef', overflow: 'hidden' }}>
-                          <div style={{ width: `${u.progress}%`, height: '100%', background: '#4a6cf7', borderRadius: 2, transition: 'width 0.3s' }} />
+                          <div style={{ width: `${u.progress}%`, height: '100%', background: 'var(--orange)', borderRadius: 2, transition: 'width 0.3s' }} />
                         </div>
                       )}
                     </div>
@@ -1310,7 +1310,7 @@ export default function ContentScheduler() {
                             {count > 0 && (
                               <span style={{
                                 fontSize: 10, fontWeight: 700,
-                                background: active ? '#fff0e6' : '#f0f2f8',
+                                background: active ? '#fff0e6' : 'var(--surface-3)',
                                 color: active ? '#E8650A' : '#8e8ea0',
                                 padding: '1px 7px', borderRadius: 10,
                               }}>{count}</span>
@@ -1329,13 +1329,13 @@ export default function ContentScheduler() {
                           placeholder="Search a Post"
                           style={{
                             width: '100%', padding: '7px 10px 7px 32px', borderRadius: 8,
-                            border: '1px solid #eef0f5', fontSize: 12, outline: 'none', background: '#fff',
+                            border: '1px solid #eef0f5', fontSize: 12, outline: 'none', background: 'var(--surface)',
                           }}
                         />
                       </div>
                       <button style={{ ...btnGhost, fontSize: 11 }}><Calendar size={12} /> Select Dates <ChevronDown size={12} /></button>
                       <button style={{ ...btnGhost, fontSize: 11 }}><Filter size={12} /> Filter Posts</button>
-                      <div style={{ marginLeft: 'auto', fontSize: 11, color: '#8e8ea0' }}>
+                      <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>
                         {(() => {
                           const total = counts[postsTab] ?? scripts.length;
                           return total > 0 ? `1 – ${total} of ${total}` : '0 of 0';
@@ -1358,7 +1358,7 @@ export default function ContentScheduler() {
                     <Plus size={13} /> Add Row
                   </button>
                   {scripts.length > 0 && (
-                    <label style={{ fontSize: 12, color: '#8e8ea0', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <label style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                       <input type="checkbox" checked={scripts.length > 0 && selectedScripts.size === scripts.length}
                         onChange={selectAll} style={{ accentColor: '#4a6cf7' }} />
                       Select All ({scripts.length})
@@ -1366,7 +1366,7 @@ export default function ContentScheduler() {
                   )}
                   {selectedScripts.size > 0 && (
                     <>
-                      <span style={{ fontSize: 12, color: '#4a6cf7', fontWeight: 600 }}>{selectedScripts.size} selected</span>
+                      <span style={{ fontSize: 12, color: 'var(--orange)', fontWeight: 600 }}>{selectedScripts.size} selected</span>
                       <button style={{ ...btnGhost, fontSize: 11, color: '#ef4444' }} onClick={deleteSelected}>
                         <Trash2 size={12} /> Delete
                       </button>
@@ -1454,23 +1454,23 @@ export default function ContentScheduler() {
                 return (
                   <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
                     {/* Calendar header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
                       <button onClick={() => setCalendarMonth(new Date(year, month - 1))} style={btnGhost}><ChevronLeft size={16} /></button>
-                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>{monthName}</h3>
+                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{monthName}</h3>
                       <button onClick={() => setCalendarMonth(new Date(year, month + 1))} style={btnGhost}><ChevronRight size={16} /></button>
                     </div>
 
                     {/* Day headers */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e5e7ef' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)' }}>
                       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                        <div key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#8e8ea0', textTransform: 'uppercase' }}>{d}</div>
+                        <div key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>{d}</div>
                       ))}
                     </div>
 
                     {/* Calendar grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
                       {cells.map((day, i) => {
-                        if (day === null) return <div key={`empty-${i}`} style={{ minHeight: 110, background: '#fafafa', borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none', borderBottom: '1px solid #f0f0f5' }} />;
+                        if (day === null) return <div key={`empty-${i}`} style={{ minHeight: 110, background: 'var(--surface-2)', borderRight: i % 7 !== 6 ? '1px solid #f0f0f5' : 'none', borderBottom: '1px solid #f0f0f5' }} />;
 
                         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                         const dayScripts = byDate[dateStr] || [];
@@ -1489,7 +1489,7 @@ export default function ContentScheduler() {
                               display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
                             }}>
                               {isToday ? (
-                                <span style={{ background: '#4a6cf7', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>{day}</span>
+                                <span style={{ background: 'var(--orange)', color: '#fff', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>{day}</span>
                               ) : day}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -1509,7 +1509,7 @@ export default function ContentScheduler() {
                                 );
                               })}
                               {dayScripts.length > 3 && (
-                                <div style={{ fontSize: 10, color: '#4a6cf7', fontWeight: 600, cursor: 'pointer', paddingLeft: 4 }}>
+                                <div style={{ fontSize: 10, color: 'var(--orange)', fontWeight: 600, cursor: 'pointer', paddingLeft: 4 }}>
                                   +{dayScripts.length - 3} more
                                 </div>
                               )}
@@ -1521,7 +1521,7 @@ export default function ContentScheduler() {
 
                     {/* Unscheduled count */}
                     {scripts.filter(s => !s.scheduled_datetime).length > 0 && (
-                      <div style={{ padding: '10px 20px', borderTop: '1px solid #e5e7ef', fontSize: 12, color: '#8e8ea0' }}>
+                      <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--muted)' }}>
                         <Clock size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
                         {scripts.filter(s => !s.scheduled_datetime).length} unscheduled scripts
                       </div>
@@ -1534,11 +1534,11 @@ export default function ContentScheduler() {
               {['list','day','week'].includes(viewMode) && (
                 <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
                   {loading ? (
-                    <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+                    <div style={{ textAlign: 'center', padding: 60, color: 'var(--muted)' }}>
                       <Loader size={20} className="spin" />
                     </div>
                   ) : scripts.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '50px 20px', color: '#8e8ea0', fontSize: 13 }}>
+                    <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--muted)', fontSize: 13 }}>
                       No content yet. Click "Add Row" above, upload scripts, or type a command.
                     </div>
                   ) : (
@@ -1629,7 +1629,7 @@ export default function ContentScheduler() {
                                   }}
                                 >
                                   {uploadProgress[script.id] !== undefined ? (
-                                    <div style={{ textAlign: 'center', fontSize: 10, color: '#4a6cf7', fontWeight: 600 }}>
+                                    <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--orange)', fontWeight: 600 }}>
                                       {Math.round(uploadProgress[script.id])}%
                                     </div>
                                   ) : script.media_urls?.length ? (
@@ -1749,7 +1749,7 @@ export default function ContentScheduler() {
                               <td style={{ padding: 10 }}>
                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                   <button onClick={() => setEditingPost(script)}
-                                    style={{ ...btnGhost, padding: '4px 6px', color: '#4a6cf7' }} title="Edit post">
+                                    style={{ ...btnGhost, padding: '4px 6px', color: 'var(--orange)' }} title="Edit post">
                                     <Edit3 size={12} />
                                   </button>
                                   <button onClick={async () => {
@@ -1840,7 +1840,7 @@ export default function ContentScheduler() {
               {/* Quick Actions — Threads Post Types */}
               <div style={{ ...cardStyle, padding: '14px 20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Threads Quick Generate</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Threads Quick Generate</div>
                   <button onClick={() => setShowThreadsStyle(!showThreadsStyle)} style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }}>
                     <Settings size={12} /> {showThreadsStyle ? 'Hide' : 'Edit'} Style
                   </button>
@@ -1861,9 +1861,9 @@ export default function ContentScheduler() {
                       onClick={() => handleGenerate(action.prompt)}
                       disabled={genLoading}
                       style={{
-                        padding: '8px 14px', borderRadius: 10, border: '1px solid #e5e7ef',
+                        padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
                         background: '#f8f9fc', cursor: genLoading ? 'not-allowed' : 'pointer',
-                        fontSize: 12, fontWeight: 600, color: '#1a1a2e',
+                        fontSize: 12, fontWeight: 600, color: 'var(--text)',
                         display: 'flex', alignItems: 'center', gap: 6,
                         opacity: genLoading ? 0.5 : 1,
                         transition: 'all 0.15s',
@@ -1880,40 +1880,40 @@ export default function ContentScheduler() {
               {/* Threads Style Editor */}
               {showThreadsStyle && (
                 <div style={{ ...cardStyle, padding: '16px 20px' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Threads Content Style</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>Threads Content Style</div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Voice / Persona</label>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Voice / Persona</label>
                       <textarea value={threadsStyle.voice || ''} onChange={e => setThreadsStyle(s => ({ ...s, voice: e.target.value }))}
                         rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Writing Style</label>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Writing Style</label>
                       <textarea value={threadsStyle.writing_style || ''} onChange={e => setThreadsStyle(s => ({ ...s, writing_style: e.target.value }))}
                         rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>CTA Style</label>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>CTA Style</label>
                       <textarea value={threadsStyle.cta_style || ''} onChange={e => setThreadsStyle(s => ({ ...s, cta_style: e.target.value }))}
                         rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Hashtag Rules</label>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Hashtag Rules</label>
                       <textarea value={threadsStyle.hashtag_rules || ''} onChange={e => setThreadsStyle(s => ({ ...s, hashtag_rules: e.target.value }))}
                         rows={2} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
                     </div>
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Core Topics (comma separated)</label>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Core Topics (comma separated)</label>
                     <input value={(threadsStyle.core_topics || []).join(', ')}
                       onChange={e => setThreadsStyle(s => ({ ...s, core_topics: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
                       style={{ ...inputStyle, width: '100%', fontSize: 12 }} />
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>
                       Tone Rules (one per line)
                     </label>
                     <textarea value={(threadsStyle.tone_rules || []).join('\n')}
@@ -1922,7 +1922,7 @@ export default function ContentScheduler() {
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>
                       Formatting Rules (one per line)
                     </label>
                     <textarea value={(threadsStyle.formatting_rules || []).join('\n')}
@@ -1931,7 +1931,7 @@ export default function ContentScheduler() {
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>
                       Example Posts (paste full posts, separate with ---)
                     </label>
                     <textarea value={(threadsStyle.example_posts || []).join('\n---\n')}
@@ -1953,7 +1953,7 @@ export default function ContentScheduler() {
 
               {/* Chat area */}
               <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                   Content Generator
                 </div>
                 {/* Messages */}
@@ -1962,7 +1962,7 @@ export default function ContentScheduler() {
                   display: 'flex', flexDirection: 'column', gap: 10,
                 }}>
                   {genMessages.length === 0 && !genLoading && (
-                    <div style={{ textAlign: 'center', padding: '40px 10px', color: '#8e8ea0', fontSize: 13 }}>
+                    <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--muted)', fontSize: 13 }}>
                       Use the quick buttons above or describe what content you want.<br />
                       <span style={{ fontSize: 12, color: '#bbb' }}>
                         e.g. "Create 10 Threads posts about AI tools" or "Generate 5 TikTok scripts about dating red flags"
@@ -1981,14 +1981,14 @@ export default function ContentScheduler() {
                     </div>
                   ))}
                   {genLoading && (
-                    <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, background: '#f0f0f5', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#8e8ea0' }}>
+                    <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, background: '#f0f0f5', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--muted)' }}>
                       <Loader size={14} className="spin" /> Generating...
                     </div>
                   )}
                 </div>
 
                 {/* Input area */}
-                <div style={{ borderTop: '1px solid #e5e7ef', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                <div style={{ borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                   <textarea
                     value={genInput}
                     onChange={e => setGenInput(e.target.value)}
@@ -2012,8 +2012,8 @@ export default function ContentScheduler() {
               {/* Generated results list */}
               {genResults.length > 0 && (
                 <div style={{ ...cardStyle, padding: 0 }}>
-                  <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
+                  <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                       Generated Posts ({genResults.length})
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -2037,20 +2037,20 @@ export default function ContentScheduler() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {post.title && (
-                              <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
                                 {post.title}
                               </div>
                             )}
-                            <div style={{ fontSize: 13, color: '#333', lineHeight: 1.5, marginBottom: 6, whiteSpace: 'pre-wrap' }}>
+                            <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, marginBottom: 6, whiteSpace: 'pre-wrap' }}>
                               {post.caption || post.content || ''}
                             </div>
                             {post.hashtags && (
-                              <div style={{ fontSize: 12, color: '#4a6cf7', marginBottom: 4 }}>
+                              <div style={{ fontSize: 12, color: 'var(--orange)', marginBottom: 4 }}>
                                 {post.hashtags}
                               </div>
                             )}
                             {post.first_comment && (
-                              <div style={{ fontSize: 12, color: '#8e8ea0', fontStyle: 'italic' }}>
+                              <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
                                 1st comment: {post.first_comment}
                               </div>
                             )}
@@ -2099,7 +2099,7 @@ export default function ContentScheduler() {
                               </>
                             )}
                             {post.approving && (
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#3b82f6', padding: '6px 10px', background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--blue)', padding: '6px 10px', background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <Loader size={12} className="spin" /> Scheduling...
                               </span>
                             )}
@@ -2109,7 +2109,7 @@ export default function ContentScheduler() {
                                   <Check size={12} /> Scheduled
                                 </span>
                                 {post.scheduledAt && (
-                                  <span style={{ fontSize: 10, color: '#8e8ea0' }}>
+                                  <span style={{ fontSize: 10, color: 'var(--muted)' }}>
                                     {new Date(post.scheduledAt).toLocaleString('en-US', { timeZone: schedTimezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' })}
                                   </span>
                                 )}
@@ -2139,7 +2139,7 @@ export default function ContentScheduler() {
               <div style={{ ...cardStyle, padding: '16px 20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showTemplateSetup ? 14 : 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Slide Templates</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Slide Templates</div>
                     {(carouselTemplates.cover || carouselTemplates.content) && (
                       <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e', background: '#ecfdf5', padding: '2px 8px', borderRadius: 6 }}>Active</span>
                     )}
@@ -2151,7 +2151,7 @@ export default function ContentScheduler() {
                 </div>
                 {showTemplateSetup && (
                   <div>
-                    <p style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 12, lineHeight: 1.6 }}>
+                    <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
                       Upload template images for each slide type. The generator will use image-to-image to swap text while keeping your exact design, logo, and layout.
                     </p>
                     <div style={{ display: 'flex', gap: 12 }}>
@@ -2161,7 +2161,7 @@ export default function ContentScheduler() {
                         { key: 'cta', label: 'CTA Slide', ref: ctaTemplateRef },
                       ].map(t => (
                         <div key={t.key} style={{ flex: 1, textAlign: 'center' }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: '#1a1a2e', marginBottom: 6 }}>{t.label}</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{t.label}</div>
                           {carouselTemplates[t.key] ? (
                             <div style={{ position: 'relative' }}>
                               <img src={carouselTemplates[t.key]} alt={t.label}
@@ -2179,7 +2179,7 @@ export default function ContentScheduler() {
                             <div onClick={() => t.ref.current?.click()}
                               style={{ width: '100%', aspectRatio: '4/5', borderRadius: 8, border: '2px dashed #e5e7ef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#f8f9fc', gap: 4 }}>
                               <Upload size={16} color="#8e8ea0" />
-                              <span style={{ fontSize: 10, color: '#8e8ea0' }}>Upload</span>
+                              <span style={{ fontSize: 10, color: 'var(--muted)' }}>Upload</span>
                             </div>
                           )}
                           <input ref={t.ref} type="file" accept="image/*" style={{ display: 'none' }}
@@ -2191,7 +2191,7 @@ export default function ContentScheduler() {
                     <div style={{ marginTop: 12 }}>
                       {['cover', 'content', 'cta'].map(key => (
                         <div key={key} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: '#8e8ea0', width: 55 }}>{key.charAt(0).toUpperCase() + key.slice(1)} URL</label>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', width: 55 }}>{key.charAt(0).toUpperCase() + key.slice(1)} URL</label>
                           <input value={carouselTemplates[key]} onChange={e => setCarouselTemplates(prev => ({ ...prev, [key]: e.target.value }))}
                             placeholder="Paste image URL or upload above"
                             style={{ ...inputStyle, flex: 1, fontSize: 11, padding: '5px 8px' }} />
@@ -2208,21 +2208,21 @@ export default function ContentScheduler() {
 
               {/* Generator */}
               <div style={{ ...cardStyle, padding: '16px 20px' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 14 }}>Carousel Generator</div>
-                <p style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>Carousel Generator</div>
+                <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.6 }}>
                   {(carouselTemplates.cover || carouselTemplates.content)
                     ? 'Templates active. AI will generate text and use image-to-image to swap it onto your templates, keeping your exact design and logo.'
                     : 'Describe your carousel topic. AI will generate slide content and images from scratch.'}
                 </p>
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Topic / Prompt</label>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Topic / Prompt</label>
                   <textarea value={carouselPrompt} onChange={e => setCarouselPrompt(e.target.value)}
                     placeholder="e.g. 6 AI tools every small business owner should know about"
                     rows={3} style={{ ...inputStyle, width: '100%', fontSize: 12, resize: 'vertical' }} />
                 </div>
                 {/* Model selector */}
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8ea0', marginBottom: 4, display: 'block' }}>Image Model</label>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>Image Model</label>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {[
                       { key: 'nano-banana', label: 'Nano Banana', desc: 'Fast, creative edits' },
@@ -2236,7 +2236,7 @@ export default function ContentScheduler() {
                           textAlign: 'left',
                         }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: carouselModel === m.key ? '#4a6cf7' : '#1a1a2e' }}>{m.label}</div>
-                        <div style={{ fontSize: 10, color: '#8e8ea0', marginTop: 2 }}>{m.desc}</div>
+                        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -2250,7 +2250,7 @@ export default function ContentScheduler() {
                     { label: 'Before/After', prompt: 'Create a 5-slide carousel showing before and after scenarios of businesses using AI automation' },
                   ].map(q => (
                     <button key={q.label} onClick={() => setCarouselPrompt(q.prompt)}
-                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #e5e7ef', background: '#f8f9fc', fontSize: 11, color: '#1a1a2e', cursor: 'pointer', fontWeight: 500 }}>
+                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#f8f9fc', fontSize: 11, color: 'var(--text)', cursor: 'pointer', fontWeight: 500 }}>
                       {q.label}
                     </button>
                   ))}
@@ -2279,18 +2279,18 @@ export default function ContentScheduler() {
                     <div style={{ color: '#ef4444', fontSize: 13 }}>Error: {carouselResult.error}</div>
                   ) : (
                     <>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 12 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
                         Carousel Created ({carouselResult.slide_count || carouselResult.slides?.length || 0} slides)
                       </div>
                       {carouselResult.image_urls ? (
                         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10 }}>
                           {carouselResult.image_urls.map((url, i) => (
                             <img key={i} src={url} alt={`Slide ${i}`}
-                              style={{ width: 160, height: 200, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7ef', flexShrink: 0 }} />
+                              style={{ width: 160, height: 200, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', flexShrink: 0 }} />
                           ))}
                         </div>
                       ) : carouselResult.slides ? (
-                        <div style={{ fontSize: 12, color: '#8e8ea0' }}>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
                           HTML previews generated (HCTI API keys needed for image conversion). {carouselResult.slides.length} slides ready.
                         </div>
                       ) : null}
@@ -2307,7 +2307,7 @@ export default function ContentScheduler() {
                           </button>
                         )}
                         {carouselResult.approving && (
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#eff6ff', borderRadius: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#eff6ff', borderRadius: 8 }}>
                             <Loader size={13} className="spin" /> Analyzing images & scheduling...
                           </span>
                         )}
@@ -2317,14 +2317,14 @@ export default function ContentScheduler() {
                               <Check size={13} /> {carouselResult.usedVision ? 'Captions generated from images' : 'Captions generated'} & Scheduled
                             </span>
                             {carouselResult.scheduledAt && (
-                              <span style={{ fontSize: 11, color: '#8e8ea0' }}>
+                              <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                                 {new Date(carouselResult.scheduledAt).toLocaleString('en-US', { timeZone: schedTimezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' })}
                               </span>
                             )}
                           </div>
                         )}
                         {!carouselResult.approved && !carouselResult.approving && (
-                          <span style={{ fontSize: 11, color: '#8e8ea0' }}>
+                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                             <Check size={11} style={{ verticalAlign: 'middle' }} /> Added to scheduler (draft)
                           </span>
                         )}
@@ -2341,17 +2341,17 @@ export default function ContentScheduler() {
           {/* ════════════════════════════════════════════════════════════════ */}
           {client && activeSection === 'exported' && (
             <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7ef', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
                   Exported Scripts ({exportedScripts.length})
                 </div>
               </div>
               {loading ? (
-                <div style={{ textAlign: 'center', padding: 60, color: '#8e8ea0' }}>
+                <div style={{ textAlign: 'center', padding: 60, color: 'var(--muted)' }}>
                   <Loader size={20} className="spin" />
                 </div>
               ) : exportedScripts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px 20px', color: '#8e8ea0', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--muted)', fontSize: 13 }}>
                   No exported content yet. Export scripts from the Content tab.
                 </div>
               ) : (
@@ -2389,21 +2389,21 @@ export default function ContentScheduler() {
                               )}
                             </div>
                           </td>
-                          <td style={{ padding: 10, fontSize: 12, color: '#1a1a2e' }}>
+                          <td style={{ padding: 10, fontSize: 12, color: 'var(--text)' }}>
                             {script.title || '-'}
                           </td>
-                          <td style={{ padding: 10, fontSize: 12, color: '#1a1a2e', maxWidth: 200 }}>
+                          <td style={{ padding: 10, fontSize: 12, color: 'var(--text)', maxWidth: 200 }}>
                             <div style={{ maxHeight: 60, overflow: 'hidden', lineHeight: 1.4 }}>
                               {script.caption ? (script.caption.length > 100 ? script.caption.slice(0, 100) + '...' : script.caption) : '-'}
                             </div>
                           </td>
-                          <td style={{ padding: 10, fontSize: 12, color: '#4a6cf7' }}>
+                          <td style={{ padding: 10, fontSize: 12, color: 'var(--orange)' }}>
                             {script.hashtags || '-'}
                           </td>
                           <td style={{ padding: 10, fontSize: 12, color: '#555' }}>
                             {script.first_comment || '-'}
                           </td>
-                          <td style={{ padding: 10, fontSize: 12, color: '#1a1a2e' }}>
+                          <td style={{ padding: 10, fontSize: 12, color: 'var(--text)' }}>
                             {script.scheduled_datetime
                               ? new Date(script.scheduled_datetime).toLocaleString('en-US', {
                                   month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
@@ -2424,8 +2424,8 @@ export default function ContentScheduler() {
               )}
 
               {/* Quick Command */}
-              <div style={{ borderTop: '1px solid #e5e7ef', padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, background: '#f8f9fc', borderRadius: 12, padding: '10px 14px', border: '1px solid #e5e7ef' }}>
+              <div style={{ borderTop: '1px solid var(--border)', padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, background: '#f8f9fc', borderRadius: 12, padding: '10px 14px', border: '1px solid var(--border)' }}>
                   <textarea
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
@@ -2434,7 +2434,7 @@ export default function ContentScheduler() {
                     rows={1}
                     style={{
                       flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                      color: '#1a1a2e', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.5,
+                      color: 'var(--text)', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.5,
                       resize: 'none', minHeight: 20, maxHeight: 80,
                     }}
                     onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px'; }}
@@ -2449,7 +2449,7 @@ export default function ContentScheduler() {
                   </button>
                 </div>
                 {actionLoading && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#4a6cf7' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--orange)' }}>
                     <Loader size={12} className="spin" /> {actionLoading === 'captions' ? 'Generating captions...' : actionLoading === 'schedule' ? 'Scheduling...' : 'Processing...'}
                   </div>
                 )}
@@ -2462,8 +2462,8 @@ export default function ContentScheduler() {
           {/* ════════════════════════════════════════════════════════════════ */}
           {client && activeSection === 'docs' && (
             <div style={{ ...cardStyle }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e', margin: '0 0 16px' }}>Content Agent Commands</h3>
-              <p style={{ fontSize: 13, color: '#8e8ea0', marginBottom: 20, lineHeight: 1.6 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}>Content Agent Commands</h3>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20, lineHeight: 1.6 }}>
                 Use the command bar in any section. Paste scripts to create rows, or type commands to manage content.
               </p>
 
@@ -2519,7 +2519,7 @@ export default function ContentScheduler() {
               ].map(({ category, commands }) => (
                 <div key={category} style={{ marginBottom: 20 }}>
                   <div style={{
-                    fontSize: 12, fontWeight: 700, color: '#4a6cf7', textTransform: 'uppercase',
+                    fontSize: 12, fontWeight: 700, color: 'var(--orange)', textTransform: 'uppercase',
                     letterSpacing: '0.05em', marginBottom: 8, paddingBottom: 6,
                     borderBottom: '1px solid #f0f0f5',
                   }}>
@@ -2531,13 +2531,13 @@ export default function ContentScheduler() {
                       padding: '8px 0', borderBottom: '1px solid #fafafa', gap: 12,
                     }}>
                       <code style={{
-                        fontSize: 12, color: '#1a1a2e', background: '#f8f9fc',
+                        fontSize: 12, color: 'var(--text)', background: '#f8f9fc',
                         padding: '3px 8px', borderRadius: 6, fontFamily: 'monospace',
                         flexShrink: 0,
                       }}>
                         {cmd}
                       </code>
-                      <span style={{ fontSize: 12, color: '#8e8ea0', textAlign: 'right' }}>{desc}</span>
+                      <span style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>{desc}</span>
                     </div>
                   ))}
                 </div>
@@ -2569,9 +2569,9 @@ export default function ContentScheduler() {
               {/* IG Comments */}
               {engageTab === 'comments' && (
                 <div style={{ ...cardStyle, padding: 20 }}>
-                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Instagram Comments</h3>
+                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Instagram Comments</h3>
                   {!client.uploadpost_user ? (
-                    <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
+                    <p style={{ color: 'var(--muted)', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
                   ) : (
                     <>
                       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -2590,13 +2590,13 @@ export default function ContentScheduler() {
                         </button>
                       </div>
                       {igComments.length === 0 && !igCommentsLoading && (
-                        <p style={{ color: '#8e8ea0', fontSize: 13 }}>Enter a post URL and click Load to see comments.</p>
+                        <p style={{ color: 'var(--muted)', fontSize: 13 }}>Enter a post URL and click Load to see comments.</p>
                       )}
                       {igComments.map((c, i) => (
                         <div key={c.id || i} style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f5' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                            <span style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>@{c.username || c.from?.username || 'unknown'}</span>
-                            <span style={{ fontSize: 11, color: '#8e8ea0' }}>{c.timestamp ? new Date(c.timestamp).toLocaleDateString() : ''}</span>
+                            <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>@{c.username || c.from?.username || 'unknown'}</span>
+                            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{c.timestamp ? new Date(c.timestamp).toLocaleDateString() : ''}</span>
                           </div>
                           <p style={{ margin: '0 0 8px', fontSize: 13, color: '#444' }}>{c.text}</p>
                           <div style={{ display: 'flex', gap: 6 }}>
@@ -2637,14 +2637,14 @@ export default function ContentScheduler() {
               {/* IG DMs */}
               {engageTab === 'dms' && (
                 <div style={{ ...cardStyle, padding: 20 }}>
-                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Instagram Direct Messages</h3>
+                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Instagram Direct Messages</h3>
                   {!client.uploadpost_user ? (
-                    <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
+                    <p style={{ color: 'var(--muted)', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
                   ) : (
                     <>
                       {/* Send DM */}
                       <div style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0', marginBottom: 8 }}>Send DM</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>Send DM</div>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                           <input style={{ ...inputStyle, flex: 1 }} placeholder="Recipient user ID or username"
                             value={dmRecipient} onChange={e => setDmRecipient(e.target.value)} />
@@ -2667,7 +2667,7 @@ export default function ContentScheduler() {
 
                       {/* Conversations */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0' }}>Conversations</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Conversations</div>
                         <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }} disabled={dmLoading}
                           onClick={async () => {
                             setDmLoading(true);
@@ -2681,12 +2681,12 @@ export default function ContentScheduler() {
                         </button>
                       </div>
                       {dmConversations.length === 0 && !dmLoading && (
-                        <p style={{ color: '#8e8ea0', fontSize: 13 }}>Click Refresh to load conversations.</p>
+                        <p style={{ color: 'var(--muted)', fontSize: 13 }}>Click Refresh to load conversations.</p>
                       )}
                       {dmConversations.map((conv, i) => (
                         <div key={conv.id || i} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f5' }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>@{conv.username || conv.participants?.[0]?.username || 'Unknown'}</div>
-                          <div style={{ fontSize: 12, color: '#8e8ea0', marginTop: 2 }}>{conv.last_message || conv.snippet || ''}</div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>@{conv.username || conv.participants?.[0]?.username || 'Unknown'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{conv.last_message || conv.snippet || ''}</div>
                         </div>
                       ))}
                     </>
@@ -2697,30 +2697,30 @@ export default function ContentScheduler() {
               {/* AutoDMs */}
               {engageTab === 'autodms' && (
                 <div style={{ ...cardStyle, padding: 20 }}>
-                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>AutoDM Monitors</h3>
-                  <p style={{ fontSize: 12, color: '#8e8ea0', marginBottom: 14 }}>
+                  <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>AutoDM Monitors</h3>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
                     Automatically DM anyone who comments on a post. Limit: 2 active monitors, 500 DMs/day. Monitors expire after 15 days.
                   </p>
                   {!client.uploadpost_user ? (
-                    <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
+                    <p style={{ color: 'var(--muted)', fontSize: 13 }}>Set an Upload-Post username in client settings to use this feature.</p>
                   ) : (
                     <>
                       {/* Start New Monitor */}
                       <div style={{ background: '#f8f9fc', borderRadius: 10, padding: 14, marginBottom: 16 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', marginBottom: 10 }}>Start New Monitor</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Start New Monitor</div>
                         {/* Post picker — latest 10 TikTok posts */}
                         <div style={{ marginBottom: 8 }}>
-                          <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
                             Latest TikTok Posts
                             {recentPostsLoading && <Loader size={11} className="spin" />}
                             {!recentPostsLoading && <button onClick={() => { setRecentTikTokPosts([]); }} style={{ ...btnGhost, padding: '1px 6px', fontSize: 10 }}><RefreshCw size={10} /> Refresh</button>}
                           </div>
-                          <div style={{ maxHeight: 220, overflowY: 'auto', borderRadius: 8, border: '1px solid #e5e7ef', background: '#fff' }}>
+                          <div style={{ maxHeight: 220, overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)' }}>
                             {recentPostsLoading && (
-                              <div style={{ padding: '14px 12px', fontSize: 12, color: '#8e8ea0', textAlign: 'center' }}>Loading posts…</div>
+                              <div style={{ padding: '14px 12px', fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>Loading posts…</div>
                             )}
                             {!recentPostsLoading && recentTikTokPosts.length === 0 && (
-                              <div style={{ padding: '10px 12px', fontSize: 12, color: '#8e8ea0' }}>No TikTok posts found</div>
+                              <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--muted)' }}>No TikTok posts found</div>
                             )}
                             {recentTikTokPosts.map((post, i) => {
                               const url = post.post_url || post.url || post.share_url || post.video_url || '';
@@ -2743,10 +2743,10 @@ export default function ContentScheduler() {
                                       : <Play size={14} color="#8e8ea0" />}
                                   </div>
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       {title}
                                     </div>
-                                    {date && <div style={{ fontSize: 10, color: '#8e8ea0' }}>{new Date(typeof date === 'number' ? date * 1000 : date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>}
+                                    {date && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{new Date(typeof date === 'number' ? date * 1000 : date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>}
                                   </div>
                                   {isSelected && <Check size={12} color="#E8650A" />}
                                 </div>
@@ -2766,7 +2766,7 @@ export default function ContentScheduler() {
                           placeholder="Reply message when someone comments… (required)"
                           value={autoDMReplyMessage}
                           onChange={e => setAutoDMReplyMessage(e.target.value)} />
-                        <div style={{ fontSize: 11, color: '#8e8ea0', marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
                           Pre-filled from client settings. Edit as needed.
                         </div>
                         <button style={btnPrimary} disabled={autoDMLoading || !autoDMPostUrl || !autoDMReplyMessage.trim()}
@@ -2794,7 +2794,7 @@ export default function ContentScheduler() {
 
                       {/* Active Monitors */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8ea0' }}>Active Monitors</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Active Monitors</div>
                         <button style={{ ...btnGhost, fontSize: 11, padding: '4px 10px' }} disabled={autoDMLoading}
                           onClick={async () => {
                             setAutoDMLoading(true);
@@ -2808,14 +2808,14 @@ export default function ContentScheduler() {
                         </button>
                       </div>
                       {autoDMMonitors.length === 0 && (
-                        <p style={{ color: '#8e8ea0', fontSize: 13 }}>No monitors found. Click Refresh to load.</p>
+                        <p style={{ color: 'var(--muted)', fontSize: 13 }}>No monitors found. Click Refresh to load.</p>
                       )}
                       {autoDMMonitors.map((m, i) => (
                         <div key={m.id || m.monitor_id || i} style={{ padding: '12px', background: '#f8f9fc', borderRadius: 8, marginBottom: 8 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                             <div>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>{m.post_url || 'Monitor ' + (i + 1)}</div>
-                              <div style={{ fontSize: 11, color: '#8e8ea0' }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{m.post_url || 'Monitor ' + (i + 1)}</div>
+                              <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                                 Status: <strong>{m.status || 'unknown'}</strong>
                                 {m.dms_sent !== undefined && ` · ${m.dms_sent} DMs sent`}
                                 {m.expires_at && ` · Expires ${new Date(m.expires_at).toLocaleDateString()}`}
@@ -2869,7 +2869,7 @@ export default function ContentScheduler() {
                             <div style={{ marginTop: 8, maxHeight: 120, overflowY: 'auto', fontSize: 11, color: '#555' }}>
                               {(autoDMLogs[m.id || m.monitor_id] || []).map((log, li) => (
                                 <div key={li} style={{ padding: '2px 0', borderBottom: '1px solid #f0f0f5' }}>
-                                  <span style={{ color: '#8e8ea0' }}>{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</span>
+                                  <span style={{ color: 'var(--muted)' }}>{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</span>
                                   {' · '}{log.username ? `@${log.username}` : ''} {log.message || log.action || JSON.stringify(log)}
                                 </div>
                               ))}
@@ -2891,7 +2891,7 @@ export default function ContentScheduler() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20 }}>
               {!client.uploadpost_user ? (
                 <div style={{ ...cardStyle, padding: 20 }}>
-                  <p style={{ color: '#8e8ea0', fontSize: 13 }}>Set an Upload-Post username in client settings to use analytics.</p>
+                  <p style={{ color: 'var(--muted)', fontSize: 13 }}>Set an Upload-Post username in client settings to use analytics.</p>
                 </div>
               ) : (
                 <>
@@ -2916,24 +2916,24 @@ export default function ContentScheduler() {
                     <button style={btnGhost} disabled={analyticsLoading} onClick={loadAnalytics}>
                       {analyticsLoading ? <Loader size={13} className="spin" /> : <RefreshCw size={13} />} Refresh
                     </button>
-                    {analyticsLoading && <span style={{ fontSize: 12, color: '#8e8ea0' }}>Loading…</span>}
+                    {analyticsLoading && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Loading…</span>}
                   </div>
 
                   {/* Total Impressions */}
                   {impressionsData && (
                     <div style={{ ...cardStyle, padding: 20 }}>
-                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Total Impressions — {analyticsPeriod.replace(/_/g, ' ')}</h3>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Total Impressions — {analyticsPeriod.replace(/_/g, ' ')}</h3>
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                         <div style={{ background: '#f0f4ff', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
-                          <div style={{ fontSize: 28, fontWeight: 800, color: '#4a6cf7' }}>
+                          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--orange)' }}>
                             {(impressionsData.total_impressions || impressionsData.impressions || 0).toLocaleString()}
                           </div>
-                          <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2 }}>Total Impressions</div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Total Impressions</div>
                         </div>
                         {impressionsData.breakdown && Object.entries(impressionsData.breakdown).map(([platform, val]) => (
                           <div key={platform} style={{ background: '#f8f9fc', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
-                            <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e' }}>{Number(val).toLocaleString()}</div>
-                            <div style={{ fontSize: 11, color: '#8e8ea0', marginTop: 2, textTransform: 'capitalize' }}>{platform}</div>
+                            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{Number(val).toLocaleString()}</div>
+                            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, textTransform: 'capitalize' }}>{platform}</div>
                           </div>
                         ))}
                       </div>
@@ -2943,10 +2943,10 @@ export default function ContentScheduler() {
                   {/* Platform Analytics */}
                   {analyticsData && (
                     <div style={{ ...cardStyle, padding: 20 }}>
-                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Platform Analytics</h3>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Platform Analytics</h3>
                       {Object.entries(analyticsData).map(([platform, data]) => (
                         <div key={platform} style={{ marginBottom: 20 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#4a6cf7', textTransform: 'capitalize', marginBottom: 10 }}>{platform}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--orange)', textTransform: 'capitalize', marginBottom: 10 }}>{platform}</div>
                           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                             {[
                               ['Followers', data?.followers || data?.follower_count],
@@ -2959,8 +2959,8 @@ export default function ContentScheduler() {
                               ['Views', data?.views || data?.video_views],
                             ].filter(([, v]) => v !== undefined && v !== null).map(([label, val]) => (
                               <div key={label} style={{ background: '#f8f9fc', borderRadius: 8, padding: '10px 14px', minWidth: 80, textAlign: 'center' }}>
-                                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>{typeof val === 'number' ? val.toLocaleString() : val}</div>
-                                <div style={{ fontSize: 10, color: '#8e8ea0', marginTop: 2 }}>{label}</div>
+                                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{typeof val === 'number' ? val.toLocaleString() : val}</div>
+                                <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
                               </div>
                             ))}
                           </div>
@@ -2972,15 +2972,15 @@ export default function ContentScheduler() {
                   {/* History / Compare */}
                   {compareMode && analyticsHistory.length > 0 && (
                     <div style={{ ...cardStyle, padding: 20 }}>
-                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Snapshot History</h3>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Snapshot History</h3>
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                           <thead>
                             <tr style={{ borderBottom: '1px solid #eef0f5' }}>
-                              <th style={{ textAlign: 'left', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Date</th>
-                              <th style={{ textAlign: 'right', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600 }}>Total Impressions</th>
+                              <th style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Date</th>
+                              <th style={{ textAlign: 'right', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600 }}>Total Impressions</th>
                               {['instagram', 'tiktok', 'youtube', 'facebook'].filter(p => analyticsPlatforms.includes(p)).map(p => (
-                                <th key={p} style={{ textAlign: 'right', padding: '6px 10px', color: '#8e8ea0', fontWeight: 600, textTransform: 'capitalize' }}>{p}</th>
+                                <th key={p} style={{ textAlign: 'right', padding: '6px 10px', color: 'var(--muted)', fontWeight: 600, textTransform: 'capitalize' }}>{p}</th>
                               ))}
                             </tr>
                           </thead>
@@ -2992,7 +2992,7 @@ export default function ContentScheduler() {
                                 <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f8', background: i === 0 ? '#f0f4ff' : 'transparent' }}>
                                   <td style={{ padding: '7px 10px', fontWeight: i === 0 ? 700 : 400 }}>
                                     {new Date(row.snapshot_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    {i === 0 && <span style={{ marginLeft: 6, fontSize: 10, color: '#4a6cf7', fontWeight: 700 }}>Latest</span>}
+                                    {i === 0 && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--orange)', fontWeight: 700 }}>Latest</span>}
                                   </td>
                                   <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700 }}>{Number(total).toLocaleString()}</td>
                                   {['instagram', 'tiktok', 'youtube', 'facebook'].filter(p => analyticsPlatforms.includes(p)).map(p => (
@@ -3010,7 +3010,7 @@ export default function ContentScheduler() {
                   )}
 
                   {!analyticsData && !impressionsData && !analyticsLoading && (
-                    <div style={{ ...cardStyle, padding: 20, textAlign: 'center', color: '#8e8ea0' }}>
+                    <div style={{ ...cardStyle, padding: 20, textAlign: 'center', color: 'var(--muted)' }}>
                       <BarChart2 size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
                       <p style={{ fontSize: 13 }}>Analytics load automatically when you open this section.</p>
                     </div>
@@ -3027,7 +3027,7 @@ export default function ContentScheduler() {
       {publishModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => !publishLoading && setPublishModal(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 24, width: 480, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, padding: 24, width: 480, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
                 {publishModal._bulk ? `Publish ${publishModal.ids?.length} Posts` : `Publish: ${publishModal.title || 'Post'}`}
@@ -3035,7 +3035,7 @@ export default function ContentScheduler() {
               <button onClick={() => !publishLoading && setPublishModal(null)} style={{ ...btnGhost, padding: '4px 8px' }}><X size={16} /></button>
             </div>
 
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 8 }}>Platforms</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 8 }}>Platforms</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
               {ALL_PLATFORMS.map(p => {
                 const checked = publishPlatforms.includes(p.key);
@@ -3054,7 +3054,7 @@ export default function ContentScheduler() {
               })}
             </div>
 
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Schedule Date (optional)</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>Schedule Date (optional)</div>
             <input type="datetime-local" style={{ ...inputStyle, marginBottom: 16 }}
               value={publishScheduleDate} onChange={e => setPublishScheduleDate(e.target.value)} />
 
@@ -3070,7 +3070,7 @@ export default function ContentScheduler() {
               const isVideo = videoUrl && /\.(mp4|mov|webm)/i.test(videoUrl);
               return isVideo ? (
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 8 }}>Cover Frame</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 8 }}>Cover Frame</div>
                   <CoverFramePicker videoUrl={videoUrl} onChange={setCoverTimestampMs} />
                 </div>
               ) : null;
@@ -3125,11 +3125,11 @@ export default function ContentScheduler() {
         <div style={modalOverlay} onClick={() => { setShowMediaModal(null); setSlideEditIndex(null); setSlideEditPrompt(''); }}>
           <div style={{ ...modalBox, maxWidth: 800, padding: 0 }} onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e5e7ef' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{showMediaModal.title || 'Media Preview'}</h3>
                 {showMediaModal.media_urls?.length > 1 && (
-                  <span style={{ fontSize: 12, color: '#8e8ea0' }}>Slide {carouselIndex + 1} of {showMediaModal.media_urls.length}</span>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>Slide {carouselIndex + 1} of {showMediaModal.media_urls.length}</span>
                 )}
               </div>
               <button onClick={() => { setShowMediaModal(null); setSlideEditIndex(null); setSlideEditPrompt(''); }} style={{ ...btnGhost, padding: '4px 8px' }}><X size={16} /></button>
@@ -3138,7 +3138,7 @@ export default function ContentScheduler() {
             {/* Image viewer */}
             <div style={{ position: 'relative', background: '#0a0a0a', minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {slideRegenLoading === carouselIndex ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: '#8e8ea0' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--muted)' }}>
                   <Loader size={28} className="spin" />
                   <span style={{ fontSize: 13 }}>Regenerating slide...</span>
                 </div>
@@ -3194,7 +3194,7 @@ export default function ContentScheduler() {
             )}
 
             {/* Action buttons */}
-            <div style={{ padding: '12px 20px', borderTop: '1px solid #e5e7ef', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {/* Regenerate */}
               {showMediaModal.media_type === 'carousel' && (
                 <button onClick={async () => {
@@ -3325,7 +3325,7 @@ export default function ContentScheduler() {
           <div className="cs-modal" style={modalBox} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>Auto-Schedule Settings</h3>
 
-            <label style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600 }}>Timezone</label>
+            <label style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Timezone</label>
             <select value={schedTimezone} onChange={e => setSchedTimezone(e.target.value)}
               style={{ ...inputStyle, marginBottom: 16 }}>
               <option value="America/Chicago">Central (America/Chicago)</option>
@@ -3335,14 +3335,14 @@ export default function ContentScheduler() {
               <option value="UTC">UTC</option>
             </select>
 
-            <label style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600 }}>Post Times</label>
+            <label style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Post Times</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
               {schedTimeslots.map((slot, i) => (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 12px', borderRadius: 8, background: '#f8f9fc', border: '1px solid #e5e7ef',
+                  padding: '6px 12px', borderRadius: 8, background: '#f8f9fc', border: '1px solid var(--border)',
                 }}>
-                  <Clock size={12} style={{ color: '#4a6cf7' }} />
+                  <Clock size={12} style={{ color: 'var(--orange)' }} />
                   <span style={{ fontSize: 13 }}>{slot}</span>
                   <button onClick={() => setSchedTimeslots(prev => prev.filter((_, j) => j !== i))}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}>
@@ -3382,7 +3382,7 @@ export default function ContentScheduler() {
             </h3>
 
             {/* Basic Info */}
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Basic Info</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>Basic Info</div>
             <div className="cs-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               <input style={inputStyle} placeholder="Business Name *" value={clientForm.business_name}
                 onChange={e => setClientForm({ ...clientForm, business_name: e.target.value })} />
@@ -3405,7 +3405,7 @@ export default function ContentScheduler() {
             </div>
 
             {/* Social Handles */}
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Social Handles</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>Social Handles</div>
             <div className="cs-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               <input style={inputStyle} placeholder="Instagram @handle" value={clientForm.instagram_handle}
                 onChange={e => setClientForm({ ...clientForm, instagram_handle: e.target.value })} />
@@ -3422,12 +3422,12 @@ export default function ContentScheduler() {
             </div>
 
             {/* Upload-Post Publishing */}
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Upload-Post Publishing</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>Upload-Post Publishing</div>
             <input style={{ ...inputStyle, marginBottom: 10 }} placeholder="Upload-Post username (e.g. rayvaughnceo)"
               value={clientForm.uploadpost_user}
               onChange={e => setClientForm({ ...clientForm, uploadpost_user: e.target.value })} />
 
-            <div style={{ fontSize: 11, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>Default Platforms</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>Default Platforms</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
               {ALL_PLATFORMS.map(p => {
                 const checked = (clientForm.uploadpost_platforms || []).includes(p.key);
@@ -3449,7 +3449,7 @@ export default function ContentScheduler() {
             </div>
 
             {/* AutoDM Reply Message */}
-            <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600, marginBottom: 6 }}>AutoDM Reply Message</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>AutoDM Reply Message</div>
             <textarea style={{ ...inputStyle, minHeight: 72, resize: 'vertical', marginBottom: 16 }}
               placeholder="Auto-reply when someone comments on a post (e.g. Comment LINK and I'll DM you!)"
               value={clientForm.autodm_reply_message}
@@ -3457,7 +3457,7 @@ export default function ContentScheduler() {
 
             {/* Brand Bible */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div style={{ fontSize: 12, color: '#8e8ea0', fontWeight: 600 }}>Brand Bible</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Brand Bible</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input type="file" ref={brandBibleUploadRef} accept=".pdf,.txt,.docx,.doc,.md,image/*"
                   onChange={handleBrandBibleUpload} style={{ display: 'none' }} />

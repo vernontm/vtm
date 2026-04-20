@@ -3,9 +3,9 @@ import { LayoutDashboard, Users, CreditCard, DollarSign, ClipboardCheck, Trendin
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getAcademyStats } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
 
 function StatCard({ icon: Icon, label, value, color = '#4a6cf7' }) {
@@ -15,7 +15,7 @@ function StatCard({ icon: Icon, label, value, color = '#4a6cf7' }) {
         <Icon size={20} color={color} />
       </div>
       <div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e' }}>{value}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{value}</div>
         <div style={{ fontSize: 12, color: '#7a7f9a', fontWeight: 500 }}>{label}</div>
       </div>
     </div>
@@ -59,7 +59,7 @@ export default function AcademyDashboard() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load dashboard</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadStats} style={{ marginTop: 12, padding: '8px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadStats} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -89,7 +89,7 @@ export default function AcademyDashboard() {
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <TrendingUp size={16} color="#4a6cf7" />
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>Revenue Trend</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Revenue Trend</span>
           </div>
           {revenueTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
@@ -97,12 +97,12 @@ export default function AcademyDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7ef" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#7a7f9a' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#7a7f9a' }} />
-                <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7ef', fontSize: 12 }} />
+                <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--border)', fontSize: 12 }} />
                 <Line type="monotone" dataKey="revenue" stroke="#4a6cf7" strokeWidth={2} dot={{ r: 3, fill: '#4a6cf7' }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: 180, background: '#f5f7fa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ height: 180, background: 'var(--bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 13, color: '#7a7f9a' }}>No revenue data yet</span>
             </div>
           )}
@@ -111,7 +111,7 @@ export default function AcademyDashboard() {
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <BarChart3 size={16} color="#22c55e" />
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>Student Activity</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Student Activity</span>
           </div>
           {revenueTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
@@ -119,12 +119,12 @@ export default function AcademyDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7ef" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#7a7f9a' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#7a7f9a' }} />
-                <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7ef', fontSize: 12 }} />
+                <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid var(--border)', fontSize: 12 }} />
                 <Bar dataKey="students" fill="#22c55e" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: 180, background: '#f5f7fa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ height: 180, background: 'var(--bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 13, color: '#7a7f9a' }}>No activity data yet</span>
             </div>
           )}
@@ -134,7 +134,7 @@ export default function AcademyDashboard() {
       <div style={cardStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <CreditCard size={16} color="#f59e0b" />
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>Recent Enrollments</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Recent Enrollments</span>
         </div>
         {recentEnrollments.length > 0 ? (
           <div>
@@ -145,7 +145,7 @@ export default function AcademyDashboard() {
                     <Users size={14} color="#4a6cf7" />
                   </div>
                   <div>
-                    <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{e.student_name || e.name || 'Unknown Student'}</div>
+                    <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{e.student_name || e.name || 'Unknown Student'}</div>
                     <div style={{ fontSize: 11, color: '#7a7f9a' }}>{e.course_title || e.course || 'Unknown Course'}</div>
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default function AcademyDashboard() {
             ))}
           </div>
         ) : (
-          <div style={{ height: 80, background: '#f5f7fa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ height: 80, background: 'var(--bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: 13, color: '#7a7f9a' }}>No recent enrollments</span>
           </div>
         )}

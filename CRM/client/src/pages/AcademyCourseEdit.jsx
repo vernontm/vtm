@@ -3,14 +3,14 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { BookOpen, Save, Image, ToggleLeft, ToggleRight, GripVertical, Plus, Trash2, Pencil, Loader2, ArrowLeft, X, Sparkles, Upload } from 'lucide-react';
 import { getAcademyCourses, updateAcademyCourse, getAcademyLessons, createAcademyLesson, updateAcademyLesson, deleteAcademyLesson, generateAcademyContent, uploadAcademyFile } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const btnPrimary = { padding: '10px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const btnOutline = { padding: '10px 20px', background: '#fff', color: '#4a6cf7', border: '1px solid #4a6cf7', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const btnOutline = { padding: '10px 20px', background: 'var(--surface)', color: 'var(--orange)', border: '1px solid #4a6cf7', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
-const labelStyle = { fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' };
-const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' };
+const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'block' };
+const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' };
 const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
 const btnAI = { padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #4a6cf7)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 };
 
@@ -246,13 +246,13 @@ export default function AcademyCourseEdit() {
 
           <div style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>Lessons ({lessons.length})</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Lessons ({lessons.length})</span>
               <button style={btnOutline} onClick={() => { setLessonForm({ title: '', description: '', sort_order: lessons.length, status: 'draft' }); setShowLessonModal(true); }}>
                 <Plus size={14} /> Add Lesson
               </button>
             </div>
             {lessons.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', color: '#7a7f9a', fontSize: 13, background: '#f5f7fa', borderRadius: 10 }}>
+              <div style={{ padding: 24, textAlign: 'center', color: '#7a7f9a', fontSize: 13, background: 'var(--bg)', borderRadius: 10 }}>
                 No lessons yet. Add one to get started.
               </div>
             ) : lessons.map((l, i) => (
@@ -263,11 +263,11 @@ export default function AcademyCourseEdit() {
                 onDragEnter={() => handleDragEnter(i)}
                 onDragEnd={handleDragEnd}
                 onDragOver={(e) => e.preventDefault()}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#f5f7fa', borderRadius: 10, marginBottom: 8, cursor: 'grab' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10, marginBottom: 8, cursor: 'grab' }}
               >
                 <GripVertical size={14} color="#7a7f9a" />
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#7a7f9a', width: 24 }}>#{l.sort_order ?? i + 1}</span>
-                <span style={{ fontSize: 13, fontWeight: 500, color: '#1a1a2e', flex: 1 }}>{l.title}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', flex: 1 }}>{l.title}</span>
                 <StatusBadge status={l.status || 'draft'} />
                 <button onClick={() => navigate(`/academy/lessons/${l.id}/edit`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                   <Pencil size={14} color="#4a6cf7" />
@@ -301,7 +301,7 @@ export default function AcademyCourseEdit() {
             ) : (
               <div
                 style={{
-                  height: 140, background: '#f5f7fa', borderRadius: 10,
+                  height: 140, background: 'var(--bg)', borderRadius: 10,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: '2px dashed #e5e7ef', marginBottom: 14, cursor: 'pointer',
                 }}
@@ -339,10 +339,10 @@ export default function AcademyCourseEdit() {
             </div>
 
             {/* AI Generate Cover */}
-            <div style={{ background: '#f5f7fa', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <Sparkles size={14} color="#8b5cf6" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>AI Cover Generator</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>AI Cover Generator</span>
               </div>
               <input
                 style={{ ...inputStyle, marginBottom: 8, fontSize: 12 }}
@@ -371,7 +371,7 @@ export default function AcademyCourseEdit() {
 
           <div style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>Content Drip</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Content Drip</span>
               <button onClick={() => updateField('drip_enabled', !form.drip_enabled)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 {form.drip_enabled
                   ? <ToggleRight size={24} color="#4a6cf7" />
@@ -385,7 +385,7 @@ export default function AcademyCourseEdit() {
           </div>
 
           <div style={cardStyle}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', display: 'block', marginBottom: 8 }}>Status</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 8 }}>Status</span>
             <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.status} onChange={(e) => updateField('status', e.target.value)}>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
@@ -400,7 +400,7 @@ export default function AcademyCourseEdit() {
         <div style={overlayStyle} onClick={() => setShowLessonModal(false)}>
           <div style={{ ...cardStyle, width: 480, maxWidth: '90vw', margin: 0 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Add New Lesson</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Add New Lesson</span>
               <button onClick={() => setShowLessonModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} color="#7a7f9a" /></button>
             </div>
 
@@ -425,7 +425,7 @@ export default function AcademyCourseEdit() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowLessonModal(false)} style={{ ...btnPrimary, background: '#f5f7fa', color: '#7a7f9a' }}>Cancel</button>
+              <button onClick={() => setShowLessonModal(false)} style={{ ...btnPrimary, background: 'var(--bg)', color: '#7a7f9a' }}>Cancel</button>
               <button onClick={handleCreateLesson} disabled={lessonSaving || !lessonForm.title} style={{ ...btnPrimary, opacity: lessonSaving || !lessonForm.title ? 0.6 : 1 }}>
                 {lessonSaving ? 'Creating...' : 'Create Lesson'}
               </button>

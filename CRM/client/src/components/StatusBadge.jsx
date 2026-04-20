@@ -64,7 +64,7 @@ export default function StatusBadge({ status, options = [], onChange }) {
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4,
-          background: '#ffffff', border: '1px solid #e5e7ef', borderRadius: 8,
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
           padding: 6, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
         }}>
           {options.map((opt) => {
@@ -85,7 +85,7 @@ export default function StatusBadge({ status, options = [], onChange }) {
                   display: 'inline-block', width: 12, height: 12,
                   borderRadius: 3, background: c.bg, flexShrink: 0
                 }} />
-                <span style={{ fontSize: 13, color: '#1a1a2e' }}>{opt}</span>
+                <span style={{ fontSize: 13, color: 'var(--text)' }}>{opt}</span>
               </div>
             );
           })}

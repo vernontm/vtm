@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { BookOpen, Plus, Pencil, Trash2, Loader2, GripVertical, X } from 'lucide-react';
 import { getAcademyCourses, createAcademyCourse, updateAcademyCourse, deleteAcademyCourse } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const btnPrimary = { padding: '10px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
-const thStyle = { textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#7a7f9a', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e5e7ef' };
-const tdStyle = { padding: '12px 14px', fontSize: 13, color: '#1a1a2e', borderBottom: '1px solid #f0f1f5' };
-const labelStyle = { fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' };
-const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' };
+const thStyle = { textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#7a7f9a', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)' };
+const tdStyle = { padding: '12px 14px', fontSize: 13, color: 'var(--text)', borderBottom: '1px solid #f0f1f5' };
+const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'block' };
+const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' };
 const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
 
 function StatusBadge({ status }) {
@@ -180,13 +180,13 @@ export default function AcademyCourses() {
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => navigate(`/academy/courses/${c.id}/edit`)}
-                      style={{ background: '#f5f7fa', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
+                      style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
                     >
                       <Pencil size={14} color="#4a6cf7" />
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(c.id)}
-                      style={{ background: '#f5f7fa', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
+                      style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}
                     >
                       <Trash2 size={14} color="#ef4444" />
                     </button>
@@ -203,7 +203,7 @@ export default function AcademyCourses() {
         <div style={overlayStyle} onClick={() => setShowModal(false)}>
           <div style={{ ...cardStyle, width: 480, maxWidth: '90vw', margin: 0 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Add New Course</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Add New Course</span>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} color="#7a7f9a" /></button>
             </div>
 
@@ -242,7 +242,7 @@ export default function AcademyCourses() {
             </select>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ ...btnPrimary, background: '#f5f7fa', color: '#7a7f9a' }}>Cancel</button>
+              <button onClick={() => setShowModal(false)} style={{ ...btnPrimary, background: 'var(--bg)', color: '#7a7f9a' }}>Cancel</button>
               <button onClick={handleCreate} disabled={saving || !form.title} style={{ ...btnPrimary, opacity: saving || !form.title ? 0.6 : 1 }}>
                 {saving ? 'Creating...' : 'Create Course'}
               </button>
@@ -256,10 +256,10 @@ export default function AcademyCourses() {
         <div style={overlayStyle} onClick={() => setDeleteConfirm(null)}>
           <div style={{ ...cardStyle, width: 380, margin: 0, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
             <Trash2 size={28} color="#ef4444" style={{ marginBottom: 12 }} />
-            <p style={{ fontSize: 15, fontWeight: 600, color: '#1a1a2e', marginBottom: 8 }}>Delete this course?</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>Delete this course?</p>
             <p style={{ fontSize: 13, color: '#7a7f9a', marginBottom: 20 }}>This action cannot be undone. All lessons in this course will also be removed.</p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={() => setDeleteConfirm(null)} style={{ ...btnPrimary, background: '#f5f7fa', color: '#7a7f9a' }}>Cancel</button>
+              <button onClick={() => setDeleteConfirm(null)} style={{ ...btnPrimary, background: 'var(--bg)', color: '#7a7f9a' }}>Cancel</button>
               <button onClick={() => handleDelete(deleteConfirm)} style={{ ...btnPrimary, background: '#ef4444' }}>Delete</button>
             </div>
           </div>

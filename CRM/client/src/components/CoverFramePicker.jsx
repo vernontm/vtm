@@ -45,7 +45,7 @@ export default function CoverFramePicker({ videoUrl, onChange }) {
       {/* Toggle */}
       <label style={{
         display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-        fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: enabled ? 12 : 0,
+        fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: enabled ? 12 : 0,
       }}>
         <div
           onClick={() => setEnabled(v => !v)}
@@ -58,7 +58,7 @@ export default function CoverFramePicker({ videoUrl, onChange }) {
         >
           <div style={{
             position: 'absolute', top: 2, left: enabled ? 18 : 2,
-            width: 16, height: 16, borderRadius: '50%', background: '#fff',
+            width: 16, height: 16, borderRadius: '50%', background: 'var(--surface)',
             transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
           }} />
         </div>
@@ -67,7 +67,7 @@ export default function CoverFramePicker({ videoUrl, onChange }) {
 
       {enabled && (
         <div style={{
-          border: '1px solid #e5e7ef', borderRadius: 10, overflow: 'hidden',
+          border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden',
           background: '#000',
         }}>
           {/* Video preview */}
@@ -84,7 +84,7 @@ export default function CoverFramePicker({ videoUrl, onChange }) {
             {!loaded && (
               <div style={{
                 position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', color: '#8e8ea0', fontSize: 12,
+                justifyContent: 'center', color: 'var(--muted)', fontSize: 12,
               }}>
                 Loading video…
               </div>
@@ -111,7 +111,7 @@ export default function CoverFramePicker({ videoUrl, onChange }) {
                 {fmt(currentTime)}
               </span>
               <span style={{
-                fontSize: 11, fontWeight: 600, color: '#4a6cf7',
+                fontSize: 11, fontWeight: 600, color: 'var(--orange)',
                 background: '#1e2a5e', padding: '2px 8px', borderRadius: 4,
               }}>
                 Cover @ {fmt(currentTime)} ({Math.round(currentTime * 1000)} ms)

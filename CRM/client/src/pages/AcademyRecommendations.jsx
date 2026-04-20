@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Star, Plus, Pencil, Trash2, ExternalLink, X, Loader2, GripVertical } from 'lucide-react';
 import { getAcademyRecommendations, createAcademyRecommendation, updateAcademyRecommendation, deleteAcademyRecommendation } from '../api';
 
-const pageStyle = { padding: '24px 28px', background: '#f5f7fa', minHeight: '100vh' };
-const cardStyle = { background: '#fff', border: '1px solid #e5e7ef', borderRadius: 14, padding: 20, marginBottom: 16 };
-const btnPrimary = { padding: '10px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
-const headingStyle = { fontSize: 22, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 };
+const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
+const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
+const btnPrimary = { padding: '10px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 };
+const headingStyle = { fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 4 };
 const subStyle = { fontSize: 13, color: '#7a7f9a', marginBottom: 24 };
-const thStyle = { textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#7a7f9a', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e5e7ef' };
-const tdStyle = { padding: '12px 14px', fontSize: 13, color: '#1a1a2e', borderBottom: '1px solid #f0f1f5' };
-const labelStyle = { fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6, display: 'block' };
-const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid #e5e7ef', borderRadius: 10, fontSize: 13, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box', marginBottom: 14 };
+const thStyle = { textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 600, color: '#7a7f9a', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)' };
+const tdStyle = { padding: '12px 14px', fontSize: 13, color: 'var(--text)', borderBottom: '1px solid #f0f1f5' };
+const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6, display: 'block' };
+const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text)', outline: 'none', boxSizing: 'border-box', marginBottom: 14 };
 const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const modalStyle = { background: '#fff', borderRadius: 16, padding: 28, width: 480, maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' };
+const modalStyle = { background: 'var(--surface)', borderRadius: 16, padding: 28, width: 480, maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' };
 
 const categoryColors = { Tools: '#4a6cf7', Books: '#8b5cf6', Resources: '#22c55e', Brokers: '#f59e0b' };
 
@@ -119,7 +119,7 @@ export default function AcademyRecommendations() {
         <div style={{ ...cardStyle, color: '#ef4444', textAlign: 'center', padding: 40 }}>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Failed to load recommendations</p>
           <p style={{ fontSize: 13, color: '#7a7f9a' }}>{error}</p>
-          <button onClick={loadRecs} style={{ marginTop: 12, padding: '8px 20px', background: '#4a6cf7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
+          <button onClick={loadRecs} style={{ marginTop: 12, padding: '8px 20px', background: 'var(--orange)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Retry</button>
         </div>
       </div>
     );
@@ -171,15 +171,15 @@ export default function AcademyRecommendations() {
                   <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#7a7f9a' }}>{r.description}</td>
                   <td style={tdStyle}>
                     {r.affiliate_url && (
-                      <a href={r.affiliate_url} target="_blank" rel="noopener noreferrer" style={{ color: '#4a6cf7', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <a href={r.affiliate_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--orange)', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                         {r.affiliate_url.replace(/https?:\/\//, '').split('/')[0]} <ExternalLink size={11} />
                       </a>
                     )}
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button onClick={() => openEdit(r)} style={{ background: '#f5f7fa', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Pencil size={14} color="#4a6cf7" /></button>
-                      <button onClick={() => handleDelete(r.id)} style={{ background: '#f5f7fa', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Trash2 size={14} color="#ef4444" /></button>
+                      <button onClick={() => openEdit(r)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Pencil size={14} color="#4a6cf7" /></button>
+                      <button onClick={() => handleDelete(r.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer' }}><Trash2 size={14} color="#ef4444" /></button>
                     </div>
                   </td>
                 </tr>
@@ -194,7 +194,7 @@ export default function AcademyRecommendations() {
         <div style={overlayStyle} onClick={closeModal}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{editingId ? 'Edit Recommendation' : 'Add Recommendation'}</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{editingId ? 'Edit Recommendation' : 'Add Recommendation'}</h2>
               <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={18} color="#7a7f9a" /></button>
             </div>
 
@@ -227,7 +227,7 @@ export default function AcademyRecommendations() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-              <button onClick={closeModal} style={{ padding: '10px 20px', background: '#f5f7fa', color: '#7a7f9a', border: '1px solid #e5e7ef', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={closeModal} style={{ padding: '10px 20px', background: 'var(--bg)', color: '#7a7f9a', border: '1px solid var(--border)', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving} style={{ ...btnPrimary, opacity: saving ? 0.6 : 1 }}>
                 {saving ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : null}
                 {editingId ? 'Update' : 'Create'}
