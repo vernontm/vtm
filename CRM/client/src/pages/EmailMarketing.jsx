@@ -2488,7 +2488,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
 
   const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)' };
   const lbl = { display: 'block', fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
-  const primary = { background: 'var(--surface)', color: 'var(--surface)', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const primary = { background: 'var(--accent)', color: '#1a1a1a', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
   const secondary = { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
@@ -2504,8 +2504,8 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)', cursor: 'pointer', fontWeight: 600 }}>
               <span>Active</span>
               <span onClick={() => { setActive(a => !a); setDirty(true); }}
-                style={{ display: 'inline-block', width: 38, height: 22, background: active ? 'var(--surface-3)' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background 0.15s' }}>
-                <span style={{ position: 'absolute', top: 2, left: active ? 18 : 2, width: 18, height: 18, background: 'var(--surface)', borderRadius: 9, transition: 'left 0.15s' }}/>
+                style={{ display: 'inline-block', width: 38, height: 22, background: active ? 'var(--accent)' : 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 11, position: 'relative', transition: 'background 0.15s' }}>
+                <span style={{ position: 'absolute', top: 2, left: active ? 18 : 2, width: 18, height: 18, background: '#fff', borderRadius: 9, transition: 'left 0.15s', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }}/>
               </span>
             </label>
             <button onClick={onClose} style={secondary}><X size={14} /></button>
@@ -2584,8 +2584,8 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
                   const on = sendDays.includes(d);
                   return (
                     <button key={d} onClick={() => toggleDay(d)} style={{
-                      padding: '6px 10px', borderRadius: 8, border: '1px solid ' + (on ? 'var(--surface-3)' : 'var(--border)'),
-                      background: on ? 'var(--surface-3)' : 'var(--surface)', color: on ? 'var(--surface)' : 'var(--muted)',
+                      padding: '6px 10px', borderRadius: 8, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--border)'),
+                      background: on ? 'var(--accent)' : 'var(--surface)', color: on ? '#1a1a1a' : 'var(--muted)',
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     }}>{d}</button>
                   );
