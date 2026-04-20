@@ -1696,7 +1696,7 @@ export default function EmailMarketing() {
                 )}
               </div>
               {campTemplateHtml && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
                   <FileText size={13} color="#2563eb" />
                   <span style={{ color: '#1e3a8a' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
                   <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only the body paragraph below is editable.</span>
@@ -1721,7 +1721,7 @@ export default function EmailMarketing() {
 
               {/* CTA customization — shown when a template wrapper is active */}
               {campTemplateHtml && (
-                <div style={{ marginTop: 12, padding: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10 }}>
+                <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,155,38,0.08)', border: '1px solid #fed7aa', borderRadius: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#9a3412', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <div style={{ flex: '1 1 200px', minWidth: 160 }}>
@@ -1802,7 +1802,7 @@ export default function EmailMarketing() {
                     </>
                   )}
                   {campTriggerType === 'birthday' && (
-                    <div style={{ fontSize: 12, color: '#5a5a6e', padding: 10, background: '#fff7ed', borderRadius: 8, border: '1px solid #fed7aa' }}>
+                    <div style={{ fontSize: 12, color: '#5a5a6e', padding: 10, background: 'rgba(255,155,38,0.08)', borderRadius: 8, border: '1px solid #fed7aa' }}>
                       <Cake size={12} style={{ marginRight: 6, color: '#f59e0b' }} />
                       Sends at 8am Chicago time each year on the contact's birthday.
                     </div>
@@ -2249,7 +2249,7 @@ export default function EmailMarketing() {
         <div style={cardStyle}>
           <div style={sectionTitle}>Resend Configuration — <span className="private-value">{selectedClient?.business_name}</span></div>
           {config && (
-            <div style={{ marginBottom: 14, padding: 12, background: '#e8f5e9', borderRadius: 8, fontSize: 12, color: '#1a7a3a' }}>
+            <div style={{ marginBottom: 14, padding: 12, background: 'rgba(34,197,94,0.08)', borderRadius: 8, fontSize: 12, color: '#1a7a3a' }}>
               <Check size={14} style={{ marginRight: 6 }} /> Connected. API key: <code>{config.resend_api_key_masked}</code> &middot; From: {config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email} &middot; Daily limit: {config.daily_limit}
             </div>
           )}
@@ -2613,7 +2613,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
           <button onClick={onAddStep} style={primary}><Plus size={14} /> Add email</button>
         </div>
         {(seq.steps || []).length === 0 ? (
-          <div style={{ border: '1px dashed #e5e7ef', borderRadius: 10, padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+          <div style={{ border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 10, padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
             No emails yet. Click "Add email" to create the first one.
           </div>
         ) : (
@@ -2756,7 +2756,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
 
           {/* Template banner */}
           {tplHtml && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12 }}>
               <FileText size={13} color="#2563eb" />
               <span style={{ color: '#1e3a8a' }}>Using template: <strong>{tplName || 'Template'}</strong></span>
               <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only the body below is editable.</span>
@@ -2792,7 +2792,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
 
           {/* CTA editor (when template wrapper is active) */}
           {tplHtml && (
-            <div style={{ padding: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10 }}>
+            <div style={{ padding: 12, background: 'rgba(255,155,38,0.08)', border: '1px solid #fed7aa', borderRadius: 10 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#9a3412', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 180px', minWidth: 140 }}>

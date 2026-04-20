@@ -21,13 +21,13 @@ import CopyCell from '../components/CopyCell';
 const LEAD_STATUSES = ['New', 'Interested', 'Not Interested', 'Follow Up', 'Call Scheduled', 'Called', 'Won'];
 
 const STATUS_STYLES = {
-  'New':            { bg: '#E0F2FE', fg: '#0369A1' }, // sky blue
-  'Interested':     { bg: '#DCFCE7', fg: '#15803D' }, // green
-  'Not Interested': { bg: '#FEE2E2', fg: '#B91C1C' }, // red
-  'Follow Up':      { bg: '#FEF3C7', fg: '#B45309' }, // amber
-  'Call Scheduled': { bg: '#EDE9FE', fg: '#6D28D9' }, // violet
-  'Called':         { bg: '#CCFBF1', fg: '#0F766E' }, // teal
-  'Won':            { bg: '#D1FAE5', fg: '#047857' }, // emerald
+  'New':            { bg: 'rgba(3,105,161,0.2)', fg: '#38bdf8' }, // sky blue
+  'Interested':     { bg: 'rgba(21,128,61,0.2)', fg: '#4ade80' }, // green
+  'Not Interested': { bg: 'rgba(185,28,28,0.2)', fg: '#f87171' }, // red
+  'Follow Up':      { bg: 'rgba(180,83,9,0.2)', fg: '#fbbf24' }, // amber
+  'Call Scheduled': { bg: 'rgba(109,40,217,0.2)', fg: '#a78bfa' }, // violet
+  'Called':         { bg: 'rgba(15,118,110,0.2)', fg: '#2dd4bf' }, // teal
+  'Won':            { bg: 'rgba(4,120,87,0.2)', fg: '#34d399' }, // emerald
 };
 
 const FILTER_TABS = ['All Leads', ...LEAD_STATUSES];
@@ -61,7 +61,7 @@ const PRODUCT_NEEDS = [
 ];
 
 const PRODUCT_NEED_STYLES = {
-  'Digital Presence': { bg: '#4a6cf720', fg: '#4a6cf7', icon: '🌐',
+  'Digital Presence': { bg: 'rgba(74,108,247,0.12)', fg: '#4a6cf7', icon: '🌐',
     subtitle: 'Website · App · Local SEO' },
   'Content Engine':   { bg: '#f59e0b20', fg: '#d97706', icon: '🎬',
     subtitle: 'AI Content · Reels · Intros/Outros' },
@@ -111,10 +111,10 @@ function ProductNeedChip({ value, onChange }) {
                     display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
                     borderRadius: 5, fontSize: 12, fontWeight: 500, width: '100%',
                     background: value === s ? st.bg : 'transparent',
-                    color: value === s ? st.fg : '#1a1a2e',
+                    color: value === s ? st.fg : 'var(--text)',
                     border: 'none', cursor: 'pointer', textAlign: 'left',
                   }}
-                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = '#f5f7fa'; }}
+                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                   onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <span style={{ fontSize: 14 }}>{st.icon}</span>
@@ -152,13 +152,13 @@ const LEAD_SOURCES = [
 ];
 
 const PLATFORM_STYLES = {
-  'Email':        { bg: '#4a6cf720', fg: '#4a6cf7', icon: '✉️' },
+  'Email':        { bg: 'rgba(74,108,247,0.12)', fg: '#4a6cf7', icon: '✉️' },
   'TikTok':       { bg: '#FF004F20', fg: '#E60048', icon: '🎵' },
   'Instagram':    { bg: '#E1306C20', fg: '#E1306C', icon: '📸' },
   'YouTube':      { bg: '#FF000020', fg: '#D00000', icon: '▶️' },
-  'Threads':      { bg: '#1a1a2e20', fg: '#1a1a2e', icon: '@' },
+  'Threads':      { bg: '#1a1a2e20', fg: '#c8c8e0', icon: '@' },
   'Facebook':     { bg: '#1877F220', fg: '#1877F2', icon: 'f' },
-  'X / Twitter':  { bg: '#71767B20', fg: '#4B5563', icon: '𝕏' },
+  'X / Twitter':  { bg: '#71767B20', fg: '#9ca3af', icon: '𝕏' },
   'LinkedIn':     { bg: '#0A66C220', fg: '#0A66C2', icon: 'in' },
   'Website':      { bg: '#10B98120', fg: '#059669', icon: '🌐' },
   'Referral':     { bg: '#F59E0B20', fg: '#B45309', icon: '🤝' },
@@ -210,10 +210,10 @@ function PlatformChip({ value, onChange }) {
                     display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
                     borderRadius: 5, fontSize: 12, fontWeight: 500,
                     background: value === s ? st.bg : 'transparent',
-                    color: value === s ? st.fg : '#1a1a2e',
+                    color: value === s ? st.fg : 'var(--text)',
                     border: 'none', cursor: 'pointer', textAlign: 'left',
                   }}
-                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = '#f5f7fa'; }}
+                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                   onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <span style={{ fontSize: 11 }}>{st.icon}</span> {s}
@@ -277,10 +277,10 @@ function StatusPill({ value, onChange }) {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '6px 10px', borderRadius: 5, fontSize: 12, fontWeight: 500,
                     background: value === s ? st.bg : 'transparent',
-                    color: value === s ? st.fg : '#1a1a2e',
+                    color: value === s ? st.fg : 'var(--text)',
                     border: 'none', cursor: 'pointer', textAlign: 'left',
                   }}
-                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = '#f5f7fa'; }}
+                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                   onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 4, background: st.fg, marginRight: 8 }} />{s}</span>
@@ -404,7 +404,7 @@ function EditableField({ fieldKey, value, onChange }) {
 function CollapsibleSection({ title, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div style={{ borderTop: '1px solid #f0f2f8' }}>
+    <div style={{ borderTop: '1px solid var(--border)' }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -425,14 +425,14 @@ function CollapsibleSection({ title, defaultOpen = true, children }) {
 
 // ─── Activity Timeline ────────────────────────────────────────────────────────
 const ACTIVITY_ICONS = {
-  call:      { icon: '📞', color: '#f87171', bg: '#FEE2E2' },
-  email:     { icon: '✉️',  color: 'var(--orange)', bg: '#EEF4FF' },
-  recording: { icon: '🎙️', color: '#7C3AED', bg: '#EDE9FE' },
-  meeting:   { icon: '📅', color: '#0369A1', bg: '#E0F2FE' },
-  note:      { icon: '📝', color: '#B45309', bg: '#FEF3C7' },
-  status:    { icon: '🔄', color: '#0369A1', bg: '#E0F2FE' },
-  created:   { icon: '✅', color: '#15803D', bg: '#DCFCE7' },
-  default:   { icon: '💬', color: '#6B7280', bg: '#F3F4F6' },
+  call:      { icon: '📞', color: '#f87171', bg: 'rgba(239,68,68,0.15)' },
+  email:     { icon: '✉️',  color: 'var(--orange)', bg: 'rgba(59,130,246,0.15)' },
+  recording: { icon: '🎙️', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)' },
+  meeting:   { icon: '📅', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
+  note:      { icon: '📝', color: '#fbbf24', bg: 'rgba(234,179,8,0.15)' },
+  status:    { icon: '🔄', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
+  created:   { icon: '✅', color: '#4ade80', bg: 'rgba(34,197,94,0.15)' },
+  default:   { icon: '💬', color: 'var(--muted)', bg: 'rgba(107,114,128,0.15)' },
 };
 
 function fmtDateTime(dateStr) {
@@ -500,10 +500,10 @@ function ActivityTimeline({ lead, convos, recordings }) {
   }, [lead, convos, recordings]);
 
   const INTEREST_STYLES = {
-    hot:            { bg: '#FEE2E2', fg: '#B91C1C', label: '🔥 Hot' },
-    warm:           { bg: '#FEF3C7', fg: '#B45309', label: '☀️ Warm' },
-    cold:           { bg: '#E0F2FE', fg: '#0369A1', label: '❄️ Cold' },
-    not_interested: { bg: '#F3F4F6', fg: '#6B7280', label: '👎 Not interested' },
+    hot:            { bg: 'rgba(185,28,28,0.2)', fg: '#f87171', label: '🔥 Hot' },
+    warm:           { bg: 'rgba(180,83,9,0.2)', fg: '#fbbf24', label: '☀️ Warm' },
+    cold:           { bg: 'rgba(3,105,161,0.2)', fg: '#38bdf8', label: '❄️ Cold' },
+    not_interested: { bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af', label: '👎 Not interested' },
   };
 
   return (
@@ -556,7 +556,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
                             : ev.recording.summary;
                           if (!s?.summary) return null;
                           return (
-                            <p style={{ fontSize: 11, color: '#4B5563', lineHeight: 1.5, margin: '0 0 8px' }}>
+                            <p style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5, margin: '0 0 8px' }}>
                               {s.summary}
                             </p>
                           );
@@ -565,7 +565,7 @@ function ActivityTimeline({ lead, convos, recordings }) {
                         <RecordingCard recording={ev.recording} />
                       </div>
                     ) : ev.type === 'meeting' ? (
-                      <div style={{ marginTop: 4, padding: '10px 12px', background: '#EFF6FF', borderRadius: 8, border: '1px solid #BFDBFE' }}>
+                      <div style={{ marginTop: 4, padding: '10px 12px', background: 'rgba(59,130,246,0.08)', borderRadius: 8, border: '1px solid rgba(59,130,246,0.25)' }}>
                         {/* Meeting details */}
                         {ev.metadata?.start_time && (
                           <div style={{ fontSize: 11, color: 'var(--blue)', marginBottom: 4, fontWeight: 600 }}>
@@ -590,13 +590,13 @@ function ActivityTimeline({ lead, convos, recordings }) {
                           </a>
                         )}
                         {ev.body && !ev.metadata?.meet_link && (
-                          <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
                             {ev.body.length > 200 ? ev.body.slice(0, 200) + '…' : ev.body}
                           </div>
                         )}
                       </div>
                     ) : ev.body ? (
-                      <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5, marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5, marginTop: 2 }}>
                         {ev.body.length > 160 ? ev.body.slice(0, 160) + '…' : ev.body}
                       </div>
                     ) : null}
@@ -722,7 +722,7 @@ function RecordingCard({ recording: rawR }) {
             {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
           {r.audio_cleaned && (
-            <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, background: '#EDE9FE', color: '#6D28D9' }}>
+            <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>
               ✨ Cleaned
             </span>
           )}
@@ -757,8 +757,8 @@ function RecordingCard({ recording: rawR }) {
           )}
           <span style={{
             fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
-            background: r.transcript_status === 'done' ? '#DCFCE7' : r.transcript_status === 'error' ? '#FEE2E2' : '#FEF3C7',
-            color: r.transcript_status === 'done' ? '#15803D' : r.transcript_status === 'error' ? '#B91C1C' : '#B45309',
+            background: r.transcript_status === 'done' ? 'rgba(34,197,94,0.15)' : r.transcript_status === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
+            color: r.transcript_status === 'done' ? '#4ade80' : r.transcript_status === 'error' ? '#f87171' : '#fbbf24',
           }}>
             {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
           </span>
@@ -817,10 +817,10 @@ function RecordingCard({ recording: rawR }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
             {summary.interest_level && (() => {
               const iMap = {
-                hot:           { bg: '#FEE2E2', fg: '#B91C1C', label: '🔥 Hot' },
-                warm:          { bg: '#FEF3C7', fg: '#B45309', label: '☀️ Warm' },
-                cold:          { bg: '#E0F2FE', fg: '#0369A1', label: '❄️ Cold' },
-                not_interested:{ bg: '#F3F4F6', fg: '#6B7280', label: '👎 Not Interested' },
+                hot:           { bg: 'rgba(185,28,28,0.2)', fg: '#f87171', label: '🔥 Hot' },
+                warm:          { bg: 'rgba(180,83,9,0.2)', fg: '#fbbf24', label: '☀️ Warm' },
+                cold:          { bg: 'rgba(3,105,161,0.2)', fg: '#38bdf8', label: '❄️ Cold' },
+                not_interested:{ bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af', label: '👎 Not Interested' },
               };
               const s = iMap[summary.interest_level] || iMap.warm;
               return (
@@ -831,9 +831,9 @@ function RecordingCard({ recording: rawR }) {
             })()}
             {summary.sentiment && (() => {
               const sMap = {
-                positive: { bg: '#DCFCE7', fg: '#15803D', label: '😊 Positive' },
-                neutral:  { bg: '#F3F4F6', fg: '#6B7280', label: '😐 Neutral' },
-                negative: { bg: '#FEE2E2', fg: '#B91C1C', label: '😟 Negative' },
+                positive: { bg: 'rgba(21,128,61,0.2)', fg: '#4ade80', label: '😊 Positive' },
+                neutral:  { bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af', label: '😐 Neutral' },
+                negative: { bg: 'rgba(185,28,28,0.2)', fg: '#f87171', label: '😟 Negative' },
               };
               const s = sMap[summary.sentiment] || sMap.neutral;
               return (
@@ -864,7 +864,7 @@ function RecordingCard({ recording: rawR }) {
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Pain Points</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {summary.pain_points.map((p, i) => (
-                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#FEF3C7', color: '#B45309' }}>{p}</span>
+                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(234,179,8,0.15)', color: '#fbbf24' }}>{p}</span>
                 ))}
               </div>
             </div>
@@ -888,7 +888,7 @@ function RecordingCard({ recording: rawR }) {
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Topics</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {summary.topics.map((t, i) => (
-                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: '#EEF4FF', color: 'var(--orange)' }}>{t}</span>
+                  <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(59,130,246,0.12)', color: 'var(--orange)' }}>{t}</span>
                 ))}
               </div>
             </div>
@@ -951,7 +951,7 @@ function ScriptBrowseRow({ script }) {
   }
 
   return (
-    <div style={{ borderBottom: '1px solid #f0f2f8' }}>
+    <div style={{ borderBottom: '1px solid var(--border)' }}>
       <div
         onClick={() => setExpanded(e => !e)}
         style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: expanded ? '#f9fafb' : '#fff' }}
@@ -1721,24 +1721,24 @@ export default function Leads() {
       </div>
 
       {/* ── Segment tabs ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 8, padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
         {[
-          { key: 'inbound', label: 'Inbound', emoji: '📥', accent: '#E8650A', bg: '#fff5f0', owner: 'Ray' },
-          { key: 'cold',    label: 'Cold Calls', emoji: '❄️', accent: '#0369A1', bg: '#E0F2FE', owner: 'Stephanie' },
+          { key: 'inbound', label: 'Inbound', emoji: '📥', accent: 'var(--orange)', accentRaw: '#ff9b26', bg: 'rgba(255,155,38,0.1)', owner: 'Ray' },
+          { key: 'cold',    label: 'Cold Calls', emoji: '❄️', accent: '#38bdf8', accentRaw: '#38bdf8', bg: 'rgba(56,189,248,0.1)', owner: 'Stephanie' },
         ].map(seg => {
           const active = activeSegment === seg.key;
           return (
             <button key={seg.key} onClick={() => { setActiveSegment(seg.key); load(); }} style={{
-              flex: 1, padding: '14px 20px', border: 'none', cursor: 'pointer',
-              background: active ? seg.bg : '#fafafa',
-              borderBottom: active ? `3px solid ${seg.accent}` : '3px solid transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '8px 16px', border: `1px solid ${active ? (seg.accentRaw + '60') : 'var(--border)'}`,
+              cursor: 'pointer', borderRadius: 10,
+              background: active ? seg.bg : 'var(--surface-2)',
+              display: 'flex', alignItems: 'center', gap: 8,
               transition: 'all 0.15s',
             }}>
-              <span style={{ fontSize: 18 }}>{seg.emoji}</span>
+              <span style={{ fontSize: 16 }}>{seg.emoji}</span>
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: active ? seg.accent : '#8e8ea0' }}>{seg.label}</div>
-                <div style={{ fontSize: 11, color: active ? seg.accent : '#b0b0c0' }}>{segmentCounts[seg.key]} leads · {seg.owner}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: active ? seg.accent : 'var(--text)', fontFamily: 'var(--font-display)' }}>{seg.label}</div>
+                <div style={{ fontSize: 10, color: active ? seg.accent : 'var(--muted)', opacity: active ? 0.85 : 1, fontFamily: 'var(--font-display)' }}>{segmentCounts[seg.key]} leads · {seg.owner}</div>
               </div>
             </button>
           );
@@ -1749,15 +1749,15 @@ export default function Leads() {
       {(() => {
         const won = leads.filter(l => l.status === 'Won').length;
         const stats = [
-          { label: 'Calls (24h)',      value: recordingStats.calls_24h,  icon: '📞', color: '#0369A1', bg: '#E0F2FE' },
-          { label: 'Calls (7d)',       value: recordingStats.calls_7d,   icon: '📞', color: '#0F766E', bg: '#CCFBF1' },
-          { label: 'Calls (30d)',      value: recordingStats.calls_30d,  icon: '📞', color: '#6D28D9', bg: '#EDE9FE' },
-          { label: 'Meets This Week',  value: meetingStats.meets_7d,     icon: '📅', color: '#1D4ED8', bg: '#DBEAFE' },
-          { label: 'Meets (30d)',      value: meetingStats.meets_30d,    icon: '📅', color: '#0C4A6E', bg: '#BAE6FD' },
-          { label: 'Leads Won',        value: won,                      icon: '🏆', color: '#047857', bg: '#D1FAE5' },
+          { label: 'Calls (24h)',      value: recordingStats.calls_24h,  icon: '📞', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
+          { label: 'Calls (7d)',       value: recordingStats.calls_7d,   icon: '📞', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)' },
+          { label: 'Calls (30d)',      value: recordingStats.calls_30d,  icon: '📞', color: '#a78bfa', bg: 'rgba(139,92,246,0.12)' },
+          { label: 'Meets This Week',  value: meetingStats.meets_7d,     icon: '📅', color: '#60a5fa', bg: 'rgba(59,130,246,0.12)' },
+          { label: 'Meets (30d)',      value: meetingStats.meets_30d,    icon: '📅', color: '#38bdf8', bg: 'rgba(14,165,233,0.12)' },
+          { label: 'Leads Won',        value: won,                      icon: '🏆', color: '#34d399', bg: 'rgba(4,120,87,0.12)' },
         ];
         return (
-          <div style={{ padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid #f0f2f8', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {stats.map(s => (
               <div key={s.label} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
@@ -1790,10 +1790,10 @@ export default function Leads() {
               onClick={() => setActiveTab(tab)}
               style={{
                 padding: '8px 14px', borderRadius: '6px 6px 0 0', border: 'none',
-                background: active ? '#EEF4FF' : 'transparent',
-                color: active ? '#4a6cf7' : '#8e8ea0',
+                background: active ? 'rgba(255,155,38,0.1)' : 'transparent',
+                color: active ? 'var(--orange)' : 'var(--muted)',
                 fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
-                borderBottom: active ? '2px solid #4a6cf7' : '2px solid transparent',
+                borderBottom: active ? '2px solid var(--orange)' : '2px solid transparent',
                 marginBottom: -1,
                 display: 'inline-flex', alignItems: 'center', gap: 6,
               }}
@@ -1900,7 +1900,7 @@ export default function Leads() {
               <tr
                 key={lead.id}
                 style={{
-                  background: selectedIds.has(lead.id) ? 'rgba(74,108,247,0.08)' : undefined,
+                  background: selectedIds.has(lead.id) ? 'rgba(255,155,38,0.08)' : undefined,
                   cursor: 'pointer',
                   position: 'relative',
                 }}
@@ -1954,7 +1954,7 @@ export default function Leads() {
                           )}
                         </div>
                         {processing ? (
-                          <span style={{ fontSize: 9, fontWeight: 700, color: '#E8650A', background: '#FFF5F0', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--orange)', background: '#FFF5F0', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
                             AI…
                           </span>
                         ) : count > 0 && (

@@ -346,7 +346,7 @@ export default function Projects() {
                   return (
                     <React.Fragment key={project.id}>
                       {/* Project row */}
-                      <tr style={{ background: selectedIds.has(project.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
+                      <tr style={{ background: selectedIds.has(project.id) ? 'rgba(255,155,38,0.08)' : undefined }}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 4 }}>
                             <input

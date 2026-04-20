@@ -140,7 +140,7 @@ export default function Accounts() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No accounts yet.</td></tr>
             ) : filtered.map(account => (
-              <tr key={account.id} style={{ background: selectedIds.has(account.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
+              <tr key={account.id} style={{ background: selectedIds.has(account.id) ? 'rgba(255,155,38,0.08)' : undefined }}>
                 <td>
                   <input
                     type="checkbox"

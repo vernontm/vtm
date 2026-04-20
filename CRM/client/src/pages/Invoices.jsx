@@ -226,7 +226,7 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
           </div>
 
           {/* Total */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0', borderTop: '1px solid #f0f2f8' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0', borderTop: '1px solid var(--border)' }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>Total</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>

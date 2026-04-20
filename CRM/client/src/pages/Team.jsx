@@ -550,7 +550,7 @@ function MemberCard({ member, onEdit, onRemove, onViewAs, allClients }) {
               : restrictedClients.map(c => (
                 <span key={c.id} style={{
                   fontSize: 11, padding: '2px 7px', borderRadius: 4,
-                  background: '#f0f4ff', color: 'var(--orange)', fontWeight: 500,
+                  background: 'rgba(59,130,246,0.08)', color: 'var(--orange)', fontWeight: 500,
                 }}>
                   {c.business_name}
                   {member.default_client_id === c.id && (

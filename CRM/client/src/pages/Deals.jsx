@@ -449,7 +449,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                 </div>
               ))}
               <div style={{ padding: '8px 12px' }}>
-                <button onClick={addItem} style={{ background: 'none', border: '1px dashed #e5e7ef', borderRadius: 6, cursor: 'pointer', color: 'var(--orange)', fontSize: 12, padding: '5px 12px', width: '100%' }}>
+                <button onClick={addItem} style={{ background: 'none', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 6, cursor: 'pointer', color: 'var(--orange)', fontSize: 12, padding: '5px 12px', width: '100%' }}>
                   + Add Item
                 </button>
               </div>
@@ -801,7 +801,7 @@ export default function Deals() {
                 </tr>
                 {!collapsed[label] && items.map(deal => (
                   <React.Fragment key={deal.id}>
-                  <tr style={{ background: selectedIds.has(deal.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
+                  <tr style={{ background: selectedIds.has(deal.id) ? 'rgba(255,155,38,0.08)' : undefined }}>
                     <td><input type="checkbox" checked={selectedIds.has(deal.id)} onChange={() => toggleSelect(deal.id)} /></td>
                     <td
                       style={{ fontWeight: 500 }}

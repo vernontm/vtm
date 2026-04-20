@@ -200,7 +200,7 @@ export default function Contacts() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts yet.</td></tr>
             ) : filtered.map(contact => (
-              <tr key={contact.id} style={{ background: selectedIds.has(contact.id) ? 'rgba(74,108,247,0.08)' : undefined }}>
+              <tr key={contact.id} style={{ background: selectedIds.has(contact.id) ? 'rgba(255,155,38,0.08)' : undefined }}>
                 <td>
                   <input
                     type="checkbox"

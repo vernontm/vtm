@@ -200,7 +200,7 @@ export default function GlobalSearch({ onClose }) {
           })}
 
           {hasResults && (
-            <div style={{ padding: '8px 14px 12px', borderTop: '1px solid #f0f2f8', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+            <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
               {CATEGORIES.filter(cat => (results[cat.key] || []).length > 0).map(cat => (
                 <button key={cat.key} onClick={() => { navigate(`${cat.route}?search=${encodeURIComponent(query)}`); onClose(); }}
                   style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--muted)', cursor: 'pointer' }}
@@ -214,7 +214,7 @@ export default function GlobalSearch({ onClose }) {
           )}
         </div>
 
-        <div style={{ padding: '7px 16px', borderTop: '1px solid #f0f2f8', display: 'flex', gap: 14, flexShrink: 0 }}>
+        <div style={{ padding: '7px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 14, flexShrink: 0 }}>
           {[['↑↓', 'Navigate'], ['↵', 'Go to page'], ['ESC', 'Close']].map(([key, label]) => (
             <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--muted)' }}>
               <span style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px', fontFamily: 'monospace', fontSize: 10 }}>{key}</span>

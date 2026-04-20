@@ -209,7 +209,7 @@ export default function Dashboard() {
                 <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No recent payments</div>
               ) : (
                 (stats.stripeRevenue.recentPayments || []).slice(0, 6).map(p => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #f0f2f8' }}>
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#22c55e18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <DollarSign size={13} color="#22c55e" />
                     </div>
@@ -262,7 +262,7 @@ export default function Dashboard() {
             recentLeads.map(lead => (
               <div key={lead.id} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+                padding: '10px 0', borderBottom: '1px solid var(--border)',
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%', background: '#f5a62318',
@@ -299,7 +299,7 @@ export default function Dashboard() {
             drafts.slice(0, 5).map(email => (
               <div key={email.id} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+                padding: '10px 0', borderBottom: '1px solid var(--border)',
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%', background: '#4a6cf718',
@@ -334,7 +334,7 @@ export default function Dashboard() {
             meetings.map(m => (
               <div key={m.google_event_id || m.id} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+                padding: '10px 0', borderBottom: '1px solid var(--border)',
               }}>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{m.title}</div>
@@ -366,7 +366,7 @@ export default function Dashboard() {
             projects.map(p => (
               <div key={p.id} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 0', borderBottom: '1px solid #f0f2f8',
+                padding: '10px 0', borderBottom: '1px solid var(--border)',
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: 8, background: '#00b8d418',
@@ -409,7 +409,7 @@ export default function Dashboard() {
             </div>
             <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
               <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>MRR</div>
-              <div className="private-value" style={{ fontSize: 20, fontWeight: 800, color: '#E8650A' }}>${(academyStats.mrr || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="private-value" style={{ fontSize: 20, fontWeight: 800, color: 'var(--orange)' }}>${(academyStats.mrr || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             </div>
             <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
               <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pending HW</div>

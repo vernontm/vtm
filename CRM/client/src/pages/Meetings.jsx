@@ -45,7 +45,7 @@ const LEAD_STATUS_COLORS = {
   'New':            { bg: '#4a6cf722', fg: '#4a6cf7' },
   'Contacted':      { bg: '#fdab3d22', fg: '#fdab3d' },
   'Call Scheduled': { bg: '#784bd122', fg: '#784bd1' },
-  'Called':         { bg: '#CCFBF1',   fg: '#0F766E' },
+  'Called':         { bg: 'rgba(45,212,191,0.12)',   fg: '#0F766E' },
   'Won':            { bg: '#00d1d122', fg: '#00a8a8' },
   'Not Interested': { bg: '#ff5c5c22', fg: '#ff5c5c' },
   'Follow Up':      { bg: '#fdab3d22', fg: '#d97706' },
@@ -452,7 +452,7 @@ export default function Meetings() {
                       key={event.google_event_id}
                       onClick={() => navigate(`/meetings/${event.google_event_id}`)}
                       style={{ transition: 'background 0.1s', cursor: 'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#f5f7fa'}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--text)', maxWidth: 240 }}>

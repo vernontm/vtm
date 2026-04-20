@@ -335,7 +335,7 @@ export default function Scripts() {
           filtered.map(script =>
             editScript?.id === script.id ? (
               <div key={script.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <div style={{ padding: '12px 20px', background: '#f0f4ff', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ padding: '12px 20px', background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Edit2 size={13} color="#4a6cf7" />
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--orange)' }}>Editing: {script.title}</span>
                 </div>

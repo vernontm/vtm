@@ -2099,7 +2099,7 @@ export default function ContentScheduler() {
                               </>
                             )}
                             {post.approving && (
-                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--blue)', padding: '6px 10px', background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--blue)', padding: '6px 10px', background: 'rgba(59,130,246,0.08)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <Loader size={12} className="spin" /> Scheduling...
                               </span>
                             )}
@@ -2307,7 +2307,7 @@ export default function ContentScheduler() {
                           </button>
                         )}
                         {carouselResult.approving && (
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#eff6ff', borderRadius: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(59,130,246,0.08)', borderRadius: 8 }}>
                             <Loader size={13} className="spin" /> Analyzing images & scheduling...
                           </span>
                         )}
@@ -2924,7 +2924,7 @@ export default function ContentScheduler() {
                     <div style={{ ...cardStyle, padding: 20 }}>
                       <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Total Impressions — {analyticsPeriod.replace(/_/g, ' ')}</h3>
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                        <div style={{ background: '#f0f4ff', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
+                        <div style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
                           <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--orange)' }}>
                             {(impressionsData.total_impressions || impressionsData.impressions || 0).toLocaleString()}
                           </div>

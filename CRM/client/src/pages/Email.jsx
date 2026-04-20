@@ -632,7 +632,7 @@ export default function EmailPage() {
             return (
               <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); }}
                 style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 18px', border:'none', cursor:'pointer', fontSize:13, fontWeight:500,
-                  background:isActive?'rgba(74,108,247,0.08)':'transparent', color:isActive?'#4a6cf7':'#5a5a6e', borderLeft:isActive?'3px solid #4a6cf7':'3px solid transparent' }}>
+                  background:isActive?'rgba(255,155,38,0.08)':'transparent', color:isActive?'#4a6cf7':'#5a5a6e', borderLeft:isActive?'3px solid #4a6cf7':'3px solid transparent' }}>
                 <t.icon size={16} /> {t.label}
                 {count > 0 && <span style={{ marginLeft:'auto', background:t.key==='drafts'?'#ff5c5c':'#4a6cf7', color:'#fff', borderRadius:10, padding:'1px 7px', fontSize:10, fontWeight:700 }}>{count}</span>}
               </button>

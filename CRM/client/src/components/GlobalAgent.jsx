@@ -355,7 +355,7 @@ export default function GlobalAgent() {
           height: 280,
           display: 'flex',
           flexDirection: 'column',
-          borderBottom: '1px solid #f0f2f8',
+          borderBottom: '1px solid var(--border)',
         }}>
           {/* Messages */}
           <div style={{ flex: 1, overflow: 'auto', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>

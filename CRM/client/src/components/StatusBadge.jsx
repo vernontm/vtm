@@ -78,7 +78,7 @@ export default function StatusBadge({ status, options = [], onChange }) {
                   display: 'flex', alignItems: 'center', gap: 8,
                   transition: 'background 0.1s',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = '#f5f7fa'}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <span style={{
