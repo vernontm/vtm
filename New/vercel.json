@@ -73,7 +73,8 @@
     { "source": "/free-gift", "destination": "/free-gift.html" },
     { "source": "/claude-guide", "destination": "/claude-guide.html" },
     { "source": "/services", "destination": "/services.html" },
-    { "source": "/resources/traders", "destination": "/resources/traders.html" },
+    { "source": "/resources", "destination": "/resources/index.html" },
+    { "source": "/resources/:slug", "destination": "/resources/category.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

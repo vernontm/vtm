@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>vernontm. - Resources</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange: #ff9b26; --orange-dark: #ee4c27;
+            --bg: #111112; --surface: #1a1a1c; --surface-2: #222226;
+            --border: rgba(255,255,255,0.07); --text: #f0f0f0; --muted: #6b6b72;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+        html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+        .page { position: relative; z-index: 1; }
+
+        nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+        .logo img { height: 46px; width: auto; display: block; }
+        .nav-links { display: flex; align-items: center; gap: 28px; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .nav-links a.nav-mode-btn { background: var(--surface-2); padding: 8px 18px; border-radius: 8px; color: var(--text); font-weight: 500; }
+        .nav-links a:hover { color: var(--text); }
+
+        .page-hero { text-align: center; padding: 60px 20px 40px; }
+        .page-hero .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,155,38,0.1); border: 1px solid rgba(255,155,38,0.2); color: var(--orange); padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px; }
+        .page-hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 5.5vw, 4rem); font-weight: 300; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 12px; }
+        .page-hero h1 em { font-style: normal; font-weight: 800; color: var(--orange); }
+        .page-hero p { font-size: 1rem; color: var(--muted); max-width: 520px; margin: 0 auto; }
+
+        .cats-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+        .cats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .cat-card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+            padding: 28px; text-decoration: none; color: var(--text); transition: all 0.25s;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .cat-card:hover { border-color: rgba(255,155,38,0.3); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,155,38,0.06); }
+        .cat-emoji { font-size: 2.5rem; }
+        .cat-name { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
+        .cat-sub { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+        .cat-arrow { margin-top: auto; color: var(--orange); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+        @media (max-width: 900px) { .cats-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) {
+            nav { padding: 20px 24px; }
+            .nav-links a:not(.nav-mode-btn) { display: none; }
+            .cats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <nav>
+            <a href="/" class="logo"><img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" /></a>
+            <div class="nav-links">
+                <a href="/services">Services</a>
+                <a href="/contact">Contact Us</a>
+                <a href="/book-call">Book a Call</a>
+            </div>
+        </nav>
+
+        <div class="page-hero">
+            <div class="badge">Free Resources</div>
+            <h1>Pick your <em>path</em></h1>
+            <p>Prompts, dashboards, code, and walkthroughs — organized by what you're building.</p>
+        </div>
+
+        <section class="cats-section">
+            <div class="cats-grid" id="catsGrid">
+                <div style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">Loading…</div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        }
+
+        async function loadCats() {
+            try {
+                const res = await fetch('/api/resources');
+                const data = await res.json();
+                const cats = data.categories || [];
+                const grid = document.getElementById('catsGrid');
+                if (!cats.length) {
+                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">No categories yet. Check back soon!</div>`;
+                    return;
+                }
+                grid.innerHTML = cats.map(c => `
+                    <a class="cat-card" href="/resources/${escapeHtml(c.slug)}">
+                        <div class="cat-emoji">${escapeHtml(c.emoji || '📚')}</div>
+                        <div class="cat-name">${escapeHtml(c.name)}</div>
+                        <div class="cat-sub">${escapeHtml(c.hero_subtitle || '')}</div>
+                        <div class="cat-arrow">Explore &rarr;</div>
+                    </a>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+                document.getElementById('catsGrid').innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">Couldn't load resources right now.</div>`;
+            }
+        }
+        loadCats();
+    </script>
+</body>
+</html>

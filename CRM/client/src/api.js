@@ -214,11 +214,16 @@ export const createBlogPost  = (data)       => request('/blog-posts', { method: 
 export const updateBlogPost  = (id, data)   => request(`/blog-posts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteBlogPost  = (id)         => request(`/blog-posts?id=${id}`, { method: 'DELETE' });
 
-// Trader Resources (public traders page)
-export const getTraderResources    = ()         => request('/trader-resources');
-export const createTraderResource  = (data)     => request('/trader-resources', { method: 'POST', body: JSON.stringify(data) });
-export const updateTraderResource  = (id, data) => request(`/trader-resources?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteTraderResource  = (id)       => request(`/trader-resources?id=${id}`, { method: 'DELETE' });
+// Resources (public resources pages — grouped by category)
+export const getResourceCategories   = ()         => request('/resource-categories');
+export const createResourceCategory  = (data)     => request('/resource-categories', { method: 'POST', body: JSON.stringify(data) });
+export const updateResourceCategory  = (id, data) => request(`/resource-categories?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteResourceCategory  = (id)       => request(`/resource-categories?id=${id}`, { method: 'DELETE' });
+
+export const getResources    = (category)        => request(`/resources${category ? `?category=${encodeURIComponent(category)}` : ''}`);
+export const createResource  = (data)            => request('/resources', { method: 'POST', body: JSON.stringify(data) });
+export const updateResource  = (id, data)        => request(`/resources?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteResource  = (id)              => request(`/resources?id=${id}`, { method: 'DELETE' });
 
 export async function uploadBlogMedia(file) {
   const { data: { session } } = await supabase.auth.getSession();

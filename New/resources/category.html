@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <title>vernontm. - Trader Resources</title>
+    <title id="pageTitle">vernontm. - Resources</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
@@ -196,10 +196,10 @@
         <div class="page-hero">
             <div class="badge">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-                Free Resources
+                <span id="heroBadge">Free Resources</span>
             </div>
-            <h1>Built for <em>traders</em></h1>
-            <p>AI-powered prompts, dashboards, and tools to sharpen your edge in the market.</p>
+            <h1><span id="heroTitle">Loading</span> <em id="heroHighlight"></em></h1>
+            <p id="heroSubtitle"></p>
         </div>
 
         <!-- Gate -->
@@ -211,8 +211,8 @@
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                 </div>
-                <h2>Unlock Free Access</h2>
-                <p>Drop your name and email to get instant access to all our trader prompts and tools.</p>
+                <h2 id="gateTitle">Unlock Free Access</h2>
+                <p id="gateDesc">Drop your name and email to get instant access.</p>
                 <form class="gate-form" id="gateForm">
                     <input type="text" id="gateName" placeholder="Your name" autocomplete="name" required />
                     <input type="email" id="gateEmail" placeholder="Your email" autocomplete="email" required />
@@ -269,15 +269,32 @@
             });
         });
 
-        // ── Prompts data (loaded from API) ──
+        // ── Category + Prompts data (loaded from API) ──
         let PROMPTS = [];
+        let CATEGORY = null;
 
-        async function loadPrompts() {
+        // Resolve category slug from URL: /resources/<slug>
+        function getCategorySlug() {
+            const parts = window.location.pathname.split('/').filter(Boolean);
+            const idx = parts.indexOf('resources');
+            return (idx >= 0 && parts[idx + 1]) ? parts[idx + 1] : 'traders';
+        }
+
+        async function loadData() {
+            const slug = getCategorySlug();
             try {
-                const res = await fetch('/api/trader-resources');
-                if (!res.ok) throw new Error('Failed to load');
-                const rows = await res.json();
-                PROMPTS = rows.map(r => ({
+                const res = await fetch(`/api/resources?category=${encodeURIComponent(slug)}`);
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        document.getElementById('heroTitle').textContent = 'Category not found';
+                        document.getElementById('heroSubtitle').textContent = `"${slug}" doesn't exist (yet).`;
+                        return;
+                    }
+                    throw new Error('Failed to load');
+                }
+                const data = await res.json();
+                CATEGORY = data.category;
+                PROMPTS = (data.resources || []).map(r => ({
                     id: r.id,
                     emoji: r.emoji || '📊',
                     tag: r.tag || 'Resource',
@@ -287,10 +304,22 @@
                     youtubeUrl: r.youtube_url || '',
                     codeBlocks: Array.isArray(r.code_blocks) ? r.code_blocks : [],
                 }));
+                applyCategoryChrome();
             } catch (e) {
                 console.error('Failed to load resources', e);
                 PROMPTS = [];
             }
+        }
+
+        function applyCategoryChrome() {
+            if (!CATEGORY) return;
+            document.getElementById('pageTitle').textContent = `vernontm. - ${CATEGORY.name}`;
+            document.getElementById('heroBadge').textContent = CATEGORY.badge_label || 'Free Resources';
+            document.getElementById('heroTitle').textContent = CATEGORY.hero_title || 'Built for';
+            document.getElementById('heroHighlight').textContent = CATEGORY.hero_highlight || CATEGORY.name.toLowerCase();
+            document.getElementById('heroSubtitle').textContent = CATEGORY.hero_subtitle || '';
+            document.getElementById('gateTitle').textContent = CATEGORY.gate_title || 'Unlock Free Access';
+            document.getElementById('gateDesc').textContent = CATEGORY.gate_description || 'Drop your name and email to get instant access.';
         }
 
         // ── Helpers ──
@@ -438,22 +467,33 @@
         }
 
         async function loadAndRender() {
-            await loadPrompts();
+            await loadData();
             renderPrompts();
         }
 
         // ── Gate logic ──
-        const STORAGE_KEY = 'vtm_traders_unlocked';
+        const SLUG = getCategorySlug();
+        const STORAGE_KEY = `vtm_resources_unlocked_${SLUG}`;
 
         function showContent() {
             document.getElementById('gateWrap').style.display = 'none';
             document.getElementById('contentWrap').style.display = 'block';
         }
 
-        if (localStorage.getItem(STORAGE_KEY)) {
-            showContent();
-            loadAndRender();
-        }
+        // Hero is populated from the category even if gated — fetch chrome eagerly
+        (async () => {
+            await loadData();
+            // If gate disabled on this category, skip straight to content
+            if (CATEGORY && CATEGORY.gate_enabled === false) {
+                showContent();
+                renderPrompts();
+                return;
+            }
+            if (localStorage.getItem(STORAGE_KEY)) {
+                showContent();
+                renderPrompts();
+            }
+        })();
 
         document.getElementById('gateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -476,9 +516,9 @@
                     body: JSON.stringify({
                         name,
                         email,
-                        source: 'traders-page',
-                        tags: ['traders'],
-                        notes: 'Signed up via /resources/traders page',
+                        source: `resources-${SLUG}`,
+                        tags: [SLUG],
+                        notes: `Signed up via /resources/${SLUG} page`,
                     }),
                 });
             } catch (_) {
@@ -487,7 +527,7 @@
 
             localStorage.setItem(STORAGE_KEY, '1');
             showContent();
-            loadAndRender();
+            renderPrompts();
         });
     </script>
 </body>
