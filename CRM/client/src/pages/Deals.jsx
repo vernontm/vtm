@@ -41,9 +41,9 @@ function PaymentBadge({ dealId, allInvoices, onRefresh }) {
   const allPaid = paid.length >= totalPhases;
 
   let label, color;
-  if (allPaid)              { label = '✓ Fully Paid'; color = '#4a6cf7'; }
+  if (allPaid)              { label = '✓ Fully Paid'; color = 'var(--orange)'; }
   else if (paid.length > 0) { label = `Phase ${paid.length}/${totalPhases} Paid`; color = '#fdab3d'; }
-  else                      { label = totalPhases > 1 ? `Phase 1/${totalPhases} Sent` : 'Invoice Sent'; color = '#4a6cf7'; }
+  else                      { label = totalPhases > 1 ? `Phase 1/${totalPhases} Sent` : 'Invoice Sent'; color = 'var(--orange)'; }
 
   const latestUrl = inv.find(i => i.stripe_invoice_url)?.stripe_invoice_url;
 
@@ -828,7 +828,7 @@ export default function Deals() {
                           placeholder="Task name…"
                           style={{
                             display: 'block', marginTop: 4, width: '100%',
-                            background: 'var(--surface-3)', border: '1px solid rgba(74,108,247,0.4)',
+                            background: 'var(--surface-3)', border: '1px solid rgba(255,155,38,0.4)',
                             borderRadius: 5, outline: 'none', color: 'var(--text)',
                             fontSize: 12, padding: '3px 8px', fontFamily: 'var(--font-display)',
                           }}
@@ -842,7 +842,7 @@ export default function Deals() {
                             color: 'var(--muted)', fontSize: 11, padding: 0,
                             fontFamily: 'var(--font-display)', transition: 'color 0.15s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#4a6cf7'}
+                          onMouseEnter={e => e.currentTarget.style.color = 'var(--orange)'}
                           onMouseLeave={e => e.currentTarget.style.color = '#8e8ea0'}
                         >
                           <Plus size={11} /> Add Task
