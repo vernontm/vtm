@@ -2,18 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Users, Briefcase, Star, LayoutDashboard, RefreshCw,
-  Mail, Calendar, Settings, Search, Bell, Receipt, StickyNote, LogOut,
+  Mail, Calendar, Settings, Receipt, StickyNote, LogOut,
   Eye, EyeOff, FileText, CreditCard, FolderOpen, Film,
   GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2, UserCog,
-  Video, X, Package,
+  Video, X, Package, Bell,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../context/TeamContext';
 import { useMobile } from '../App';
-import GlobalSearch from './GlobalSearch';
-import { getNotifications, getGmailInbox } from '../api';
+import { getGmailInbox } from '../api';
 
 // ── Nav definitions ───────────────────────────────────────────────────────────
 const nav = [
@@ -70,17 +69,21 @@ const FOOTER_BTN = (active = false) => ({
 });
 
 export default function Sidebar() {
-  const { triggerRefresh } = useRefresh();
   const [spinning, setSpinning]     = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [notifCount, setNotifCount] = useState(0);
   const [emailCount, setEmailCount] = useState(0);
 
   const { hasPermission, isOwner, viewingAs, clearViewingAs } = useTeam();
+  const { triggerRefresh } = useRefresh();
 
+  function handleRefresh() {
+    setSpinning(true);
+    triggerRefresh();
+    setTimeout(() => setSpinning(false), 800);
+  }
+
+  // Only fetch email count — notifications + refresh + search live in Header now
   useEffect(() => {
     const fetchCounts = () => {
-      getNotifications().then(d => setNotifCount(d.total || 0)).catch(() => {});
       getGmailInbox({ maxResults: '10' }).then(d => {
         const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
         const recent = (d?.messages || []).filter(m => {
@@ -93,23 +96,6 @@ export default function Sidebar() {
     fetchCounts();
     const interval = setInterval(fetchCounts, 60000);
     return () => clearInterval(interval);
-  }, []);
-
-  function handleRefresh() {
-    setSpinning(true);
-    triggerRefresh();
-    setTimeout(() => setSpinning(false), 700);
-  }
-
-  useEffect(() => {
-    function onKeyDown(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setSearchOpen(prev => !prev);
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const { privacyMode, togglePrivacy } = usePrivacy();
@@ -178,35 +164,6 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Search */}
-        <div style={{ padding: '10px 12px 4px', flexShrink: 0 }}>
-          <button
-            onClick={() => setSearchOpen(true)}
-            title="Search (Cmd+K)"
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-              padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
-              background: 'var(--surface-2)', border: '1px solid var(--border)',
-              color: 'var(--muted)', fontSize: 12.5, transition: 'all 0.15s',
-              textAlign: 'left', fontFamily: 'var(--font-display)',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,155,38,0.35)'; e.currentTarget.style.color = 'var(--text)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
-          >
-            <Search size={13} style={{ flexShrink: 0 }} />
-            <span style={{ flex: 1 }}>Search...</span>
-            <span style={{
-              fontSize: 10,
-              background: 'var(--bg)',
-              border: '1px solid var(--border)',
-              borderRadius: 5,
-              padding: '1px 6px',
-              color: 'var(--muted)',
-              fontFamily: 'var(--font-display)',
-            }}>⌘K</span>
-          </button>
-        </div>
-
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', paddingTop: 8, paddingBottom: 8 }}>
 
@@ -232,11 +189,6 @@ export default function Sidebar() {
                   {to === '/email' && emailCount > 0 && (
                     <span style={{ background: 'var(--orange)', color: 'var(--text)', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
                       {emailCount}
-                    </span>
-                  )}
-                  {to === '/notifications' && notifCount > 0 && (
-                    <span style={{ background: 'var(--red)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', boxShadow: '0 0 8px rgba(239,68,68,0.5)', fontFamily: 'var(--font-display)' }}>
-                      {notifCount}
                     </span>
                   )}
                 </NavLink>
@@ -313,7 +265,6 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
     </>
   );
 }

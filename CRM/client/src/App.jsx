@@ -8,6 +8,7 @@ import { TeamProvider } from './context/TeamContext';
 import { UiProvider } from './context/UiContext';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import RecordingBar from './components/RecordingBar';
 import Login from './pages/Login';
 import Leads from './pages/Leads';
@@ -71,6 +72,7 @@ function AppLayout() {
         <RecordingBar />
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Header />
           <main key={refreshKey} className="app-main" style={{ flex: 1, overflow: 'auto' }}>
             <ErrorBoundary>
             <Routes>
