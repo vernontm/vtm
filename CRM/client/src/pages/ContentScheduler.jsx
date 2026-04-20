@@ -48,7 +48,7 @@ const ALL_PLATFORMS = [
   { key: 'tiktok',     label: 'TikTok',     color: 'var(--text)' },
   { key: 'instagram',  label: 'Instagram',  color: '#E1306C' },
   { key: 'facebook',   label: 'Facebook',   color: '#1877F2' },
-  { key: 'threads',    label: 'Threads',    color: '#1a1a1a' },
+  { key: 'threads',    label: 'Threads',    color: '#c8c8e0' },
   { key: 'youtube',    label: 'YouTube',    color: '#FF0000' },
   { key: 'linkedin',   label: 'LinkedIn',   color: '#0A66C2' },
   { key: 'x',          label: 'X',          color: 'var(--text)' },
@@ -996,7 +996,7 @@ export default function ContentScheduler() {
   // ── Styles ──
   const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 10,
-    border: '1px solid var(--border)', background: '#f8f9fc', fontSize: 14,
+    border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: 14,
     color: 'var(--text)', outline: 'none', fontFamily: 'inherit',
   };
   const btnPrimary = {
@@ -1041,7 +1041,7 @@ export default function ContentScheduler() {
             Clients
           </div>
           {clients.length === 0 && (
-            <div style={{ padding: '8px 16px', fontSize: 12, color: '#ccc' }}>No clients yet</div>
+            <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--muted)' }}>No clients yet</div>
           )}
           {clients.map(c => (
             <div
@@ -1051,7 +1051,7 @@ export default function ContentScheduler() {
                 padding: '8px 16px',
                 fontSize: 13,
                 cursor: 'pointer',
-                color: selectedClientId === c.id ? '#4a6cf7' : '#1a1a2e',
+                color: selectedClientId === c.id ? 'var(--orange)' : 'var(--text)',
                 background: selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent',
                 borderLeft: selectedClientId === c.id ? '3px solid #4a6cf7' : '3px solid transparent',
                 fontWeight: selectedClientId === c.id ? 600 : 400,
@@ -1085,7 +1085,7 @@ export default function ContentScheduler() {
       {/* ══════ SECTIONS SIDEBAR ══════ */}
       {client && (
         <div className="cs-sections" style={{
-          width: 56, background: '#fafbfd', borderRight: '1px solid var(--border)',
+          width: 56, background: 'var(--surface-2)', borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0,
           paddingTop: 8, gap: 4,
         }}>
@@ -1108,7 +1108,7 @@ export default function ContentScheduler() {
                 width: 42, height: 42, borderRadius: 10, border: 'none', cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
                 background: activeSection === key ? 'rgba(74,108,247,0.12)' : 'transparent',
-                color: activeSection === key ? '#4a6cf7' : '#8e8ea0',
+                color: activeSection === key ? 'var(--orange)' : 'var(--muted)',
                 fontFamily: 'inherit', transition: 'all 0.15s',
               }}>
               <Icon size={18} />
@@ -1150,8 +1150,8 @@ export default function ContentScheduler() {
                   {['list', 'day', 'week', 'month'].map(v => (
                     <button key={v} onClick={() => setViewMode(v)} style={{
                       padding: '5px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
-                      background: viewMode === v ? '#4a6cf7' : '#fff',
-                      color: viewMode === v ? '#fff' : '#8e8ea0',
+                      background: viewMode === v ? 'var(--orange)' : 'var(--surface-3)',
+                      color: viewMode === v ? '#fff' : 'var(--muted)',
                       textTransform: 'capitalize',
                     }}>{v}</button>
                   ))}
@@ -1181,7 +1181,7 @@ export default function ContentScheduler() {
               </div>
 
               {client.brand_bible && (
-                <div style={{ padding: 12, background: '#f8f9fc', borderRadius: 10, fontSize: 12, color: '#555', maxHeight: 100, overflow: 'auto' }}>
+                <div style={{ padding: 12, background: 'var(--surface-2)', borderRadius: 10, fontSize: 12, color: 'var(--muted)', maxHeight: 100, overflow: 'auto' }}>
                   <strong style={{ color: 'var(--text)' }}>Brand Bible:</strong> {client.brand_bible.slice(0, 300)}{client.brand_bible.length > 300 ? '...' : ''}
                 </div>
               )}
@@ -1209,8 +1209,8 @@ export default function ContentScheduler() {
                 onClick={() => bulkUploadRef.current?.click()}
                 style={{
                   ...cardStyle, padding: '20px 24px', cursor: 'pointer',
-                  border: bulkDragOver ? '2px dashed #4a6cf7' : '2px dashed #e5e7ef',
-                  background: bulkDragOver ? '#4a6cf708' : '#fafbfe',
+                  border: bulkDragOver ? '2px dashed var(--orange)' : '2px dashed rgba(255,255,255,0.15)',
+                  background: bulkDragOver ? 'rgba(255,155,38,0.06)' : 'var(--surface-2)',
                   display: 'flex', alignItems: 'center', gap: 16,
                   transition: 'all 0.2s',
                 }}
@@ -1265,7 +1265,7 @@ export default function ContentScheduler() {
                         {u.status === 'error' && <span style={{ color: '#ef4444' }} title={u.error}>✕ Failed</span>}
                       </span>
                       {u.status !== 'done' && u.status !== 'error' && (
-                        <div style={{ width: 60, height: 4, borderRadius: 2, background: '#e5e7ef', overflow: 'hidden' }}>
+                        <div style={{ width: 60, height: 4, borderRadius: 2, background: 'var(--surface-3)', overflow: 'hidden' }}>
                           <div style={{ width: `${u.progress}%`, height: '100%', background: 'var(--orange)', borderRadius: 2, transition: 'width 0.3s' }} />
                         </div>
                       )}
@@ -1301,7 +1301,7 @@ export default function ContentScheduler() {
                           <button key={t.key} onClick={() => setPostsTab(t.key)} style={{
                             padding: '14px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
                             fontSize: 13, fontWeight: active ? 700 : 500,
-                            color: active ? '#1a1a2e' : '#8e8ea0',
+                            color: active ? 'var(--text)' : 'var(--muted)',
                             borderBottom: active ? '2px solid #E8650A' : '2px solid transparent',
                             marginBottom: -1, whiteSpace: 'nowrap',
                             display: 'flex', alignItems: 'center', gap: 6,
@@ -1319,9 +1319,9 @@ export default function ContentScheduler() {
                         );
                       })}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fafbfd' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface-2)' }}>
                       <div style={{ position: 'relative', flex: 1, maxWidth: 340 }}>
-                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
                         <input
                           type="text"
                           value={postsSearch}
@@ -1485,7 +1485,7 @@ export default function ContentScheduler() {
                           }}>
                             <div style={{
                               fontSize: 12, fontWeight: isToday ? 700 : 500, marginBottom: 4,
-                              color: isToday ? '#4a6cf7' : '#8e8ea0',
+                              color: isToday ? 'var(--orange)' : 'var(--muted)',
                               display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
                             }}>
                               {isToday ? (
@@ -1588,7 +1588,7 @@ export default function ContentScheduler() {
                             }
                             if (!list.length) {
                               return (
-                                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: '#b0b0c0', fontSize: 13 }}>
+                                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
                                   No posts match this filter.
                                 </td></tr>
                               );
@@ -1609,7 +1609,7 @@ export default function ContentScheduler() {
                                   onDrop={e => handleMediaDrop(e, script)}
                                   style={{
                                     width: 64, height: 64, borderRadius: 8,
-                                    border: dragOverId === script.id ? '2px dashed #4a6cf7' : '2px dashed #e5e7ef',
+                                    border: dragOverId === script.id ? '2px dashed var(--orange)' : '2px dashed rgba(255,255,255,0.15)',
                                     background: dragOverId === script.id ? 'rgba(74,108,247,0.05)' : '#f8f9fc',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', position: 'relative', overflow: 'hidden',
@@ -1650,7 +1650,7 @@ export default function ContentScheduler() {
                                       )}
                                     </>
                                   ) : (
-                                    <Upload size={16} style={{ color: '#ccc' }} />
+                                    <Upload size={16} style={{ color: 'var(--muted)' }} />
                                   )}
                                 </div>
                               </td>
@@ -1676,7 +1676,7 @@ export default function ContentScheduler() {
                                     <div
                                       onClick={() => startEdit(script.id, field, script[field])}
                                       style={{
-                                        cursor: 'pointer', fontSize: 12, color: script[field] ? '#1a1a2e' : '#ccc',
+                                        cursor: 'pointer', fontSize: 12, color: script[field] ? 'var(--text)' : 'var(--muted)',
                                         maxHeight: 60, overflow: 'hidden', lineHeight: 1.4,
                                       }}
                                       title={script[field] || 'Click to edit'}
@@ -1715,7 +1715,7 @@ export default function ContentScheduler() {
                                     onClick={() => startEdit(script.id, 'scheduled_datetime',
                                       script.scheduled_datetime ? new Date(script.scheduled_datetime).toISOString().slice(0, 16) : ''
                                     )}
-                                    style={{ cursor: 'pointer', fontSize: 12, color: script.scheduled_datetime ? '#1a1a2e' : '#ccc' }}
+                                    style={{ cursor: 'pointer', fontSize: 12, color: script.scheduled_datetime ? 'var(--text)' : 'var(--muted)' }}
                                   >
                                     {script.scheduled_datetime
                                       ? new Date(script.scheduled_datetime).toLocaleString('en-US', {
@@ -1862,7 +1862,7 @@ export default function ContentScheduler() {
                       disabled={genLoading}
                       style={{
                         padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
-                        background: '#f8f9fc', cursor: genLoading ? 'not-allowed' : 'pointer',
+                        background: 'var(--surface-2)', cursor: genLoading ? 'not-allowed' : 'pointer',
                         fontSize: 12, fontWeight: 600, color: 'var(--text)',
                         display: 'flex', alignItems: 'center', gap: 6,
                         opacity: genLoading ? 0.5 : 1,
@@ -1964,7 +1964,7 @@ export default function ContentScheduler() {
                   {genMessages.length === 0 && !genLoading && (
                     <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--muted)', fontSize: 13 }}>
                       Use the quick buttons above or describe what content you want.<br />
-                      <span style={{ fontSize: 12, color: '#bbb' }}>
+                      <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                         e.g. "Create 10 Threads posts about AI tools" or "Generate 5 TikTok scripts about dating red flags"
                       </span>
                     </div>
@@ -1975,7 +1975,7 @@ export default function ContentScheduler() {
                       maxWidth: '80%',
                       padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.5,
                       background: msg.role === 'user' ? 'linear-gradient(135deg, #4a6cf7, #3b5de7)' : '#f0f0f5',
-                      color: msg.role === 'user' ? '#fff' : '#1a1a2e',
+                      color: '#fff',
                     }}>
                       {msg.content}
                     </div>
@@ -1995,7 +1995,7 @@ export default function ContentScheduler() {
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
                     placeholder="Describe content to generate..."
                     rows={1}
-                    style={{ ...inputStyle, border: 'none', background: '#f8f9fc', resize: 'none', minHeight: 20, maxHeight: 100, overflow: 'auto', lineHeight: '20px', flex: 1 }}
+                    style={{ ...inputStyle, border: 'none', background: 'var(--surface-2)', resize: 'none', minHeight: 20, maxHeight: 100, overflow: 'auto', lineHeight: '20px', flex: 1 }}
                     onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
                   />
                   <button onClick={handleGenerate} disabled={!genInput.trim() || genLoading} style={{
@@ -2062,8 +2062,8 @@ export default function ContentScheduler() {
                                   onClick={() => approveGenPost(idx)}
                                   title="Approve, generate captions & schedule"
                                   style={{
-                                    height: 32, borderRadius: 8, border: '1px solid #d1fae5',
-                                    background: '#ecfdf5', cursor: 'pointer', display: 'flex', padding: '0 10px',
+                                    height: 32, borderRadius: 8, border: '1px solid rgba(34,197,94,0.25)',
+                                    background: 'rgba(34,197,94,0.12)', cursor: 'pointer', display: 'flex', padding: '0 10px',
                                     alignItems: 'center', justifyContent: 'center', color: '#22c55e', gap: 4, fontSize: 11, fontWeight: 600,
                                   }}
                                 >
@@ -2078,9 +2078,9 @@ export default function ContentScheduler() {
                                   }}
                                   title="Edit"
                                   style={{
-                                    width: 32, height: 32, borderRadius: 8, border: '1px solid #fef3c7',
-                                    background: '#fffbeb', cursor: 'pointer', display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center', color: '#f59e0b',
+                                    width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(234,179,8,0.25)',
+                                    background: 'rgba(234,179,8,0.12)', cursor: 'pointer', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', color: '#fbbf24',
                                   }}
                                 >
                                   <Edit3 size={14} />
@@ -2105,7 +2105,7 @@ export default function ContentScheduler() {
                             )}
                             {post.approved && (
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                                <span style={{ fontSize: 11, fontWeight: 600, color: '#22c55e', padding: '6px 10px', background: '#ecfdf5', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#22c55e', padding: '6px 10px', background: 'rgba(34,197,94,0.12)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <Check size={12} /> Scheduled
                                 </span>
                                 {post.scheduledAt && (
@@ -2141,7 +2141,7 @@ export default function ContentScheduler() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Slide Templates</div>
                     {(carouselTemplates.cover || carouselTemplates.content) && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e', background: '#ecfdf5', padding: '2px 8px', borderRadius: 6 }}>Active</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e', background: 'rgba(34,197,94,0.12)', padding: '2px 8px', borderRadius: 6 }}>Active</span>
                     )}
                   </div>
                   <button onClick={() => setShowTemplateSetup(!showTemplateSetup)}
@@ -2177,7 +2177,7 @@ export default function ContentScheduler() {
                             </div>
                           ) : (
                             <div onClick={() => t.ref.current?.click()}
-                              style={{ width: '100%', aspectRatio: '4/5', borderRadius: 8, border: '2px dashed #e5e7ef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#f8f9fc', gap: 4 }}>
+                              style={{ width: '100%', aspectRatio: '4/5', borderRadius: 8, border: '2px dashed #e5e7ef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'var(--surface-2)', gap: 4 }}>
                               <Upload size={16} color="#8e8ea0" />
                               <span style={{ fontSize: 10, color: 'var(--muted)' }}>Upload</span>
                             </div>
@@ -2250,7 +2250,7 @@ export default function ContentScheduler() {
                     { label: 'Before/After', prompt: 'Create a 5-slide carousel showing before and after scenarios of businesses using AI automation' },
                   ].map(q => (
                     <button key={q.label} onClick={() => setCarouselPrompt(q.prompt)}
-                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#f8f9fc', fontSize: 11, color: 'var(--text)', cursor: 'pointer', fontWeight: 500 }}>
+                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: 11, color: 'var(--text)', cursor: 'pointer', fontWeight: 500 }}>
                       {q.label}
                     </button>
                   ))}
@@ -2295,7 +2295,7 @@ export default function ContentScheduler() {
                         </div>
                       ) : null}
                       {carouselResult.content?.caption && (
-                        <div style={{ marginTop: 10, fontSize: 12, color: '#555', lineHeight: 1.5 }}>
+                        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
                           <strong>Caption:</strong> {carouselResult.content.caption}
                         </div>
                       )}
@@ -2374,7 +2374,7 @@ export default function ContentScheduler() {
                           <td style={{ padding: 10 }}>
                             <div style={{
                               width: 64, height: 64, borderRadius: 8,
-                              border: '2px dashed #e5e7ef', background: '#f8f9fc',
+                              border: '2px dashed #e5e7ef', background: 'var(--surface-2)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               overflow: 'hidden',
                             }}>
@@ -2385,7 +2385,7 @@ export default function ContentScheduler() {
                                   <img src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 )
                               ) : (
-                                <Film size={16} style={{ color: '#ccc' }} />
+                                <Film size={16} style={{ color: 'var(--muted)' }} />
                               )}
                             </div>
                           </td>
@@ -2400,7 +2400,7 @@ export default function ContentScheduler() {
                           <td style={{ padding: 10, fontSize: 12, color: 'var(--orange)' }}>
                             {script.hashtags || '-'}
                           </td>
-                          <td style={{ padding: 10, fontSize: 12, color: '#555' }}>
+                          <td style={{ padding: 10, fontSize: 12, color: 'var(--muted)' }}>
                             {script.first_comment || '-'}
                           </td>
                           <td style={{ padding: 10, fontSize: 12, color: 'var(--text)' }}>
@@ -2425,7 +2425,7 @@ export default function ContentScheduler() {
 
               {/* Quick Command */}
               <div style={{ borderTop: '1px solid var(--border)', padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, background: '#f8f9fc', borderRadius: 12, padding: '10px 14px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, background: 'var(--surface-2)', borderRadius: 12, padding: '10px 14px', border: '1px solid var(--border)' }}>
                   <textarea
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
@@ -2531,7 +2531,7 @@ export default function ContentScheduler() {
                       padding: '8px 0', borderBottom: '1px solid #fafafa', gap: 12,
                     }}>
                       <code style={{
-                        fontSize: 12, color: 'var(--text)', background: '#f8f9fc',
+                        fontSize: 12, color: 'var(--text)', background: 'var(--surface-2)',
                         padding: '3px 8px', borderRadius: 6, fontFamily: 'monospace',
                         flexShrink: 0,
                       }}>
@@ -2706,7 +2706,7 @@ export default function ContentScheduler() {
                   ) : (
                     <>
                       {/* Start New Monitor */}
-                      <div style={{ background: '#f8f9fc', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+                      <div style={{ background: 'var(--surface-2)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Start New Monitor</div>
                         {/* Post picker — latest 10 TikTok posts */}
                         <div style={{ marginBottom: 8 }}>
@@ -2811,7 +2811,7 @@ export default function ContentScheduler() {
                         <p style={{ color: 'var(--muted)', fontSize: 13 }}>No monitors found. Click Refresh to load.</p>
                       )}
                       {autoDMMonitors.map((m, i) => (
-                        <div key={m.id || m.monitor_id || i} style={{ padding: '12px', background: '#f8f9fc', borderRadius: 8, marginBottom: 8 }}>
+                        <div key={m.id || m.monitor_id || i} style={{ padding: '12px', background: 'var(--surface-2)', borderRadius: 8, marginBottom: 8 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                             <div>
                               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{m.post_url || 'Monitor ' + (i + 1)}</div>
@@ -2866,7 +2866,7 @@ export default function ContentScheduler() {
                             View Logs
                           </button>
                           {autoDMLogs[m.id || m.monitor_id] && (
-                            <div style={{ marginTop: 8, maxHeight: 120, overflowY: 'auto', fontSize: 11, color: '#555' }}>
+                            <div style={{ marginTop: 8, maxHeight: 120, overflowY: 'auto', fontSize: 11, color: 'var(--muted)' }}>
                               {(autoDMLogs[m.id || m.monitor_id] || []).map((log, li) => (
                                 <div key={li} style={{ padding: '2px 0', borderBottom: '1px solid #f0f0f5' }}>
                                   <span style={{ color: 'var(--muted)' }}>{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</span>
@@ -2931,7 +2931,7 @@ export default function ContentScheduler() {
                           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Total Impressions</div>
                         </div>
                         {impressionsData.breakdown && Object.entries(impressionsData.breakdown).map(([platform, val]) => (
-                          <div key={platform} style={{ background: '#f8f9fc', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
+                          <div key={platform} style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '12px 20px', textAlign: 'center' }}>
                             <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{Number(val).toLocaleString()}</div>
                             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, textTransform: 'capitalize' }}>{platform}</div>
                           </div>
@@ -2958,7 +2958,7 @@ export default function ContentScheduler() {
                               ['Engagement Rate', data?.engagement_rate ? `${(data.engagement_rate * 100).toFixed(2)}%` : null],
                               ['Views', data?.views || data?.video_views],
                             ].filter(([, v]) => v !== undefined && v !== null).map(([label, val]) => (
-                              <div key={label} style={{ background: '#f8f9fc', borderRadius: 8, padding: '10px 14px', minWidth: 80, textAlign: 'center' }}>
+                              <div key={label} style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', minWidth: 80, textAlign: 'center' }}>
                                 <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{typeof val === 'number' ? val.toLocaleString() : val}</div>
                                 <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
                               </div>
@@ -3340,7 +3340,7 @@ export default function ContentScheduler() {
               {schedTimeslots.map((slot, i) => (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 12px', borderRadius: 8, background: '#f8f9fc', border: '1px solid var(--border)',
+                  padding: '6px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)',
                 }}>
                   <Clock size={12} style={{ color: 'var(--orange)' }} />
                   <span style={{ fontSize: 13 }}>{slot}</span>

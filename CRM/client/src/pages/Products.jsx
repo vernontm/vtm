@@ -239,7 +239,7 @@ export default function Products() {
           <div style={{ fontSize: 15, lineHeight: 1.7, marginBottom: 12 }}>
             We're a creative technology studio. We build websites, apps, AI content systems, and marketing automation for small businesses and creators who want to stand out.
           </div>
-          <div style={{ fontSize: 13, lineHeight: 1.7, color: '#b0b0c0' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--muted)' }}>
             Our 3 packages below are bundled for how most clients actually buy. If a lead needs just one piece, we can do that too — but the packages are designed to cover the full problem, not just a symptom.
           </div>
         </div>

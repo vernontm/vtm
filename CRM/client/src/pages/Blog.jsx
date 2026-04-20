@@ -269,7 +269,7 @@ export default function Blog() {
               )}
             </div>
             {!editing.file_url && (
-              <p style={{ fontSize: 11, color: '#b0b0c0', marginTop: 4 }}>Upload any file (PDF, ZIP, etc.) for users to download on the blog page.</p>
+              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Upload any file (PDF, ZIP, etc.) for users to download on the blog page.</p>
             )}
           </div>
 

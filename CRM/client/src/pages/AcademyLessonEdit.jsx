@@ -421,7 +421,7 @@ export default function AcademyLessonEdit() {
               >
                 <Upload size={28} color="#7a7f9a" style={{ marginBottom: 8 }} />
                 <div>Drop files here or click to upload</div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                   Videos, images, PDFs, audio files
                 </div>
               </div>

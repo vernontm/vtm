@@ -104,6 +104,25 @@ h1, h2, h3, h4, h5, h6 {
 }
 .btn-green:hover { opacity: 0.9; }
 
+.btn-danger {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: 10px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; font-family: var(--font-display); color: #fff;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  box-shadow: 0 4px 14px rgba(239,68,68,0.25);
+  transition: opacity 0.15s;
+}
+.btn-danger:hover { opacity: 0.9; }
+
+/* ── Focus outline (replace browser blue with orange) ───────────────────────── */
+*:focus-visible {
+  outline: 2px solid rgba(255,155,38,0.5);
+  outline-offset: 2px;
+}
+button:focus, input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+
 /* ── Cards ──────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--surface);
@@ -261,7 +280,18 @@ textarea:focus, select:focus {
   background: var(--surface); border: 1px solid var(--border-light);
   border-radius: 20px; box-shadow: 0 24px 80px rgba(0,0,0,0.6);
   width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; position: relative;
+  padding: 28px;
 }
+/* Tailwind spacing shims used in Modal.jsx */
+.mb-5 { margin-bottom: 20px; }
+.mt-6 { margin-top: 24px; }
+.mb-4 { margin-bottom: 16px; }
+.mt-4 { margin-top: 16px; }
+.mb-3 { margin-bottom: 12px; }
+.mt-3 { margin-top: 12px; }
+.mb-2 { margin-bottom: 8px; }
+.mt-2 { margin-top: 8px; }
+.justify-end { justify-content: flex-end; }
 
 /* ── Badges / Pills ─────────────────────────────────────────────────────────── */
 .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: var(--font-display); }

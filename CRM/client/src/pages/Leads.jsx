@@ -1858,7 +1858,7 @@ export default function Leads() {
                 </div>
               )}
               {lastFollowUps[lead.id] && (
-                <div className="mobile-card-row" style={{ fontSize: 10, color: '#b0b0c0', marginTop: 2 }}>
+                <div className="mobile-card-row" style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
                   <Clock size={10} /> Last contact: {formatFollowUp(lastFollowUps[lead.id])}
                 </div>
               )}
@@ -2097,7 +2097,7 @@ export default function Leads() {
         {!loading && filtered.length > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 16px', borderTop: '1px solid var(--border)', background: '#fafbfc',
+            padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
               Rows Per Page
@@ -2391,7 +2391,7 @@ export default function Leads() {
             <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>✅</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>Call processed</div>
-              <div style={{ fontSize: 12, color: '#b0b0c0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {n.leadName || 'Lead'} — summary ready
               </div>
             </div>

@@ -293,7 +293,7 @@ export default function Projects() {
                     </div>
                   )}
                   {project.notes && (
-                    <div className="mobile-card-row" style={{ fontSize: 11, color: '#b0b0c0', marginTop: 2 }}>
+                    <div className="mobile-card-row" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                       {project.notes.length > 60 ? project.notes.slice(0, 60) + '…' : project.notes}
                     </div>
                   )}

@@ -145,7 +145,7 @@ export default function GlobalSearch({ onClose }) {
           />
           {query && (
             <button onClick={() => { setQuery(''); setResults(null); inputRef.current?.focus(); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b0b0c0', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
               <X size={15} />
             </button>
           )}

@@ -195,7 +195,7 @@ export default function Dashboard() {
                         background: m.revenue > 0 ? 'linear-gradient(180deg, #4a6cf7, #6e8efb)' : 'var(--surface-3)',
                         transition: 'height 0.3s ease',
                       }} />
-                      <span style={{ fontSize: 8, color: '#b0b0c0', whiteSpace: 'nowrap' }}>{m.label}</span>
+                      <span style={{ fontSize: 8, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{m.label}</span>
                     </div>
                   );
                 })}

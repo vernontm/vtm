@@ -113,7 +113,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                 padding: 14, background: 'var(--surface)', borderRadius: 10, border: '1px solid #eef0f5',
               }}>
                 {mediaUrls.length === 0 && (
-                  <div style={{ color: '#b0b0c0', fontSize: 12, padding: 20 }}>No media yet.</div>
+                  <div style={{ color: 'var(--muted)', fontSize: 12, padding: 20 }}>No media yet.</div>
                 )}
                 {mediaUrls.map((url, i) => (
                   <div key={i} style={{
@@ -175,7 +175,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   <IconBtn title="Snippet"><Code size={14} /></IconBtn>
                   <IconBtn title="AI"><Sparkles size={14} /></IconBtn>
                 </div>
-                <div style={{ fontSize: 11, color: '#b0b0c0' }}>{captionCharCount}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{captionCharCount}</div>
               </div>
               {hashtags && (
                 <div style={{ marginTop: 8, fontSize: 12, color: 'var(--orange)', paddingLeft: 4 }}>{hashtags}</div>
@@ -249,14 +249,14 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                         <IconBtn title="Snippet"><Code size={13} /></IconBtn>
                         <IconBtn title="AI"><Sparkles size={13} /></IconBtn>
                       </div>
-                      <div style={{ fontSize: 10, color: '#b0b0c0' }}>{charCount}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>{charCount}</div>
                     </div>
                   </div>
 
                   {/* Location */}
                   <label style={{ ...lblStyle, marginTop: 14 }}>Location</label>
                   <div style={{ position: 'relative' }}>
-                    <MapPin size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
+                    <MapPin size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
                     <input
                       type="text"
                       value={location}

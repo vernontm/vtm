@@ -134,7 +134,7 @@ export default function SelectionBar({
         onClick={onClear}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          color: '#b0b0c0', padding: '4px 6px', borderRadius: 6,
+          color: 'var(--muted)', padding: '4px 6px', borderRadius: 6,
           display: 'flex', alignItems: 'center',
         }}
         onMouseEnter={e => { e.currentTarget.style.color = '#1a1a2e'; e.currentTarget.style.background = 'var(--surface-3)'; }}

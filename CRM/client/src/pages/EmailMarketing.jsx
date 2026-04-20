@@ -52,7 +52,7 @@ const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const inputStyle = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box' };
 const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
-const btnSecondary = { background: '#f8f9fc', border: '1px solid var(--border)', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
+const btnSecondary = { background: '#f8f9fc', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
 const btnDanger = { ...btnSecondary, color: '#ef4444', border: '1px solid #fecaca' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 };
 const sectionTitle = { fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 };
@@ -106,7 +106,7 @@ function TagSelect({ value, onChange, options = [], placeholder = 'Select tags..
         }}
       >
         {selected.length === 0 && (
-          <span style={{ color: '#b0b0c0', padding: '3px 2px' }}>{placeholder}</span>
+          <span style={{ color: 'var(--muted)', padding: '3px 2px' }}>{placeholder}</span>
         )}
         {selected.map(tag => (
           <span key={tag} style={{
@@ -765,11 +765,11 @@ export default function EmailMarketing() {
             Clients
           </div>
           {clients.length === 0 && (
-            <div style={{ padding: '8px 16px', fontSize: 12, color: '#ccc' }}>No clients yet</div>
+            <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--muted)' }}>No clients yet</div>
           )}
           <div style={{ padding: '4px 12px 10px' }}>
             <button onClick={() => setNewClientOpen(true)} style={{
-              width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px dashed #c7d2fe',
+              width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.15)',
               background: 'var(--accent-dim)', color: 'var(--orange)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
@@ -813,7 +813,7 @@ export default function EmailMarketing() {
               {config ? (
                 <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Resend connected</span>
               ) : (
-                <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 4 }}><Settings size={14} /> Setup needed</span>
+                <span style={{ color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4 }}><Settings size={14} /> Setup needed</span>
               )}
             </div>
           )}
@@ -823,7 +823,7 @@ export default function EmailMarketing() {
                 <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
                   padding: '8px 14px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
                   background: activeTab === t.key ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
-                  color: activeTab === t.key ? '#fff' : '#5a5a6e', transition: 'all 0.15s',
+                  color: activeTab === t.key ? '#fff' : 'var(--muted)', transition: 'all 0.15s',
                 }}>
                   <t.Icon size={14} /> {t.label}
                 </button>
@@ -833,9 +833,9 @@ export default function EmailMarketing() {
         </div>
 
         {error && (
-          <div style={{ padding: '10px 24px', background: '#fef2f2', color: '#dc2626', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '10px 24px', background: 'rgba(220,38,38,0.1)', color: '#f87171', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{error}</span>
-            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><X size={14} /></button>
+            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171' }}><X size={14} /></button>
           </div>
         )}
 
@@ -910,8 +910,8 @@ export default function EmailMarketing() {
                     <tr key={s.id} style={{ borderBottom: '1px solid #f0f0f5' }}>
                       <td style={{ padding: '10px', color: 'var(--text)', fontWeight: 500 }}>{s.subject || '-'}</td>
                       <td style={{ padding: '10px', textAlign: 'center' }}><StatusPill status={s.status} /></td>
-                      <td style={{ padding: '10px', color: '#5a5a6e', fontSize: 12 }}>{s.sent_at ? new Date(s.sent_at).toLocaleString() : '-'}</td>
-                      <td style={{ padding: '10px', color: '#5a5a6e', fontSize: 12 }}>{s.opened_at ? new Date(s.opened_at).toLocaleString() : '-'}</td>
+                      <td style={{ padding: '10px', color: 'var(--muted)', fontSize: 12 }}>{s.sent_at ? new Date(s.sent_at).toLocaleString() : '-'}</td>
+                      <td style={{ padding: '10px', color: 'var(--muted)', fontSize: 12 }}>{s.opened_at ? new Date(s.opened_at).toLocaleString() : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -975,7 +975,7 @@ export default function EmailMarketing() {
 
               {/* Auto-trigger info */}
               {c.auto_trigger_enabled && (
-                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: 10, marginBottom: 14, fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: 8, padding: 10, marginBottom: 14, fontSize: 12, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 6 }}>
                   {c.trigger_type === 'birthday' ? <Cake size={14} /> : <Zap size={14} />}
                   Auto-trigger: {c.trigger_type === 'birthday' ? 'sends on contact birthday' : <>sends when contact gets tag <strong>{c.trigger_on_tag}</strong></>}
                 </div>
@@ -1097,7 +1097,7 @@ export default function EmailMarketing() {
                     <button key={t} onClick={() => setTplType(t)} style={{
                       padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
                       background: tplType === t ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
-                      color: tplType === t ? '#fff' : '#5a5a6e',
+                      color: tplType === t ? '#fff' : 'var(--muted)',
                     }}>{t}</button>
                   ))}
                 </div>
@@ -1109,7 +1109,7 @@ export default function EmailMarketing() {
                   value={aiGenPrompt} onChange={e => setAiGenPrompt(e.target.value)} />
               </div>
               {!selectedClient?.logo_url && (
-                <div style={{ fontSize: 11, padding: 8, background: '#fef3c7', color: '#b45309', borderRadius: 6 }}>
+                <div style={{ fontSize: 11, padding: 8, background: 'rgba(180,83,9,0.15)', color: '#fbbf24', borderRadius: 6 }}>
                   Tip: upload a logo in Settings for better results.
                 </div>
               )}
@@ -1248,8 +1248,8 @@ export default function EmailMarketing() {
               if (f) handleBulkFile(f);
             }}
             style={{
-              border: '1px dashed #c7d2fe', borderRadius: 10, padding: 14, background: '#f8f9fc',
-              fontSize: 12, color: '#5a5a6e', textAlign: 'center', marginBottom: 10,
+              border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 10, padding: 14, background: '#f8f9fc',
+              fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginBottom: 10,
               transition: 'all 0.15s',
             }}
           >
@@ -1264,7 +1264,7 @@ export default function EmailMarketing() {
           />
 
           {bulkError && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#dc2626' }}>{bulkError}</div>
+            <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}>{bulkError}</div>
           )}
 
           {bulkPreview.length > 0 && (
@@ -1293,9 +1293,9 @@ export default function EmailMarketing() {
                     {bulkPreview.slice(0, 100).map((p, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f0f0f5' }}>
                         <td className="private-value" style={{ padding: '6px 10px', color: 'var(--text)' }}>{p.email}</td>
-                        <td className="private-value" style={{ padding: '6px 10px', color: '#5a5a6e' }}>{p.name || '-'}</td>
-                        <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{(p.tags || []).join(', ') || '-'}</td>
-                        <td style={{ padding: '6px 10px', color: '#5a5a6e' }}>{[p.city, p.state, p.country].filter(Boolean).join(', ') || '-'}</td>
+                        <td className="private-value" style={{ padding: '6px 10px', color: 'var(--muted)' }}>{p.name || '-'}</td>
+                        <td style={{ padding: '6px 10px', color: 'var(--muted)' }}>{(p.tags || []).join(', ') || '-'}</td>
+                        <td style={{ padding: '6px 10px', color: 'var(--muted)' }}>{[p.city, p.state, p.country].filter(Boolean).join(', ') || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1327,7 +1327,7 @@ export default function EmailMarketing() {
               {allTags.map(tag => {
                 const count = contacts.filter(c => (c.tags || []).includes(tag)).length;
                 return (
-                  <span key={tag} style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: '#f0f0f5', color: '#5a5a6e' }}>
+                  <span key={tag} style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: 'var(--surface-3)', color: 'var(--muted)' }}>
                     <Tag size={10} style={{ marginRight: 3 }} />{tag} ({count})
                   </span>
                 );
@@ -1367,19 +1367,19 @@ export default function EmailMarketing() {
                       <React.Fragment key={c.id}>
                         <tr style={{ borderBottom: isEditing ? 'none' : '1px solid #f0f0f5', cursor: 'pointer' }} onClick={() => !isEditing && handleViewSends(c)}>
                           <td className="private-value" style={{ padding: '10px 10px', fontWeight: 600, color: 'var(--text)' }}>{c.email}</td>
-                          <td className="private-value" style={{ padding: '10px 10px', color: '#5a5a6e' }}>{c.name || '-'}</td>
+                          <td className="private-value" style={{ padding: '10px 10px', color: 'var(--muted)' }}>{c.name || '-'}</td>
                           <td style={{ padding: '10px 10px' }}>
                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                               {(c.tags || []).map((tag, i) => (
-                                <span key={i} style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, background: '#e0f2fe', color: '#0ea5e9' }}>{tag}</span>
+                                <span key={i} style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, background: 'rgba(14,165,233,0.15)', color: '#38bdf8' }}>{tag}</span>
                               ))}
                             </div>
                           </td>
-                          <td style={{ padding: '10px 10px', color: '#5a5a6e', fontSize: 12 }}>
+                          <td style={{ padding: '10px 10px', color: 'var(--muted)', fontSize: 12 }}>
                             {c.birthday_month && c.birthday_day ? `${MONTHS[c.birthday_month]} ${c.birthday_day}` : '-'}
                           </td>
-                          <td style={{ padding: '10px 10px', color: '#5a5a6e', fontSize: 12, fontFamily: 'monospace' }}>{c.discount_code || '-'}</td>
-                          <td style={{ padding: '10px 10px', color: '#5a5a6e', fontSize: 12 }}>
+                          <td style={{ padding: '10px 10px', color: 'var(--muted)', fontSize: 12, fontFamily: 'monospace' }}>{c.discount_code || '-'}</td>
+                          <td style={{ padding: '10px 10px', color: 'var(--muted)', fontSize: 12 }}>
                             {c.signed_up_at ? new Date(c.signed_up_at).toLocaleDateString() : '-'}
                           </td>
                           <td style={{ padding: '10px 10px', textAlign: 'center', color: '#22c55e', fontWeight: 600 }}>{stats.sent}</td>
@@ -1393,7 +1393,7 @@ export default function EmailMarketing() {
                           </td>
                         </tr>
                         {isEditing && (
-                          <tr style={{ borderBottom: '1px solid #f0f0f5', background: '#fafbfe' }}>
+                          <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
                             <td colSpan={10} style={{ padding: '12px 10px' }}>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                                 <div style={{ minWidth: 170 }}>
@@ -1460,7 +1460,7 @@ export default function EmailMarketing() {
                   <button key={t} onClick={() => setTplType(t)} style={{
                     padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
                     background: tplType === t ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
-                    color: tplType === t ? '#fff' : '#5a5a6e',
+                    color: tplType === t ? '#fff' : 'var(--muted)',
                   }}>{t}</button>
                 ))}
               </div>
@@ -1475,11 +1475,11 @@ export default function EmailMarketing() {
           )}
           {tplShowPreview && (
             <div style={{ marginBottom: 10 }}>
-              <label style={labelStyle}>Preview text <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(shown in inbox before they open)</span></label>
+              <label style={labelStyle}>Preview text <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(shown in inbox before they open)</span></label>
               <input style={inputStyle} placeholder="A short teaser shown under the subject in most inboxes" value={tplPreview} onChange={e => setTplPreview(e.target.value)} />
             </div>
           )}
-          <label style={labelStyle}>Body <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(rich editor · switch to HTML source for full control · emails auto-wrapped in styled shell)</span></label>
+          <label style={labelStyle}>Body <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(rich editor · switch to HTML source for full control · emails auto-wrapped in styled shell)</span></label>
           <VarButtons onInsert={token => setTplBody((tplBody || '') + token)} />
           <EmailEditor value={tplBody} onChange={setTplBody} clientId={selectedClientId} placeholder="Hey {{name}}," height={320} />
           <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
@@ -1638,7 +1638,7 @@ export default function EmailMarketing() {
 
             {/* Audience tags */}
             <div style={{ marginTop: 16 }}>
-              <label style={labelStyle}>Audience <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(filter by tags — leave empty for all active contacts)</span></label>
+              <label style={labelStyle}>Audience <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(filter by tags — leave empty for all active contacts)</span></label>
               {allKnownTags.length > 0 ? (
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {allKnownTags.map(tag => {
@@ -1659,7 +1659,7 @@ export default function EmailMarketing() {
                   })}
                 </div>
               ) : (
-                <div style={{ fontSize: 11, color: '#b0b0c0' }}>No tags yet — add tags to contacts first.</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>No tags yet — add tags to contacts first.</div>
               )}
             </div>
 
@@ -1698,7 +1698,7 @@ export default function EmailMarketing() {
               {campTemplateHtml && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
                   <FileText size={13} color="#2563eb" />
-                  <span style={{ color: '#1e3a8a' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
+                  <span style={{ color: '#60a5fa' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
                   <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only the body paragraph below is editable.</span>
                   <button
                     type="button"
@@ -1722,14 +1722,14 @@ export default function EmailMarketing() {
               {/* CTA customization — shown when a template wrapper is active */}
               {campTemplateHtml && (
                 <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,155,38,0.08)', border: '1px solid #fed7aa', borderRadius: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9a3412', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#fb923c', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <div style={{ flex: '1 1 200px', minWidth: 160 }}>
-                      <label style={{ ...labelStyle, color: '#9a3412' }}>Button text</label>
+                      <label style={{ ...labelStyle, color: '#fb923c' }}>Button text</label>
                       <input style={inputStyle} placeholder="Get Access" value={campCtaText} onChange={e => setCampCtaText(e.target.value)} />
                     </div>
                     <div style={{ flex: '2 1 320px', minWidth: 240 }}>
-                      <label style={{ ...labelStyle, color: '#9a3412' }}>Button URL</label>
+                      <label style={{ ...labelStyle, color: '#fb923c' }}>Button URL</label>
                       <input style={inputStyle} placeholder="https://..." value={campCtaUrl} onChange={e => setCampCtaUrl(e.target.value)} />
                     </div>
                   </div>
@@ -1788,7 +1788,7 @@ export default function EmailMarketing() {
                         padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                         display: 'inline-flex', alignItems: 'center', gap: 6,
                         background: campTriggerType === opt.key ? 'linear-gradient(135deg, #4a6cf7, #6e8efb)' : '#f0f0f5',
-                        color: campTriggerType === opt.key ? '#fff' : '#5a5a6e',
+                        color: campTriggerType === opt.key ? '#fff' : 'var(--muted)',
                       }}><opt.Icon size={12} /> {opt.label}</button>
                     ))}
                   </div>
@@ -1802,8 +1802,8 @@ export default function EmailMarketing() {
                     </>
                   )}
                   {campTriggerType === 'birthday' && (
-                    <div style={{ fontSize: 12, color: '#5a5a6e', padding: 10, background: 'rgba(255,155,38,0.08)', borderRadius: 8, border: '1px solid #fed7aa' }}>
-                      <Cake size={12} style={{ marginRight: 6, color: '#f59e0b' }} />
+                    <div style={{ fontSize: 12, color: 'var(--muted)', padding: 10, background: 'rgba(255,155,38,0.08)', borderRadius: 8, border: '1px solid #fed7aa' }}>
+                      <Cake size={12} style={{ marginRight: 6, color: '#fbbf24' }} />
                       Sends at 8am Chicago time each year on the contact's birthday.
                     </div>
                   )}
@@ -1838,7 +1838,7 @@ export default function EmailMarketing() {
 
         {!config && (
           <div style={{ ...cardStyle, background: '#fef3c7', borderColor: '#fbbf24', marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ fontSize: 13, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Settings size={16} /> Set up your Resend API key in the Settings tab before sending.
             </div>
           </div>
@@ -1860,12 +1860,12 @@ export default function EmailMarketing() {
             <button key={t.key} onClick={() => t.jumpTo ? setActiveTab(t.jumpTo) : setCampFilter(t.key)} style={{
               padding: '10px 14px', border: 'none', background: 'transparent',
               fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-              color: campFilter === t.key ? '#1a1a2e' : '#8e8ea0',
+              color: campFilter === t.key ? 'var(--orange)' : 'var(--muted)',
               borderBottom: campFilter === t.key ? '2px solid #1a1a2e' : '2px solid transparent',
               marginBottom: -1, display: 'inline-flex', alignItems: 'center', gap: 8,
             }}>
               {t.label}
-              <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 10, background: '#f0f0f5', color: '#5a5a6e', fontWeight: 600 }}>
+              <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 10, background: 'var(--surface-3)', color: 'var(--muted)', fontWeight: 600 }}>
                 {counts[t.key]}
               </span>
             </button>
@@ -1875,7 +1875,7 @@ export default function EmailMarketing() {
         {/* Search + refresh */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
           <div style={{ flex: 1, position: 'relative', maxWidth: 340 }}>
-            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#b0b0c0' }} />
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input
               style={{ ...inputStyle, paddingLeft: 36 }}
               placeholder="Search broadcasts..."
@@ -1934,7 +1934,7 @@ export default function EmailMarketing() {
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '14px 12px', textAlign: 'right', color: '#5a5a6e', fontSize: 12 }}>
+                        <td style={{ padding: '14px 12px', textAlign: 'right', color: 'var(--muted)', fontSize: 12 }}>
                           {d ? (
                             <>
                               <div>{d.toLocaleString('en-US', { weekday: 'short' })} {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
@@ -2092,8 +2092,8 @@ export default function EmailMarketing() {
               <option value="inactive">Inactive</option>
             </select>
             <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-              <button onClick={() => setSeqView('list')} style={{ padding: '7px 10px', background: seqView === 'list' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: '#5a5a6e' }} title="List view">☰</button>
-              <button onClick={() => setSeqView('grid')} style={{ padding: '7px 10px', background: seqView === 'grid' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: '#5a5a6e' }} title="Grid view">▦</button>
+              <button onClick={() => setSeqView('list')} style={{ padding: '7px 10px', background: seqView === 'list' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="List view">☰</button>
+              <button onClick={() => setSeqView('grid')} style={{ padding: '7px 10px', background: seqView === 'grid' ? '#f0f0f5' : '#fff', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="Grid view">▦</button>
             </div>
             <button onClick={() => setNewSeqOpen(true)} style={{ ...btnPrimary, background: 'var(--surface)' }}>
               <Plus size={14} /> New sequence
@@ -2129,10 +2129,10 @@ export default function EmailMarketing() {
                 {list.map(s => (
                   <tr key={s.id} onClick={() => handleOpenSequence(s.id)} style={{ borderBottom: '1px solid #f0f0f5', cursor: 'pointer' }}>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text)' }}>{s.name}</td>
-                    <td style={{ padding: '12px 10px', color: '#5a5a6e' }}>{s.trigger_tag ? <span style={{ background: '#f0f0f5', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>{s.trigger_tag}</span> : '—'}</td>
+                    <td style={{ padding: '12px 10px', color: 'var(--muted)' }}>{s.trigger_tag ? <span style={{ background: '#f0f0f5', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>{s.trigger_tag}</span> : '—'}</td>
                     <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--text)' }}>{s.steps_count || 0}</td>
                     <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{s.subscribers || 0}</td>
-                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#5a5a6e' }}>{(s.open_rate || 0).toFixed(1)}%</td>
+                    <td style={{ padding: '12px 10px', textAlign: 'right', color: 'var(--muted)' }}>{(s.open_rate || 0).toFixed(1)}%</td>
                     <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                       <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, background: s.active ? '#e8f5e9' : '#f0f0f5', color: s.active ? '#22c55e' : '#8e8ea0' }}>
                         {s.active ? 'Active' : 'Inactive'}
@@ -2255,7 +2255,7 @@ export default function EmailMarketing() {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Resend API Key {config && <span style={{ fontWeight: 400, color: '#b0b0c0' }}>(leave blank to keep current)</span>}</label>
+              <label style={labelStyle}>Resend API Key {config && <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(leave blank to keep current)</span>}</label>
               <input style={inputStyle} type="password" placeholder="re_..." value={cfgApiKey} onChange={e => setCfgApiKey(e.target.value)} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -2285,7 +2285,7 @@ export default function EmailMarketing() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
               <label style={labelStyle}>Logo</label>
               <div style={{
-                width: 160, height: 160, border: '1px dashed #c7d2fe', borderRadius: 10, background: '#f8f9fc',
+                width: 160, height: 160, border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 10, background: '#f8f9fc',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
               }}>
                 {selectedClient?.logo_url ? (
@@ -2331,7 +2331,7 @@ export default function EmailMarketing() {
 
         <div style={cardStyle}>
           <div style={sectionTitle}>How Rollover Works</div>
-          <div style={{ fontSize: 13, color: '#5a5a6e', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
             <p>Resend's free tier allows <strong>100 emails per day</strong>. When you send a campaign to more recipients than your daily limit:</p>
             <ul style={{ paddingLeft: 20 }}>
               <li>The first {cfgDailyLimit || 100} emails send immediately</li>
@@ -2355,7 +2355,7 @@ function TagContextRow({ tc, onUpdate, onDelete }) {
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
       <div style={{ minWidth: 140, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: '#e0f2fe', color: '#0ea5e9' }}>
+        <span style={{ padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'rgba(14,165,233,0.15)', color: '#38bdf8' }}>
           <Tag size={11} style={{ marginRight: 4 }} />{tc.tag}
         </span>
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tc.contact_count || 0} contacts</span>
@@ -2489,7 +2489,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
   const inp = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box', background: 'var(--surface)', color: 'var(--text)' };
   const lbl = { display: 'block', fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
   const primary = { background: 'var(--surface)', color: '#fff', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
-  const secondary = { background: '#f8f9fc', border: '1px solid var(--border)', color: '#5a5a6e', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+  const secondary = { background: '#f8f9fc', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -2501,7 +2501,7 @@ function SequenceEditor({ seq, allTags, templates, clientId, onClose, onUpdate, 
               style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', border: 'none', outline: 'none', width: '100%', padding: 0, fontFamily: 'var(--font-display)', marginTop: 2 }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#5a5a6e', cursor: 'pointer', fontWeight: 600 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)', cursor: 'pointer', fontWeight: 600 }}>
               <span>Active</span>
               <span onClick={() => { setActive(a => !a); setDirty(true); }}
                 style={{ display: 'inline-block', width: 38, height: 22, background: active ? '#1a1a2e' : '#cbd5e1', borderRadius: 11, position: 'relative', transition: 'background 0.15s' }}>
@@ -2714,7 +2714,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
         <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--surface)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{index + 1}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {subject || <span style={{ color: '#b0b0c0', fontStyle: 'italic' }}>Untitled email</span>}
+            {subject || <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Untitled email</span>}
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
             {index === 0 && amount === 0 ? 'Sends immediately after enrollment' : `Sends ${amount} ${unit} after ${index === 0 ? 'enrollment' : 'previous email'}`}
@@ -2725,14 +2725,14 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
       {expanded && (
         <div style={{ padding: 14, borderTop: '1px solid #f0f0f5', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: '#5a5a6e', fontWeight: 600 }}>Send email</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Send email</span>
             <input type="number" min="0" style={{ ...inp, width: 80 }} value={amount} onChange={e => setAmount(e.target.value)} />
             <select style={{ ...inp, width: 110 }} value={unit} onChange={e => setUnit(e.target.value)}>
               <option value="minutes">minutes</option>
               <option value="hours">hours</option>
               <option value="days">days</option>
             </select>
-            <span style={{ fontSize: 12, color: '#5a5a6e' }}>after {index === 0 ? 'enrollment' : 'last email'}</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>after {index === 0 ? 'enrollment' : 'last email'}</span>
           </div>
           <input style={inp} placeholder="Subject line" value={subject} onChange={e => setSubject(e.target.value)} />
           <input style={inp} placeholder="Preview text (optional)" value={preview} onChange={e => setPreview(e.target.value)} />
@@ -2758,7 +2758,7 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
           {tplHtml && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12 }}>
               <FileText size={13} color="#2563eb" />
-              <span style={{ color: '#1e3a8a' }}>Using template: <strong>{tplName || 'Template'}</strong></span>
+              <span style={{ color: '#60a5fa' }}>Using template: <strong>{tplName || 'Template'}</strong></span>
               <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only the body below is editable.</span>
               <button
                 type="button"
@@ -2793,14 +2793,14 @@ function StepEditor({ step, index, templates = [], clientId, onSave, onDelete })
           {/* CTA editor (when template wrapper is active) */}
           {tplHtml && (
             <div style={{ padding: 12, background: 'rgba(255,155,38,0.08)', border: '1px solid #fed7aa', borderRadius: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#9a3412', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#fb923c', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 180px', minWidth: 140 }}>
-                  <div style={{ fontSize: 11, color: '#9a3412', fontWeight: 600, marginBottom: 4 }}>Button text</div>
+                  <div style={{ fontSize: 11, color: '#fb923c', fontWeight: 600, marginBottom: 4 }}>Button text</div>
                   <input style={inp} placeholder="Get Access" value={ctaText} onChange={e => setCtaText(e.target.value)} />
                 </div>
                 <div style={{ flex: '2 1 280px', minWidth: 220 }}>
-                  <div style={{ fontSize: 11, color: '#9a3412', fontWeight: 600, marginBottom: 4 }}>Button URL</div>
+                  <div style={{ fontSize: 11, color: '#fb923c', fontWeight: 600, marginBottom: 4 }}>Button URL</div>
                   <input style={inp} placeholder="https://..." value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} />
                 </div>
               </div>

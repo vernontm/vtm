@@ -176,8 +176,8 @@ export default function Notifications() {
               key={key}
               onClick={() => setPriorityFilter(p => p === key ? 'all' : key)}
               style={{
-                background: priorityFilter === key ? color + '22' : '#ffffff',
-                border: `1px solid ${priorityFilter === key ? color : '#e5e7ef'}`,
+                background: priorityFilter === key ? color + '22' : 'var(--surface-2)',
+                border: `1px solid ${priorityFilter === key ? color : 'var(--border)'}`,
                 borderRadius: 10, padding: '14px 18px',
                 display: 'flex', alignItems: 'center', gap: 12,
                 cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
@@ -207,9 +207,9 @@ export default function Notifications() {
                 onClick={() => setFilter(t)}
                 style={{
                   padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
-                  border: `1px solid ${active ? (tc?.color || '#4a6cf7') : '#e5e7ef'}`,
+                  border: `1px solid ${active ? (tc?.color || 'var(--orange)') : 'var(--border)'}`,
                   background: active ? (tc?.color || '#4a6cf7') + '22' : 'transparent',
-                  color: active ? (tc?.color || '#4a6cf7') : '#8e8ea0',
+                  color: active ? (tc?.color || 'var(--orange)') : 'var(--muted)',
                   fontWeight: active ? 700 : 400,
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}
@@ -227,7 +227,7 @@ export default function Notifications() {
           <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60, fontSize: 14 }}>Loading notifications...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
-            <Bell size={40} style={{ color: '#e5e7ef', marginBottom: 16 }} />
+            <Bell size={40} style={{ color: 'var(--surface-3)', marginBottom: 16 }} />
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--muted)', marginBottom: 8 }}>
               {notifications.length === 0 ? 'All clear!' : 'No notifications match this filter'}
             </div>

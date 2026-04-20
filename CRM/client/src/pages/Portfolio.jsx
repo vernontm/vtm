@@ -15,8 +15,8 @@ function CategorySlider({ value, onChange }) {
           style={{
             padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
             cursor: 'pointer', transition: 'all 0.15s', border: 'none',
-            background: value === cat.toLowerCase() ? '#4a6cf7' : 'var(--surface-3)',
-            color: value === cat.toLowerCase() ? '#fff' : '#8e8ea0',
+            background: value === cat.toLowerCase() ? 'var(--orange)' : 'var(--surface-3)',
+            color: value === cat.toLowerCase() ? '#fff' : 'var(--muted)',
           }}
         >
           {cat}
@@ -42,7 +42,7 @@ function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
             <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#b0b0c0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--muted)' }}>
             <Image size={32} />
           </div>
         )}
@@ -83,8 +83,8 @@ function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
             style={{
               display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px',
               borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-              background: item.visible ? '#4a6cf710' : '#ff5c5c10',
-              color: item.visible ? '#4a6cf7' : '#ff5c5c',
+              background: item.visible ? 'rgba(255,155,38,0.1)' : 'rgba(255,92,92,0.1)',
+              color: item.visible ? 'var(--orange)' : '#f87171',
             }}
           >
             {item.visible ? <Eye size={12} /> : <EyeOff size={12} />}
@@ -106,7 +106,7 @@ function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
             style={{
               display: 'flex', alignItems: 'center', padding: '5px 7px',
               borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: 'none', color: '#b0b0c0',
+              background: 'none', color: 'var(--muted)',
             }}
             onMouseEnter={e => e.currentTarget.style.color = '#ff5c5c'}
             onMouseLeave={e => e.currentTarget.style.color = '#b0b0c0'}
@@ -226,7 +226,7 @@ function EditModal({ item, onClose, onSave }) {
                   <>
                     <Upload size={24} />
                     <span>Click to upload image or video</span>
-                    <span style={{ fontSize: 11, color: '#b0b0c0' }}>PNG, JPG, WebP, MP4</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>PNG, JPG, WebP, MP4</span>
                   </>
                 )}
               </label>
@@ -308,7 +308,7 @@ function EditModal({ item, onClose, onSave }) {
                 </a>
               )}
             </div>
-            <span style={{ fontSize: 11, color: '#b0b0c0', marginTop: 4, display: 'block' }}>Link visitors can click to try out the project</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>Link visitors can click to try out the project</span>
           </div>
 
           {/* Visibility Toggle */}
