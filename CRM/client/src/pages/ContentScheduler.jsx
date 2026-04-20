@@ -1112,7 +1112,7 @@ export default function ContentScheduler() {
                 fontFamily: 'inherit', transition: 'all 0.15s',
               }}>
               <Icon size={18} />
-              <span style={{ fontSize: 9, fontWeight: 600 }}>{label}</span>
+              <span style={{ fontSize: 9, fontWeight: 600, maxWidth: 48, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
             </button>
           ))}
         </div>
