@@ -526,11 +526,49 @@ module.exports = async function handler(req, res) {
     if (req.method === 'DELETE') {
       if (!id) return res.status(400).json({ error: 'id required' });
 
-      // Fetch storage_path so we can delete the file too
-      const rows = await supaFetch(`crm_lead_recordings?id=eq.${id}&select=storage_path`);
+      // Fetch storage_path + lead_id + summary so we can clean up downstream
+      const rows = await supaFetch(
+        `crm_lead_recordings?id=eq.${id}&select=storage_path,lead_id,summary`
+      );
       const storagePath = rows?.[0]?.storage_path;
+      const leadId = rows?.[0]?.lead_id;
+      const recSummary = rows?.[0]?.summary;
 
-      // Delete the row first
+      // Strip the matching call-summary block from the lead's notes (if any)
+      if (leadId && recSummary?.summary) {
+        try {
+          const leadRows = await supaFetch(`crm_leads?id=eq.${leadId}&select=notes`);
+          const existingNotes = leadRows?.[0]?.notes || '';
+          if (existingNotes.includes(recSummary.summary)) {
+            const escaped = recSummary.summary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Match a whole call block: optional leading "\n\n---\n" separator,
+            // "📞 Call ..." header line, our summary text, and any trailing
+            // "Next steps:" / "Pain points:" lines, up to the next "---" or end.
+            const blockRe = new RegExp(
+              `(?:\\n\\n---\\n)?📞 Call[^\\n]*\\n${escaped}(?:\\n(?!---|📞 Call)[^\\n]*)*`,
+              'g'
+            );
+            let cleaned = existingNotes.replace(blockRe, '').trimEnd();
+            // Heal any orphaned "---" left at the start or from adjacent removals
+            cleaned = cleaned
+              .replace(/^(\s*---\s*\n)+/g, '')
+              .replace(/\n\n---\n\n---\n/g, '\n\n---\n')
+              .replace(/\n\n---\s*$/g, '')
+              .trim();
+            if (cleaned !== existingNotes) {
+              await supaFetch(`crm_leads?id=eq.${leadId}`, {
+                method: 'PATCH',
+                headers: { 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ notes: cleaned }),
+              });
+            }
+          }
+        } catch (notesErr) {
+          console.warn('Failed to strip call summary from notes:', notesErr.message);
+        }
+      }
+
+      // Delete the row
       await supaFetch(`crm_lead_recordings?id=eq.${id}`, { method: 'DELETE' });
 
       // Best-effort storage cleanup — don't fail the request if this errors
