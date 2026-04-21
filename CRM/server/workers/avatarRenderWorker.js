@@ -3,7 +3,9 @@
 // Supabase Storage upload → mark `done`.
 //
 // Started from server/index.js when the relevant env vars are present.
-// Runs as a simple setInterval loop — one job at a time on the user's Mac.
+// Runs up to RENDER_CONCURRENCY (default 2) renders in parallel. Each render
+// keeps its own workDir and its own ffmpeg process, so concurrency mostly
+// costs CPU during the stitching phase.
 
 const fs    = require('fs');
 const path  = require('path');
@@ -15,41 +17,53 @@ const { submitVideo, waitForVideo, downloadTo } = require('../services/heygenVid
 const { chunkCaptions } = require('../services/captionBuilder');
 const { renderFinal } = require('../services/ffmpegRender');
 
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 5_000;
 const TMP_ROOT = path.join(os.tmpdir(), 'avatar-renders');
 
-let running = false;
+const MAX_CONCURRENCY = Math.max(1, parseInt(process.env.RENDER_CONCURRENCY || '2', 10));
+
+// Set of render IDs currently being processed.
+const inFlight = new Set();
 
 // Dual-log: terminal + Supabase row (for the UI to show in the preview modal).
 async function say(render, msg) {
-  console.log(`[render-worker]   ${msg}`);
+  console.log(`[render-worker] [${render.id.slice(0, 6)}]   ${msg}`);
   await supa.appendLog(render.id, msg);
 }
 
 async function tick() {
-  if (running) return;
-  try {
-    const render = await supa.claimNextPendingRender();
-    if (!render) return;
-    running = true;
-    console.log(`[render-worker] picked render ${render.id}`);
-    await supa.appendLog(render.id, 'picked up by worker');
+  // Fill up to capacity on every tick
+  while (inFlight.size < MAX_CONCURRENCY) {
+    let render;
     try {
-      await processRender(render);
-      console.log(`[render-worker] render ${render.id} → done`);
-      await supa.appendLog(render.id, '✓ done');
+      render = await supa.claimNextPendingRender();
     } catch (err) {
-      console.error(`[render-worker] render ${render.id} failed:`, err.message);
-      await supa.appendLog(render.id, `✗ failed: ${String(err.message || err).slice(0, 400)}`);
-      await supa.updateRender(render.id, {
-        status: 'failed',
-        error: String(err.message || err).slice(0, 2000),
-      });
+      console.error('[render-worker] claim error:', err.message);
+      return;
     }
+    if (!render) return; // no more pending rows
+    inFlight.add(render.id);
+    console.log(`[render-worker] [${render.id.slice(0, 6)}] picked up (in-flight ${inFlight.size}/${MAX_CONCURRENCY})`);
+    // Fire-and-forget — runs in parallel with any other in-flight renders.
+    runRender(render).finally(() => {
+      inFlight.delete(render.id);
+    });
+  }
+}
+
+async function runRender(render) {
+  await supa.appendLog(render.id, `picked up by worker (slot ${inFlight.size}/${MAX_CONCURRENCY})`);
+  try {
+    await processRender(render);
+    console.log(`[render-worker] [${render.id.slice(0, 6)}] → done`);
+    await supa.appendLog(render.id, '✓ done');
   } catch (err) {
-    console.error('[render-worker] tick error:', err.message);
-  } finally {
-    running = false;
+    console.error(`[render-worker] [${render.id.slice(0, 6)}] failed:`, err.message);
+    await supa.appendLog(render.id, `✗ failed: ${String(err.message || err).slice(0, 400)}`);
+    await supa.updateRender(render.id, {
+      status: 'failed',
+      error: String(err.message || err).slice(0, 2000),
+    });
   }
 }
 
@@ -213,9 +227,9 @@ function start() {
     console.log('[render-worker] disabled — need HEYGEN_API_KEY, ELEVENLABS_API_KEY, SUPABASE_URL');
     return;
   }
-  console.log('[render-worker] started, polling every 10s');
+  console.log(`[render-worker] started, polling every ${POLL_INTERVAL_MS / 1000}s, concurrency=${MAX_CONCURRENCY}`);
   setInterval(tick, POLL_INTERVAL_MS);
-  // Run one immediately so a freshly-queued render doesn't wait 10s
+  // Run one immediately so a freshly-queued render doesn't wait
   setTimeout(tick, 1000);
 }
 
