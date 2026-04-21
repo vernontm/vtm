@@ -15,6 +15,7 @@ import {
 import Modal from '../components/Modal';
 import RenderComposer from '../components/RenderComposer';
 import RenderPreviewModal from '../components/RenderPreviewModal';
+import AvatarTemplatePreview from '../components/AvatarTemplatePreview';
 
 const LOGO_POSITIONS = [
   { key: 'tl', label: 'Top Left' },
@@ -239,6 +240,8 @@ function TemplateEditor({ avatar, onUpdate }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <AvatarTemplatePreview avatar={avatar} draft={draft} previewWidth={248} />
+
       <Field label="Avatar name">
         <input value={draft.name || ''} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} style={input} />
       </Field>
