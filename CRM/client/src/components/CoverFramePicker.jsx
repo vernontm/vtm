@@ -5,11 +5,11 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
  * Shows a video player + scrubber so the user can pick an exact cover frame.
  * onChange(ms) fires whenever the selected timestamp changes (null = no cover set).
  */
-export default function CoverFramePicker({ videoUrl, onChange }) {
+export default function CoverFramePicker({ videoUrl, onChange, initialMs = null }) {
   const videoRef = useRef(null);
   const [duration,    setDuration]    = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [enabled,     setEnabled]     = useState(false);
+  const [currentTime, setCurrentTime] = useState(initialMs != null ? initialMs / 1000 : 0);
+  const [enabled,     setEnabled]     = useState(initialMs != null);
   const [loaded,      setLoaded]      = useState(false);
 
   // Notify parent on change

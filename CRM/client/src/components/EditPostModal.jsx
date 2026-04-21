@@ -4,6 +4,7 @@ import {
   Image as ImageIcon, Smile, AtSign, Hash, Code, Sparkles,
   Instagram, MapPin, ChevronDown, Save,
 } from 'lucide-react';
+import CoverFramePicker from './CoverFramePicker';
 
 /**
  * Publer-style Edit Post modal.
@@ -18,6 +19,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
   const [postType, setPostType] = useState(post?.post_type || 'post');
   const [scheduledAt, setScheduledAt] = useState(post?.scheduled_datetime ? toLocalInput(post.scheduled_datetime) : '');
   const [mediaUrls, setMediaUrls] = useState(post?.media_urls || []);
+  const [coverTimestamp, setCoverTimestamp] = useState(post?.cover_timestamp ?? null);
   const [igOpen, setIgOpen] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -29,6 +31,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
     setPostType(post?.post_type || 'post');
     setScheduledAt(post?.scheduled_datetime ? toLocalInput(post.scheduled_datetime) : '');
     setMediaUrls(post?.media_urls || []);
+    setCoverTimestamp(post?.cover_timestamp ?? null);
   }, [post?.id]);
 
   if (!post) return null;
@@ -58,6 +61,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
         post_type: postType,
         scheduled_datetime: fromLocalInput(scheduledAt),
         media_urls: mediaUrls,
+        cover_timestamp: coverTimestamp,
       });
       onClose();
     } catch (e) {
@@ -153,6 +157,19 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                 <IconBtn title="More">···</IconBtn>
               </div>
             </Section>
+
+            {/* Cover Frame (videos only) */}
+            {isVideo && firstMedia && (
+              <Section title="Cover Frame">
+                <div style={{ padding: 14, background: 'var(--surface)', borderRadius: 10, border: '1px solid #eef0f5' }}>
+                  <CoverFramePicker
+                    videoUrl={firstMedia}
+                    initialMs={coverTimestamp}
+                    onChange={setCoverTimestamp}
+                  />
+                </div>
+              </Section>
+            )}
 
             {/* Caption */}
             <Section title="Caption">

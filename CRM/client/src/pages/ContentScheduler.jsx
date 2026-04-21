@@ -122,6 +122,10 @@ export default function ContentScheduler() {
   const [postsSearch, setPostsSearch] = useState('');
   const [editingPost, setEditingPost] = useState(null); // script obj for modal
 
+  // Publish notification state (fires when a post flips to completed)
+  const [publishedNotifs, setPublishedNotifs] = useState([]); // [{ id, title }]
+  const knownPublishingRef = useRef(new Map()); // scriptId → title (scripts currently 'publishing')
+
   // Publish state
   const [publishingId, setPublishingId] = useState(null); // script id being published
   const [publishModal, setPublishModal] = useState(null); // script to publish
@@ -600,6 +604,42 @@ export default function ContentScheduler() {
     }
     setPublishLoading(false);
   }
+
+  // Auto-dismiss published notifications after 15s
+  useEffect(() => {
+    if (!publishedNotifs.length) return;
+    const t = setTimeout(() => {
+      const cutoff = Date.now() - 15000;
+      setPublishedNotifs(ns => ns.filter(n => (n.ts || 0) > cutoff));
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [publishedNotifs]);
+
+  // ── Detect publish_status transitions: publishing → completed/failed ──
+  useEffect(() => {
+    const prev = knownPublishingRef.current;
+    const nowPublishing = new Map();
+    const newlyDone = [];
+    for (const s of scripts) {
+      if (s.publish_status === 'publishing') {
+        nowPublishing.set(s.id, s.title || 'Post');
+      }
+    }
+    // Anything in prev but not nowPublishing → finished
+    for (const [id, title] of prev.entries()) {
+      if (!nowPublishing.has(id)) {
+        const cur = scripts.find(x => x.id === id);
+        // Only notify on successful completion (not failed)
+        if (cur && (cur.publish_status === 'completed' || cur.status === 'posted')) {
+          newlyDone.push({ id, title });
+        }
+      }
+    }
+    knownPublishingRef.current = nowPublishing;
+    if (newlyDone.length) {
+      setPublishedNotifs(n => [...n, ...newlyDone.map(d => ({ ...d, ts: Date.now() }))]);
+    }
+  }, [scripts]);
 
   // ── Poll publish status for in-progress scripts ──
   useEffect(() => {
@@ -1734,6 +1774,8 @@ export default function ContentScheduler() {
                                     loadClientData(client.id);
                                   }} />
                                   {script.publish_status && (() => {
+                                    // Suppress redundant "Scheduled" pill when the main status already says Scheduled
+                                    if (script.publish_status === 'scheduled' && script.status === 'scheduled') return null;
                                     const ps = PUBLISH_STATUS[script.publish_status];
                                     return ps ? (
                                       <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600,
@@ -3507,8 +3549,35 @@ export default function ContentScheduler() {
         </div>
       )}
 
+      {/* ── Published-post notifications ──────────────────────────────── */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
+        {publishedNotifs.map(n => (
+          <div key={n.id} style={{
+            background: 'var(--surface)', color: '#fff', borderRadius: 10,
+            padding: '12px 16px', minWidth: 260, maxWidth: 340,
+            boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
+            border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'flex-start', gap: 12,
+            animation: 'slideInRight 0.25s ease',
+          }}>
+            <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>✅</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>Post published</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.title || 'Post'} — live on socials
+              </div>
+            </div>
+            <button onClick={() => setPublishedNotifs(ns => ns.filter(x => x.id !== n.id))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .spin { animation: spin 1s linear infinite; }
 
         @media (max-width: 768px) {

@@ -34,6 +34,11 @@ async function publishScript(script, client) {
   if (fullCaption)         form.append('description', fullCaption);
   if (hasTikTok && fullCaption) form.append('tiktok_title', fullCaption.slice(0, 2200));
   if (script.first_comment)     form.append('first_comment', script.first_comment);
+  if (script.cover_timestamp != null) {
+    form.append('cover_timestamp', String(script.cover_timestamp));
+    form.append('thumb_offset', String(script.cover_timestamp));
+    form.append('pinterest_cover_image_key_frame_time', String(script.cover_timestamp));
+  }
   form.append('async_upload', 'true');
 
   let endpoint;
