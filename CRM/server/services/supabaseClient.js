@@ -38,7 +38,9 @@ async function supaFetch(restPath, options = {}) {
 }
 
 // Upload a local file to Supabase Storage and return its public URL.
-// Defaults to `blog-media` bucket with an `avatars/` prefix.
+// Defaults to `blog-media` bucket with an `avatars/` prefix. Retries up to
+// 3 times with backoff, since large MP4s occasionally hit transient socket
+// errors (fetch failed) mid-upload.
 async function uploadFile(localPath, {
   bucket = 'blog-media',
   keyPrefix = 'avatars',
@@ -46,6 +48,7 @@ async function uploadFile(localPath, {
 } = {}) {
   ensureConfigured();
   const buf  = fs.readFileSync(localPath);
+  const sizeMb = (buf.length / 1024 / 1024).toFixed(1);
   const ext  = path.extname(localPath).replace('.', '') || 'bin';
   const key  = `${keyPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const guess = {
@@ -53,19 +56,36 @@ async function uploadFile(localPath, {
     png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
   }[ext.toLowerCase()] || 'application/octet-stream';
 
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${key}`, {
-    method: 'POST',
-    headers: {
-      ...authHeaders(),
-      'Content-Type': contentType || guess,
-    },
-    body: buf,
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Storage upload failed (${res.status}): ${err}`);
+  const url = `${SUPABASE_URL}/storage/v1/object/${bucket}/${key}`;
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': contentType || guess,
+          'Content-Length': String(buf.length),
+        },
+        body: buf,
+        // Disable keep-alive reuse on retries to avoid stale sockets
+        duplex: 'half',
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`HTTP ${res.status}: ${err}`);
+      }
+      return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${key}`;
+    } catch (err) {
+      const cause = err?.cause?.message || err?.cause?.code || '';
+      lastErr = new Error(`upload attempt ${attempt}/3 failed (${sizeMb} MB): ${err.message}${cause ? ` — ${cause}` : ''}`);
+      console.error(`[uploadFile] ${lastErr.message}`);
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 2000 * attempt));
+      }
+    }
   }
-  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${key}`;
+  throw lastErr;
 }
 
 async function getRender(id) {
