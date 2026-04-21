@@ -45,23 +45,9 @@ function posCoords(pos, padPx = 32) {
   }
 }
 
-// Escape a string for use inside a drawtext `text='...'` value in
-// filter_complex. Single quotes inside are replaced with a visually
-// identical right-single-quotation-mark to sidestep quoting hell.
-function escDrawtextText(s) {
-  return String(s || '')
-    .replace(/\\/g, '\\\\')
-    .replace(/:/g, '\\:')
-    .replace(/,/g, '\\,')
-    .replace(/;/g, '\\;')
-    .replace(/\[/g, '\\[')
-    .replace(/\]/g, '\\]')
-    .replace(/'/g, '\u2019');
-}
-
-// Naive word-wrap that inserts literal backslash-n sequences (drawtext
-// interprets those as line breaks). Estimates character width from the font
-// size — works well enough for ExtraBold/Black variants at typical sizes.
+// Word-wrap that returns REAL newlines. We write the result to a text file
+// and reference it via drawtext's textfile= option, which sidesteps ffmpeg's
+// fussy inline text= escaping entirely.
 function softWrap(text, { fontSize, maxWidth = 972 /* 90% of 1080 */ }) {
   const avgCharWidth = fontSize * 0.55;
   const maxChars = Math.max(6, Math.floor(maxWidth / avgCharWidth));
@@ -78,8 +64,7 @@ function softWrap(text, { fontSize, maxWidth = 972 /* 90% of 1080 */ }) {
     }
   }
   if (line) lines.push(line);
-  // Two-character escape: backslash + n — ffmpeg parses this as newline in drawtext
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 
 // Escape a filesystem path for use as fontfile=<path> (no surrounding quotes).
@@ -91,13 +76,16 @@ function escDrawtextPath(p) {
 }
 
 // Title overlay — a single drawtext with a solid box= background.
-// Returns a drawtext filter string or '' if the title is disabled/empty.
-function buildTitleDrawtext({ title, style }) {
+// Writes the wrapped title to a text file so drawtext can load it via
+// textfile=, which avoids ffmpeg's fragile inline-text escaping.
+function buildTitleDrawtext({ title, style, workDir }) {
   if (!style?.enabled || !title) return '';
   const size    = Math.max(16, Math.round(style.size || 72));
   const rawText = style.uppercase ? String(title).toUpperCase() : String(title);
   // Leave room for the background padding: wrap at a narrower safe width.
-  const text    = softWrap(rawText, { fontSize: size, maxWidth: 900 });
+  const wrapped = softWrap(rawText, { fontSize: size, maxWidth: 900 });
+  const textPath = path.join(workDir, 'title.txt');
+  fs.writeFileSync(textPath, wrapped, 'utf8');
   const color   = style.color || '#FFFFFF';
   const bg      = style.bg_color || '#E91E63';
   const padding = Math.max(0, Math.round(style.padding ?? 28));
@@ -107,9 +95,10 @@ function buildTitleDrawtext({ title, style }) {
   const font    = escDrawtextPath(resolveFontFile(fontKey));
   const parts = [
     `fontfile=${font}`,
-    `text='${escDrawtextText(text)}'`,
+    `textfile=${path.basename(textPath)}`,
     `fontcolor=${color}`,
     `fontsize=${size}`,
+    `line_spacing=${Math.round(size * 0.15)}`,
     `box=1`,
     `boxcolor=${bg}@1.0`,
     `boxborderw=${padding}`,
@@ -119,7 +108,7 @@ function buildTitleDrawtext({ title, style }) {
   return `drawtext=${parts.join(':')}`;
 }
 
-function buildDrawtextChain({ chunks, style }) {
+function buildDrawtextChain({ chunks, style, workDir }) {
   if (!chunks?.length) return '';
   const size    = Math.max(8, Math.round(style?.size || 64));
   const color   = style?.color || 'white';
@@ -130,16 +119,20 @@ function buildDrawtextChain({ chunks, style }) {
   const fontKey = (style?.font || DEFAULT_FONT).toLowerCase().replace(/\s+/g, '_');
   const font    = escDrawtextPath(resolveFontFile(fontKey));
 
-  return chunks.map(c => {
+  return chunks.map((c, i) => {
     const wrapped = softWrap(c.text, { fontSize: size, maxWidth: 980 });
-    const text = escDrawtextText(wrapped);
+    // Write to its own textfile — drawtext's textfile= is forgiving about
+    // any character including quotes, commas, colons, unicode, newlines.
+    const textPath = path.join(workDir, `cap-${String(i).padStart(3, '0')}.txt`);
+    fs.writeFileSync(textPath, wrapped, 'utf8');
     const start = Number(c.start || 0).toFixed(3);
     const end   = Number(c.end   || 0).toFixed(3);
     const parts = [
       `fontfile=${font}`,
-      `text='${text}'`,
+      `textfile=${path.basename(textPath)}`,
       `fontcolor=${color}`,
       `fontsize=${size}`,
+      `line_spacing=${Math.round(size * 0.15)}`,
       `borderw=${border}`,
       `bordercolor=${borderC}`,
       `x=(w-text_w)/2`,
@@ -196,9 +189,12 @@ async function renderFinal({
     vOut = '[withlogo]';
   }
 
-  // Captions via drawtext (no libass needed) + optional title overlay
-  const drawChain = buildDrawtextChain({ chunks: captionChunks, style: captionStyle });
-  const titleDraw = buildTitleDrawtext({ title, style: titleStyle });
+  // Captions via drawtext (no libass needed) + optional title overlay.
+  // Both read their rendered text from text files in workDir so
+  // ffmpeg never has to parse escape sequences in a filter arg.
+  const textDir = path.dirname(outPath);
+  const drawChain = buildDrawtextChain({ chunks: captionChunks, style: captionStyle, workDir: textDir });
+  const titleDraw = buildTitleDrawtext({ title, style: titleStyle, workDir: textDir });
   const combined = [drawChain, titleDraw].filter(Boolean).join(',');
   if (combined) {
     f.push(`${vOut}${combined}[vfinal]`);
@@ -227,13 +223,14 @@ async function renderFinal({
     outPath,
   );
 
-  await runFfmpeg(args);
+  // cwd=workDir so drawtext textfile=<basename> resolves without path escaping
+  await runFfmpeg(args, { cwd: path.dirname(outPath) });
   return outPath;
 }
 
-function runFfmpeg(args) {
+function runFfmpeg(args, opts = {}) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(FFMPEG, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const proc = spawn(FFMPEG, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd: opts.cwd });
     let err = '';
     proc.stderr.on('data', d => { err += d.toString(); });
     proc.on('error', reject);

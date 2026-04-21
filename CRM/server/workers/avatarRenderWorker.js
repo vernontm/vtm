@@ -158,7 +158,7 @@ async function processRender(render) {
 
   const captionStyle = render.caption_style || avatar.caption_style || {};
   const captionChunks = chunkCaptions({ sentences, captionStyle });
-  const titleStyle    = avatar.title_style || {};
+  const titleStyle    = render.title_style || avatar.title_style || {};
   const titleText     = render.title || '';
 
   // If logo/music weren't explicitly set on the render, inherit from the avatar

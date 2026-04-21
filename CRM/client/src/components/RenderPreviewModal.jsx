@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Calendar, Loader, ExternalLink, Copy, Check, Terminal, RefreshCw } from 'lucide-react';
+import { X, Calendar, Loader, ExternalLink, Copy, Check, Terminal, RefreshCw, Edit3 } from 'lucide-react';
 import { getContentClients, scheduleRender, updateRender } from '../api';
+import RenderEditModal from './RenderEditModal';
 
 const STATUS_PILL = {
   draft:              { bg: '#f0f0f5', text: '#8e8ea0', label: 'Draft' },
@@ -22,6 +23,7 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [retrying, setRetrying] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     getContentClients().then(setClients).catch(() => {});
@@ -109,7 +111,7 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {done && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <a href={render.final_video_url} target="_blank" rel="noreferrer"
                   className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
                   <ExternalLink size={11} /> Open in new tab
@@ -117,6 +119,14 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
                 <button onClick={copyUrl} className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
                   {copied ? <Check size={11} /> : <Copy size={11} />}
                   {copied ? 'Copied' : 'Copy URL'}
+                </button>
+                <button onClick={() => setEditOpen(true)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+                    padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
+                    background: 'var(--orange)', color: '#fff', border: 'none',
+                  }}>
+                  <Edit3 size={11} /> Edit & re-render
                 </button>
                 {render.duration_secs && (
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>· {render.duration_secs.toFixed(1)}s</span>
@@ -190,6 +200,14 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
           <button onClick={onClose} className="btn-ghost">Close</button>
         </div>
       </div>
+
+      {editOpen && (
+        <RenderEditModal
+          render={render} avatar={avatar}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => { setEditOpen(false); onResumed?.(); }}
+        />
+      )}
     </div>
   );
 }
