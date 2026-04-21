@@ -1675,7 +1675,7 @@ export default function ContentScheduler() {
                                   ) : script.media_urls?.length ? (
                                     <>
                                       {script.media_type === 'video' ? (
-                                        <video src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <video src={script.cover_timestamp != null ? `${script.media_urls[0]}#t=${(script.cover_timestamp / 1000).toFixed(2)}` : script.media_urls[0]} preload="metadata" muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                       ) : (
                                         <img src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                       )}
@@ -2422,7 +2422,7 @@ export default function ContentScheduler() {
                             }}>
                               {script.media_urls?.length ? (
                                 script.media_type === 'video' ? (
-                                  <video src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <video src={script.cover_timestamp != null ? `${script.media_urls[0]}#t=${(script.cover_timestamp / 1000).toFixed(2)}` : script.media_urls[0]} preload="metadata" muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
                                   <img src={script.media_urls[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 )

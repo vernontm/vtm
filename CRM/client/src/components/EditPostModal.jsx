@@ -125,7 +125,12 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                     border: '1px solid #eef0f5', background: '#000',
                   }}>
                     {isVideo && i === 0 ? (
-                      <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <video
+                        src={coverTimestamp != null ? `${url}#t=${(coverTimestamp / 1000).toFixed(2)}` : url}
+                        preload="metadata"
+                        muted
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
                     ) : (
                       <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     )}
@@ -334,7 +339,12 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
               }}>
                 {firstMedia ? (
                   isVideo ? (
-                    <video src={firstMedia} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <video
+                      src={coverTimestamp != null ? `${firstMedia}#t=${(coverTimestamp / 1000).toFixed(2)}` : firstMedia}
+                      controls
+                      preload="metadata"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   ) : (
                     <img src={firstMedia} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   )
