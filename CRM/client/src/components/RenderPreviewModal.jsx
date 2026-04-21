@@ -155,8 +155,8 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
             {done && !scheduled && (
               <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Schedule under a client</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-                  <div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
                     <Label>Content client</Label>
                     <select value={clientId} onChange={e => setClientId(e.target.value)} style={input}>
                       <option value="">— pick a client —</option>
@@ -165,22 +165,15 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <Label>Caption</Label>
-                    <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={3}
-                      style={{ ...input, resize: 'vertical' }} />
-                  </div>
-                  <div>
-                    <Label>Hashtags</Label>
-                    <input value={hashtags} onChange={e => setHashtags(e.target.value)} style={input}
-                      placeholder="#mindset #ai #trading" />
-                  </div>
                   <button onClick={handleSchedule} disabled={scheduling || !clientId}
                     className="btn-primary"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center', opacity: (scheduling || !clientId) ? 0.5 : 1, marginTop: 4 }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center', opacity: (scheduling || !clientId) ? 0.5 : 1, whiteSpace: 'nowrap' }}>
                     {scheduling ? <Loader size={13} className="spin" /> : <Calendar size={13} />}
-                    {scheduling ? 'Scheduling...' : 'Add to Content → Scheduler'}
+                    {scheduling ? 'Scheduling...' : 'Add to Scheduler'}
                   </button>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 6, opacity: 0.7 }}>
+                  Caption + hashtags can be edited later inside the Content Scheduler.
                 </div>
               </div>
             )}

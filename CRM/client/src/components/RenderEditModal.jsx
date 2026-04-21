@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Save, Loader, RotateCcw } from 'lucide-react';
 import { updateRender } from '../api';
+import AvatarTemplatePreview from './AvatarTemplatePreview';
 
 // Edit a render's overlay settings (title, colors, caption style, music volume)
 // then bounce status back to `pending` so the worker re-stitches from cached
@@ -34,6 +35,17 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState('');
 
+  // Build a synthetic draft shaped like an avatar so the preview component
+  // can render the live state as the user edits.
+  const previewDraft = useMemo(() => ({
+    ...avatar,
+    title_style: titleS,
+    caption_style: capS,
+    logo_position: logoPos,
+    default_volume: musicVol,
+    default_fade_secs: musicFade,
+  }), [avatar, titleS, capS, logoPos, musicVol, musicFade]);
+
   async function handleSaveAndRerender() {
     setSaving(true); setError('');
     try {
@@ -56,7 +68,7 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget && !saving) onClose(); }}>
-      <div className="modal-content" style={{ maxWidth: 720, width: '90vw' }}>
+      <div className="modal-content" style={{ maxWidth: 1040, width: '95vw' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Edit & re-render</div>
@@ -71,7 +83,15 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
           <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 10px', color: '#fca5a5', fontSize: 12, marginBottom: 12 }}>{error}</div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 1fr', gap: 14 }}>
+          {/* Live preview */}
+          <div style={{ position: 'sticky', top: 0, alignSelf: 'start' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 6 }}>
+              Live preview
+            </div>
+            <AvatarTemplatePreview avatar={avatar} draft={previewDraft} previewWidth={240} titleText={title} />
+          </div>
+
           {/* Title */}
           <div style={col}>
             <Section>Title overlay</Section>

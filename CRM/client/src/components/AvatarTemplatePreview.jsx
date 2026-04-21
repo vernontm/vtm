@@ -9,7 +9,7 @@ import { getLooks } from '../api';
 //
 // Live-updates from the editor draft — doesn't refetch when text fields change.
 
-export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 240 }) {
+export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 240, titleText }) {
   const [looks, setLooks] = useState([]);
   const [idx, setIdx] = useState(0);
 
@@ -116,7 +116,8 @@ export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 24
         {look && draft?.title_style?.enabled && (
           (() => {
             const ts = draft.title_style;
-            const sampleTitle = ts.uppercase ? 'YOUR TITLE HERE' : 'your title here';
+            const rawTitle = (titleText && titleText.trim()) ? titleText : 'your title here';
+            const sampleTitle = ts.uppercase ? rawTitle.toUpperCase() : rawTitle;
             const titleFont = ({
               impact:      'Impact, "Arial Black", sans-serif',
               arial_black: '"Arial Black", Impact, sans-serif',
