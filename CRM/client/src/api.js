@@ -527,3 +527,32 @@ export const createScript       = (data)         => request('/scripts', { method
 export const updateScript       = (id, data)     => request(`/scripts?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const deleteScript       = (id)           => request(`/scripts?id=${id}`, { method: 'DELETE' });
 export const personalizeScript  = (script, lead) => request('/personalize-script', { method: 'POST', body: JSON.stringify({ script, lead }) });
+
+// Avatars
+export const getAvatars      = ()           => request('/avatars');
+export const getAvatar       = (id)         => request(`/avatars?id=${id}`);
+export const createAvatar    = (data)       => request('/avatars', { method: 'POST', body: JSON.stringify(data) });
+export const updateAvatar    = (id, data)   => request(`/avatars?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteAvatar    = (id)         => request(`/avatars?id=${id}`, { method: 'DELETE' });
+
+// Avatar Outfits
+export const getOutfits      = (avatar_id)  => request(`/avatar-outfits?avatar_id=${avatar_id}`);
+export const createOutfit    = (data)       => request('/avatar-outfits', { method: 'POST', body: JSON.stringify(data) });
+export const updateOutfit    = (id, data)   => request(`/avatar-outfits?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteOutfit    = (id)         => request(`/avatar-outfits?id=${id}`, { method: 'DELETE' });
+
+// Avatar Looks
+export const getLooks        = (avatar_id, outfit_id = null) => {
+  const q = new URLSearchParams({ avatar_id });
+  if (outfit_id != null) q.set('outfit_id', outfit_id);
+  return request(`/avatar-looks?${q.toString()}`);
+};
+export const createLook      = (data)       => request('/avatar-looks', { method: 'POST', body: JSON.stringify(data) });
+export const updateLook      = (id, data)   => request(`/avatar-looks?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteLook      = (id)         => request(`/avatar-looks?id=${id}`, { method: 'DELETE' });
+export const bulkAssignLooks = (ids, outfit_id) => request('/avatar-looks?action=bulk-assign', { method: 'PUT', body: JSON.stringify({ ids, outfit_id }) });
+
+// HeyGen import
+export const getHeyGenGroups = ()           => request('/avatar-heygen?action=groups');
+export const getHeyGenLooks  = (group_id)   => request(`/avatar-heygen?action=looks&group_id=${encodeURIComponent(group_id)}`);
+export const importFromHeyGen = (data)      => request('/avatar-heygen?action=import', { method: 'POST', body: JSON.stringify(data) });

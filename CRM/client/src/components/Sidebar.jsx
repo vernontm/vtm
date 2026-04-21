@@ -5,7 +5,7 @@ import {
   Mail, Calendar, Settings, Receipt, StickyNote, LogOut,
   Eye, EyeOff, FileText, CreditCard, FolderOpen, Film,
   GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2, UserCog,
-  Video, X, Package, Bell, FileCode,
+  Video, X, Package, Bell, FileCode, Sparkles,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -24,6 +24,7 @@ const nav = [
   { to: '/portfolio',         icon: FolderOpen,      label: 'Portfolio',        slug: 'portfolio' },
   { to: '/resources',         icon: FileCode,        label: 'Resources',        slug: 'resources' },
   { to: '/content-scheduler', icon: Film,            label: 'Content',          slug: 'content-scheduler' },
+  { to: '/avatars',           icon: Sparkles,        label: 'Avatars',          slug: 'avatars' },
   { to: '/email-marketing',   icon: Mail,            label: 'Email Marketing',  slug: 'email-marketing' },
 ];
 

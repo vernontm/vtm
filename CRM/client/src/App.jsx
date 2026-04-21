@@ -26,6 +26,7 @@ import EmailPage from './pages/Email';
 import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
 import ContentScheduler from './pages/ContentScheduler';
+import Avatars from './pages/Avatars';
 import EmailMarketing from './pages/EmailMarketing';
 import GlobalAgent from './components/GlobalAgent';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -92,6 +93,7 @@ function AppLayout() {
               <Route path="/subscriptions" element={<Subscriptions />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/content-scheduler" element={<ContentScheduler />} />
+              <Route path="/avatars" element={<Avatars />} />
               <Route path="/email-marketing" element={<EmailMarketing />} />
               <Route path="/settings" element={<Settings />} />
               {/* Academy Admin */}
