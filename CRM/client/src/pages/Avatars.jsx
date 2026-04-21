@@ -219,6 +219,8 @@ function TemplateEditor({ avatar, onUpdate }) {
 
   const cap = draft?.caption_style || DEFAULT_CAPTION_STYLE;
   const setCap = (patch) => setDraft(d => ({ ...d, caption_style: { ...cap, ...patch } }));
+  const titleS = draft?.title_style || { enabled: true, font: 'montserrat', color: '#FFFFFF', bg_color: '#E91E63', size: 72, y_position: 0.12, padding: 28, uppercase: false };
+  const setTitleS = (patch) => setDraft(d => ({ ...d, title_style: { ...titleS, ...patch } }));
 
   async function uploadFile(file, label) {
     setUploading(true);
@@ -369,6 +371,50 @@ function TemplateEditor({ avatar, onUpdate }) {
       <Field label={`Y position (${Math.round((cap.y_position || 0.75) * 100)}% from top)`}>
         <input type="range" min={0.1} max={0.95} step={0.01} value={cap.y_position || 0.75} onChange={e => setCap({ y_position: Number(e.target.value) })} style={{ width: '100%' }} />
       </Field>
+
+      {/* Title overlay */}
+      <SectionHeader icon={<Type size={13} />}>Title overlay</SectionHeader>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text)', cursor: 'pointer' }}>
+        <input type="checkbox" checked={!!titleS.enabled}
+          onChange={e => setTitleS({ enabled: e.target.checked })} />
+        Burn title overlay onto renders
+      </label>
+      <Field label="Title font">
+        <select
+          value={(titleS.font || 'montserrat').toLowerCase().replace(/\s+/g, '_')}
+          onChange={e => setTitleS({ font: e.target.value })}
+          style={input}>
+          <option value="montserrat">Montserrat ExtraBold</option>
+          <option value="poppins">Poppins ExtraBold</option>
+          <option value="impact">Impact</option>
+          <option value="arial_black">Arial Black</option>
+        </select>
+      </Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <Field label="Text color">
+          <input type="color" value={titleS.color || '#FFFFFF'} onChange={e => setTitleS({ color: e.target.value })} style={{ ...input, height: 34, padding: 2 }} />
+        </Field>
+        <Field label="Background">
+          <input type="color" value={titleS.bg_color || '#E91E63'} onChange={e => setTitleS({ bg_color: e.target.value })} style={{ ...input, height: 34, padding: 2 }} />
+        </Field>
+      </div>
+      <Field label={`Size (${titleS.size || 72}px)`}>
+        <input type="range" min={40} max={140} step={2} value={titleS.size || 72}
+          onChange={e => setTitleS({ size: Number(e.target.value) })} style={{ width: '100%' }} />
+      </Field>
+      <Field label={`Background padding (${titleS.padding ?? 28}px)`}>
+        <input type="range" min={8} max={60} step={2} value={titleS.padding ?? 28}
+          onChange={e => setTitleS({ padding: Number(e.target.value) })} style={{ width: '100%' }} />
+      </Field>
+      <Field label={`Y position (${Math.round((titleS.y_position ?? 0.12) * 100)}% from top)`}>
+        <input type="range" min={0.02} max={0.6} step={0.01} value={titleS.y_position ?? 0.12}
+          onChange={e => setTitleS({ y_position: Number(e.target.value) })} style={{ width: '100%' }} />
+      </Field>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text)', cursor: 'pointer' }}>
+        <input type="checkbox" checked={!!titleS.uppercase}
+          onChange={e => setTitleS({ uppercase: e.target.checked })} />
+        UPPERCASE
+      </label>
 
       <button onClick={save} disabled={!dirty || saving || uploading}
         style={{ ...btn.primary, marginTop: 8, justifyContent: 'center', opacity: (!dirty || saving) ? 0.5 : 1 }}>

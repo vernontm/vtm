@@ -1,5 +1,35 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
 
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+
+// Ask Claude for a short lowercase hook title from the full script.
+async function suggestTitleFromScript(script) {
+  if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 120,
+      messages: [{
+        role: 'user',
+        content: `Read this short-form video script and return a punchy TikTok-style lowercase title (3-7 words, no quotes, no trailing punctuation, occasionally one period between short words like "effort. environment. presentation." is fine). Return ONLY the title text, nothing else.\n\nScript:\n${script}`,
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Claude error ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  const txt = (data?.content?.[0]?.text || '').trim().replace(/^["""'']|["""'']$/g, '');
+  return txt;
+}
+
 // Avatar renders endpoint.
 // - GET                           — all renders (optionally filter by avatar_id or status)
 // - GET ?id=                      — single render with sentences
@@ -31,6 +61,18 @@ module.exports = async function handler(req, res) {
     filters.push('order=created_at.desc');
     const rows = await supaFetch(`crm_avatar_renders?${filters.join('&')}`);
     return res.json(rows);
+  }
+
+  // ── Suggest title from script ──
+  if (req.method === 'POST' && action === 'suggest-title') {
+    const { script } = req.body || {};
+    if (!script || !script.trim()) return res.status(400).json({ error: 'script required' });
+    try {
+      const title = await suggestTitleFromScript(script);
+      return res.json({ title });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
 
   // ── Schedule under client ──

@@ -93,6 +93,8 @@ export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 24
         )}
       </div>
 
+      {/* resolve optional title overlay */}
+      {(() => null)()}
       <div style={{
         width: w, height: h, position: 'relative', borderRadius: 10, overflow: 'hidden',
         background: 'var(--surface-3)', margin: '0 auto',
@@ -108,6 +110,46 @@ export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 24
           }}>
             No looks yet —<br />import some to preview
           </div>
+        )}
+
+        {/* Title overlay (matches burned ffmpeg output) */}
+        {look && draft?.title_style?.enabled && (
+          (() => {
+            const ts = draft.title_style;
+            const sampleTitle = ts.uppercase ? 'YOUR TITLE HERE' : 'your title here';
+            const titleFont = ({
+              impact:      'Impact, "Arial Black", sans-serif',
+              arial_black: '"Arial Black", Impact, sans-serif',
+              poppins:     '"Poppins", "Arial Black", sans-serif',
+              montserrat:  '"Montserrat", "Arial Black", sans-serif',
+            }[(ts.font || 'montserrat').toLowerCase().replace(/\s+/g, '_')]) || '"Montserrat", sans-serif';
+            const sizePx = Math.max(8, Math.round((ts.size || 72) * scale));
+            const padPx  = Math.max(2, Math.round((ts.padding ?? 28) * scale));
+            const titleY = (ts.y_position ?? 0.12) * h;
+            return (
+              <div style={{
+                position: 'absolute', left: 0, right: 0,
+                top: titleY, transform: 'translateY(-50%)',
+                textAlign: 'center', pointerEvents: 'none',
+              }}>
+                <span style={{
+                  display: 'inline-block',
+                  background: ts.bg_color || '#E91E63',
+                  color: ts.color || '#FFFFFF',
+                  fontFamily: titleFont,
+                  fontWeight: 900,
+                  fontSize: sizePx,
+                  lineHeight: 1.1,
+                  padding: `${padPx}px ${padPx * 1.2}px`,
+                  maxWidth: `${Math.round(w * 0.92)}px`,
+                  borderRadius: Math.round(padPx * 0.2),
+                  boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone',
+                  whiteSpace: 'normal', wordWrap: 'break-word',
+                  letterSpacing: '0.01em',
+                }}>{sampleTitle}</span>
+              </div>
+            );
+          })()
         )}
 
         {/* Logo overlay */}

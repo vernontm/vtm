@@ -564,3 +564,4 @@ export const createRender    = (data)       => request('/avatar-renders', { meth
 export const updateRender    = (id, data)   => request(`/avatar-renders?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteRender    = (id)         => request(`/avatar-renders?id=${id}`, { method: 'DELETE' });
 export const scheduleRender  = (id, data)   => request(`/avatar-renders?id=${id}&action=schedule`, { method: 'POST', body: JSON.stringify(data) });
+export const suggestTitle    = (script)     => request('/avatar-renders?action=suggest-title', { method: 'POST', body: JSON.stringify({ script }) });

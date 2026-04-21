@@ -59,12 +59,64 @@ function escDrawtextText(s) {
     .replace(/'/g, '\u2019');
 }
 
+// Naive word-wrap that inserts literal backslash-n sequences (drawtext
+// interprets those as line breaks). Estimates character width from the font
+// size — works well enough for ExtraBold/Black variants at typical sizes.
+function softWrap(text, { fontSize, maxWidth = 972 /* 90% of 1080 */ }) {
+  const avgCharWidth = fontSize * 0.55;
+  const maxChars = Math.max(6, Math.floor(maxWidth / avgCharWidth));
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (test.length > maxChars && line) {
+      lines.push(line);
+      line = w;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  // Two-character escape: backslash + n — ffmpeg parses this as newline in drawtext
+  return lines.join('\\n');
+}
+
 // Escape a filesystem path for use as fontfile=<path> (no surrounding quotes).
 function escDrawtextPath(p) {
   return String(p || '')
     .replace(/\\/g, '\\\\')
     .replace(/:/g, '\\:')
     .replace(/'/g, '\\\'');
+}
+
+// Title overlay — a single drawtext with a solid box= background.
+// Returns a drawtext filter string or '' if the title is disabled/empty.
+function buildTitleDrawtext({ title, style }) {
+  if (!style?.enabled || !title) return '';
+  const size    = Math.max(16, Math.round(style.size || 72));
+  const rawText = style.uppercase ? String(title).toUpperCase() : String(title);
+  // Leave room for the background padding: wrap at a narrower safe width.
+  const text    = softWrap(rawText, { fontSize: size, maxWidth: 900 });
+  const color   = style.color || '#FFFFFF';
+  const bg      = style.bg_color || '#E91E63';
+  const padding = Math.max(0, Math.round(style.padding ?? 28));
+  const yFrac   = style.y_position ?? 0.12;
+  const yPx     = Math.round(yFrac * H);
+  const fontKey = (style.font || DEFAULT_FONT).toLowerCase().replace(/\s+/g, '_');
+  const font    = escDrawtextPath(resolveFontFile(fontKey));
+  const parts = [
+    `fontfile=${font}`,
+    `text='${escDrawtextText(text)}'`,
+    `fontcolor=${color}`,
+    `fontsize=${size}`,
+    `box=1`,
+    `boxcolor=${bg}@1.0`,
+    `boxborderw=${padding}`,
+    `x=(w-text_w)/2`,
+    `y=${yPx}-text_h/2`,
+  ];
+  return `drawtext=${parts.join(':')}`;
 }
 
 function buildDrawtextChain({ chunks, style }) {
@@ -79,7 +131,8 @@ function buildDrawtextChain({ chunks, style }) {
   const font    = escDrawtextPath(resolveFontFile(fontKey));
 
   return chunks.map(c => {
-    const text = escDrawtextText(c.text);
+    const wrapped = softWrap(c.text, { fontSize: size, maxWidth: 980 });
+    const text = escDrawtextText(wrapped);
     const start = Number(c.start || 0).toFixed(3);
     const end   = Number(c.end   || 0).toFixed(3);
     const parts = [
@@ -108,6 +161,8 @@ async function renderFinal({
   musicFadeSecs = 1.5,
   captionChunks = [],
   captionStyle = {},
+  title = '',
+  titleStyle = {},
   totalDurationSecs,
   outPath,
 }) {
@@ -141,10 +196,12 @@ async function renderFinal({
     vOut = '[withlogo]';
   }
 
-  // Captions via drawtext (no libass needed)
+  // Captions via drawtext (no libass needed) + optional title overlay
   const drawChain = buildDrawtextChain({ chunks: captionChunks, style: captionStyle });
-  if (drawChain) {
-    f.push(`${vOut}${drawChain}[vfinal]`);
+  const titleDraw = buildTitleDrawtext({ title, style: titleStyle });
+  const combined = [drawChain, titleDraw].filter(Boolean).join(',');
+  if (combined) {
+    f.push(`${vOut}${combined}[vfinal]`);
     vOut = '[vfinal]';
   }
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Loader, Wand2, Shuffle, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Loader, Wand2, Shuffle, Play, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import {
   getOutfits, getLooks,
-  createRender,
+  createRender, suggestTitle,
 } from '../api';
 
 // Split a script into sentences. Keeps trailing punctuation, trims, drops empties.
@@ -21,6 +21,7 @@ export default function RenderComposer({ avatar, onClose, onCreated }) {
   const [looksByOutfit, setLooksByOutfit] = useState({}); // { outfit_id: Look[] }
   const [outfitId, setOutfitId] = useState('');
   const [title, setTitle] = useState('');
+  const [titleLoading, setTitleLoading] = useState(false);
   const [script, setScript] = useState('');
   const [assignments, setAssignments] = useState([]); // parallel to sentences: [{ text, look_id }]
   const [submitting, setSubmitting] = useState(false);
@@ -77,6 +78,16 @@ export default function RenderComposer({ avatar, onClose, onCreated }) {
       ...a,
       look_id: looks[(i + Math.floor(Math.random() * looks.length)) % looks.length].id,
     })));
+  }
+
+  async function handleAutoTitle() {
+    if (!script.trim()) return setError('Paste a script first');
+    setTitleLoading(true); setError('');
+    try {
+      const r = await suggestTitle(script);
+      if (r?.title) setTitle(r.title);
+    } catch (e) { setError(e.message); }
+    finally { setTitleLoading(false); }
   }
 
   async function handleGenerate() {
@@ -144,8 +155,19 @@ export default function RenderComposer({ avatar, onClose, onCreated }) {
                 </select>
               </div>
               <div>
-                <Label>Title (optional)</Label>
-                <input value={title} onChange={e => setTitle(e.target.value)} style={input} placeholder="e.g. Mindset Monday #12" />
+                <Label>Title overlay (optional)</Label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input value={title} onChange={e => setTitle(e.target.value)}
+                    style={{ ...input, flex: 1 }} placeholder="e.g. effort. environment. presentation." />
+                  <button type="button" onClick={handleAutoTitle} disabled={!script.trim() || titleLoading}
+                    style={{ ...pillBtn, opacity: (!script.trim() || titleLoading) ? 0.5 : 1, padding: '6px 10px' }}
+                    title="Auto-generate title from script via Claude">
+                    {titleLoading ? <Loader size={11} className="spin" /> : <Sparkles size={11} />} Auto
+                  </button>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 3, opacity: 0.7 }}>
+                  Burned onto the video using your avatar's title style (font + colors set in the template).
+                </div>
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <Label>Script</Label>
