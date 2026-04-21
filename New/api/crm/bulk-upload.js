@@ -24,6 +24,7 @@ module.exports = async function handler(req, res) {
 
     // ── Step 1: Transcribe via ElevenLabs ──
     let transcript = '';
+    let firstWordMs = null; // cover frame: first word start time in ms
 
     if (ELEVENLABS_API_KEY) {
       // Download file from Supabase storage using service key (bucket may be private)
@@ -73,6 +74,13 @@ module.exports = async function handler(req, res) {
       if (sttRes.ok) {
         const sttData = await sttRes.json();
         transcript = sttData.text || '';
+        // ElevenLabs Scribe returns `words: [{ text, start, end, type }]`
+        // Pick the first "word" type entry's start (seconds) + 100ms offset.
+        const words = Array.isArray(sttData.words) ? sttData.words : [];
+        const firstWord = words.find(w => (w.type === 'word' || !w.type) && typeof w.start === 'number');
+        if (firstWord) {
+          firstWordMs = Math.max(0, Math.round(firstWord.start * 1000) + 100);
+        }
       } else {
         const errText = await sttRes.text();
         console.error('ElevenLabs STT failed:', errText);
@@ -161,6 +169,7 @@ Return ONLY valid JSON:
       status: generated.caption ? 'caption_ready' : (transcript ? 'media_uploaded' : 'draft'),
       updated_at: new Date().toISOString(),
     };
+    if (firstWordMs != null) updates.cover_timestamp = firstWordMs;
 
     await supaFetch(`crm_content_scripts?id=eq.${script_id}`, {
       method: 'PATCH',
