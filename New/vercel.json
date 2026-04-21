@@ -41,11 +41,13 @@
     "api/crm/email-campaigns.js": { "maxDuration": 60 },
     "api/crm/email-cron.js": { "maxDuration": 60 },
     "api/crm/uploadpost.js": { "maxDuration": 60 },
+    "api/crm/publish-cron.js": { "maxDuration": 60 },
     "api/crm/personalize-script.js": { "maxDuration": 30 },
     "api/crm/email-template-ai.js": { "maxDuration": 60 }
   },
   "crons": [
-    { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" }
+    { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" },
+    { "path": "/api/crm/publish-cron", "schedule": "*/15 * * * *" }
   ],
   "redirects": [
     { "source": "/book-call",  "destination": "https://calendar.app.google/LayD3nk48Jy3uH95A", "permanent": false },
