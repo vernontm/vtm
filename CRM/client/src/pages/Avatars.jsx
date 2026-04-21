@@ -421,7 +421,7 @@ function OutfitPanel({ avatar, onReimport }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
       {/* Outfit tabs */}
       <div style={{
         display: 'flex', gap: 6, flexWrap: 'wrap', padding: '12px 14px',
@@ -729,7 +729,7 @@ export default function Avatars() {
           </aside>
 
           {/* Right: outfits + looks + renders strip */}
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
             <OutfitPanel avatar={selected} onReimport={() => setImportOpen(true)} />
             <RenderStrip avatar={selected} refreshKey={renderRefreshKey} onOpen={r => setPreviewRenderId(r.id)} />
           </div>
