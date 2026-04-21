@@ -693,11 +693,14 @@ export default function Avatars() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [previewRenderId, setPreviewRenderId] = useState(null);
   const [previewRender, setPreviewRender] = useState(null);
+  const [previewPollBust, setPreviewPollBust] = useState(0);
   const [renderRefreshKey, setRenderRefreshKey] = useState(0);
 
   const selected = avatars.find(a => a.id === selectedId);
 
-  // Load + poll the focused render for live status during preview
+  // Load + poll the focused render for live status during preview.
+  // Bumping `previewPollBust` (e.g. from the "Resume" button) re-triggers this
+  // effect so polling restarts after a render had already settled to failed/done.
   useEffect(() => {
     if (!previewRenderId) { setPreviewRender(null); return; }
     let cancelled = false;
@@ -707,13 +710,13 @@ export default function Avatars() {
         if (cancelled) return;
         setPreviewRender(r);
         if (r && ['pending', 'generating_audio', 'generating_clips', 'stitching'].includes(r.status)) {
-          setTimeout(loop, 5000);
+          setTimeout(loop, 3000);
         }
       } catch {}
     }
     loop();
     return () => { cancelled = true; };
-  }, [previewRenderId]);
+  }, [previewRenderId, previewPollBust]);
 
   async function handleDeleteRender() {
     if (!previewRender) return;
@@ -820,6 +823,7 @@ export default function Avatars() {
           onClose={() => setPreviewRenderId(null)}
           onScheduled={() => setRenderRefreshKey(k => k + 1)}
           onDelete={handleDeleteRender}
+          onResumed={() => { setPreviewPollBust(k => k + 1); setRenderRefreshKey(k => k + 1); }}
         />
       )}
     </div>

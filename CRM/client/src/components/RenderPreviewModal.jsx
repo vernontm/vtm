@@ -12,7 +12,7 @@ const STATUS_PILL = {
   failed:             { bg: '#fee2e2', text: '#dc2626', label: 'Failed' },
 };
 
-export default function RenderPreviewModal({ render, avatar, onClose, onScheduled, onDelete }) {
+export default function RenderPreviewModal({ render, avatar, onClose, onScheduled, onDelete, onResumed }) {
   const [clients, setClients] = useState([]);
   const [clientId, setClientId] = useState('');
   const [caption, setCaption] = useState(render.script || '');
@@ -42,6 +42,7 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
     setRetrying(true); setError('');
     try {
       await updateRender(render.id, { status: 'pending', error: null, logs: [] });
+      onResumed?.();
     } catch (e) { setError(e.message); }
     finally { setRetrying(false); }
   }
