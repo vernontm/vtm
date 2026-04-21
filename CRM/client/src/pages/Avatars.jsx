@@ -325,6 +325,17 @@ function TemplateEditor({ avatar, onUpdate }) {
 
       {/* Captions */}
       <SectionHeader icon={<Type size={13} />}>Captions</SectionHeader>
+      <Field label="Font (all variants are bold)">
+        <select
+          value={(cap.font || 'montserrat').toLowerCase().replace(/\s+/g, '_')}
+          onChange={e => setCap({ font: e.target.value })}
+          style={input}>
+          <option value="montserrat">Montserrat ExtraBold</option>
+          <option value="poppins">Poppins ExtraBold</option>
+          <option value="impact">Impact</option>
+          <option value="arial_black">Arial Black</option>
+        </select>
+      </Field>
       <Field label="Words per chunk">
         <div style={{ display: 'flex', gap: 6 }}>
           {[1, 2, 3, 4].map(n => (
@@ -341,10 +352,17 @@ function TemplateEditor({ avatar, onUpdate }) {
         <Field label="Text color">
           <input type="color" value={cap.color} onChange={e => setCap({ color: e.target.value })} style={{ ...input, height: 34, padding: 2 }} />
         </Field>
-        <Field label="Highlight">
-          <input type="color" value={cap.highlight} onChange={e => setCap({ highlight: e.target.value })} style={{ ...input, height: 34, padding: 2 }} />
+        <Field label="Outline color">
+          <input type="color" value={cap.stroke || '#000000'} onChange={e => setCap({ stroke: e.target.value })} style={{ ...input, height: 34, padding: 2 }} />
         </Field>
       </div>
+      <Field label={`Outline thickness (${cap.stroke_width ?? 6}px)`}>
+        <input type="range" min={0} max={16} step={1} value={cap.stroke_width ?? 6}
+          onChange={e => setCap({ stroke_width: Number(e.target.value) })} style={{ width: '100%' }} />
+      </Field>
+      <Field label="Highlight (first word color)">
+        <input type="color" value={cap.highlight} onChange={e => setCap({ highlight: e.target.value })} style={{ ...input, height: 34, padding: 2 }} />
+      </Field>
       <Field label={`Font size (${cap.size}px)`}>
         <input type="range" min={32} max={120} step={2} value={cap.size} onChange={e => setCap({ size: Number(e.target.value) })} style={{ width: '100%' }} />
       </Field>

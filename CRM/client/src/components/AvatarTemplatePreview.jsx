@@ -41,6 +41,14 @@ export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 24
     return pool.slice(0, wpc).join(' ');
   }, [cap.words_per_chunk]);
 
+  // Map the render's font key → web font-family that matches the burned video.
+  const cssFont = ({
+    impact:       'Impact, "Arial Black", sans-serif',
+    arial_black:  '"Arial Black", Impact, sans-serif',
+    poppins:      '"Poppins", "Arial Black", sans-serif',
+    montserrat:   '"Montserrat", "Arial Black", sans-serif',
+  }[(cap.font || 'montserrat').toLowerCase().replace(/\s+/g, '_')]) || '"Montserrat", sans-serif';
+
   const logoStyle = (() => {
     const base = { position: 'absolute', width: logoPx, height: 'auto', pointerEvents: 'none' };
     if (logoPos === 'tl') return { ...base, top: pad,           left: pad };
@@ -113,7 +121,7 @@ export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 24
             position: 'absolute', left: 0, right: 0,
             top: captionY, transform: 'translateY(-50%)',
             textAlign: 'center',
-            fontFamily: `${cap.font || 'Montserrat'}, var(--font-display, sans-serif)`,
+            fontFamily: cssFont,
             fontWeight: 900, letterSpacing: '0.01em',
             fontSize: captionFontPx,
             lineHeight: 1.05,

@@ -12,7 +12,7 @@ const os    = require('os');
 const supa = require('../services/supabaseClient');
 const { synthesizeWithTimestamps } = require('../services/elevenLabsTTS');
 const { submitVideo, waitForVideo, downloadTo } = require('../services/heygenVideo');
-const { buildAssCaptions } = require('../services/captionBuilder');
+const { chunkCaptions } = require('../services/captionBuilder');
 const { renderFinal } = require('../services/ffmpegRender');
 
 const POLL_INTERVAL_MS = 10_000;
@@ -131,8 +131,7 @@ async function processRender(render) {
   await supa.updateRender(render.id, { status: 'stitching' });
 
   const captionStyle = render.caption_style || avatar.caption_style || {};
-  const captionsPath = path.join(workDir, 'captions.ass');
-  buildAssCaptions({ sentences, captionStyle, outPath: captionsPath });
+  const captionChunks = chunkCaptions({ sentences, captionStyle });
 
   // If logo/music weren't explicitly set on the render, inherit from the avatar
   const logoUrl    = render.logo_url    ?? avatar.logo_url;
@@ -163,7 +162,8 @@ async function processRender(render) {
     musicPath,
     musicVolume: musicVol,
     musicFadeSecs: fadeSecs,
-    captionsPath,
+    captionChunks,
+    captionStyle,
     totalDurationSecs: totalDuration,
     outPath,
   });
