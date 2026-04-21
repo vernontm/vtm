@@ -45,11 +45,11 @@ function posCoords(pos, padPx = 32) {
   }
 }
 
-// Word-wrap that returns REAL newlines. We write the result to a text file
-// and reference it via drawtext's textfile= option, which sidesteps ffmpeg's
-// fussy inline text= escaping entirely.
-function softWrap(text, { fontSize, maxWidth = 972 /* 90% of 1080 */ }) {
-  const avgCharWidth = fontSize * 0.55;
+// Word-wrap that returns REAL newlines. Coefficient is tuned for bold/
+// extra-bold weights (UPPERCASE captions especially) — Montserrat/Poppins
+// ExtraBold at 64pt averages ~0.65-0.7x font size per char.
+function softWrap(text, { fontSize, maxWidth = 880, charCoef = 0.65 }) {
+  const avgCharWidth = fontSize * charCoef;
   const maxChars = Math.max(6, Math.floor(maxWidth / avgCharWidth));
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines = [];
@@ -75,40 +75,69 @@ function escDrawtextPath(p) {
     .replace(/'/g, '\\\'');
 }
 
-// Title overlay — a single drawtext with a solid box= background.
-// Writes the wrapped title to a text file so drawtext can load it via
-// textfile=, which avoids ffmpeg's fragile inline-text escaping.
+// Title overlay. Rendered per-line (one drawtext per line) with a separate
+// drawbox behind the text block — avoids drawtext's multi-line newline bug
+// that renders the LF char itself as a tofu glyph in ffmpeg 8.1.
+//
+// bg_mode: 'fit' (background matches widest line + padding) or 'rectangle'
+// (background spans full video width).
 function buildTitleDrawtext({ title, style, workDir }) {
   if (!style?.enabled || !title) return '';
+
   const size    = Math.max(16, Math.round(style.size || 72));
   const rawText = style.uppercase ? String(title).toUpperCase() : String(title);
-  // Leave room for the background padding: wrap at a narrower safe width.
-  const wrapped = softWrap(rawText, { fontSize: size, maxWidth: 900 });
-  const textPath = path.join(workDir, 'title.txt');
-  fs.writeFileSync(textPath, wrapped, 'utf8');
+  // Title text is usually lowercase so the coef can be a bit smaller
+  const wrapped = softWrap(rawText, { fontSize: size, maxWidth: 820, charCoef: 0.58 });
+  const lines   = wrapped.split('\n').filter(Boolean);
+  if (!lines.length) return '';
+
   const color   = style.color || '#FFFFFF';
   const bg      = style.bg_color || '#E91E63';
   const padding = Math.max(0, Math.round(style.padding ?? 28));
   const yFrac   = style.y_position ?? 0.12;
-  const yPx     = Math.round(yFrac * H);
+  const centerY = Math.round(yFrac * H);
   const fontKey = (style.font || DEFAULT_FONT).toLowerCase().replace(/\s+/g, '_');
   const font    = escDrawtextPath(resolveFontFile(fontKey));
-  const parts = [
-    `fontfile=${font}`,
-    `textfile=${path.basename(textPath)}`,
-    `fontcolor=${color}`,
-    `fontsize=${size}`,
-    `line_spacing=${Math.round(size * 0.15)}`,
-    `text_align=C`,
-    `box=1`,
-    `boxcolor=${bg}@1.0`,
-    `boxborderw=${padding}`,
-    `x=(w-text_w)/2`,
-    `y=${yPx}-text_h/2`,
-  ];
-  return `drawtext=${parts.join(':')}`;
+
+  const lineHeight  = Math.round(size * 1.15);
+  const totalTextH  = lines.length * lineHeight;
+  const bgMode      = style.bg_mode === 'rectangle' ? 'rectangle' : 'fit';
+
+  // Approximate widest line width for 'fit' mode.
+  const avgCharWidth = size * 0.55;
+  const widestChars  = Math.max(...lines.map(l => l.length));
+  const approxWidth  = Math.min(Math.round(widestChars * avgCharWidth), Math.round(W * 0.92));
+
+  const bgWidth  = bgMode === 'rectangle' ? W : approxWidth + padding * 2;
+  const bgHeight = totalTextH + padding * 2;
+  const bgX      = bgMode === 'rectangle' ? 0 : Math.round((W - bgWidth) / 2);
+  const bgY      = centerY - Math.round(bgHeight / 2);
+
+  const filters = [];
+  // Solid background
+  filters.push(`drawbox=x=${bgX}:y=${bgY}:w=${bgWidth}:h=${bgHeight}:color=${bg}@1.0:t=fill`);
+
+  // One drawtext per line, stacked vertically inside the bg
+  lines.forEach((line, i) => {
+    const textPath = path.join(workDir, `title-${String(i).padStart(2, '0')}.txt`);
+    fs.writeFileSync(textPath, line, 'utf8');
+    const baselineY = bgY + padding + i * lineHeight + Math.round((lineHeight - size) / 2);
+    const parts = [
+      `fontfile=${font}`,
+      `textfile=${path.basename(textPath)}`,
+      `fontcolor=${color}`,
+      `fontsize=${size}`,
+      `x=(w-text_w)/2`,
+      `y=${baselineY}`,
+    ];
+    filters.push(`drawtext=${parts.join(':')}`);
+  });
+
+  return filters.join(',');
 }
 
+// Captions — per-line rendering so each wrapped line is its own drawtext,
+// individually centered. Same enable window per chunk's lines.
 function buildDrawtextChain({ chunks, style, workDir }) {
   if (!chunks?.length) return '';
   const size    = Math.max(8, Math.round(style?.size || 64));
@@ -119,30 +148,37 @@ function buildDrawtextChain({ chunks, style, workDir }) {
   const yPx     = Math.round(yFrac * H);
   const fontKey = (style?.font || DEFAULT_FONT).toLowerCase().replace(/\s+/g, '_');
   const font    = escDrawtextPath(resolveFontFile(fontKey));
+  const lineHeight = Math.round(size * 1.15);
 
-  return chunks.map((c, i) => {
-    const wrapped = softWrap(c.text, { fontSize: size, maxWidth: 980 });
-    // Write to its own textfile — drawtext's textfile= is forgiving about
-    // any character including quotes, commas, colons, unicode, newlines.
-    const textPath = path.join(workDir, `cap-${String(i).padStart(3, '0')}.txt`);
-    fs.writeFileSync(textPath, wrapped, 'utf8');
-    const start = Number(c.start || 0).toFixed(3);
-    const end   = Number(c.end   || 0).toFixed(3);
-    const parts = [
-      `fontfile=${font}`,
-      `textfile=${path.basename(textPath)}`,
-      `fontcolor=${color}`,
-      `fontsize=${size}`,
-      `line_spacing=${Math.round(size * 0.15)}`,
-      `text_align=C`,
-      `borderw=${border}`,
-      `bordercolor=${borderC}`,
-      `x=(w-text_w)/2`,
-      `y=${yPx}-text_h/2`,
-      `enable='between(t,${start},${end})'`,
-    ];
-    return `drawtext=${parts.join(':')}`;
-  }).join(',');
+  const all = [];
+  chunks.forEach((c, chunkIdx) => {
+    // Captions are uppercase bold — use a tighter width + wider char coef
+    const wrapped = softWrap(c.text, { fontSize: size, maxWidth: 880, charCoef: 0.7 });
+    const lines   = wrapped.split('\n').filter(Boolean);
+    if (!lines.length) return;
+    const totalH = lines.length * lineHeight;
+    const start  = Number(c.start || 0).toFixed(3);
+    const end    = Number(c.end   || 0).toFixed(3);
+
+    lines.forEach((line, lineIdx) => {
+      const textPath = path.join(workDir, `cap-${String(chunkIdx).padStart(3, '0')}-${lineIdx}.txt`);
+      fs.writeFileSync(textPath, line, 'utf8');
+      const lineY = yPx - Math.round(totalH / 2) + lineIdx * lineHeight + Math.round((lineHeight - size) / 2);
+      const parts = [
+        `fontfile=${font}`,
+        `textfile=${path.basename(textPath)}`,
+        `fontcolor=${color}`,
+        `fontsize=${size}`,
+        `borderw=${border}`,
+        `bordercolor=${borderC}`,
+        `x=(w-text_w)/2`,
+        `y=${lineY}`,
+        `enable='between(t,${start},${end})'`,
+      ];
+      all.push(`drawtext=${parts.join(':')}`);
+    });
+  });
+  return all.join(',');
 }
 
 // Build and run ffmpeg. Returns the output path when done.

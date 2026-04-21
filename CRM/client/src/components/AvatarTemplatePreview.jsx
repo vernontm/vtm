@@ -124,30 +124,33 @@ export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 24
               poppins:     '"Poppins", "Arial Black", sans-serif',
               montserrat:  '"Montserrat", "Arial Black", sans-serif',
             }[(ts.font || 'montserrat').toLowerCase().replace(/\s+/g, '_')]) || '"Montserrat", sans-serif';
-            const sizePx = Math.max(8, Math.round((ts.size || 72) * scale));
-            const padPx  = Math.max(2, Math.round((ts.padding ?? 28) * scale));
-            const titleY = (ts.y_position ?? 0.12) * h;
+            const sizePx  = Math.max(8, Math.round((ts.size || 72) * scale));
+            const padPx   = Math.max(2, Math.round((ts.padding ?? 28) * scale));
+            const titleY  = (ts.y_position ?? 0.12) * h;
+            const isRect  = (ts.bg_mode || 'fit') === 'rectangle';
+            const radius  = Math.max(0, Math.round((ts.corner_radius ?? 0) * scale));
             return (
               <div style={{
                 position: 'absolute', left: 0, right: 0,
                 top: titleY, transform: 'translateY(-50%)',
                 textAlign: 'center', pointerEvents: 'none',
+                paddingLeft: isRect ? 0 : 8, paddingRight: isRect ? 0 : 8,
               }}>
-                <span style={{
-                  display: 'inline-block',
+                <div style={{
+                  display: isRect ? 'block' : 'inline-block',
                   background: ts.bg_color || '#E91E63',
                   color: ts.color || '#FFFFFF',
                   fontFamily: titleFont,
                   fontWeight: 900,
                   fontSize: sizePx,
-                  lineHeight: 1.1,
-                  padding: `${padPx}px ${padPx * 1.2}px`,
-                  maxWidth: `${Math.round(w * 0.92)}px`,
-                  borderRadius: Math.round(padPx * 0.2),
-                  boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone',
+                  lineHeight: 1.15,
+                  padding: `${padPx}px ${isRect ? 0 : padPx * 1.2}px`,
+                  maxWidth: isRect ? 'none' : `${Math.round(w * 0.92)}px`,
+                  width: isRect ? '100%' : undefined,
+                  borderRadius: radius,
                   whiteSpace: 'normal', wordWrap: 'break-word',
                   letterSpacing: '0.01em',
-                }}>{sampleTitle}</span>
+                }}>{sampleTitle}</div>
               </div>
             );
           })()

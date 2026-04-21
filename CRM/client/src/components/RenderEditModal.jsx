@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { X, Save, Loader, RotateCcw } from 'lucide-react';
-import { updateRender } from '../api';
+import { X, Save, Loader, RotateCcw, BookmarkPlus, Check } from 'lucide-react';
+import { updateRender, updateAvatar } from '../api';
 import AvatarTemplatePreview from './AvatarTemplatePreview';
 
 // Edit a render's overlay settings (title, colors, caption style, music volume)
@@ -14,12 +14,14 @@ const FONTS = [
   { key: 'arial_black', label: 'Arial Black' },
 ];
 
-export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
+export default function RenderEditModal({ render, avatar, onClose, onSaved, onTemplateSaved }) {
   const [title, setTitle] = useState(render.title || '');
   // Title style: use render override, else avatar default, else fallback
   const [titleS, setTitleS] = useState({
     enabled: true, font: 'montserrat', color: '#FFFFFF', bg_color: '#E91E63',
     size: 72, y_position: 0.12, padding: 28, uppercase: false,
+    bg_mode: 'fit',     // 'fit' (bg hugs text) or 'rectangle' (full width)
+    corner_radius: 0,   // preview only for now; burn is square
     ...(avatar?.title_style || {}),
     ...(render?.title_style || {}),
   });
@@ -34,6 +36,8 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
   const [logoPos, setLogoPos]     = useState(render.logo_position || avatar?.logo_position || 'tr');
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState('');
+  const [savingTpl, setSavingTpl] = useState(false);
+  const [tplSaved, setTplSaved]   = useState(false);
 
   // Build a synthetic draft shaped like an avatar so the preview component
   // can render the live state as the user edits.
@@ -64,6 +68,25 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
       onClose();
     } catch (e) { setError(e.message); }
     finally { setSaving(false); }
+  }
+
+  // Persist the currently-edited style choices as the avatar's new defaults
+  // so future renders inherit them without needing to override per-render.
+  async function handleSaveAsTemplate() {
+    setSavingTpl(true); setError('');
+    try {
+      await updateAvatar(avatar.id, {
+        title_style: titleS,
+        caption_style: capS,
+        logo_position: logoPos,
+        default_volume: musicVol,
+        default_fade_secs: musicFade,
+      });
+      setTplSaved(true);
+      onTemplateSaved?.();
+      setTimeout(() => setTplSaved(false), 2000);
+    } catch (e) { setError(e.message); }
+    finally { setSavingTpl(false); }
   }
 
   return (
@@ -123,6 +146,21 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
             <Label>{`Y position (${Math.round((titleS.y_position ?? 0.12) * 100)}% from top)`}</Label>
             <input type="range" min={0.02} max={0.6} step={0.01} value={titleS.y_position ?? 0.12}
               onChange={e => setTitleS({ ...titleS, y_position: Number(e.target.value) })} style={{ width: '100%' }} />
+            <Label>Background shape</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              {[{ k: 'fit', l: 'Fit to text' }, { k: 'rectangle', l: 'Full rectangle' }].map(o => (
+                <button key={o.k} onClick={() => setTitleS({ ...titleS, bg_mode: o.k })}
+                  style={{
+                    padding: '6px 0', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                    cursor: 'pointer', border: 'none',
+                    background: (titleS.bg_mode || 'fit') === o.k ? 'var(--orange)' : 'var(--surface-3)',
+                    color:      (titleS.bg_mode || 'fit') === o.k ? '#fff' : 'var(--muted)',
+                  }}>{o.l}</button>
+              ))}
+            </div>
+            <Label>{`Corner radius (${titleS.corner_radius ?? 0}px) — preview only, burn is square for now`}</Label>
+            <input type="range" min={0} max={40} step={1} value={titleS.corner_radius ?? 0}
+              onChange={e => setTitleS({ ...titleS, corner_radius: Number(e.target.value) })} style={{ width: '100%' }} />
             <label style={check}>
               <input type="checkbox" checked={!!titleS.uppercase}
                 onChange={e => setTitleS({ ...titleS, uppercase: e.target.checked })} /> UPPERCASE
@@ -192,11 +230,27 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', flex: 1, minWidth: 200 }}>
             Re-queues the render with your changes. Worker will skip TTS + HeyGen and re-stitch only.
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={handleSaveAsTemplate} disabled={savingTpl || saving}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 12px', borderRadius: 8, cursor: 'pointer',
+                background: tplSaved ? 'rgba(34,197,94,0.15)' : 'var(--surface-2)',
+                border: `1px solid ${tplSaved ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
+                color: tplSaved ? '#22c55e' : 'var(--text)',
+                fontSize: 12, fontWeight: 600,
+                fontFamily: 'var(--font-display)',
+              }}
+              title="Save these settings as the avatar's new default template">
+              {savingTpl ? <Loader size={13} className="spin" />
+                : tplSaved ? <Check size={13} />
+                : <BookmarkPlus size={13} />}
+              {tplSaved ? 'Saved to template' : savingTpl ? 'Saving…' : 'Update template'}
+            </button>
             <button onClick={onClose} disabled={saving} className="btn-ghost">Cancel</button>
             <button onClick={handleSaveAndRerender} disabled={saving}
               className="btn-primary"
