@@ -74,13 +74,13 @@ async function renderFinal({
     vOut = '[withlogo]';
   }
 
-  // Burn captions. ffmpeg 8.1's filter-arg parser rejects absolute paths on
-  // the subtitles filter, so we run ffmpeg with cwd=workDir (set below) and
-  // reference the captions as a bare basename. libass auto-discovers system
+  // Burn captions via the `ass` filter (simpler parser than `subtitles=`,
+  // requires explicit filename= option in ffmpeg 8.x). cwd=workDir (set
+  // below) keeps the path a bare basename. libass auto-discovers system
   // fonts via fontconfig on macOS, no fontsdir needed.
   if (captionsPath) {
     const esc = escapeForSubtitlesFilter(path.basename(captionsPath));
-    f.push(`${vOut}subtitles=${esc}[vfinal]`);
+    f.push(`${vOut}ass=filename=${esc}[vfinal]`);
     vOut = '[vfinal]';
   }
 
