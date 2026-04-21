@@ -100,6 +100,25 @@ async function claimNextPendingRender() {
   return claimed[0];
 }
 
+// Append a log line onto the render row via the append_render_log RPC.
+// Fails silently — we never want a DB hiccup to kill a render.
+async function appendLog(renderId, message) {
+  try {
+    ensureConfigured();
+    const entry = { t: new Date().toISOString(), m: String(message) };
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/append_render_log`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_id: renderId, p_entry: entry }),
+    });
+  } catch (err) {
+    console.error('[appendLog] failed:', err.message);
+  }
+}
+
 async function getAvatar(id) {
   const rows = await supaFetch(`crm_avatars?id=eq.${id}`);
   return rows[0] || null;
@@ -115,4 +134,5 @@ module.exports = {
   supaFetch, uploadFile,
   getRender, updateRender, claimNextPendingRender,
   getAvatar, getLook,
+  appendLog,
 };

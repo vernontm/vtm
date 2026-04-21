@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { X, Calendar, Loader, ExternalLink, Copy, Check } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { X, Calendar, Loader, ExternalLink, Copy, Check, Terminal } from 'lucide-react';
 import { getContentClients, scheduleRender } from '../api';
 
 const STATUS_PILL = {
@@ -115,6 +115,8 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
               </div>
             )}
 
+            <LogsPane logs={render.logs} />
+
             {done && !scheduled && (
               <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Schedule under a client</div>
@@ -162,6 +164,48 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
           </button>
           <button onClick={onClose} className="btn-ghost">Close</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Live log pane — reflects crm_avatar_renders.logs (appended by the worker).
+// Auto-scrolls to latest as new entries arrive.
+function LogsPane({ logs }) {
+  const scrollRef = useRef(null);
+  const list = Array.isArray(logs) ? logs : [];
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [list.length]);
+
+  if (!list.length) return null;
+
+  return (
+    <div style={{ borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px',
+        background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
+        fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)',
+      }}>
+        <Terminal size={11} /> Worker log <span style={{ opacity: 0.6, marginLeft: 'auto' }}>{list.length} entries</span>
+      </div>
+      <div ref={scrollRef} style={{
+        maxHeight: 220, overflow: 'auto', padding: '8px 10px',
+        background: '#0a0a0c', color: '#e5e5e5',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, lineHeight: 1.55,
+      }}>
+        {list.map((entry, i) => {
+          const t = entry.t ? new Date(entry.t) : null;
+          const ts = t ? t.toLocaleTimeString([], { hour12: false }) : '';
+          const isErr = /failed|error|✗/i.test(entry.m || '');
+          const isDone = /✓|done|ready/i.test(entry.m || '');
+          return (
+            <div key={i} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              <span style={{ opacity: 0.5 }}>{ts}</span>{' '}
+              <span style={{ color: isErr ? '#f87171' : isDone ? '#4ade80' : '#e5e5e5' }}>{entry.m}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

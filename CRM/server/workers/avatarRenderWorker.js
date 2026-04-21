@@ -20,6 +20,12 @@ const TMP_ROOT = path.join(os.tmpdir(), 'avatar-renders');
 
 let running = false;
 
+// Dual-log: terminal + Supabase row (for the UI to show in the preview modal).
+async function say(render, msg) {
+  console.log(`[render-worker]   ${msg}`);
+  await supa.appendLog(render.id, msg);
+}
+
 async function tick() {
   if (running) return;
   try {
@@ -27,11 +33,14 @@ async function tick() {
     if (!render) return;
     running = true;
     console.log(`[render-worker] picked render ${render.id}`);
+    await supa.appendLog(render.id, 'picked up by worker');
     try {
       await processRender(render);
       console.log(`[render-worker] render ${render.id} → done`);
+      await supa.appendLog(render.id, '✓ done');
     } catch (err) {
       console.error(`[render-worker] render ${render.id} failed:`, err.message);
+      await supa.appendLog(render.id, `✗ failed: ${String(err.message || err).slice(0, 400)}`);
       await supa.updateRender(render.id, {
         status: 'failed',
         error: String(err.message || err).slice(0, 2000),
@@ -66,7 +75,7 @@ async function processRender(render) {
   const ttsDir = path.join(workDir, 'tts');
   for (let i = 0; i < sentences.length; i++) {
     const s = sentences[i];
-    console.log(`[render-worker]   TTS ${i + 1}/${sentences.length}`);
+    await say(render, `ElevenLabs TTS ${i + 1}/${sentences.length}`);
     const { mp3Path, durationSecs, words } = await synthesizeWithTimestamps({
       text: s.text, voiceId, outDir: ttsDir,
     });
@@ -94,7 +103,7 @@ async function processRender(render) {
     });
     s.heygen_video_id = videoId;
     s.status = 'heygen_submitted';
-    console.log(`[render-worker]   HeyGen submit ${i + 1}/${sentences.length} → ${videoId}`);
+    await say(render, `HeyGen submit ${i + 1}/${sentences.length} → ${videoId.slice(0, 8)}…`);
   }
   await supa.updateRender(render.id, { sentences });
 
@@ -103,7 +112,7 @@ async function processRender(render) {
   fs.mkdirSync(clipsDir, { recursive: true });
   for (let i = 0; i < sentences.length; i++) {
     const s = sentences[i];
-    console.log(`[render-worker]   waiting on clip ${i + 1}/${sentences.length} (${s.heygen_video_id})`);
+    await say(render, `waiting on clip ${i + 1}/${sentences.length}`);
     const result = await waitForVideo(s.heygen_video_id);
     if (result.status !== 'completed') {
       throw new Error(`HeyGen clip ${i + 1} failed: ${result.error || 'unknown'}`);
@@ -114,11 +123,11 @@ async function processRender(render) {
     s.clip_local = clipPath;
     s.status = 'clip_ready';
     await supa.updateRender(render.id, { sentences });
-    console.log(`[render-worker]   clip ${i + 1}/${sentences.length} ready`);
+    await say(render, `clip ${i + 1}/${sentences.length} ready`);
   }
 
   // ─── Step 3: ffmpeg stitch ────────────────────────────────────────────────
-  console.log(`[render-worker]   stitching`);
+  await say(render, 'stitching with ffmpeg');
   await supa.updateRender(render.id, { status: 'stitching' });
 
   const captionStyle = render.caption_style || avatar.caption_style || {};
@@ -160,6 +169,7 @@ async function processRender(render) {
   });
 
   // ─── Step 4: Upload final MP4 and mark done ───────────────────────────────
+  await say(render, 'uploading final MP4 to Supabase');
   const finalUrl = await supa.uploadFile(outPath, { keyPrefix: `avatars/renders/${render.id}` });
   await supa.updateRender(render.id, {
     status: 'done',
