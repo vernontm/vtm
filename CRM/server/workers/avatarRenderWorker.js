@@ -75,6 +75,11 @@ async function processRender(render) {
   const ttsDir = path.join(workDir, 'tts');
   for (let i = 0; i < sentences.length; i++) {
     const s = sentences[i];
+    // Resume: skip TTS if this sentence already has an audio_url from a prior run
+    if (s.audio_url && s.audio_duration && Array.isArray(s.words)) {
+      await say(render, `TTS ${i + 1}/${sentences.length} — cached, skipping`);
+      continue;
+    }
     await say(render, `ElevenLabs TTS ${i + 1}/${sentences.length}`);
     const { mp3Path, durationSecs, words } = await synthesizeWithTimestamps({
       text: s.text, voiceId, outDir: ttsDir,
@@ -90,9 +95,14 @@ async function processRender(render) {
   // ─── Step 2: HeyGen lip-sync for each (look, audio_url) pair ──────────────
   await supa.updateRender(render.id, { status: 'generating_clips' });
 
-  // Submit all jobs up front, then poll
+  // Submit all jobs up front, then poll.
+  // Resume: skip submit for sentences that already have a heygen_video_id.
   for (let i = 0; i < sentences.length; i++) {
     const s = sentences[i];
+    if (s.heygen_video_id) {
+      await say(render, `HeyGen submit ${i + 1}/${sentences.length} — cached (${s.heygen_video_id.slice(0, 8)}…)`);
+      continue;
+    }
     const look = await supa.getLook(s.look_id);
     if (!look) throw new Error(`look ${s.look_id} not found`);
     if (!look.heygen_look_id) throw new Error(`look ${s.look_id} has no heygen_look_id`);
@@ -107,17 +117,33 @@ async function processRender(render) {
   }
   await supa.updateRender(render.id, { sentences });
 
-  // Poll each job to completion
+  // Poll each job to completion (or re-download if we already have the URL).
   const clipsDir = path.join(workDir, 'clips');
   fs.mkdirSync(clipsDir, { recursive: true });
   for (let i = 0; i < sentences.length; i++) {
     const s = sentences[i];
+    const clipPath = path.join(clipsDir, `clip-${String(i).padStart(3, '0')}.mp4`);
+
+    // Resume: if we already have a final clip_url, reuse it. Re-download if
+    // the local file from a prior run is missing (macOS /var/folders tmp
+    // gets cleaned up between reboots).
+    if (s.clip_url) {
+      if (s.clip_local && fs.existsSync(s.clip_local)) {
+        await say(render, `clip ${i + 1}/${sentences.length} — using cached local copy`);
+      } else {
+        await say(render, `clip ${i + 1}/${sentences.length} — re-downloading from HeyGen URL`);
+        await downloadTo(s.clip_url, clipPath);
+        s.clip_local = clipPath;
+        await supa.updateRender(render.id, { sentences });
+      }
+      continue;
+    }
+
     await say(render, `waiting on clip ${i + 1}/${sentences.length}`);
     const result = await waitForVideo(s.heygen_video_id);
     if (result.status !== 'completed') {
       throw new Error(`HeyGen clip ${i + 1} failed: ${result.error || 'unknown'}`);
     }
-    const clipPath = path.join(clipsDir, `clip-${String(i).padStart(3, '0')}.mp4`);
     await downloadTo(result.video_url, clipPath);
     s.clip_url = result.video_url;
     s.clip_local = clipPath;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Calendar, Loader, ExternalLink, Copy, Check, Terminal } from 'lucide-react';
-import { getContentClients, scheduleRender } from '../api';
+import { X, Calendar, Loader, ExternalLink, Copy, Check, Terminal, RefreshCw } from 'lucide-react';
+import { getContentClients, scheduleRender, updateRender } from '../api';
 
 const STATUS_PILL = {
   draft:              { bg: '#f0f0f5', text: '#8e8ea0', label: 'Draft' },
@@ -21,6 +21,7 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
   const [scheduled, setScheduled] = useState(!!render.scheduled_post_id);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     getContentClients().then(setClients).catch(() => {});
@@ -35,6 +36,14 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
       onScheduled?.();
     } catch (e) { setError(e.message); }
     finally { setScheduling(false); }
+  }
+
+  async function handleRetry() {
+    setRetrying(true); setError('');
+    try {
+      await updateRender(render.id, { status: 'pending', error: null, logs: [] });
+    } catch (e) { setError(e.message); }
+    finally { setRetrying(false); }
   }
 
   async function copyUrl() {
@@ -71,8 +80,23 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
 
         {render.status === 'failed' && render.error && (
           <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '10px 12px', color: '#fca5a5', fontSize: 12, marginBottom: 12, whiteSpace: 'pre-wrap' }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Render failed</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 12 }}>
+              <div style={{ fontWeight: 700 }}>Render failed</div>
+              <button onClick={handleRetry} disabled={retrying}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)',
+                  color: '#fca5a5', fontSize: 11, fontWeight: 700,
+                  padding: '4px 10px', borderRadius: 6, cursor: retrying ? 'default' : 'pointer',
+                }}>
+                {retrying ? <Loader size={11} className="spin" /> : <RefreshCw size={11} />}
+                {retrying ? 'Queueing…' : 'Resume from last step'}
+              </button>
+            </div>
             {render.error}
+            <div style={{ marginTop: 6, fontSize: 10, color: '#fca5a5', opacity: 0.7 }}>
+              Resume skips any step that already completed — cached audio, HeyGen clips, etc. — so you don't re-burn credits.
+            </div>
           </div>
         )}
 
