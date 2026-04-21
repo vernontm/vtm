@@ -329,9 +329,20 @@
 
         function getYoutubeEmbed(url) {
             if (!url) return null;
-            const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-            if (!m) return null;
-            return `https://www.youtube.com/embed/${m[1]}`;
+            // Pull video id (11 chars) if one is present
+            const vidMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            // Pull playlist id (list= param) — either a standalone playlist URL or tagged onto a watch URL
+            const listMatch = url.match(/[?&]list=([A-Za-z0-9_-]+)/);
+            if (vidMatch && listMatch) {
+                return `https://www.youtube.com/embed/${vidMatch[1]}?list=${listMatch[1]}`;
+            }
+            if (listMatch) {
+                return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}`;
+            }
+            if (vidMatch) {
+                return `https://www.youtube.com/embed/${vidMatch[1]}`;
+            }
+            return null;
         }
 
         // ── Modal logic ──

@@ -16,6 +16,24 @@ function splitSentences(text) {
   return parts;
 }
 
+// Rough cost estimates — pessimistic pay-as-you-go rates. Override in code if
+// your HeyGen/ElevenLabs plan is cheaper.
+const COST_PER_1K_CHARS_ELEVENLABS = 0.30;   // $0.30 per 1k chars (turbo v2.5 PAYG)
+const COST_PER_HEYGEN_VIDEO        = 0.30;   // rough average for short photo-avatar clips
+const COST_CLAUDE_TITLE            = 0.01;   // tiny — Sonnet 4.5 on ~200 tokens
+
+function estimateCost(script, sentences) {
+  const chars = (script || '').length;
+  const clips = sentences.length;
+  const elevenlabs = (chars / 1000) * COST_PER_1K_CHARS_ELEVENLABS;
+  const heygen     = clips * COST_PER_HEYGEN_VIDEO;
+  return {
+    elevenlabs, heygen, claude: COST_CLAUDE_TITLE,
+    total: elevenlabs + heygen + COST_CLAUDE_TITLE,
+    chars, clips,
+  };
+}
+
 export default function RenderComposer({ avatar, onClose, onCreated }) {
   const [outfits, setOutfits] = useState([]);
   const [looksByOutfit, setLooksByOutfit] = useState({}); // { outfit_id: Look[] }
@@ -49,6 +67,7 @@ export default function RenderComposer({ avatar, onClose, onCreated }) {
   }, [avatar.id]); // eslint-disable-line
 
   const sentences = useMemo(() => splitSentences(script), [script]);
+  const cost      = useMemo(() => estimateCost(script, sentences), [script, sentences]);
   const looks = looksByOutfit[outfitId] || [];
 
   // Auto-assign round-robin whenever sentences or outfit changes
@@ -232,7 +251,28 @@ export default function RenderComposer({ avatar, onClose, onCreated }) {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+        {sentences.length > 0 && (
+          <div style={{
+            marginTop: 14, padding: '10px 12px', borderRadius: 10,
+            background: 'var(--surface-2)', border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+          }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>Est. cost</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>${cost.total.toFixed(2)}</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 180, fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
+              <div>ElevenLabs TTS: <strong style={{ color: 'var(--text)' }}>${cost.elevenlabs.toFixed(2)}</strong> ({cost.chars} chars)</div>
+              <div>HeyGen clips: <strong style={{ color: 'var(--text)' }}>${cost.heygen.toFixed(2)}</strong> ({cost.clips} videos)</div>
+              <div>Claude title: <strong style={{ color: 'var(--text)' }}>~${cost.claude.toFixed(2)}</strong></div>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--muted)', opacity: 0.7, maxWidth: 200 }}>
+              Rough estimate — actual cost depends on your HeyGen / ElevenLabs plan.
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
             {assignments.length > 0 && `${assignments.length} clips · HeyGen generation starts when your local server picks it up.`}
           </div>

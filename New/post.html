@@ -471,8 +471,13 @@
             if (post.media_url) {
                 if (post.media_type === 'video') {
                     if (post.media_url.includes('youtube.com') || post.media_url.includes('youtu.be')) {
-                        const vid = post.media_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-                        if (vid) mediaHtml = `<div class="post-media"><iframe src="https://www.youtube.com/embed/${vid[1]}" allowfullscreen></iframe></div>`;
+                        const vid  = post.media_url.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+                        const list = post.media_url.match(/[?&]list=([A-Za-z0-9_-]+)/);
+                        let src = null;
+                        if (vid && list) src = `https://www.youtube.com/embed/${vid[1]}?list=${list[1]}`;
+                        else if (list)   src = `https://www.youtube.com/embed/videoseries?list=${list[1]}`;
+                        else if (vid)    src = `https://www.youtube.com/embed/${vid[1]}`;
+                        if (src) mediaHtml = `<div class="post-media"><iframe src="${src}" allowfullscreen></iframe></div>`;
                     } else {
                         mediaHtml = `<div class="post-media"><video src="${post.media_url}" controls></video></div>`;
                     }

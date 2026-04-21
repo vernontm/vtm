@@ -535,8 +535,8 @@ function ResourceEditor({ initial, category, onCancel, onSaved }) {
 
       <Section title="Media (optional)">
         <Field label={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Youtube size={13} style={{ color: '#ff5c5c' }} /> YouTube URL</span>}>
-          <input value={r.youtube_url || ''} onChange={e => setR({ ...r, youtube_url: e.target.value })} placeholder="https://www.youtube.com/watch?v=…" style={inputStyle} />
-          <div style={hintStyle}>Shown as an embedded video inside the resource modal.</div>
+          <input value={r.youtube_url || ''} onChange={e => setR({ ...r, youtube_url: e.target.value })} placeholder="https://youtube.com/watch?v=… or /playlist?list=…" style={inputStyle} />
+          <div style={hintStyle}>Single video URL, playlist URL, or watch URL with a <code>list=</code> parameter — all three embed correctly.</div>
         </Field>
         <Field label="Claude Artifact / iframe URL">
           <input value={r.iframe_src || ''} onChange={e => setR({ ...r, iframe_src: e.target.value })} placeholder="https://claude.site/public/artifacts/…/embed" style={inputStyle} />
