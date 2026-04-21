@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Plus, Trash2, Upload, Download, Check, X, Search, Edit3, Image as ImageIcon,
-  User, Sparkles, Save, Music, Type, Link2, Loader, ChevronDown,
+  User, Sparkles, Save, Music, Type, Link2, Loader, ChevronDown, Wand2, Film,
+  Play, Clock,
 } from 'lucide-react';
 import {
   getAvatars, createAvatar, updateAvatar, deleteAvatar,
@@ -9,8 +10,11 @@ import {
   getLooks, bulkAssignLooks, deleteLook,
   getHeyGenGroups, getHeyGenLooks, importFromHeyGen,
   uploadBlogMedia,
+  getRenders, getRender, deleteRender,
 } from '../api';
 import Modal from '../components/Modal';
+import RenderComposer from '../components/RenderComposer';
+import RenderPreviewModal from '../components/RenderPreviewModal';
 
 const LOGO_POSITIONS = [
   { key: 'tl', label: 'Top Left' },
@@ -542,13 +546,115 @@ function LookCard({ look, selected, onToggle, outfit }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
+const RENDER_PILL = {
+  draft:              { bg: 'rgba(142,142,160,0.15)', text: '#8e8ea0', label: 'Draft' },
+  pending:            { bg: 'rgba(2,132,199,0.15)', text: '#38bdf8',  label: 'Queued' },
+  generating_audio:   { bg: 'rgba(161,98,7,0.15)',  text: '#fbbf24',  label: 'Audio…' },
+  generating_clips:   { bg: 'rgba(202,138,4,0.15)', text: '#facc15',  label: 'HeyGen…' },
+  stitching:          { bg: 'rgba(124,58,237,0.15)', text: '#a78bfa', label: 'Stitching…' },
+  done:               { bg: 'rgba(21,128,61,0.15)', text: '#4ade80',  label: 'Ready' },
+  failed:             { bg: 'rgba(220,38,38,0.15)', text: '#f87171',  label: 'Failed' },
+};
+
+function RenderStrip({ avatar, refreshKey, onOpen }) {
+  const [renders, setRenders] = useState([]);
+  const timerRef = useRef(null);
+
+  const reload = useCallback(() => {
+    getRenders(avatar.id).then(setRenders).catch(() => {});
+  }, [avatar.id]);
+
+  useEffect(() => { reload(); }, [reload, refreshKey]);
+
+  // Poll while any render is in-flight
+  useEffect(() => {
+    const anyInFlight = renders.some(r => ['pending', 'generating_audio', 'generating_clips', 'stitching'].includes(r.status));
+    if (!anyInFlight) { clearInterval(timerRef.current); return; }
+    timerRef.current = setInterval(reload, 7000);
+    return () => clearInterval(timerRef.current);
+  }, [renders, reload]);
+
+  if (!renders.length) return null;
+
+  return (
+    <div style={{
+      borderTop: '1px solid var(--border)', padding: '10px 14px',
+      background: 'var(--surface)', flexShrink: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <Film size={13} color="var(--muted)" />
+        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)' }}>
+          Renders ({renders.length})
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+        {renders.map(r => {
+          const pill = RENDER_PILL[r.status] || RENDER_PILL.draft;
+          return (
+            <button key={r.id} onClick={() => onOpen(r)}
+              style={{
+                flexShrink: 0, width: 180, textAlign: 'left',
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: '10px 12px', cursor: 'pointer',
+              }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <span style={{
+                  background: pill.bg, color: pill.text,
+                  padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
+                }}>{pill.label}</span>
+                {r.status === 'done' && <Play size={11} color="var(--muted)" />}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {r.title || r.script?.slice(0, 30) + '…'}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Clock size={9} /> {new Date(r.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Avatars() {
   const [avatars, setAvatars] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [loading, setLoading] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [previewRenderId, setPreviewRenderId] = useState(null);
+  const [previewRender, setPreviewRender] = useState(null);
+  const [renderRefreshKey, setRenderRefreshKey] = useState(0);
 
   const selected = avatars.find(a => a.id === selectedId);
+
+  // Load + poll the focused render for live status during preview
+  useEffect(() => {
+    if (!previewRenderId) { setPreviewRender(null); return; }
+    let cancelled = false;
+    async function loop() {
+      try {
+        const r = await getRender(previewRenderId);
+        if (cancelled) return;
+        setPreviewRender(r);
+        if (r && ['pending', 'generating_audio', 'generating_clips', 'stitching'].includes(r.status)) {
+          setTimeout(loop, 5000);
+        }
+      } catch {}
+    }
+    loop();
+    return () => { cancelled = true; };
+  }, [previewRenderId]);
+
+  async function handleDeleteRender() {
+    if (!previewRender) return;
+    if (!confirm('Delete this render? The final MP4 stays in storage.')) return;
+    await deleteRender(previewRender.id);
+    setPreviewRenderId(null);
+    setRenderRefreshKey(k => k + 1);
+  }
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -607,6 +713,7 @@ export default function Avatars() {
         </select>
         <button onClick={handleCreateManual} style={btn.secondary}><Plus size={13} /> New</button>
         <button onClick={() => setImportOpen(true)} style={btn.secondary}><Download size={13} /> Import</button>
+        {selected && <button onClick={() => setComposerOpen(true)} style={btn.primary}><Wand2 size={13} /> New render</button>}
         {selected && <button onClick={handleDelete} style={btn.iconDanger} title="Delete avatar"><Trash2 size={14} /></button>}
       </div>
 
@@ -621,12 +728,33 @@ export default function Avatars() {
             <TemplateEditor avatar={selected} onUpdate={u => setAvatars(as => as.map(a => a.id === u.id ? u : a))} />
           </aside>
 
-          {/* Right: outfits + looks */}
-          <OutfitPanel avatar={selected} onReimport={() => setImportOpen(true)} />
+          {/* Right: outfits + looks + renders strip */}
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+            <OutfitPanel avatar={selected} onReimport={() => setImportOpen(true)} />
+            <RenderStrip avatar={selected} refreshKey={renderRefreshKey} onOpen={r => setPreviewRenderId(r.id)} />
+          </div>
         </div>
       )}
 
       <HeyGenImportModal open={importOpen} onClose={() => setImportOpen(false)} onImported={a => { setSelectedId(a.id); reload(); }} />
+
+      {composerOpen && selected && (
+        <RenderComposer
+          avatar={selected}
+          onClose={() => setComposerOpen(false)}
+          onCreated={r => { setRenderRefreshKey(k => k + 1); setPreviewRenderId(r.id); }}
+        />
+      )}
+
+      {previewRender && (
+        <RenderPreviewModal
+          render={previewRender}
+          avatar={selected}
+          onClose={() => setPreviewRenderId(null)}
+          onScheduled={() => setRenderRefreshKey(k => k + 1)}
+          onDelete={handleDeleteRender}
+        />
+      )}
     </div>
   );
 }

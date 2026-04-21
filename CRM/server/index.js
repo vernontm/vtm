@@ -29,6 +29,8 @@ const aiCallerRouter         = require('./routes/aiCaller');
 const todosRouter            = require('./routes/todos');
 const contentRouter          = require('./routes/content');
 
+const avatarRenderWorker     = require('./workers/avatarRenderWorker');
+
 const app  = express();
 const PORT = process.env.SERVER_PORT || 3001;
 
@@ -125,5 +127,13 @@ app.listen(PORT, () => {
   } else {
     console.log(`   📞 ElevenLabs AI Caller ready ✓`);
   }
+  if (!process.env.HEYGEN_API_KEY) {
+    console.log(`   ⚠️  HeyGen not configured — add HEYGEN_API_KEY to server/.env for avatar render worker`);
+  } else if (!process.env.SUPABASE_URL && !process.env.CRM_SUPABASE_URL) {
+    console.log(`   ⚠️  Supabase not configured on server — avatar render worker disabled`);
+  } else {
+    console.log(`   🎬 Avatar render worker ready ✓`);
+  }
   console.log('');
+  avatarRenderWorker.start();
 });

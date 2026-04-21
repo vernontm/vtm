@@ -556,3 +556,11 @@ export const bulkAssignLooks = (ids, outfit_id) => request('/avatar-looks?action
 export const getHeyGenGroups = ()           => request('/avatar-heygen?action=groups');
 export const getHeyGenLooks  = (group_id)   => request(`/avatar-heygen?action=looks&group_id=${encodeURIComponent(group_id)}`);
 export const importFromHeyGen = (data)      => request('/avatar-heygen?action=import', { method: 'POST', body: JSON.stringify(data) });
+
+// Avatar Renders
+export const getRenders      = (avatar_id) => request(`/avatar-renders${avatar_id ? `?avatar_id=${avatar_id}` : ''}`);
+export const getRender       = (id)         => request(`/avatar-renders?id=${id}`);
+export const createRender    = (data)       => request('/avatar-renders', { method: 'POST', body: JSON.stringify(data) });
+export const updateRender    = (id, data)   => request(`/avatar-renders?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteRender    = (id)         => request(`/avatar-renders?id=${id}`, { method: 'DELETE' });
+export const scheduleRender  = (id, data)   => request(`/avatar-renders?id=${id}&action=schedule`, { method: 'POST', body: JSON.stringify(data) });
