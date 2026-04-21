@@ -74,11 +74,12 @@ async function renderFinal({
     vOut = '[withlogo]';
   }
 
-  // Burn captions. libass auto-discovers system fonts via fontconfig on macOS,
-  // so no fontsdir option needed. Path is backslash-escaped for ffmpeg's
-  // filter-arg parser (NOT quoted — quoting inside filter_complex is brittle).
+  // Burn captions. ffmpeg 8.1's filter-arg parser rejects absolute paths on
+  // the subtitles filter, so we run ffmpeg with cwd=workDir (set below) and
+  // reference the captions as a bare basename. libass auto-discovers system
+  // fonts via fontconfig on macOS, no fontsdir needed.
   if (captionsPath) {
-    const esc = escapeForSubtitlesFilter(captionsPath);
+    const esc = escapeForSubtitlesFilter(path.basename(captionsPath));
     f.push(`${vOut}subtitles=${esc}[vfinal]`);
     vOut = '[vfinal]';
   }
@@ -105,7 +106,8 @@ async function renderFinal({
     outPath,
   );
 
-  await runFfmpeg(args);
+  // cwd is the work dir so the subtitles filter can use a bare basename
+  await runFfmpeg(args, { cwd: captionsPath ? path.dirname(captionsPath) : undefined });
   return outPath;
 }
 
@@ -121,9 +123,9 @@ function escapeForSubtitlesFilter(p) {
     .replace(/;/g, '\\;');
 }
 
-function runFfmpeg(args) {
+function runFfmpeg(args, opts = {}) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(FFMPEG, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const proc = spawn(FFMPEG, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd: opts.cwd });
     let err = '';
     proc.stderr.on('data', d => { err += d.toString(); });
     proc.on('error', reject);
