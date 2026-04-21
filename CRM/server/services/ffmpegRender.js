@@ -74,10 +74,12 @@ async function renderFinal({
     vOut = '[withlogo]';
   }
 
-  // Burn captions (escape the path for ffmpeg)
+  // Burn captions. libass auto-discovers system fonts via fontconfig on macOS,
+  // so no fontsdir option needed. Path is backslash-escaped for ffmpeg's
+  // filter-arg parser (NOT quoted — quoting inside filter_complex is brittle).
   if (captionsPath) {
     const esc = escapeForSubtitlesFilter(captionsPath);
-    f.push(`${vOut}subtitles='${esc}':fontsdir=/System/Library/Fonts[vfinal]`);
+    f.push(`${vOut}subtitles=${esc}[vfinal]`);
     vOut = '[vfinal]';
   }
 
@@ -108,8 +110,15 @@ async function renderFinal({
 }
 
 function escapeForSubtitlesFilter(p) {
-  // ffmpeg's subtitles= filter wants single-quoted paths with colons escaped.
-  return p.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "\\'");
+  // ffmpeg filter-arg escapes: backslash each of : \ ' [ ] , ;
+  return p
+    .replace(/\\/g, '\\\\')
+    .replace(/:/g, '\\:')
+    .replace(/'/g, "\\'")
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
 }
 
 function runFfmpeg(args) {

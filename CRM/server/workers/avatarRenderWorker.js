@@ -66,6 +66,7 @@ async function processRender(render) {
   const ttsDir = path.join(workDir, 'tts');
   for (let i = 0; i < sentences.length; i++) {
     const s = sentences[i];
+    console.log(`[render-worker]   TTS ${i + 1}/${sentences.length}`);
     const { mp3Path, durationSecs, words } = await synthesizeWithTimestamps({
       text: s.text, voiceId, outDir: ttsDir,
     });
@@ -81,7 +82,8 @@ async function processRender(render) {
   await supa.updateRender(render.id, { status: 'generating_clips' });
 
   // Submit all jobs up front, then poll
-  for (const s of sentences) {
+  for (let i = 0; i < sentences.length; i++) {
+    const s = sentences[i];
     const look = await supa.getLook(s.look_id);
     if (!look) throw new Error(`look ${s.look_id} not found`);
     if (!look.heygen_look_id) throw new Error(`look ${s.look_id} has no heygen_look_id`);
@@ -92,6 +94,7 @@ async function processRender(render) {
     });
     s.heygen_video_id = videoId;
     s.status = 'heygen_submitted';
+    console.log(`[render-worker]   HeyGen submit ${i + 1}/${sentences.length} → ${videoId}`);
   }
   await supa.updateRender(render.id, { sentences });
 
@@ -100,6 +103,7 @@ async function processRender(render) {
   fs.mkdirSync(clipsDir, { recursive: true });
   for (let i = 0; i < sentences.length; i++) {
     const s = sentences[i];
+    console.log(`[render-worker]   waiting on clip ${i + 1}/${sentences.length} (${s.heygen_video_id})`);
     const result = await waitForVideo(s.heygen_video_id);
     if (result.status !== 'completed') {
       throw new Error(`HeyGen clip ${i + 1} failed: ${result.error || 'unknown'}`);
@@ -110,9 +114,11 @@ async function processRender(render) {
     s.clip_local = clipPath;
     s.status = 'clip_ready';
     await supa.updateRender(render.id, { sentences });
+    console.log(`[render-worker]   clip ${i + 1}/${sentences.length} ready`);
   }
 
   // ─── Step 3: ffmpeg stitch ────────────────────────────────────────────────
+  console.log(`[render-worker]   stitching`);
   await supa.updateRender(render.id, { status: 'stitching' });
 
   const captionStyle = render.caption_style || avatar.caption_style || {};

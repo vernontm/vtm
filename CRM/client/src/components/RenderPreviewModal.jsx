@@ -110,7 +110,7 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
               <div style={{ padding: 14, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
                   <Loader size={13} className="spin" />
-                  The local render worker on your Mac will pick this up. Keep <code style={{ background: 'var(--surface-3)', padding: '1px 6px', borderRadius: 4 }}>npm run dev</code> running in CRM/server.
+                  Queued for the local render worker. HeyGen typically takes 60-90s per sentence; this page auto-updates as it progresses.
                 </div>
               </div>
             )}
