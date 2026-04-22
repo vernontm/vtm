@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import EditPostModal from '../components/EditPostModal';
 import { useTeam } from '../context/TeamContext';
+import { useUi } from '../context/UiContext';
 import CoverFramePicker from '../components/CoverFramePicker';
 
 const STATUS_COLORS = {
@@ -85,6 +86,7 @@ const SIDEBAR_SECTIONS = [
 
 export default function ContentScheduler() {
   const { allowedClientIds, defaultClientId } = useTeam();
+  const { setContentContext } = useUi();
 
   // Client state
   const [clients, setClients] = useState([]);
@@ -679,6 +681,14 @@ export default function ContentScheduler() {
     return () => clearInterval(interval);
   }, [scripts]);
 
+
+  // Publish the current client + scripts to the UI context so the
+  // GlobalAgent bar can offer @mention of posts while on this page.
+  // Clears on unmount so the @ picker disappears on other pages.
+  useEffect(() => {
+    setContentContext({ client, scripts });
+    return () => setContentContext(null);
+  }, [client, scripts, setContentContext]);
 
   // Sync taggedScriptIds from the Content-list checkbox selection when
   // switching INTO the Generator tab. Gives the "select, then reference

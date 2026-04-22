@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
-import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem, sequenceAgent } from '../api';
+import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem, sequenceAgent, editPosts } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
 import { useUi } from '../context/UiContext';
 
@@ -106,8 +106,14 @@ export default function GlobalAgent() {
   const location = useLocation();
   const navigate = useNavigate();
   const ctx = getContext(location.pathname);
-  const { leadPanelOpen } = useUi();
+  const { leadPanelOpen, contentContext } = useUi();
   const hidden = leadPanelOpen || location.pathname === '/leads';
+
+  // @mention of posts — only enabled on /content-scheduler with a loaded client
+  const mentionEnabled = location.pathname.startsWith('/content-scheduler')
+    && !!contentContext?.client
+    && Array.isArray(contentContext?.scripts);
+  const mentionScripts = mentionEnabled ? contentContext.scripts : [];
 
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState('');
@@ -118,6 +124,21 @@ export default function GlobalAgent() {
   const [copiedIdx, setCopiedIdx] = useState(null);
   const [attachments, setAttachments] = useState([]); // [{ name, type, media_type, data_base64, size }]
   const [attachError, setAttachError] = useState('');
+
+  // @mention state (only meaningful when mentionEnabled)
+  const [taggedScriptIds, setTaggedScriptIds] = useState(new Set());
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+
+  // Clear tags when leaving the content scheduler
+  useEffect(() => {
+    if (!mentionEnabled) {
+      setTaggedScriptIds(new Set());
+      setMentionOpen(false);
+      setMentionQuery('');
+    }
+  }, [mentionEnabled]);
+
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -210,6 +231,46 @@ export default function GlobalAgent() {
     }
   };
 
+  /* ── @mention handlers (content-scheduler only) ──────────────── */
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInput(val);
+    if (!mentionEnabled) return;
+    const caret = e.target.selectionStart ?? val.length;
+    const upToCaret = val.slice(0, caret);
+    const atIdx = upToCaret.lastIndexOf('@');
+    if (atIdx >= 0) {
+      const token = upToCaret.slice(atIdx + 1);
+      if (!/\s/.test(token)) {
+        setMentionOpen(true);
+        setMentionQuery(token.toLowerCase());
+        return;
+      }
+    }
+    setMentionOpen(false);
+    setMentionQuery('');
+  };
+
+  const insertMention = (script) => {
+    const el = inputRef.current;
+    const val = input;
+    const caret = el?.selectionStart ?? val.length;
+    const upToCaret = val.slice(0, caret);
+    const atIdx = upToCaret.lastIndexOf('@');
+    const before = atIdx >= 0 ? val.slice(0, atIdx) : val;
+    const after = val.slice(caret);
+    const cleaned = (before + after).replace(/\s{2,}/g, ' ');
+    setInput(cleaned);
+    setTaggedScriptIds(prev => { const next = new Set(prev); next.add(script.id); return next; });
+    setMentionOpen(false);
+    setMentionQuery('');
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const removeTag = (id) => {
+    setTaggedScriptIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+  };
+
   /* ── handle send ──────────────────────────────────────────────── */
   const handleSend = async (overrideMsg) => {
     const msg = (overrideMsg || input).trim();
@@ -223,10 +284,33 @@ export default function GlobalAgent() {
     setDraft(null);
     if (!expanded) setExpanded(true);
 
-    const intent = detectIntent(msg, msgAttachments, ctx.type);
+    // If the user tagged posts with @ on the content scheduler, route to
+    // the edit-posts endpoint so Claude edits the referenced scripts.
+    const taggedIds = mentionEnabled ? Array.from(taggedScriptIds) : [];
+    const intent = taggedIds.length > 0 ? 'edit-posts' : detectIntent(msg, msgAttachments, ctx.type);
 
     try {
-      if (intent === 'email') {
+      if (intent === 'edit-posts') {
+        try {
+          const result = await editPosts({
+            client_id: contentContext.client.id,
+            script_ids: taggedIds,
+            prompt: msg,
+          });
+          const updated = result.updated || [];
+          const errors = result.errors || [];
+          const titles = updated.map(u => u.title).filter(Boolean).slice(0, 3).join(', ');
+          const extra = updated.length > 3 ? `, +${updated.length - 3} more` : '';
+          const tail = errors.length ? ` · ${errors.length} failed` : '';
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Updated ${updated.length} post${updated.length === 1 ? '' : 's'}${titles ? `: ${titles}${extra}` : ''}${tail}`,
+          }]);
+          setTaggedScriptIds(new Set());
+        } catch (e) {
+          setMessages(prev => [...prev, { role: 'assistant', content: 'Edit failed: ' + e.message }]);
+        }
+      } else if (intent === 'email') {
         const convo = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
         const result = await emailAgent({ prompt: msg, conversation: convo, attachments: msgAttachments });
         if (result.action === 'ask' || result.needs_info) {
@@ -491,12 +575,85 @@ export default function GlobalAgent() {
         </div>
       )}
 
+      {/* Tag chips (content-scheduler @mentions) */}
+      {mentionEnabled && taggedScriptIds.size > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 6,
+          padding: '6px 14px 0', background: 'var(--surface)',
+        }}>
+          {Array.from(taggedScriptIds).map(id => {
+            const s = mentionScripts.find(x => x.id === id);
+            const label = s?.title || s?.hook || `Post ${id}`;
+            return (
+              <span key={id} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: 'rgba(255,107,0,0.12)', color: 'var(--orange)',
+                border: '1px solid rgba(255,107,0,0.3)', borderRadius: 999,
+                padding: '3px 8px 3px 10px', fontSize: 11, fontWeight: 600, maxWidth: 220,
+              }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  @{label}
+                </span>
+                <button onClick={() => removeTag(id)} style={{
+                  border: 'none', background: 'transparent', color: 'var(--orange)',
+                  cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center',
+                }} title="Remove tag">
+                  <X size={11} />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Bottom input bar (always visible) ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '8px 14px',
         background: 'var(--surface)',
+        position: 'relative',
       }}>
+        {/* @mention autocomplete */}
+        {mentionEnabled && mentionOpen && (() => {
+          const matches = mentionScripts
+            .filter(s => !taggedScriptIds.has(s.id))
+            .filter(s => {
+              if (!mentionQuery) return true;
+              const hay = `${s.title || ''} ${s.hook || ''}`.toLowerCase();
+              return hay.includes(mentionQuery);
+            })
+            .slice(0, 8);
+          if (matches.length === 0) return null;
+          return (
+            <div style={{
+              position: 'absolute', bottom: '100%', left: 14, right: 14,
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 10, boxShadow: '0 -6px 20px rgba(0,0,0,0.25)',
+              maxHeight: 220, overflowY: 'auto', zIndex: 30, marginBottom: 6,
+            }}>
+              {matches.map(s => (
+                <div key={s.id}
+                  onMouseDown={e => { e.preventDefault(); insertMention(s); }}
+                  style={{
+                    padding: '7px 12px', cursor: 'pointer', fontSize: 12,
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    @{s.title || s.hook || `Post ${s.id}`}
+                  </div>
+                  {s.platform && (
+                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>{s.platform}{s.status ? ` · ${s.status}` : ''}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* Toggle expand */}
         <button onClick={() => setExpanded(!expanded)} style={{
           background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)',
@@ -538,11 +695,20 @@ export default function GlobalAgent() {
         <input
           ref={inputRef}
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          onChange={handleInputChange}
+          onKeyDown={e => {
+            if (e.key === 'Escape' && mentionOpen) { setMentionOpen(false); return; }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+          }}
           onPaste={onPaste}
           onFocus={() => { if (!expanded && messages.length === 0) setExpanded(true); }}
-          placeholder={PLACEHOLDERS[ctx.type] || PLACEHOLDERS.general}
+          placeholder={
+            mentionEnabled && taggedScriptIds.size > 0
+              ? 'Describe the edit (e.g. "shorten caption", "add hashtags")…'
+              : mentionEnabled
+                ? 'Type @ to reference a post, or describe a task…'
+                : (PLACEHOLDERS[ctx.type] || PLACEHOLDERS.general)
+          }
           style={{
             flex: 1, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)',
             fontSize: 12, outline: 'none', fontFamily: 'inherit', background: 'var(--surface-2)', color: 'var(--text)',
