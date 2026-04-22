@@ -113,7 +113,15 @@ export default function GlobalAgent() {
   const mentionEnabled = location.pathname.startsWith('/content-scheduler')
     && !!contentContext?.client
     && Array.isArray(contentContext?.scripts);
-  const mentionScripts = mentionEnabled ? contentContext.scripts : [];
+  // Queue = not delivered and not errored. Matches the "Queued Posts" tab
+  // on the content scheduler (delivered = posted/exported).
+  const DELIVERED_STATUSES = ['posted', 'exported'];
+  const ERROR_STATUSES = ['failed', 'error'];
+  const selectedIds = new Set(mentionEnabled ? (contentContext.selectedScriptIds || []) : []);
+  const mentionScripts = mentionEnabled
+    ? contentContext.scripts.filter(s =>
+        !DELIVERED_STATUSES.includes(s.status) && !ERROR_STATUSES.includes(s.status))
+    : [];
 
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState('');
@@ -622,6 +630,11 @@ export default function GlobalAgent() {
               const hay = `${s.title || ''} ${s.hook || ''}`.toLowerCase();
               return hay.includes(mentionQuery);
             })
+            .sort((a, b) => {
+              const aSel = selectedIds.has(a.id) ? 0 : 1;
+              const bSel = selectedIds.has(b.id) ? 0 : 1;
+              return aSel - bSel;
+            })
             .slice(0, 8);
           if (matches.length === 0) return null;
           return (
@@ -642,11 +655,22 @@ export default function GlobalAgent() {
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div style={{ fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    @{s.title || s.hook || `Post ${s.id}`}
+                  <div style={{ fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      @{s.title || s.hook || `Post ${s.id}`}
+                    </span>
+                    {selectedIds.has(s.id) && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, color: 'var(--orange)',
+                        background: 'rgba(255,107,0,0.12)', border: '1px solid rgba(255,107,0,0.3)',
+                        borderRadius: 4, padding: '1px 5px', letterSpacing: 0.3, flexShrink: 0,
+                      }}>SELECTED</span>
+                    )}
                   </div>
-                  {s.platform && (
-                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>{s.platform}{s.status ? ` · ${s.status}` : ''}</div>
+                  {(s.platform || s.status) && (
+                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>
+                      {s.platform}{s.platform && s.status ? ' · ' : ''}{s.status}
+                    </div>
                   )}
                 </div>
               ))}

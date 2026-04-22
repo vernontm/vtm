@@ -686,9 +686,9 @@ export default function ContentScheduler() {
   // GlobalAgent bar can offer @mention of posts while on this page.
   // Clears on unmount so the @ picker disappears on other pages.
   useEffect(() => {
-    setContentContext({ client, scripts });
+    setContentContext({ client, scripts, selectedScriptIds: Array.from(selectedScripts) });
     return () => setContentContext(null);
-  }, [client, scripts, setContentContext]);
+  }, [client, scripts, selectedScripts, setContentContext]);
 
   // Sync taggedScriptIds from the Content-list checkbox selection when
   // switching INTO the Generator tab. Gives the "select, then reference
