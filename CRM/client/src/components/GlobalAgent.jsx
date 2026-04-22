@@ -315,6 +315,9 @@ export default function GlobalAgent() {
             content: `Updated ${updated.length} post${updated.length === 1 ? '' : 's'}${titles ? `: ${titles}${extra}` : ''}${tail}`,
           }]);
           setTaggedScriptIds(new Set());
+          // Refresh the ContentScheduler page data so the edits show
+          // immediately without a full reload.
+          try { contentContext?.reload?.(); } catch {}
         } catch (e) {
           setMessages(prev => [...prev, { role: 'assistant', content: 'Edit failed: ' + e.message }]);
         }
@@ -348,6 +351,7 @@ export default function GlobalAgent() {
         }
       } else if (intent === 'content') {
         const result = await runBulkAgent({ prompt: msg, attachments: msgAttachments });
+        try { contentContext?.reload?.(); } catch {}
         let summary = `${result.interpretation}\n\nCompleted ${result.successful}/${result.total_actions} actions:\n`;
         for (const r of result.results) {
           const icon = r.status === 'success' ? '\u2705' : r.status === 'skipped' ? '\u23ed' : '\u274c';

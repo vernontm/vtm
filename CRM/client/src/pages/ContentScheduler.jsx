@@ -686,7 +686,12 @@ export default function ContentScheduler() {
   // GlobalAgent bar can offer @mention of posts while on this page.
   // Clears on unmount so the @ picker disappears on other pages.
   useEffect(() => {
-    setContentContext({ client, scripts, selectedScriptIds: Array.from(selectedScripts) });
+    setContentContext({
+      client,
+      scripts,
+      selectedScriptIds: Array.from(selectedScripts),
+      reload: () => { if (client?.id) loadClientData(client.id); },
+    });
     return () => setContentContext(null);
   }, [client, scripts, selectedScripts, setContentContext]);
 
