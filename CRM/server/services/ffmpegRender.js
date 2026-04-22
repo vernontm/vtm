@@ -103,10 +103,17 @@ function buildTitleDrawtext({ title, style, workDir }) {
   const totalTextH  = lines.length * lineHeight;
   const bgMode      = style.bg_mode === 'rectangle' ? 'rectangle' : 'fit';
 
-  // Approximate widest line width for 'fit' mode.
-  const avgCharWidth = size * 0.55;
+  // Approximate widest line width for 'fit' mode. Uses the same coefficient
+  // the wrap step used (0.58 for lowercase, 0.72 for UPPERCASE) plus a 6%
+  // safety buffer so the bg always fully contains the text instead of the
+  // text hanging off the edge.
+  const charCoef     = style.uppercase ? 0.72 : 0.58;
+  const avgCharWidth = size * charCoef;
   const widestChars  = Math.max(...lines.map(l => l.length));
-  const approxWidth  = Math.min(Math.round(widestChars * avgCharWidth), Math.round(W * 0.92));
+  const approxWidth  = Math.min(
+    Math.round(widestChars * avgCharWidth * 1.06),
+    Math.round(W * 0.92),
+  );
 
   const bgWidth  = bgMode === 'rectangle' ? W : approxWidth + padding * 2;
   const bgHeight = totalTextH + padding * 2;
