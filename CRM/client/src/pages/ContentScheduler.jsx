@@ -5,7 +5,7 @@ import {
   getContentClients, getContentClient, createContentClient, updateContentClient, deleteContentClient,
   getContentScripts, createContentScript, updateContentScript, deleteContentScript, clearContentScripts,
   getScheduleConfig, saveScheduleConfig,
-  parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent,
+  parseScripts, generateCaptions, autoScheduleContent, processBrandBible, generateContent, editPosts,
   processBulkUpload, generateCarousel, regenerateSlide, editSlide, saveCarouselTemplates, approveAndSchedule,
   publishToSocial, getUploadPostStatus, getIGComments, replyIGComment, publicReplyIGComment,
   sendIGDM, getIGConversations, startAutoDM, getAutoDMStatus, getAutoDMLogs,
@@ -169,6 +169,12 @@ export default function ContentScheduler() {
   // Generator state
   const [genMessages, setGenMessages] = useState([]);
   const [genInput, setGenInput] = useState('');
+  // Tagged posts referenced with @ in the generator chat. Pre-seeded from
+  // selectedScripts so the checkbox UX carries over to the Generator tab.
+  const [taggedScriptIds, setTaggedScriptIds] = useState(new Set());
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const genTextareaRef = useRef(null);
   const [genLoading, setGenLoading] = useState(false);
   const [genResults, setGenResults] = useState([]);
   const genEndRef = useRef(null);
@@ -674,6 +680,15 @@ export default function ContentScheduler() {
   }, [scripts]);
 
 
+  // Sync taggedScriptIds from the Content-list checkbox selection when
+  // switching INTO the Generator tab. Gives the "select, then reference
+  // as @tag" UX without requiring a separate picker.
+  useEffect(() => {
+    if (activeSection === 'generator' && selectedScripts.size > 0 && taggedScriptIds.size === 0) {
+      setTaggedScriptIds(new Set(selectedScripts));
+    }
+  }, [activeSection]);
+
   // ── Content Generator handler ──
   async function handleGenerate(overridePrompt) {
     const msg = overridePrompt || genInput.trim();
@@ -682,14 +697,74 @@ export default function ContentScheduler() {
     setGenMessages(prev => [...prev, { role: 'user', content: msg }]);
     setGenLoading(true);
     try {
-      const result = await generateContent({ client_id: client.id, prompt: msg });
-      const posts = result.posts || [];
-      setGenMessages(prev => [...prev, { role: 'assistant', content: `Generated ${posts.length} post${posts.length !== 1 ? 's' : ''}` }]);
-      setGenResults(prev => [...prev, ...posts.map(p => ({ ...p, approved: false, rejected: false }))]);
+      // If posts are tagged as @references, route to the edit-posts endpoint
+      // so the agent applies the instruction to those specific posts.
+      if (taggedScriptIds.size > 0) {
+        const ids = Array.from(taggedScriptIds);
+        const result = await editPosts({ client_id: client.id, script_ids: ids, prompt: msg });
+        const updated = result.updated || [];
+        const failed = result.errors || [];
+        // Refresh scripts state so the UI reflects the edits
+        await loadClientData(client.id);
+        const titles = updated.map(u => u.title).filter(Boolean).slice(0, 3).join(', ');
+        const extra = updated.length > 3 ? ` +${updated.length - 3} more` : '';
+        setGenMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Updated ${updated.length} post${updated.length !== 1 ? 's' : ''}${titles ? `: ${titles}${extra}` : ''}${failed.length ? ` · ${failed.length} failed` : ''}`,
+        }]);
+      } else {
+        const result = await generateContent({ client_id: client.id, prompt: msg });
+        const posts = result.posts || [];
+        setGenMessages(prev => [...prev, { role: 'assistant', content: `Generated ${posts.length} post${posts.length !== 1 ? 's' : ''}` }]);
+        setGenResults(prev => [...prev, ...posts.map(p => ({ ...p, approved: false, rejected: false }))]);
+      }
     } catch (e) {
       setGenMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message }]);
     }
     setGenLoading(false);
+  }
+
+  // @mention handling in Generator textarea
+  function handleGenInputChange(e) {
+    const val = e.target.value;
+    setGenInput(val);
+    // Detect an active @token (no spaces after the @ and cursor right after)
+    const caret = e.target.selectionStart ?? val.length;
+    const upToCaret = val.slice(0, caret);
+    const atIdx = upToCaret.lastIndexOf('@');
+    if (atIdx >= 0) {
+      const token = upToCaret.slice(atIdx + 1);
+      // Only trigger while the token has no whitespace (still typing the handle)
+      if (!/\s/.test(token)) {
+        setMentionOpen(true);
+        setMentionQuery(token.toLowerCase());
+        return;
+      }
+    }
+    setMentionOpen(false);
+    setMentionQuery('');
+  }
+
+  function insertMention(script) {
+    // Replace the trailing @token with an empty string (we track via chips,
+    // not inline text) and add the script id to the tag set.
+    const el = genTextareaRef.current;
+    const val = genInput;
+    const caret = el?.selectionStart ?? val.length;
+    const upToCaret = val.slice(0, caret);
+    const atIdx = upToCaret.lastIndexOf('@');
+    const before = atIdx >= 0 ? val.slice(0, atIdx) : val;
+    const after = val.slice(caret);
+    const cleaned = (before + after).replace(/\s{2,}/g, ' ');
+    setGenInput(cleaned);
+    setTaggedScriptIds(prev => { const next = new Set(prev); next.add(script.id); return next; });
+    setMentionOpen(false);
+    setMentionQuery('');
+    setTimeout(() => genTextareaRef.current?.focus(), 0);
+  }
+
+  function removeTag(id) {
+    setTaggedScriptIds(prev => { const next = new Set(prev); next.delete(id); return next; });
   }
 
   // ── Save Threads Style ──
@@ -2030,24 +2105,101 @@ export default function ContentScheduler() {
                 </div>
 
                 {/* Input area */}
-                <div style={{ borderTop: '1px solid var(--border)', padding: '12px 20px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-                  <textarea
-                    value={genInput}
-                    onChange={e => setGenInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
-                    placeholder="Describe content to generate..."
-                    rows={1}
-                    style={{ ...inputStyle, border: 'none', background: 'var(--surface-2)', resize: 'none', minHeight: 20, maxHeight: 100, overflow: 'auto', lineHeight: '20px', flex: 1 }}
-                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
-                  />
-                  <button onClick={handleGenerate} disabled={!genInput.trim() || genLoading} style={{
-                    width: 36, height: 36, borderRadius: 10, border: 'none',
-                    background: 'var(--orange)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: genInput.trim() && !genLoading ? 1 : 0.4, flexShrink: 0,
-                  }}>
-                    <Send size={15} style={{ color: '#fff' }} />
-                  </button>
+                <div style={{ borderTop: '1px solid var(--border)', padding: '12px 20px', position: 'relative' }}>
+                  {/* Tag chips — posts being referenced (@title) */}
+                  {taggedScriptIds.size > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                      {Array.from(taggedScriptIds).map(id => {
+                        const s = scripts.find(x => x.id === id);
+                        const label = s?.title || s?.hook || `Post ${id}`;
+                        return (
+                          <span key={id} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            background: 'rgba(255,107,0,0.12)', color: 'var(--orange)',
+                            border: '1px solid rgba(255,107,0,0.3)', borderRadius: 999,
+                            padding: '3px 8px 3px 10px', fontSize: 11, fontWeight: 600, maxWidth: 240,
+                          }}>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              @{label}
+                            </span>
+                            <button onClick={() => removeTag(id)} style={{
+                              border: 'none', background: 'transparent', color: 'var(--orange)',
+                              cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center',
+                            }} title="Remove tag">
+                              <X size={12} />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* @mention autocomplete */}
+                  {mentionOpen && (() => {
+                    const matches = scripts
+                      .filter(s => !taggedScriptIds.has(s.id))
+                      .filter(s => {
+                        if (!mentionQuery) return true;
+                        const hay = `${s.title || ''} ${s.hook || ''}`.toLowerCase();
+                        return hay.includes(mentionQuery);
+                      })
+                      .slice(0, 8);
+                    if (matches.length === 0) return null;
+                    return (
+                      <div style={{
+                        position: 'absolute', bottom: '100%', left: 20, right: 70,
+                        background: 'var(--surface)', border: '1px solid var(--border)',
+                        borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        maxHeight: 240, overflowY: 'auto', zIndex: 20, marginBottom: 6,
+                      }}>
+                        {matches.map(s => (
+                          <div key={s.id}
+                            onMouseDown={e => { e.preventDefault(); insertMention(s); }}
+                            style={{
+                              padding: '8px 12px', cursor: 'pointer', fontSize: 12,
+                              borderBottom: '1px solid var(--border)',
+                              display: 'flex', flexDirection: 'column', gap: 2,
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <div style={{ fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              @{s.title || s.hook || `Post ${s.id}`}
+                            </div>
+                            {s.platform && (
+                              <div style={{ fontSize: 10, color: 'var(--muted)' }}>{s.platform}{s.status ? ` · ${s.status}` : ''}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                    <textarea
+                      ref={genTextareaRef}
+                      value={genInput}
+                      onChange={handleGenInputChange}
+                      onKeyDown={e => {
+                        if (e.key === 'Escape') { setMentionOpen(false); return; }
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); }
+                      }}
+                      placeholder={taggedScriptIds.size > 0
+                        ? 'Describe the edit (e.g. "shorten caption", "add hashtags about AI")…'
+                        : 'Describe content to generate… type @ to reference a post'}
+                      rows={1}
+                      style={{ ...inputStyle, border: 'none', background: 'var(--surface-2)', resize: 'none', minHeight: 20, maxHeight: 100, overflow: 'auto', lineHeight: '20px', flex: 1 }}
+                      onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
+                    />
+                    <button onClick={handleGenerate} disabled={!genInput.trim() || genLoading} style={{
+                      width: 36, height: 36, borderRadius: 10, border: 'none',
+                      background: 'var(--orange)',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: genInput.trim() && !genLoading ? 1 : 0.4, flexShrink: 0,
+                    }}>
+                      <Send size={15} style={{ color: '#fff' }} />
+                    </button>
+                  </div>
                 </div>
               </div>
 

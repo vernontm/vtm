@@ -291,6 +291,7 @@ export const generateCaptions = (data) => request('/content-ai?action=generate-c
 export const autoScheduleContent = (data) => request('/content-ai?action=auto-schedule', { method: 'POST', body: JSON.stringify(data) });
 export const processBrandBible = (data) => request('/process-brand-bible', { method: 'POST', body: JSON.stringify(data) });
 export const generateContent = (data) => request('/content-ai?action=generate-content', { method: 'POST', body: JSON.stringify(data) });
+export const editPosts = (data) => request('/content-ai?action=edit-posts', { method: 'POST', body: JSON.stringify(data) });
 export const processBulkUpload = (data) => request('/bulk-upload', { method: 'POST', body: JSON.stringify(data) });
 export const generateCarousel = (data) => request('/carousel-generator', { method: 'POST', body: JSON.stringify(data) });
 export const regenerateSlide = (data) => request('/carousel-generator?action=regenerate', { method: 'POST', body: JSON.stringify(data) });

@@ -472,6 +472,138 @@ Return ONLY valid JSON. No markdown code blocks.`;
     }
   }
 
+  // ── edit-posts ─────────────────────────────────────────────────────
+  // Referenced-post editing. Takes script_ids[] + a natural-language
+  // instruction ("change caption to ...", "new hashtags about X", "make
+  // the title punchier"), applies it to each referenced post's existing
+  // fields, and PATCHes the rows.
+  if (action === 'edit-posts' && req.method === 'POST') {
+    try {
+      const { client_id, script_ids, prompt } = req.body;
+      if (!client_id || !Array.isArray(script_ids) || !script_ids.length || !prompt) {
+        return res.status(400).json({ error: 'client_id, script_ids[], and prompt required' });
+      }
+
+      const clients = await supaFetch(`crm_content_clients?id=eq.${client_id}&limit=1`);
+      const client = clients?.[0];
+      if (!client) return res.status(404).json({ error: 'Client not found' });
+
+      const brandContext = `
+Business: ${client.business_name || ''}
+Industry: ${client.industry || ''}
+Target Audience: ${client.target_audience || ''}
+Tone: ${client.preferred_tone || 'friendly'}
+Brand Bible: ${client.brand_bible || 'None'}
+Core Hashtags: ${client.core_hashtags || 'None'}
+Instagram: @${client.instagram_handle || ''}
+TikTok: @${client.tiktok_handle || ''}
+`;
+
+      const updatedPosts = [];
+      const errors = [];
+
+      for (const id of script_ids) {
+        try {
+          const rows = await supaFetch(`crm_content_scripts?id=eq.${id}&client_id=eq.${client_id}&limit=1`);
+          const s = rows?.[0];
+          if (!s) { errors.push({ id, error: 'not found' }); continue; }
+
+          const currentJSON = JSON.stringify({
+            title: s.title || '',
+            caption: s.caption || '',
+            hashtags: s.hashtags || '',
+            first_comment: s.first_comment || '',
+            hook: s.hook || '',
+            full_script: s.full_script || '',
+          }, null, 2);
+
+          const systemPrompt = `You are editing an existing social media post. Apply the user's instruction ONLY to the fields that are clearly implicated. Leave unrelated fields unchanged.
+
+BRAND CONTEXT:
+${brandContext}
+
+RULES:
+- NEVER use em dashes (—). Use commas, periods, or colons.
+- Preserve any core brand hashtags unless the user explicitly asks to remove them.
+- Match the brand voice.
+- If the instruction is ambiguous about which field to touch, make a small conservative change.
+- Return ONLY valid JSON. No markdown.
+
+Output schema (include ALL fields; copy unchanged values verbatim for fields you aren't modifying):
+{
+  "title": "...",
+  "caption": "...",
+  "hashtags": "...",
+  "first_comment": "...",
+  "hook": "...",
+  "full_script": "..."
+}`;
+
+          const userMsg = `CURRENT POST:
+${currentJSON}
+
+INSTRUCTION:
+${prompt}`;
+
+          const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': ANTHROPIC_API_KEY,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-5',
+              max_tokens: 2048,
+              system: systemPrompt,
+              messages: [{ role: 'user', content: userMsg }],
+            }),
+          });
+
+          if (!aiRes.ok) {
+            const err = await aiRes.text();
+            errors.push({ id, error: `Anthropic: ${err.slice(0, 200)}` });
+            continue;
+          }
+
+          const aiData = await aiRes.json();
+          const raw = aiData.content[0].text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+          let parsed;
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            const match = raw.match(/\{[\s\S]*\}/);
+            if (match) parsed = JSON.parse(match[0]);
+            else { errors.push({ id, error: 'parse failed' }); continue; }
+          }
+
+          const updates = {
+            title: parsed.title ?? s.title,
+            caption: parsed.caption ?? s.caption,
+            hashtags: parsed.hashtags ?? s.hashtags,
+            first_comment: parsed.first_comment ?? s.first_comment,
+            hook: parsed.hook ?? s.hook,
+            full_script: parsed.full_script ?? s.full_script,
+            updated_at: new Date().toISOString(),
+          };
+
+          await supaFetch(`crm_content_scripts?id=eq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updates),
+          });
+          updatedPosts.push({ id, ...updates });
+        } catch (e) {
+          errors.push({ id, error: e.message });
+        }
+      }
+
+      return res.json({ updated: updatedPosts, errors });
+    } catch (err) {
+      console.error('edit-posts error:', err);
+      return res.status(500).json({ error: 'Edit posts failed: ' + err.message });
+    }
+  }
+
   // ── approve-and-schedule ───────────────────────────────────────────
   // Creates a content script row (or uses existing), generates captions/hashtags
   // (using vision for images), and auto-schedules to next available slot
