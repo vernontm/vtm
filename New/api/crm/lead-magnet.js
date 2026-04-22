@@ -1,4 +1,5 @@
 const { setCors, supaFetch, SUPABASE_URL } = require('../_lib/supabase.js');
+const { autoEnrollContact } = require('../_lib/enroll-sequences.js');
 
 // Public (no-auth) lead magnet endpoint.
 // POST { email, name?, phone?, sequence_id, tags?, action? }
@@ -43,7 +44,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Valid phone required' });
       }
       // Find contact by email (any client)
-      const existing = await supaFetch(`crm_email_contacts?email=eq.${encodeURIComponent(email)}&select=id,tags&limit=1`);
+      const existing = await supaFetch(`crm_email_contacts?email=eq.${encodeURIComponent(email)}&select=id,client_id,tags&limit=1`);
       if (!existing || !existing.length) return res.status(404).json({ error: 'Contact not found — submit email first' });
       const c = existing[0];
       const tags = Array.from(new Set([...(c.tags || []), 'video-unlocked', 'phone-given']));
@@ -52,6 +53,9 @@ module.exports = async function handler(req, res) {
         headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify({ phone, tags }),
       });
+      // Re-check enrollment — new tags may now match a sequence.
+      try { await autoEnrollContact({ client_id: c.client_id, contact_id: c.id, tags }); }
+      catch (e) { console.error('auto-enroll failed:', e.message); }
       return res.json({ ok: true, unlocked: true, contact_id: c.id });
     }
 

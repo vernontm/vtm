@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Welcome to the Build List – Vernon Tech & Media</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: #111111;
+    font-family: 'DM Sans', Arial, sans-serif;
+    color: #1a1a1a;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .email-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #111111;
+  }
+
+  /* ───── HEADER ───── */
+  .header {
+    position: relative;
+    background-color: #0d0d0d;
+    background-image:
+      radial-gradient(ellipse 80% 70% at 10% 0%, rgba(255, 120, 20, 0.55) 0%, rgba(255, 120, 20, 0.15) 40%, transparent 75%),
+      linear-gradient(rgba(255, 155, 38, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 155, 38, 0.07) 1px, transparent 1px);
+    background-size: auto, 40px 40px, 40px 40px;
+    background-position: 0 0, 0 0, 0 0;
+    padding: 64px 40px 56px;
+    text-align: center;
+    border-bottom: 1px solid #2a2a2a;
+    overflow: hidden;
+  }
+
+  .header-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  @keyframes logoPulse {
+    0%, 100% {
+      filter: drop-shadow(0 0 6px rgba(255, 155, 38, 0.3)) drop-shadow(0 0 12px rgba(255, 155, 38, 0.2));
+      transform: scale(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px rgba(255, 155, 38, 0.9)) drop-shadow(0 0 40px rgba(255, 155, 38, 0.5));
+      transform: scale(1.03);
+    }
+  }
+
+  .logo-icon {
+    width: 324px;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 0 18px rgba(255, 155, 38, 0.5));
+    animation: logoPulse 2.4s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  .header-headline {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-weight: 800;
+    font-size: 44px;
+    line-height: 1.02;
+    color: #ffffff;
+    letter-spacing: -1.5px;
+    margin: 0 auto 16px;
+    max-width: 460px;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.3);
+  }
+
+  .header-subhead {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #ff9b26;
+    max-width: 420px;
+    margin: 0 auto 8px;
+  }
+
+  .header-tagline {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2.5px;
+    color: #888888;
+    text-transform: uppercase;
+    margin-top: 0;
+  }
+
+  /* ───── SECTION LABEL ───── */
+  .section-label {
+    background: #1a1a1a;
+    padding: 10px 40px;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    color: #ff9b26;
+    text-transform: uppercase;
+  }
+
+  /* ───── HERO / TOP CARD ───── */
+  .hero-card {
+    background: #ffffff;
+    padding: 36px 40px 32px;
+  }
+
+  .hero-eyebrow {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    color: #ff9b26;
+    text-transform: uppercase;
+    background: #fff3e3;
+    padding: 5px 12px;
+    border-radius: 100px;
+    margin-bottom: 18px;
+    font-weight: 500;
+  }
+
+  .hero-card h1 {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1.1;
+    margin-bottom: 14px;
+    letter-spacing: -1px;
+  }
+
+  .pull-quote {
+    border-left: 3px solid #ff9b26;
+    padding: 4px 0 4px 16px;
+    margin: 18px 0 18px;
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .signature {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid #eeeeee;
+    font-size: 13px;
+    color: #666666;
+    line-height: 1.5;
+  }
+
+  .signature .sig-name {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-weight: 800;
+    color: #1a1a1a;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .signature .sig-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #ff9b26;
+  }
+
+  .hero-card h1 span {
+    color: #ff9b26;
+  }
+
+  .hero-card p {
+    font-size: 15px;
+    color: #444444;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+
+  .hero-card p strong {
+    color: #1a1a1a;
+  }
+
+  .hero-card .hint {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: #999999;
+    margin-bottom: 26px;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-primary {
+    display: inline-block;
+    background: linear-gradient(180deg, #ffb347 0%, #ff9b26 50%, #ef8410 100%);
+    color: #ffffff;
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 15px 32px;
+    border-radius: 6px;
+    text-decoration: none;
+    letter-spacing: 0.4px;
+    box-shadow: 0 8px 20px -4px rgba(255, 155, 38, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+  }
+
+  /* ───── DIVIDER ───── */
+  .divider {
+    height: 1px;
+    background: #2a2a2a;
+    margin: 0;
+  }
+
+  /* ───── PLAYLIST CARD ───── */
+  .playlist-card {
+    background-color: #0d0d0d;
+    background-image: radial-gradient(ellipse 70% 60% at 100% 0%, rgba(255, 120, 20, 0.35) 0%, rgba(255, 120, 20, 0.08) 45%, transparent 75%);
+    padding: 30px 40px;
+    text-align: center;
+  }
+
+  .playlist-card .section-eyebrow {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    color: #ff9b26;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .playlist-card h2 {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 8px;
+    letter-spacing: -0.7px;
+    line-height: 1.12;
+  }
+
+  .playlist-card p {
+    font-size: 14px;
+    color: #b8b8b8;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .playlist-box {
+    position: relative;
+    display: block;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    text-decoration: none;
+    margin-bottom: 20px;
+    box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.5);
+    line-height: 0;
+  }
+
+  .playlist-box img.thumb {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .playlist-box .play-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 155, 38, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  .playlist-box .play-overlay::before {
+    content: "";
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: 14px solid transparent;
+    border-bottom: 14px solid transparent;
+    border-left: 22px solid #ffffff;
+    margin-left: 5px;
+  }
+
+  /* ───── STEP 1 ATTACHMENT CARD ───── */
+  .attachment-card {
+    background: #f9f9f9;
+    padding: 30px 40px;
+    border-left: 4px solid #ff9b26;
+    margin: 0;
+  }
+
+  .attachment-card .tag {
+    display: inline-block;
+    background: #ff9b26;
+    color: #ffffff;
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 2px;
+    margin-bottom: 14px;
+  }
+
+  .attachment-card h2 {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin-bottom: 10px;
+    letter-spacing: -0.6px;
+    line-height: 1.15;
+  }
+
+  .attachment-card p {
+    font-size: 14px;
+    color: #555555;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .stack-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+
+  .stack-table th {
+    background: #1a1a1a;
+    color: #ffffff;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .stack-table td {
+    font-size: 13px;
+    padding: 9px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    color: #333333;
+  }
+
+  .stack-table tr:nth-child(even) td {
+    background: #ffffff;
+  }
+
+  .stack-table tr:nth-child(odd) td {
+    background: #fdf5ea;
+  }
+
+  .stack-table td:first-child {
+    color: #888888;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    width: 28%;
+  }
+
+  .stack-table td:nth-child(2) {
+    font-weight: 700;
+    color: #1a1a1a;
+    width: 32%;
+  }
+
+  .stack-table td:nth-child(3) {
+    color: #ff9b26;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    width: 40%;
+  }
+
+  .action-note {
+    background: #1a1a1a;
+    border-radius: 4px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #cccccc;
+    line-height: 1.6;
+  }
+
+  .action-note strong {
+    color: #ff9b26;
+  }
+
+  /* ───── CONTENT SECTIONS (white cards) ───── */
+  .content-card {
+    background: #ffffff;
+    padding: 30px 40px;
+  }
+
+  .content-card .section-eyebrow {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    color: #ff9b26;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .content-card h2 {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+    letter-spacing: -0.7px;
+    line-height: 1.12;
+  }
+
+  .content-card p {
+    font-size: 14px;
+    color: #555555;
+    line-height: 1.75;
+    margin-bottom: 10px;
+  }
+
+  .content-card p strong {
+    color: #1a1a1a;
+  }
+
+  .steps-list {
+    list-style: none;
+    margin: 14px 0 22px;
+    padding: 0;
+  }
+
+  .steps-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    color: #444444;
+    line-height: 1.6;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .steps-list li:last-child {
+    border-bottom: none;
+  }
+
+  .step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    background: #ff9b26;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ───── VALUE LIST ───── */
+  .value-list {
+    list-style: none;
+    padding: 0;
+    margin: 6px 0 18px;
+  }
+
+  .value-list li {
+    position: relative;
+    padding: 7px 0 7px 26px;
+    font-size: 14px;
+    color: #333333;
+    line-height: 1.5;
+    border-bottom: 1px solid #f3f3f3;
+  }
+
+  .value-list li:last-child {
+    border-bottom: none;
+  }
+
+  .value-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 8px;
+    height: 8px;
+    background: #ff9b26;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(255, 155, 38, 0.18);
+  }
+
+  /* ───── ACADEMY FEATURES ───── */
+  .academy-features {
+    background: #ffffff;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 6px 22px;
+    margin: 20px 0 22px;
+  }
+
+  .academy-features .af-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f3f3f3;
+  }
+
+  .academy-features .af-row:last-child {
+    border-bottom: none;
+  }
+
+  .academy-features .af-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #fff3e3;
+    color: #ff9b26;
+    font-family: 'Sora', Arial, sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  .academy-features .af-title {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+    letter-spacing: -0.2px;
+  }
+
+  .academy-features .af-desc {
+    font-size: 13px;
+    color: #666666;
+    line-height: 1.5;
+  }
+
+  /* ───── SERVICE CHIPS ───── */
+  .service-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 18px 0 22px;
+  }
+
+  .chip {
+    display: inline-block;
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 100px;
+    border: 1px solid #eaeaea;
+    letter-spacing: 0.2px;
+  }
+
+  .chip-accent {
+    background: #1a1a1a;
+    color: #ff9b26;
+    border-color: #1a1a1a;
+  }
+
+  /* ───── PRICING CALLOUT ───── */
+  .pricing-callout {
+    background: #ffffff;
+    border: 1px solid #eaeaea;
+    border-left: 4px solid #ff9b26;
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .pricing-callout .pc-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: #888888;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .pricing-callout .pc-value {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    color: #1a1a1a;
+    letter-spacing: -0.4px;
+  }
+
+  .pricing-callout .pc-value span {
+    color: #ff9b26;
+  }
+
+  .pricing-callout .pc-note {
+    font-size: 11px;
+    color: #888888;
+    font-family: 'DM Mono', monospace;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* ───── CTA STRIP ───── */
+  .cta-strip {
+    position: relative;
+    background-color: #ff9b26;
+    background-image:
+      radial-gradient(ellipse 70% 80% at 0% 100%, rgba(255, 200, 100, 0.6) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 80% at 100% 0%, rgba(220, 100, 20, 0.4) 0%, transparent 60%),
+      linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: auto, auto, 40px 40px, 40px 40px;
+    padding: 44px 40px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .cta-eyebrow {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-transform: uppercase;
+    background: rgba(0,0,0,0.2);
+    padding: 5px 12px;
+    border-radius: 100px;
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  .cta-strip h2 {
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 8px;
+    letter-spacing: -0.8px;
+    line-height: 1.1;
+  }
+
+  .cta-strip p {
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.6;
+    margin-bottom: 22px;
+  }
+
+  .btn-dark {
+    display: inline-block;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    color: #ffffff;
+    font-family: 'Sora', 'DM Sans', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 15px 32px;
+    border-radius: 6px;
+    text-decoration: none;
+    letter-spacing: 0.4px;
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* ───── CONNECT ───── */
+  .connect-card {
+    background: #1a1a1a;
+    padding: 28px 40px;
+    text-align: center;
+  }
+
+  .connect-card p {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1.5px;
+    color: #666666;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 0;
+  }
+
+  .social-icon {
+    width: 32px;
+    height: 32px;
+    background: #2a2a2a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
+
+  .social-icon svg,
+  .social-icon img {
+    width: 16px;
+    height: 16px;
+    fill: #ffffff;
+    display: block;
+  }
+
+  /* ───── FOOTER ───── */
+  .footer {
+    background: #111111;
+    padding: 20px 40px 28px;
+    text-align: center;
+    border-top: 1px solid #2a2a2a;
+  }
+
+  .footer-brand {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 4px;
+  }
+
+  .footer-brand span {
+    color: #ff9b26;
+    font-style: italic;
+  }
+
+  .footer-tagline {
+    font-size: 9px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    color: #444444;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .footer-legal {
+    font-size: 11px;
+    color: #444444;
+    line-height: 1.7;
+  }
+
+  .footer-legal a {
+    color: #ff9b26;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="email-wrapper">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-logo-wrap">
+      <img class="logo-icon" src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/content-media/VTM_logo.svg" alt="Vernon Tech & Media" />
+    </div>
+    <div class="header-tagline">Build &amp; Automate Without Limits</div>
+  </div>
+
+  <!-- HERO CARD -->
+  <div class="hero-card">
+    <span class="hero-eyebrow">Welcome &bull; From Ray</span>
+    <h1>Welcome to the <span>VTM list.</span></h1>
+    <p>
+      I'm Rayvaughn, founder of Vernon Tech &amp; Media. We help small businesses
+      build, scale, and automate with AI. This list is where I share the how.
+    </p>
+    <div class="pull-quote">
+      Right now, AI is doing for small business what the internet did in the 2000s.
+    </div>
+    <p>
+      That window is the opportunity. And you don't need a CS degree to step through it.
+      You just need the right tools and someone showing you how to use them.
+    </p>
+    <p style="margin-bottom:8px;"><strong>Here's what you're getting:</strong></p>
+    <ul class="value-list">
+      <li>Free videos and full walkthroughs</li>
+      <li>The prompts I use on real client projects</li>
+      <li>Templates, workflows, and automations</li>
+      <li>Everything new we ship, as we ship it</li>
+    </ul>
+    <p>Let's get to work.</p>
+    <div class="signature">
+      <span class="sig-name">Rayvaughn</span>
+      <span class="sig-title">Founder &bull; Vernon Tech &amp; Media</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- PLAYLIST CARD -->
+  <div class="playlist-card">
+    <div class="section-eyebrow">Start Here &bull; Free Playlist</div>
+    <h2>Learn How to Make Money<br/>Using Claude AI</h2>
+    <p>Real builds, real workflows, real income streams. Everything recorded, everything free.</p>
+    <a href="https://youtu.be/nEYsEcMaYeY" class="playlist-box">
+      <img class="thumb" src="https://img.youtube.com/vi/nEYsEcMaYeY/maxresdefault.jpg" alt="Learn How to Make Money Using Claude AI" />
+      <span class="play-overlay"></span>
+    </a>
+    <a href="https://youtu.be/nEYsEcMaYeY" class="btn-primary">Watch Now &rarr;</a>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ACADEMY CARD -->
+  <div class="content-card" style="background:#f9f9f9;">
+    <div class="section-eyebrow">Ready to Go Deeper?</div>
+    <h2>Join the Vernon Tech<br/>&amp; Media Academy.</h2>
+    <p>
+      Emails are the free stuff. The Academy is where it gets serious.
+      The full playbook for building with Claude, landing clients, and running
+      a real AI agency.
+    </p>
+
+    <div class="academy-features">
+      <div class="af-row">
+        <div class="af-icon">&#9632;</div>
+        <div>
+          <div class="af-title">Full Curriculum</div>
+          <div class="af-desc">Step-by-step path from zero to running an AI agency.</div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-icon">&#9632;</div>
+        <div>
+          <div class="af-title">Real Claude Builds</div>
+          <div class="af-desc">Ship automations, tools, and apps you can actually sell.</div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-icon">&#9632;</div>
+        <div>
+          <div class="af-title">Client Playbook</div>
+          <div class="af-desc">How I price, pitch, and close small business clients.</div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-icon">&#9632;</div>
+        <div>
+          <div class="af-title">Prompts &amp; Templates</div>
+          <div class="af-desc">The exact library I pull from on paid projects.</div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-icon">&#9632;</div>
+        <div>
+          <div class="af-title">Private Community</div>
+          <div class="af-desc">Other builders doing the work. Direct access to me.</div>
+        </div>
+      </div>
+    </div>
+
+    <a href="https://vernontm.com/academy" class="btn-dark">Explore the Academy &rarr;</a>
+  </div>
+
+  <!-- CTA STRIP -->
+  <div class="cta-strip">
+    <span class="cta-eyebrow">Let's Build</span>
+    <h2>Ready to build something real?</h2>
+    <p>
+      Book a free discovery call and let's talk about what your business needs.
+      No fluff. No sales pressure. Just real solutions.
+    </p>
+    <a href="https://vernontm.com" class="btn-dark">Book a Call at vernontm.com &rarr;</a>
+  </div>
+
+  <!-- CONNECT -->
+  <div class="connect-card">
+    <p>Connect with us</p>
+    <div class="social-icons">
+      <a href="https://tiktok.com/@rayvaughnceo" class="social-icon">
+        <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/content-media/social%20media%20icons/tiktok.svg" alt="TikTok" />
+      </a>
+      <a href="https://instagram.com/rayvaughn.ceo" class="social-icon">
+        <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/content-media/social%20media%20icons/instagram.svg" alt="Instagram" />
+      </a>
+      <a href="https://x.com/rayvaughnceo" class="social-icon">
+        <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/content-media/social%20media%20icons/x.svg" alt="X" />
+      </a>
+      <a href="https://www.youtube.com/@vernontech" class="social-icon">
+        <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/content-media/social%20media%20icons/youtube.svg" alt="YouTube" />
+      </a>
+      <a href="https://www.facebook.com/profile.php?id=61583621383560" class="social-icon">
+        <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/content-media/social%20media%20icons/facebook.svg" alt="Facebook" />
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-brand">Vernon Tech &amp; <span>Media</span></div>
+    <div class="footer-tagline">Build &amp; Automate Without Limits</div>
+    <div class="footer-legal">
+      You're getting this because you joined the Vernon Tech &amp; Media list. Glad you did.<br/>
+      Questions? Just reply. I actually read these.<br/>
+      <a href="#">Update preferences</a> &nbsp;&bull;&nbsp; <a href="{$unsubscribe}">Unsubscribe</a>
+    </div>
+    <div style="margin-top:12px; font-size:10px; color:#333333; font-family:'DM Mono',monospace; letter-spacing:0.5px;">
+      &copy; 2026 Vernon Tech &amp; Media &nbsp;&bull;&nbsp; <a href="https://vernontm.com" style="color:#ff9b26; text-decoration:none;">vernontm.com</a>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

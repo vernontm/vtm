@@ -1,4 +1,5 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { autoEnrollContact } = require('../_lib/enroll-sequences.js');
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -59,6 +60,11 @@ module.exports = async function handler(req, res) {
             body: JSON.stringify([row]),
           });
           const contact = rows?.[0];
+          // Auto-enroll into any active sequence whose tag rules match.
+          if (contact?.id) {
+            try { await autoEnrollContact({ client_id, contact_id: contact.id, tags: contact.tags }); }
+            catch (e) { console.error('auto-enroll failed:', e.message); }
+          }
           results.push(contact);
         } catch (e) {
           console.error(`Failed to add contact ${c.email}:`, e.message);
@@ -81,7 +87,13 @@ module.exports = async function handler(req, res) {
         method: 'PATCH',
         body: JSON.stringify({ tags: tags || [], updated_at: new Date().toISOString() }),
       });
-      return res.json(rows?.[0] || { updated: true });
+      const updated = rows?.[0];
+      // Re-check sequence enrollment now that tags changed.
+      if (updated?.client_id) {
+        try { await autoEnrollContact({ client_id: updated.client_id, contact_id: updated.id, tags: updated.tags }); }
+        catch (e) { console.error('auto-enroll failed:', e.message); }
+      }
+      return res.json(updated || { updated: true });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -106,7 +118,13 @@ module.exports = async function handler(req, res) {
         method: 'PATCH',
         body: JSON.stringify(update),
       });
-      return res.json(rows?.[0] || { updated: true });
+      const updated = rows?.[0];
+      // If tags were part of this update, re-check sequence enrollment.
+      if (tags !== undefined && updated?.client_id) {
+        try { await autoEnrollContact({ client_id: updated.client_id, contact_id: updated.id, tags: updated.tags }); }
+        catch (e) { console.error('auto-enroll failed:', e.message); }
+      }
+      return res.json(updated || { updated: true });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
