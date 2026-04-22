@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageSquare, X, Send, Loader, Check, Edit3, ChevronUp, ChevronDown, Copy, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
-import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem, sequenceAgent, editPosts } from '../api';
+import { emailAgent, runBulkAgent, createQueueItem, sendQueueItem, sequenceAgent, editPosts, editClient } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
 import { useUi } from '../context/UiContext';
 
@@ -65,6 +65,54 @@ function getContext(pathname) {
 // Route by INTENT (what the user is asking), not just by current page.
 // Keywords + attachments override the page default so the agent can do any
 // task from any page.
+// Words that suggest the user wants to edit a client's brand/profile
+// settings (brand bible, tone, target audience, industry, handles, etc.)
+// Only checked when on the content scheduler with a client loaded.
+function looksLikeClientSettings(prompt) {
+  const p = (prompt || '').toLowerCase();
+  const signals = [
+    'brand bible', 'update bible', 'update the bible', 'bible',
+    'brand voice', 'voice', 'tone', 'preferred tone',
+    'target audience', 'audience',
+    'industry', 'business name', 'owner name', 'owner',
+    'core hashtag', 'brand hashtag',
+    'instagram handle', 'tiktok handle', 'threads handle',
+    'youtube handle', 'linkedin handle', 'facebook handle', 'handle',
+    'client settings', 'client profile', 'profile', 'brand settings',
+    'website url', 'autodm reply', 'auto dm reply',
+  ];
+  return signals.some(k => p.includes(k));
+}
+
+// Capabilities the agent can currently perform. Used when it can't fulfil
+// a request so the user knows what IS possible.
+const AGENT_CAPABILITIES = {
+  content: [
+    'Edit a post — check it in the list (or type @) and describe the change',
+    'Update brand settings (brand bible, voice, tone, target audience, hashtags, handles)',
+    'Create new posts for any account',
+    'Schedule posts (auto-schedule, or pick a slot)',
+    'Generate captions, hashtags, and first comments',
+  ],
+  email: [
+    'Draft a cold outreach, follow-up, or check-in email',
+    'Create an email sequence or drip campaign',
+    'Send a drafted email after you approve it',
+  ],
+  general: [
+    'Answer questions about your CRM',
+    'Draft an email',
+    'Create content posts',
+    'Navigate to another page',
+  ],
+};
+function capabilityMessage(ctxType) {
+  const bullets = (AGENT_CAPABILITIES[ctxType] || AGENT_CAPABILITIES.general)
+    .map(c => `• ${c}`)
+    .join('\n');
+  return `Sorry, I'm not able to complete that task but I can help you with:\n${bullets}`;
+}
+
 function detectIntent(prompt, attachments, pageType) {
   const p = (prompt || '').toLowerCase();
   const hasImage = (attachments || []).some(a => a.kind === 'image');
@@ -313,11 +361,35 @@ export default function GlobalAgent() {
 
     // If the user tagged posts with @ on the content scheduler, route to
     // the edit-posts endpoint so Claude edits the referenced scripts.
+    // Otherwise, if on content-scheduler and the prompt mentions brand/
+    // profile settings, route to edit-client.
     const taggedIds = mentionEnabled ? Array.from(taggedScriptIds) : [];
-    const intent = taggedIds.length > 0 ? 'edit-posts' : detectIntent(msg, msgAttachments, ctx.type);
+    let intent;
+    if (taggedIds.length > 0) intent = 'edit-posts';
+    else if (mentionEnabled && looksLikeClientSettings(msg)) intent = 'edit-client';
+    else intent = detectIntent(msg, msgAttachments, ctx.type);
 
     try {
-      if (intent === 'edit-posts') {
+      if (intent === 'edit-client') {
+        try {
+          const result = await editClient({
+            client_id: contentContext.client.id,
+            prompt: msg,
+          });
+          if (result.updated) {
+            const fields = (result.fields || []).join(', ');
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Updated ${contentContext.client.business_name || 'client'} · changed: ${fields}`,
+            }]);
+            try { contentContext?.reload?.(); } catch {}
+          } else {
+            setMessages(prev => [...prev, { role: 'assistant', content: capabilityMessage(ctx.type) }]);
+          }
+        } catch (e) {
+          setMessages(prev => [...prev, { role: 'assistant', content: 'Settings update failed: ' + e.message }]);
+        }
+      } else if (intent === 'edit-posts') {
         try {
           const result = await editPosts({
             client_id: contentContext.client.id,
@@ -413,7 +485,10 @@ export default function GlobalAgent() {
         }
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message }]);
+      // Unhandled failure — tell the user what we CAN do instead of leaking
+      // a bare error string.
+      console.error('[GlobalAgent]', e);
+      setMessages(prev => [...prev, { role: 'assistant', content: capabilityMessage(ctx.type) }]);
     }
     setLoading(false);
   };

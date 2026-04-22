@@ -604,6 +604,103 @@ ${prompt}`;
     }
   }
 
+  // ── edit-client ────────────────────────────────────────────────────
+  // Natural-language updates to a client's brand settings (brand_bible,
+  // target_audience, preferred_tone, industry, hashtags, handles, etc.).
+  if (action === 'edit-client' && req.method === 'POST') {
+    try {
+      const { client_id, prompt } = req.body;
+      if (!client_id || !prompt) return res.status(400).json({ error: 'client_id and prompt required' });
+
+      const clients = await supaFetch(`crm_content_clients?id=eq.${client_id}&limit=1`);
+      const client = clients?.[0];
+      if (!client) return res.status(404).json({ error: 'Client not found' });
+
+      // Whitelist of AI-editable fields (system fields excluded)
+      const ALLOWED_FIELDS = [
+        'business_name','owner_name','industry','website_url','target_audience',
+        'notes','brand_bible','preferred_tone','core_hashtags','autodm_reply_message',
+        'instagram_handle','tiktok_handle','facebook_handle','threads_handle',
+        'youtube_handle','linkedin_handle',
+      ];
+
+      const currentSnapshot = {};
+      for (const k of ALLOWED_FIELDS) currentSnapshot[k] = client[k] ?? '';
+
+      const systemPrompt = `You are editing a client's brand/content settings. Apply the user's instruction ONLY to the fields that are clearly implicated, and output a JSON object containing ONLY those fields with their NEW values.
+
+RULES:
+- Output strictly valid JSON — no markdown, no commentary.
+- Only include fields you are actually changing. Omit unchanged fields entirely.
+- preferred_tone must be one of: friendly, casual, formal, hype, educational.
+- Handles should be stored without the leading @ (e.g. "myhandle", not "@myhandle").
+- For brand_bible edits: if the user wants to APPEND, return the full updated bible with the new content merged in; never truncate existing content unless asked.
+- If the instruction doesn't map to any allowed field, return {}.
+- Allowed fields: ${ALLOWED_FIELDS.join(', ')}.
+
+Output schema: a flat JSON object with only the fields being changed.`;
+
+      const userMsg = `CURRENT SETTINGS:
+${JSON.stringify(currentSnapshot, null, 2)}
+
+INSTRUCTION:
+${prompt}`;
+
+      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMsg }],
+        }),
+      });
+
+      if (!aiRes.ok) {
+        const err = await aiRes.text();
+        return res.status(500).json({ error: `Anthropic: ${err.slice(0, 200)}` });
+      }
+
+      const aiData = await aiRes.json();
+      const raw = aiData.content[0].text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch {
+        const match = raw.match(/\{[\s\S]*\}/);
+        parsed = match ? JSON.parse(match[0]) : {};
+      }
+
+      // Filter to allowed fields only
+      const updates = {};
+      for (const k of ALLOWED_FIELDS) {
+        if (parsed[k] !== undefined && parsed[k] !== null && parsed[k] !== client[k]) {
+          updates[k] = parsed[k];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.json({ updated: false, fields: [], message: 'No changes needed' });
+      }
+
+      updates.updated_at = new Date().toISOString();
+      await supaFetch(`crm_content_clients?id=eq.${client_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
+
+      const changedFields = Object.keys(updates).filter(k => k !== 'updated_at');
+      return res.json({ updated: true, fields: changedFields, values: updates });
+    } catch (err) {
+      console.error('edit-client error:', err);
+      return res.status(500).json({ error: 'Edit client failed: ' + err.message });
+    }
+  }
+
   // ── approve-and-schedule ───────────────────────────────────────────
   // Creates a content script row (or uses existing), generates captions/hashtags
   // (using vision for images), and auto-schedules to next available slot
