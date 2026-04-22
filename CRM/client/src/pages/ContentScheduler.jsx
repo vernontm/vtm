@@ -3113,7 +3113,7 @@ export default function ContentScheduler() {
               return isVideo ? (
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 8 }}>Cover Frame</div>
-                  <CoverFramePicker videoUrl={videoUrl} onChange={setCoverTimestampMs} />
+                  <CoverFramePicker videoUrl={videoUrl} onChange={p => setCoverTimestampMs(p?.ms ?? null)} />
                 </div>
               ) : null;
             })()}

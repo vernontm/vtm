@@ -170,7 +170,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
                   <CoverFramePicker
                     videoUrl={firstMedia}
                     initialMs={coverTimestamp}
-                    onChange={setCoverTimestamp}
+                    onChange={p => setCoverTimestamp(p?.ms ?? null)}
                   />
                 </div>
               </Section>
