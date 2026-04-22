@@ -151,6 +151,25 @@ export default function GlobalAgent() {
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Auto-add tags when posts get checkbox-selected on the content scheduler.
+  // Tracks the previous selection so we only add NEWLY checked ids (otherwise
+  // manually removing a chip would be overridden on the next render).
+  const prevSelectedRef = useRef(new Set());
+  useEffect(() => {
+    if (!mentionEnabled) { prevSelectedRef.current = new Set(); return; }
+    const current = new Set(contentContext.selectedScriptIds || []);
+    const prev = prevSelectedRef.current;
+    const newlyAdded = [...current].filter(id => !prev.has(id));
+    if (newlyAdded.length) {
+      setTaggedScriptIds(tags => {
+        const next = new Set(tags);
+        newlyAdded.forEach(id => next.add(id));
+        return next;
+      });
+    }
+    prevSelectedRef.current = current;
+  }, [mentionEnabled, contentContext]);
+
   useEffect(() => {
     if (expanded && endRef.current) {
       setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
