@@ -670,6 +670,27 @@ export default function EmailMarketing() {
     })();
   }, [showComposer, selectedClientId]);
 
+  // ── Auto-load the default template when composer opens (only if nothing picked yet) ──
+  useEffect(() => {
+    if (!showComposer || !selectedClientId) return;
+    if (campTemplateId || campBody) return; // don't stomp existing content
+    const def = templates.find(t => t.is_default);
+    if (!def) return;
+    const hasSlot = (def.html_body || '').includes('{{body}}');
+    setCampTemplateId(def.id);
+    setCampTemplateName(def.name || '');
+    if (hasSlot) {
+      setCampTemplateHtml(def.html_body || '');
+      setCampBody('');
+    } else {
+      setCampTemplateHtml(null);
+      setCampBody(def.html_body || '');
+    }
+    if (def.subject && !campSubject) setCampSubject(def.subject);
+    if (def.preview_text && !campPreview) setCampPreview(def.preview_text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showComposer, selectedClientId, templates]);
+
   // ── AI agent handlers ──
   async function handleAiSend() {
     const instruction = aiInput.trim();
@@ -1642,12 +1663,31 @@ export default function EmailMarketing() {
             {templates.map(t => (
               <div key={t.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                  <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>{t.name}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {t.name}
+                    {t.is_default && (
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>DEFAULT</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                     Subject: {t.subject} &middot; <span style={{ textTransform: 'capitalize' }}>{t.template_type}</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    onClick={async () => {
+                      const next = !t.is_default;
+                      await updateEmailTemplate(t.id, { is_default: next });
+                      setTemplates(prev => prev.map(x =>
+                        x.id === t.id ? { ...x, is_default: next }
+                        : (next && x.client_id === t.client_id ? { ...x, is_default: false } : x)
+                      ));
+                    }}
+                    style={{ ...btnSecondary, padding: '5px 10px', fontSize: 11, ...(t.is_default ? { background: 'var(--primary)', color: '#fff', borderColor: 'var(--primary)' } : {}) }}
+                    title={t.is_default ? 'Currently the default template' : 'Set as default template'}
+                  >
+                    {t.is_default ? 'Default ✓' : 'Set default'}
+                  </button>
                   <button onClick={() => startEditTemplate(t)} style={{ ...btnSecondary, padding: '5px 10px', fontSize: 11 }}><Eye size={12} /> Edit</button>
                   <button onClick={async () => { await deleteEmailTemplate(t.id); setTemplates(prev => prev.filter(x => x.id !== t.id)); }} style={{ ...btnDanger, padding: '5px 10px', fontSize: 11 }}><Trash2 size={12} /></button>
                 </div>

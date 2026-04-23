@@ -23,9 +23,16 @@ module.exports = async function handler(req, res) {
   // POST — create template
   if (req.method === 'POST') {
     try {
-      const { client_id, name, subject, html_body, preview_text, template_type } = req.body;
+      const { client_id, name, subject, html_body, preview_text, template_type, is_default } = req.body;
       if (!client_id || !name || !subject) {
         return res.status(400).json({ error: 'client_id, name, and subject required' });
+      }
+      if (is_default) {
+        // Clear existing defaults for this client first
+        await supaFetch(`crm_email_templates?client_id=eq.${client_id}&is_default=eq.true`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_default: false }),
+        });
       }
       const rows = await supaFetch('crm_email_templates', {
         method: 'POST',
@@ -36,6 +43,7 @@ module.exports = async function handler(req, res) {
           html_body: html_body || '',
           preview_text: preview_text || null,
           template_type: template_type || 'blast',
+          is_default: !!is_default,
         }]),
       });
       return res.json(rows?.[0] || { created: true });
@@ -49,13 +57,27 @@ module.exports = async function handler(req, res) {
     try {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'id query param required' });
-      const { name, subject, html_body, preview_text, template_type } = req.body;
+      const { name, subject, html_body, preview_text, template_type, is_default } = req.body;
       const update = { updated_at: new Date().toISOString() };
       if (name !== undefined) update.name = name;
       if (subject !== undefined) update.subject = subject;
       if (html_body !== undefined) update.html_body = html_body;
       if (preview_text !== undefined) update.preview_text = preview_text;
       if (template_type !== undefined) update.template_type = template_type;
+      if (is_default !== undefined) update.is_default = !!is_default;
+
+      if (is_default === true) {
+        // Look up the client_id for this template, then clear other defaults
+        const existing = await supaFetch(`crm_email_templates?id=eq.${id}&select=client_id`);
+        const cid = existing?.[0]?.client_id;
+        if (cid) {
+          await supaFetch(`crm_email_templates?client_id=eq.${cid}&is_default=eq.true&id=neq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ is_default: false }),
+          });
+        }
+      }
+
       const rows = await supaFetch(`crm_email_templates?id=eq.${id}`, {
         method: 'PATCH',
         body: JSON.stringify(update),

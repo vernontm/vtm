@@ -62,6 +62,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
   const fileRef = useRef(null);
   const iframeRef = useRef(null);
   const refCounter = useRef(0);
+  const lastVisualRenderedValue = useRef(null);
   const [uploading, setUploading] = useState(false);
   // Always default to visual — this is the click-to-edit "pretty" editor.
   const [mode, setMode] = useState('visual');
@@ -199,19 +200,17 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
     doc.open();
     doc.write(content);
     doc.close();
+    lastVisualRenderedValue.current = src;
     setTimeout(() => installVisualEditing(iframe), 20);
   }
 
-  // (Re)load iframe when entering visual mode
+  // Render iframe whenever mode is visual AND the value prop doesn't match what's
+  // currently displayed. Using a dedicated ref (not lastPropValue) avoids the race
+  // with the rich-mode sync effect, which ran first and cleared lastPropValue
+  // before this effect could see the change.
   useEffect(() => {
     if (mode !== 'visual') return;
-    renderVisualDoc(htmlSource || '');
-  }, [mode]);
-
-  // When parent pushes a new value, re-render iframe
-  useEffect(() => {
-    if (mode !== 'visual') return;
-    if (value === lastPropValue.current) return;
+    if (value === lastVisualRenderedValue.current) return;
     renderVisualDoc(value || '');
   }, [value, mode]);
 
@@ -226,6 +225,9 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
     clone.querySelectorAll('style[data-vtm-chrome]').forEach(el => el.remove());
     // Keep data-vtm-ref so AI agent can target elements; they'll be stripped at save time.
     const html = '<!doctype html>\n' + clone.outerHTML;
+    // Record this as the rendered value so the effect doesn't re-render the iframe
+    // in response to the parent echoing the same value back via the onChange prop.
+    lastVisualRenderedValue.current = html;
     setHtmlSource(html);
     onChange?.(html);
   }
@@ -466,7 +468,6 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
               border: '1px solid var(--border)', borderRadius: 8, background: '#fff',
               display: 'block', margin: '0 auto',
             }}
-            sandbox="allow-same-origin"
           />
         </div>
       )}

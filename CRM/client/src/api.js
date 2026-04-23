@@ -364,7 +364,24 @@ export const uploadClientLogo = (data) => request('/client-logo-upload', { metho
 export const generateEmailTemplateAI = (data) => request('/email-template-ai', { method: 'POST', body: JSON.stringify(data) });
 
 // AI edit pass over existing HTML — body: { client_id, html, instruction, selection? }
-export const editEmailAI = (data) => request('/email-edit-ai', { method: 'POST', body: JSON.stringify(data) });
+export const editEmailAI = async (data) => {
+  // AI edits can take a while; enforce a hard client-side timeout so the UI
+  // never hangs forever on "thinking" if the upstream call stalls.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 110000); // 110s (server max is 120s)
+  try {
+    return await request('/email-edit-ai', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('AI request timed out after 110s. Try a shorter instruction or split into smaller edits.');
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 // MailerLite groups for a client (for broadcast audience picker)
 export const getMailerliteGroups = (client_id) => request(`/mailerlite-groups?client_id=${client_id}`);
