@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
       }));
 
       // Sequence sends
-      const seqSends = await supaFetch(`crm_email_sequence_sends?contact_id=eq.${contact_id}&order=created_at.desc&limit=200`);
+      const seqSends = await supaFetch(`crm_email_sequence_sends?contact_id=eq.${contact_id}&order=sent_at.desc&limit=200`);
       const stepIds = [...new Set((seqSends || []).map(s => s.step_id).filter(Boolean))];
       let steps = [];
       if (stepIds.length) {
