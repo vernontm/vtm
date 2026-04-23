@@ -1694,10 +1694,10 @@ export default function EmailMarketing() {
       }}>
         <div onClick={e => e.stopPropagation()} style={{
           background: 'var(--surface)', borderRadius: 14, maxWidth: 1400, width: '100%', height: '94vh',
-          display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', overflow: 'hidden',
+          display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 380px', gridTemplateRows: '100%', overflow: 'hidden',
         }}>
           {/* ─── LEFT: form + editor ─── */}
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, borderRight: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%', overflow: 'hidden', borderRight: '1px solid var(--border)' }}>
             {/* Header */}
             <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               <Edit3 size={16} color="var(--orange)" />
@@ -1846,7 +1846,7 @@ export default function EmailMarketing() {
           </div>
 
           {/* ─── RIGHT: AI agent panel ─── */}
-          <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minWidth: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minWidth: 0, height: '100%', overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Sparkles size={15} color="var(--orange)" />
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>AI Editor</div>
@@ -1863,7 +1863,7 @@ export default function EmailMarketing() {
             </div>
 
             {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {aiMessages.length === 0 && (
                 <div style={{ fontSize: 12, color: 'var(--muted)', padding: 10, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
                   <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1917,7 +1917,7 @@ export default function EmailMarketing() {
             )}
 
             {/* Composer input */}
-            <form onSubmit={e => { e.preventDefault(); handleAiSend(); }} style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 6 }}>
+            <form onSubmit={e => { e.preventDefault(); handleAiSend(); }} style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 6, flexShrink: 0, background: 'var(--surface-2)' }}>
               <textarea
                 value={aiInput}
                 onChange={e => setAiInput(e.target.value)}

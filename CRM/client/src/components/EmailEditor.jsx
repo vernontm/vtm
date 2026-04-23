@@ -292,6 +292,15 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
     function onVisualClick(e) {
       const linkEl = e.target.closest('a');
       const imgEl = e.target.tagName === 'IMG' ? e.target : null;
+      // Also fire selection for plain text clicks — focusin is unreliable in sandboxed iframes
+      const editableEl = e.target.closest('[contenteditable="true"]');
+      if (editableEl && !linkEl && !imgEl) {
+        const refId = editableEl.getAttribute('data-vtm-ref');
+        if (refId && onSelectionChange) {
+          const text = (editableEl.textContent || '').trim().slice(0, 120);
+          onSelectionChange({ refId, text, tag: editableEl.tagName.toLowerCase() });
+        }
+      }
       if (linkEl && !e.target.closest('[contenteditable="true"]:not(a)')) {
         // Link click — show popover for href editing. Prevent navigation.
         e.preventDefault();
