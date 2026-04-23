@@ -1,122 +1,102 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
 const { wrapEmailHtml } = require('../_lib/email-html.js');
+const ML = require('../_lib/mailerlite.js');
 
-// ── Send a batch of emails via Resend, respecting daily limit + rollover ──
-async function sendBatch(config, campaign, contacts, supaFetchFn) {
-  const configId = config.id;
-  const dailyLimit = config.daily_limit || 100;
-  const today = new Date().toISOString().slice(0, 10);
+// ─────────────────────────────────────────────────────────────
+// Campaign endpoint — delegates to MailerLite for delivery.
+// Flow per action:
+//   create     → draft in local DB
+//   send       → create in ML with groups matching tag_filter, schedule instant
+//   schedule   → create in ML if needed, schedule for scheduled_at
+//   cancel     → ML cancel + local status=draft
+//   delete     → ML delete + local cascade
+//   refresh-stats → poll ML, backfill sent/opened/clicked counts
+// ─────────────────────────────────────────────────────────────
 
-  // Get or create daily usage record
-  let usageRows = await supaFetchFn(`crm_email_daily_usage?config_id=eq.${configId}&send_date=eq.${today}`);
-  let usage = usageRows?.[0];
-  if (!usage) {
-    const created = await supaFetchFn('crm_email_daily_usage', {
-      method: 'POST',
-      body: JSON.stringify([{ config_id: configId, send_date: today, send_count: 0 }]),
-    });
-    usage = created?.[0] || { send_count: 0 };
-  }
+async function loadMailerliteConfig(client_id) {
+  const rows = await supaFetch(
+    `crm_email_config?client_id=eq.${client_id}&select=mailerlite_api_key,from_email,from_name`
+  );
+  const cfg = rows?.[0];
+  if (!cfg?.mailerlite_api_key) throw new Error('No MailerLite API key configured for this client');
+  if (!cfg.from_email) throw new Error('No from_email configured for this client');
+  return cfg;
+}
 
-  const remaining = Math.max(0, dailyLimit - (usage.send_count || 0));
-  const toSendNow = contacts.slice(0, remaining);
-  const toRollover = contacts.slice(remaining);
-
-  let sentCount = 0;
-  let failedCount = 0;
-
-  // Send immediate batch
-  for (const contact of toSendNow) {
+// Resolve an array of tag filters to MailerLite group IDs (creating groups if
+// they don't exist yet). If no tag_filter supplied, returns [] — caller should
+// fall back to the General List group.
+async function resolveGroupIds(apiKey, client_id, tagFilter = []) {
+  const ids = [];
+  for (const tag of tagFilter) {
     try {
-      const rawBody = (campaign.html_body || '')
-        .replace(/\{\{name\}\}/g, contact.name || 'there')
-        .replace(/\{\{email\}\}/g, contact.email)
-        .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
-      const subject = (campaign.subject || '')
-        .replace(/\{\{name\}\}/g, contact.name || 'there')
-        .replace(/\{\{discount_code\}\}/g, contact.discount_code || '');
-      const html = wrapEmailHtml(rawBody, { subject, fromName: config.from_name, previewText: campaign.preview_text });
-
-      const emailRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.resend_api_key}`,
-        },
-        body: JSON.stringify({
-          from: config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email,
-          to: [contact.email],
-          subject,
-          html,
-        }),
-      });
-
-      if (emailRes.ok) {
-        const data = await emailRes.json();
-        await supaFetchFn('crm_email_sends', {
-          method: 'POST',
-          body: JSON.stringify([{
-            campaign_id: campaign.id,
-            contact_id: contact.id,
-            email: contact.email,
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            resend_id: data.id || '',
-          }]),
-        });
-        sentCount++;
-      } else {
-        const errText = await emailRes.text();
-        await supaFetchFn('crm_email_sends', {
-          method: 'POST',
-          body: JSON.stringify([{
-            campaign_id: campaign.id,
-            contact_id: contact.id,
-            email: contact.email,
-            status: 'failed',
-            error: errText.slice(0, 500),
-          }]),
-        });
-        failedCount++;
-      }
+      const g = await ML.getOrCreateGroup(apiKey, client_id, tag);
+      if (g?.group_id) ids.push(g.group_id);
     } catch (e) {
-      await supaFetchFn('crm_email_sends', {
-        method: 'POST',
-        body: JSON.stringify([{
-          campaign_id: campaign.id,
-          contact_id: contact.id,
-          email: contact.email,
-          status: 'failed',
-          error: e.message.slice(0, 500),
-        }]),
-      });
-      failedCount++;
+      console.error(`resolve group "${tag}" failed:`, e.message);
     }
   }
-
-  // Schedule rollover batch — 24.5 hours from now
-  if (toRollover.length > 0) {
-    const rolloverTime = new Date(Date.now() + 24.5 * 60 * 60 * 1000).toISOString();
-    const rolloverRows = toRollover.map(contact => ({
-      campaign_id: campaign.id,
-      contact_id: contact.id,
-      email: contact.email,
-      status: 'scheduled',
-      scheduled_at: rolloverTime,
-    }));
-    await supaFetchFn('crm_email_sends', {
-      method: 'POST',
-      body: JSON.stringify(rolloverRows),
-    });
+  // Always add the canonical General List as a safety net if no tags resolved
+  if (!ids.length) {
+    const g = await ML.getOrCreateGroup(apiKey, client_id, ML.GENERAL_LIST_GROUP_NAME);
+    if (g?.group_id) ids.push(g.group_id);
   }
+  return ids;
+}
 
-  // Update daily usage
-  await supaFetchFn(`crm_email_daily_usage?config_id=eq.${configId}&send_date=eq.${today}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ send_count: (usage.send_count || 0) + sentCount }),
+// Create (or update) the MailerLite campaign backing a local campaign row.
+// Returns the remote campaign id.
+async function pushCampaignToMailerlite(campaign, cfg) {
+  const apiKey = cfg.mailerlite_api_key;
+  const tagFilter = campaign.tag_filter || [];
+  const groupIds = await resolveGroupIds(apiKey, campaign.client_id, tagFilter);
+
+  const html = wrapEmailHtml(campaign.html_body || '', {
+    subject: campaign.subject,
+    fromName: cfg.from_name,
+    previewText: campaign.preview_text,
   });
 
-  return { sentCount, failedCount, rolledOver: toRollover.length };
+  const payload = {
+    name: campaign.subject || 'Untitled',
+    subject: campaign.subject,
+    from: cfg.from_email,
+    from_name: cfg.from_name || '',
+    html,
+    preview_text: campaign.preview_text || undefined,
+    groupIds,
+  };
+
+  let remoteId = campaign.mailerlite_campaign_id;
+  if (remoteId) {
+    try {
+      await ML.updateCampaign(apiKey, remoteId, {
+        name: payload.name,
+        emails: [{
+          subject: payload.subject,
+          from_name: payload.from_name,
+          from: payload.from,
+          content: payload.html,
+          ...(payload.preview_text ? { preview_text: payload.preview_text } : {}),
+        }],
+        groups: groupIds.map(String),
+      });
+    } catch (e) {
+      console.error('ML updateCampaign failed, creating new:', e.message);
+      remoteId = null;
+    }
+  }
+  if (!remoteId) {
+    const created = await ML.createCampaign(apiKey, payload);
+    remoteId = created?.id ? String(created.id) : null;
+    if (!remoteId) throw new Error('MailerLite createCampaign returned no id');
+    await supaFetch(`crm_email_campaigns?id=eq.${campaign.id}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ mailerlite_campaign_id: remoteId, updated_at: new Date().toISOString() }),
+    });
+  }
+  return remoteId;
 }
 
 module.exports = async function handler(req, res) {
@@ -127,7 +107,7 @@ module.exports = async function handler(req, res) {
 
   const { action } = req.query;
 
-  // GET — list campaigns
+  // ─── GET — list campaigns ───
   if (req.method === 'GET') {
     try {
       const { client_id } = req.query;
@@ -139,13 +119,11 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // POST — create campaign
+  // ─── POST action=create — create draft ───
   if (req.method === 'POST' && action === 'create') {
     try {
       const { client_id, subject, html_body, preview_text, tag_filter, scheduled_at, trigger_on_tag, auto_trigger_enabled, trigger_type } = req.body;
-      if (!client_id || !subject) {
-        return res.status(400).json({ error: 'client_id and subject required' });
-      }
+      if (!client_id || !subject) return res.status(400).json({ error: 'client_id and subject required' });
       const status = auto_trigger_enabled ? 'draft' : (scheduled_at ? 'scheduled' : 'draft');
       const rows = await supaFetch('crm_email_campaigns', {
         method: 'POST',
@@ -168,87 +146,53 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // POST — send campaign now
+  // ─── POST action=send — send now via MailerLite ───
   if (req.method === 'POST' && action === 'send') {
     try {
       const { campaign_id } = req.body;
       if (!campaign_id) return res.status(400).json({ error: 'campaign_id required' });
 
-      // Load campaign
       const campaigns = await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`);
       const campaign = campaigns?.[0];
       if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-      // Load config
-      const configs = await supaFetch(`crm_email_config?client_id=eq.${campaign.client_id}`);
-      const config = configs?.[0];
-      if (!config) return res.status(400).json({ error: 'No email config for this client. Set up Resend API key first.' });
+      const cfg = await loadMailerliteConfig(campaign.client_id);
+      const remoteId = await pushCampaignToMailerlite(campaign, cfg);
+      await ML.scheduleCampaign(cfg.mailerlite_api_key, remoteId, null); // instant
 
-      // Load contacts matching tag filter
-      let contactQuery = `crm_email_contacts?client_id=eq.${campaign.client_id}&status=eq.active&order=created_at.asc`;
-      const tagFilter = campaign.tag_filter || [];
-      const contacts = await supaFetch(contactQuery);
-      let filteredContacts = contacts || [];
-
-      // Filter by tags if specified
-      if (tagFilter.length > 0) {
-        filteredContacts = filteredContacts.filter(c => {
-          const contactTags = c.tags || [];
-          return tagFilter.some(t => contactTags.includes(t));
-        });
-      }
-
-      if (!filteredContacts.length) {
-        return res.status(400).json({ error: 'No matching contacts to send to' });
-      }
-
-      // Update campaign status
       await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           status: 'sending',
-          total_recipients: filteredContacts.length,
-          updated_at: new Date().toISOString(),
-        }),
-      });
-
-      // Send with rollover
-      const result = await sendBatch(config, campaign, filteredContacts, supaFetch);
-
-      // Update campaign final status
-      const finalStatus = result.rolledOver > 0 ? 'partial' : 'sent';
-      await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          status: finalStatus,
-          sent_count: result.sentCount,
-          failed_count: result.failedCount,
           sent_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }),
       });
 
-      return res.json({
-        sent: result.sentCount,
-        failed: result.failedCount,
-        rolled_over: result.rolledOver,
-        status: finalStatus,
-      });
+      return res.json({ ok: true, status: 'sending', mailerlite_campaign_id: remoteId });
     } catch (err) {
       console.error('Send campaign error:', err);
       return res.status(500).json({ error: 'Send failed: ' + err.message });
     }
   }
 
-  // POST — schedule campaign
+  // ─── POST action=schedule — schedule for future send ───
   if (req.method === 'POST' && action === 'schedule') {
     try {
       const { campaign_id, scheduled_at } = req.body;
-      if (!campaign_id || !scheduled_at) {
-        return res.status(400).json({ error: 'campaign_id and scheduled_at required' });
-      }
+      if (!campaign_id || !scheduled_at) return res.status(400).json({ error: 'campaign_id and scheduled_at required' });
+
+      const campaigns = await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`);
+      const campaign = campaigns?.[0];
+      if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+      const cfg = await loadMailerliteConfig(campaign.client_id);
+      const remoteId = await pushCampaignToMailerlite(campaign, cfg);
+      await ML.scheduleCampaign(cfg.mailerlite_api_key, remoteId, scheduled_at);
+
       const rows = await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`, {
         method: 'PATCH',
+        headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify({
           status: 'scheduled',
           scheduled_at,
@@ -257,11 +201,72 @@ module.exports = async function handler(req, res) {
       });
       return res.json(rows?.[0] || { scheduled: true });
     } catch (err) {
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: 'Schedule failed: ' + err.message });
     }
   }
 
-  // PUT — update campaign draft
+  // ─── POST action=cancel — cancel a scheduled campaign ───
+  if (req.method === 'POST' && action === 'cancel') {
+    try {
+      const { campaign_id } = req.body;
+      if (!campaign_id) return res.status(400).json({ error: 'campaign_id required' });
+      const campaigns = await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`);
+      const campaign = campaigns?.[0];
+      if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+      if (!campaign.mailerlite_campaign_id) {
+        // Nothing remote to cancel — just flip status back to draft
+        await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'draft', updated_at: new Date().toISOString() }),
+        });
+        return res.json({ ok: true, status: 'draft' });
+      }
+      const cfg = await loadMailerliteConfig(campaign.client_id);
+      try { await ML.cancelCampaign(cfg.mailerlite_api_key, campaign.mailerlite_campaign_id); }
+      catch (e) { console.error('ML cancel non-fatal:', e.message); }
+
+      await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'draft', scheduled_at: null, updated_at: new Date().toISOString() }),
+      });
+      return res.json({ ok: true, status: 'draft' });
+    } catch (err) {
+      return res.status(500).json({ error: 'Cancel failed: ' + err.message });
+    }
+  }
+
+  // ─── POST action=refresh-stats — poll MailerLite for open/click counts ───
+  if (req.method === 'POST' && action === 'refresh-stats') {
+    try {
+      const { campaign_id } = req.body;
+      if (!campaign_id) return res.status(400).json({ error: 'campaign_id required' });
+      const campaigns = await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`);
+      const campaign = campaigns?.[0];
+      if (!campaign?.mailerlite_campaign_id) return res.status(400).json({ error: 'No MailerLite campaign id on record' });
+
+      const cfg = await loadMailerliteConfig(campaign.client_id);
+      const { summary } = await ML.getCampaignActivity(cfg.mailerlite_api_key, campaign.mailerlite_campaign_id);
+      const stats = summary?.stats || summary || {};
+      const update = {
+        total_recipients: stats.sent ?? campaign.total_recipients ?? 0,
+        sent_count: stats.sent ?? 0,
+        opened_count: stats.opens_count ?? stats.opens ?? 0,
+        clicked_count: stats.clicks_count ?? stats.clicks ?? 0,
+        failed_count: (stats.hard_bounces ?? 0) + (stats.soft_bounces ?? 0),
+        status: summary?.status || campaign.status,
+        updated_at: new Date().toISOString(),
+      };
+      await supaFetch(`crm_email_campaigns?id=eq.${campaign_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(update),
+      });
+      return res.json({ ok: true, ...update });
+    } catch (err) {
+      return res.status(500).json({ error: 'Refresh failed: ' + err.message });
+    }
+  }
+
+  // ─── PUT — update draft ───
   if (req.method === 'PUT') {
     try {
       const { id } = req.query;
@@ -289,12 +294,20 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // DELETE
+  // ─── DELETE ───
   if (req.method === 'DELETE') {
     try {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'id required' });
-      // Delete sends first
+      const campaigns = await supaFetch(`crm_email_campaigns?id=eq.${id}`);
+      const campaign = campaigns?.[0];
+      // Best-effort remote delete
+      if (campaign?.mailerlite_campaign_id) {
+        try {
+          const cfg = await loadMailerliteConfig(campaign.client_id);
+          await ML.deleteCampaign(cfg.mailerlite_api_key, campaign.mailerlite_campaign_id);
+        } catch (e) { console.error('ML deleteCampaign non-fatal:', e.message); }
+      }
       await supaFetch(`crm_email_sends?campaign_id=eq.${id}`, { method: 'DELETE' }).catch(() => {});
       await supaFetch(`crm_email_campaigns?id=eq.${id}`, { method: 'DELETE' });
       return res.json({ deleted: true });

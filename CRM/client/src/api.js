@@ -309,6 +309,10 @@ export const approveAndSchedule = (data) => request('/content-ai?action=approve-
 // Config
 export const getEmailConfig = (clientId) => request(`/email-config?client_id=${clientId}`);
 export const saveEmailConfig = (data) => request('/email-config', { method: 'POST', body: JSON.stringify(data) });
+export const testMailerliteKey = (api_key) => request('/email-config?action=test-mailerlite', { method: 'POST', body: JSON.stringify({ api_key }) });
+export const runMailerliteBackfill = (client_id, opts = {}) => request('/mailerlite-backfill', { method: 'POST', body: JSON.stringify({ client_id, ...opts }) });
+export const refreshCampaignStats = (campaign_id) => request('/email-campaigns?action=refresh-stats', { method: 'POST', body: JSON.stringify({ campaign_id }) });
+export const cancelCampaign = (campaign_id) => request('/email-campaigns?action=cancel', { method: 'POST', body: JSON.stringify({ campaign_id }) });
 
 // Contacts
 export const getEmailContacts = (clientId, tag) => request(`/email-contacts?client_id=${clientId}${tag ? '&tag=' + encodeURIComponent(tag) : ''}`);

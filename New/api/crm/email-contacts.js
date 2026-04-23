@@ -1,5 +1,5 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
-const { autoEnrollContact } = require('../_lib/enroll-sequences.js');
+const { syncContactToMailerlite } = require('../_lib/mailerlite.js');
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -60,10 +60,18 @@ module.exports = async function handler(req, res) {
             body: JSON.stringify([row]),
           });
           const contact = rows?.[0];
-          // Auto-enroll into any active sequence whose tag rules match.
+          // Push subscriber to MailerLite (upserts + adds to groups matching tags).
           if (contact?.id) {
-            try { await autoEnrollContact({ client_id, contact_id: contact.id, tags: contact.tags }); }
-            catch (e) { console.error('auto-enroll failed:', e.message); }
+            try {
+              await syncContactToMailerlite({
+                client_id,
+                contact_id: contact.id,
+                email: contact.email,
+                name: contact.name,
+                tags: contact.tags || [],
+                source: contact.source || null,
+              });
+            } catch (e) { console.error('mailerlite sync failed:', e.message); }
           }
           results.push(contact);
         } catch (e) {
@@ -88,10 +96,18 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({ tags: tags || [], updated_at: new Date().toISOString() }),
       });
       const updated = rows?.[0];
-      // Re-check sequence enrollment now that tags changed.
+      // Re-sync to MailerLite so the new tags map to groups.
       if (updated?.client_id) {
-        try { await autoEnrollContact({ client_id: updated.client_id, contact_id: updated.id, tags: updated.tags }); }
-        catch (e) { console.error('auto-enroll failed:', e.message); }
+        try {
+          await syncContactToMailerlite({
+            client_id: updated.client_id,
+            contact_id: updated.id,
+            email: updated.email,
+            name: updated.name,
+            tags: updated.tags || [],
+            source: updated.source || null,
+          });
+        } catch (e) { console.error('mailerlite sync failed:', e.message); }
       }
       return res.json(updated || { updated: true });
     } catch (err) {
@@ -119,10 +135,18 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify(update),
       });
       const updated = rows?.[0];
-      // If tags were part of this update, re-check sequence enrollment.
+      // If tags were part of this update, re-sync to MailerLite.
       if (tags !== undefined && updated?.client_id) {
-        try { await autoEnrollContact({ client_id: updated.client_id, contact_id: updated.id, tags: updated.tags }); }
-        catch (e) { console.error('auto-enroll failed:', e.message); }
+        try {
+          await syncContactToMailerlite({
+            client_id: updated.client_id,
+            contact_id: updated.id,
+            email: updated.email,
+            name: updated.name,
+            tags: updated.tags || [],
+            source: updated.source || null,
+          });
+        } catch (e) { console.error('mailerlite sync failed:', e.message); }
       }
       return res.json(updated || { updated: true });
     } catch (err) {

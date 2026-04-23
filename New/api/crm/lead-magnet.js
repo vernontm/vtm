@@ -1,25 +1,21 @@
 const { setCors, supaFetch, SUPABASE_URL } = require('../_lib/supabase.js');
-const { autoEnrollContact } = require('../_lib/enroll-sequences.js');
+const { syncContactToMailerlite } = require('../_lib/mailerlite.js');
 
-// Public (no-auth) lead magnet endpoint.
-// POST { email, name?, phone?, sequence_id, tags?, action? }
-// - action omitted / 'signup' — upsert contact + enroll in sequence
-// - action 'add-phone' — adds a phone number to the contact (video upsell)
-//   Returns { ok: true, unlocked: true } so the client can reveal videos.
+// Public (no-auth) lead magnet endpoint — funnels CRM landing-page signups
+// into MailerLite. MailerLite automations (triggered by group membership)
+// handle the actual email delivery.
+//
+// POST { email, name?, phone?, tags?, source?, action? }
+// - action omitted / 'signup' — upsert contact + sync to MailerLite
+//     Every signup gets: "VTM - General List" + "BUILD" groups.
+//     If `source` passed (e.g. 'instagram', 'tiktok'), also adds "Source: Instagram".
+//     Any extra `tags` from the form also map to groups.
+// - action 'add-phone' — patches the contact w/ phone, tag unlocked, re-syncs.
 
-function nextSendAt(fromDate, step, sendDays) {
-  const amount = step?.delay_amount || 0;
-  const unit = step?.delay_unit || 'days';
-  const mult = unit === 'hours' ? 3600_000 : unit === 'minutes' ? 60_000 : 86_400_000;
-  let d = new Date(fromDate.getTime() + amount * mult);
-  if (Array.isArray(sendDays) && sendDays.length > 0 && sendDays.length < 7) {
-    const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    for (let i = 0; i < 7; i++) {
-      if (sendDays.includes(names[d.getDay()])) break;
-      d = new Date(d.getTime() + 86_400_000);
-    }
-  }
-  return d;
+// Resolve the client that owns CRM-form signups.
+// Override via VTM_EMAIL_CLIENT_ID; falls back to rayvaughnceo's client.
+function resolveClientId() {
+  return process.env.VTM_EMAIL_CLIENT_ID || '632a79e3-bdd1-4c80-9a64-583b64afcd2f';
 }
 
 module.exports = async function handler(req, res) {
@@ -32,19 +28,20 @@ module.exports = async function handler(req, res) {
     const email = (body.email || '').trim().toLowerCase();
     const name = (body.name || '').trim();
     const phone = (body.phone || '').trim();
-    const sequence_id = body.sequence_id;
+    const source = (body.source || '').trim() || null;   // e.g. 'instagram', 'tiktok', 'youtube'
     const action = body.action || 'signup';
-    const extraTags = Array.isArray(body.tags) ? body.tags : [];
+    const extraTags = Array.isArray(body.tags) ? body.tags.filter(Boolean) : [];
 
     if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
 
-    // ── action: add-phone — patch existing contact w/ phone, tag unlocked ──
+    const client_id = resolveClientId();
+
+    // ── action: add-phone — patch existing contact w/ phone + unlock tag, re-sync ──
     if (action === 'add-phone') {
       if (!phone || phone.replace(/\D/g, '').length < 7) {
         return res.status(400).json({ error: 'Valid phone required' });
       }
-      // Find contact by email (any client)
-      const existing = await supaFetch(`crm_email_contacts?email=eq.${encodeURIComponent(email)}&select=id,client_id,tags&limit=1`);
+      const existing = await supaFetch(`crm_email_contacts?email=eq.${encodeURIComponent(email)}&select=id,client_id,tags,name,source&limit=1`);
       if (!existing || !existing.length) return res.status(404).json({ error: 'Contact not found — submit email first' });
       const c = existing[0];
       const tags = Array.from(new Set([...(c.tags || []), 'video-unlocked', 'phone-given']));
@@ -53,26 +50,24 @@ module.exports = async function handler(req, res) {
         headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify({ phone, tags }),
       });
-      // Re-check enrollment — new tags may now match a sequence.
-      try { await autoEnrollContact({ client_id: c.client_id, contact_id: c.id, tags }); }
-      catch (e) { console.error('auto-enroll failed:', e.message); }
+      try {
+        await syncContactToMailerlite({
+          client_id: c.client_id,
+          contact_id: c.id,
+          email,
+          name: c.name,
+          tags,
+          source: c.source || null,
+        });
+      } catch (e) { console.error('mailerlite sync (add-phone) failed:', e.message); }
       return res.json({ ok: true, unlocked: true, contact_id: c.id });
     }
 
-    if (!sequence_id) return res.status(400).json({ error: 'sequence_id required' });
-
-    // Load sequence to get client_id + first step + send_days
-    const seqRows = await supaFetch(`crm_email_sequences?id=eq.${sequence_id}&select=id,name,client_id,send_days,trigger_tag`);
-    const seq = (seqRows || [])[0];
-    if (!seq) return res.status(404).json({ error: 'Sequence not found' });
-    const client_id = seq.client_id;
-
-    // Tags — include the sequence trigger tag so contact matches any future re-enrollment
-    const tagSet = new Set([...(extraTags || []), 'lead-magnet']);
-    if (seq.trigger_tag) tagSet.add(seq.trigger_tag);
+    // ── action: signup — upsert contact, sync to MailerLite ──
+    // Tags: always include 'BUILD' (CRM landing-page marker) + any form-supplied tags.
+    const tagSet = new Set(['BUILD', ...extraTags]);
     const tags = Array.from(tagSet);
 
-    // Upsert contact. on_conflict on (client_id,email) then merge to keep existing tags/status.
     const upsertRes = await fetch(
       `${SUPABASE_URL}/rest/v1/crm_email_contacts?on_conflict=client_id,email`,
       {
@@ -88,6 +83,7 @@ module.exports = async function handler(req, res) {
           email,
           name: name || null,
           tags,
+          source,
           status: 'active',
           signed_up_at: new Date().toISOString(),
         }]),
@@ -101,34 +97,25 @@ module.exports = async function handler(req, res) {
     const contact = contactRows[0];
     if (!contact?.id) return res.status(500).json({ error: 'Contact upsert returned no id' });
 
-    // Check existing enrollment
-    const existing = await supaFetch(
-      `crm_email_sequence_enrollments?sequence_id=eq.${sequence_id}&contact_id=eq.${contact.id}&select=id,status`
-    );
-    if (existing && existing.length > 0) {
-      return res.json({ ok: true, contact_id: contact.id, enrolled: false, already_enrolled: true });
-    }
-
-    // Get first step
-    const steps = await supaFetch(
-      `crm_email_sequence_steps?sequence_id=eq.${sequence_id}&order=step_order.asc&limit=1&select=step_order,delay_amount,delay_unit`
-    );
-    const firstStep = (steps || [])[0] || { delay_amount: 0, delay_unit: 'minutes' };
-    const sendAt = nextSendAt(new Date(), firstStep, seq.send_days);
-
-    await supaFetch('crm_email_sequence_enrollments', {
-      method: 'POST',
-      headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
-      body: JSON.stringify([{
-        sequence_id,
+    // Fire off to MailerLite — their automation takes it from here.
+    let mlResult = null;
+    try {
+      mlResult = await syncContactToMailerlite({
+        client_id,
         contact_id: contact.id,
-        current_step: 0,
-        next_send_at: sendAt.toISOString(),
-        status: 'active',
-      }]),
-    });
+        email,
+        name: name || null,
+        tags,
+        source,
+      });
+    } catch (e) { console.error('mailerlite sync (signup) failed:', e.message); }
 
-    return res.json({ ok: true, contact_id: contact.id, enrolled: true, already_enrolled: false });
+    return res.json({
+      ok: true,
+      contact_id: contact.id,
+      synced: !!mlResult?.ok,
+      groups: mlResult?.groups || [],
+    });
   } catch (err) {
     console.error('lead-magnet error:', err);
     return res.status(500).json({ error: err.message });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  getContentClients, getEmailConfig, saveEmailConfig,
+  getContentClients, getEmailConfig, saveEmailConfig, testMailerliteKey, runMailerliteBackfill,
   getEmailContacts, addEmailContacts, deleteEmailContact, updateEmailContact,
   getEmailTemplates, createEmailTemplate, updateEmailTemplate, deleteEmailTemplate,
   getEmailCampaigns, createEmailCampaign, sendEmailCampaign, deleteEmailCampaign,
@@ -295,11 +295,16 @@ export default function EmailMarketing() {
   const [savingTagCtx, setSavingTagCtx] = useState(false);
 
   // Settings form
-  const [cfgApiKey, setCfgApiKey] = useState('');
+  const [cfgApiKey, setCfgApiKey] = useState('');            // Resend (legacy)
+  const [cfgMlApiKey, setCfgMlApiKey] = useState('');        // MailerLite (primary)
   const [cfgFromEmail, setCfgFromEmail] = useState('');
   const [cfgFromName, setCfgFromName] = useState('');
   const [cfgDailyLimit, setCfgDailyLimit] = useState('100');
   const [savingConfig, setSavingConfig] = useState(false);
+  const [mlTestStatus, setMlTestStatus] = useState(null);    // { ok, message }
+  const [mlTesting, setMlTesting] = useState(false);
+  const [mlBackfillStatus, setMlBackfillStatus] = useState(null);
+  const [mlBackfilling, setMlBackfilling] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -342,6 +347,8 @@ export default function EmailMarketing() {
         setCfgFromName(cfg.from_name || '');
         setCfgDailyLimit(String(cfg.daily_limit || 100));
         setCfgApiKey('');
+        setCfgMlApiKey('');
+        setMlTestStatus(null);
       }
     } catch (e) {
       setError('Failed to load data');
@@ -727,21 +734,52 @@ export default function EmailMarketing() {
   // ── Config handler ──
   async function handleSaveConfig() {
     if (!cfgFromEmail.trim() || !selectedClientId) return;
-    if (!cfgApiKey.trim() && !config) { setError('Resend API key required'); return; }
+    // Either provider key (or already-saved config) is enough
+    const hasMl = !!cfgMlApiKey.trim() || !!config?.mailerlite_api_key_masked;
+    const hasResend = !!cfgApiKey.trim() || !!config?.resend_api_key_masked;
+    if (!hasMl && !hasResend) { setError('MailerLite API key required'); return; }
     setSavingConfig(true); setError('');
     try {
-      await saveEmailConfig({
+      const payload = {
         client_id: selectedClientId,
-        resend_api_key: cfgApiKey.trim() || config?.resend_api_key,
         from_email: cfgFromEmail.trim(),
         from_name: cfgFromName.trim(),
         daily_limit: parseInt(cfgDailyLimit) || 100,
-      });
+      };
+      if (cfgApiKey.trim()) payload.resend_api_key = cfgApiKey.trim();
+      if (cfgMlApiKey.trim()) payload.mailerlite_api_key = cfgMlApiKey.trim();
+      await saveEmailConfig(payload);
       setCfgApiKey('');
+      setCfgMlApiKey('');
       const cfg = await getEmailConfig(selectedClientId);
       setConfig(cfg);
     } catch (e) { setError(e.message); }
     setSavingConfig(false);
+  }
+
+  async function handleTestMailerlite() {
+    if (!cfgMlApiKey.trim()) { setMlTestStatus({ ok: false, message: 'Enter a key first' }); return; }
+    setMlTesting(true); setMlTestStatus(null);
+    try {
+      const r = await testMailerliteKey(cfgMlApiKey.trim());
+      setMlTestStatus({ ok: true, message: `Connected as ${r?.account?.name || r?.account?.email || 'MailerLite account'}` });
+    } catch (e) {
+      setMlTestStatus({ ok: false, message: e.message });
+    }
+    setMlTesting(false);
+  }
+
+  async function handleMailerliteBackfill() {
+    if (!selectedClientId) return;
+    if (!window.confirm('Push every active contact without a MailerLite subscriber id into MailerLite? This can take a while.')) return;
+    setMlBackfilling(true); setMlBackfillStatus(null);
+    try {
+      const r = await runMailerliteBackfill(selectedClientId, { only_unsynced: true, limit: 500 });
+      setMlBackfillStatus(r);
+    } catch (e) {
+      setMlBackfillStatus({ ok: false, error: e.message });
+    }
+    setMlBackfilling(false);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1839,7 +1877,7 @@ export default function EmailMarketing() {
         {!config && (
           <div style={{ ...cardStyle, background: 'rgba(251,191,36,0.12)', borderColor: '#fbbf24', marginBottom: 16 }}>
             <div style={{ fontSize: 13, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Settings size={16} /> Set up your Resend API key in the Settings tab before sending.
+              <Settings size={16} /> Set up your MailerLite API key in the Settings tab before sending.
             </div>
           </div>
         )}
@@ -2247,16 +2285,36 @@ export default function EmailMarketing() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={cardStyle}>
-          <div style={sectionTitle}>Resend Configuration — <span className="private-value">{selectedClient?.business_name}</span></div>
-          {config && (
+          <div style={sectionTitle}>Email Provider — <span className="private-value">{selectedClient?.business_name}</span></div>
+          {config && (config.mailerlite_api_key_masked || config.resend_api_key_masked) && (
             <div style={{ marginBottom: 14, padding: 12, background: 'rgba(34,197,94,0.08)', borderRadius: 8, fontSize: 12, color: '#1a7a3a' }}>
-              <Check size={14} style={{ marginRight: 6 }} /> Connected. API key: <code>{config.resend_api_key_masked}</code> &middot; From: {config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email} &middot; Daily limit: {config.daily_limit}
+              <Check size={14} style={{ marginRight: 6 }} />
+              {config.mailerlite_api_key_masked && <>MailerLite: <code>{config.mailerlite_api_key_masked}</code></>}
+              {config.mailerlite_api_key_masked && config.resend_api_key_masked && <> &middot; </>}
+              {config.resend_api_key_masked && <>Resend: <code>{config.resend_api_key_masked}</code></>}
+              <> &middot; From: {config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email}</>
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Resend API Key {config && <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(leave blank to keep current)</span>}</label>
-              <input style={inputStyle} type="password" placeholder="re_..." value={cfgApiKey} onChange={e => setCfgApiKey(e.target.value)} />
+              <label style={labelStyle}>
+                MailerLite API Key <span style={{ color: 'var(--accent)' }}>(primary — used for all sends)</span>
+                {config?.mailerlite_api_key_masked && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> (leave blank to keep current)</span>}
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input style={{ ...inputStyle, flex: 1 }} type="password" placeholder="eyJ0eX..." value={cfgMlApiKey} onChange={e => { setCfgMlApiKey(e.target.value); setMlTestStatus(null); }} />
+                <button onClick={handleTestMailerlite} disabled={mlTesting || !cfgMlApiKey.trim()} style={{ ...btnSecondary, opacity: (mlTesting || !cfgMlApiKey.trim()) ? 0.5 : 1 }}>
+                  {mlTesting ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={13} />} Test
+                </button>
+              </div>
+              {mlTestStatus && (
+                <div style={{ marginTop: 6, fontSize: 12, color: mlTestStatus.ok ? '#1a7a3a' : '#b94b4b' }}>
+                  {mlTestStatus.ok ? '✓ ' : '✗ '}{mlTestStatus.message}
+                </div>
+              )}
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)' }}>
+                Get your key at mailerlite.com → Integrations → API. All new signups land in the <strong>VTM - General List</strong> group automatically.
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <div style={{ flex: 1 }}>
@@ -2267,17 +2325,54 @@ export default function EmailMarketing() {
                 <label style={labelStyle}>From Name</label>
                 <input style={inputStyle} placeholder="Your Name" value={cfgFromName} onChange={e => setCfgFromName(e.target.value)} />
               </div>
-              <div style={{ width: 100 }}>
-                <label style={labelStyle}>Daily Limit</label>
-                <input style={inputStyle} type="number" value={cfgDailyLimit} onChange={e => setCfgDailyLimit(e.target.value)} />
-              </div>
             </div>
+            <details style={{ fontSize: 12, color: 'var(--muted)' }}>
+              <summary style={{ cursor: 'pointer' }}>Resend API Key (legacy — no longer used for sending)</summary>
+              <div style={{ marginTop: 8 }}>
+                <input style={inputStyle} type="password" placeholder="re_..." value={cfgApiKey} onChange={e => setCfgApiKey(e.target.value)} />
+              </div>
+            </details>
             <button onClick={handleSaveConfig} disabled={savingConfig || !cfgFromEmail.trim()} style={{ ...btnPrimary, alignSelf: 'flex-start', opacity: savingConfig ? 0.6 : 1 }}>
               {savingConfig ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
               Save Configuration
             </button>
           </div>
         </div>
+
+        {config?.mailerlite_api_key_masked && (
+          <div style={cardStyle}>
+            <div style={sectionTitle}>Sync Contacts to MailerLite</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.5 }}>
+              New signups sync automatically. Use this to push <strong>existing</strong> contacts that haven't been synced yet — each one joins <strong>VTM - General List</strong> plus a group per tag.
+            </div>
+            <button onClick={handleMailerliteBackfill} disabled={mlBackfilling} style={{ ...btnSecondary, opacity: mlBackfilling ? 0.6 : 1 }}>
+              {mlBackfilling ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
+              {mlBackfilling ? 'Syncing…' : 'Sync Existing Contacts'}
+            </button>
+            {mlBackfillStatus && (
+              <div style={{ marginTop: 10, padding: 10, background: 'var(--surface-2)', borderRadius: 6, fontSize: 12, lineHeight: 1.6 }}>
+                {mlBackfillStatus.error ? (
+                  <span style={{ color: '#b94b4b' }}>✗ {mlBackfillStatus.error}</span>
+                ) : (
+                  <>
+                    <div>Processed <strong>{mlBackfillStatus.total}</strong> · Synced <strong style={{ color: '#1a7a3a' }}>{mlBackfillStatus.synced}</strong> · Failed <strong style={{ color: '#b94b4b' }}>{mlBackfillStatus.failed}</strong></div>
+                    {!!mlBackfillStatus.errors?.length && (
+                      <details style={{ marginTop: 6 }}>
+                        <summary style={{ cursor: 'pointer' }}>First {mlBackfillStatus.errors.length} errors</summary>
+                        <ul style={{ margin: '6px 0 0 20px', fontSize: 11 }}>
+                          {mlBackfillStatus.errors.map((e, i) => <li key={i}>{e}</li>)}
+                        </ul>
+                      </details>
+                    )}
+                    {mlBackfillStatus.total >= 500 && (
+                      <div style={{ marginTop: 6, color: 'var(--muted)' }}>Batched 500 at a time — click again to continue.</div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={cardStyle}>
           <div style={sectionTitle}>Branding — used by AI template generator</div>
@@ -2330,16 +2425,15 @@ export default function EmailMarketing() {
         </div>
 
         <div style={cardStyle}>
-          <div style={sectionTitle}>How Rollover Works</div>
+          <div style={sectionTitle}>How Sending Works</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
-            <p>Resend's free tier allows <strong>100 emails per day</strong>. When you send a campaign to more recipients than your daily limit:</p>
+            <p>All email delivery runs through MailerLite:</p>
             <ul style={{ paddingLeft: 20 }}>
-              <li>The first {cfgDailyLimit || 100} emails send immediately</li>
-              <li>Remaining emails are auto-scheduled for <strong>24.5 hours later</strong></li>
-              <li>A cron job checks every 15 minutes and sends any due rollover emails</li>
-              <li>If the next batch also exceeds the limit, it rolls over again</li>
+              <li><strong>New signups</strong> (forms, CRM, lead magnets) are pushed into MailerLite groups automatically — everyone joins <strong>VTM - General List</strong>, plus a group per tag</li>
+              <li><strong>Broadcasts</strong> are created in MailerLite and sent to the groups matching their tag filter</li>
+              <li><strong>Sequences / drip automations</strong> are set up in MailerLite directly (triggered by group membership)</li>
+              <li><strong>Open &amp; click stats</strong> are pulled back via the "Refresh stats" button on each campaign</li>
             </ul>
-            <p>Campaign status shows as <strong>"Partial (Rollover)"</strong> until all emails are sent.</p>
           </div>
         </div>
       </div>
