@@ -28,15 +28,21 @@ async function loadMailerliteConfig(client_id) {
 // fall back to the General List group.
 async function resolveGroupIds(apiKey, client_id, tagFilter = []) {
   const ids = [];
-  for (const tag of tagFilter) {
+  for (const entry of tagFilter) {
+    if (!entry) continue;
+    // Direct MailerLite group id passthrough (new groups-dropdown flow)
+    if (typeof entry === 'string' && entry.startsWith('ml:')) {
+      ids.push(entry.slice(3));
+      continue;
+    }
     try {
-      const g = await ML.getOrCreateGroup(apiKey, client_id, tag);
+      const g = await ML.getOrCreateGroup(apiKey, client_id, entry);
       if (g?.group_id) ids.push(g.group_id);
     } catch (e) {
-      console.error(`resolve group "${tag}" failed:`, e.message);
+      console.error(`resolve group "${entry}" failed:`, e.message);
     }
   }
-  // Always add the canonical General List as a safety net if no tags resolved
+  // Always add the canonical General List as a safety net if nothing resolved
   if (!ids.length) {
     const g = await ML.getOrCreateGroup(apiKey, client_id, ML.GENERAL_LIST_GROUP_NAME);
     if (g?.group_id) ids.push(g.group_id);
@@ -119,7 +125,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ─── POST action=create — create draft ───
+  // ─── POST action=create — create draft (and schedule in MailerLite if scheduled_at) ───
   if (req.method === 'POST' && action === 'create') {
     try {
       const { client_id, subject, html_body, preview_text, tag_filter, scheduled_at, trigger_on_tag, auto_trigger_enabled, trigger_type } = req.body;
@@ -127,6 +133,7 @@ module.exports = async function handler(req, res) {
       const status = auto_trigger_enabled ? 'draft' : (scheduled_at ? 'scheduled' : 'draft');
       const rows = await supaFetch('crm_email_campaigns', {
         method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify([{
           client_id,
           subject,
@@ -140,7 +147,24 @@ module.exports = async function handler(req, res) {
           trigger_type: trigger_type || 'tag',
         }]),
       });
-      return res.json(rows?.[0] || { created: true });
+      const created = rows?.[0];
+
+      // If scheduled, immediately push to MailerLite + schedule the send there.
+      // Keeps the local record in sync (writes mailerlite_campaign_id on success).
+      if (created && scheduled_at && !auto_trigger_enabled) {
+        try {
+          const cfg = await loadMailerliteConfig(client_id);
+          const remoteId = await pushCampaignToMailerlite(created, cfg);
+          await ML.scheduleCampaign(cfg.mailerlite_api_key, remoteId, scheduled_at);
+          created.mailerlite_campaign_id = remoteId;
+        } catch (e) {
+          console.error('Schedule-on-create failed:', e.message);
+          // Keep local row, but bubble up the error so the UI can surface it
+          return res.status(200).json({ ...created, schedule_warning: e.message });
+        }
+      }
+
+      return res.json(created || { created: true });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }

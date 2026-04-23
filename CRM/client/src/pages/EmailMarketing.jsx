@@ -6,15 +6,15 @@ import {
   getEmailCampaigns, createEmailCampaign, sendEmailCampaign, deleteEmailCampaign,
   getTagContexts, saveTagContext, deleteTagContext,
   getContactStats, getContactSends,
-  generateEmailTemplateAI, uploadClientLogo, updateContentClient, createContentClient,
+  generateEmailTemplateAI, editEmailAI, getMailerliteGroups, uploadClientLogo, updateContentClient, createContentClient,
   getEmailSequences, getEmailSequenceDetail, createEmailSequence, updateEmailSequence,
   saveSequenceStep, deleteSequenceStep, enrollSequenceMatching, deleteEmailSequence,
 } from '../api';
-import EmailEditor from '../components/EmailEditor';
+import EmailEditor, { stripEditorRefs } from '../components/EmailEditor';
 import {
   Mail, Users, FileText, Send, Plus, Trash2, Loader, Check, X, ChevronDown,
   Settings, Tag, Clock, RefreshCw, Eye, Calendar, Zap, BookOpen, Info, Cake, Gift,
-  Edit3, Search, MailOpen, MousePointer, UserMinus, Globe, Sparkles, Image as ImageIcon, Upload,
+  Edit3, Search, MailOpen, MousePointer, UserMinus, Globe, Sparkles, Image as ImageIcon, Upload, MessageSquare, BookOpenCheck, ArrowUp, RotateCcw,
 } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -50,7 +50,7 @@ const TABS = [
 
 const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const inputStyle = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box' };
+const inputStyle = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'var(--font-display)', outline: 'none', width: '100%', boxSizing: 'border-box', background: 'var(--surface-2)', color: 'var(--text)', colorScheme: 'dark' };
 const btnPrimary = { background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: 'var(--surface)', borderRadius: 8, border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
 const btnSecondary = { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' };
 const btnDanger = { ...btnSecondary, color: '#ef4444', border: '1px solid #fecaca' };
@@ -288,6 +288,20 @@ export default function EmailMarketing() {
   const [campCtaText, setCampCtaText] = useState('Get Access');
   const [campCtaUrl, setCampCtaUrl] = useState('https://www.vernontm.com/book-call');
   const [campShowLivePreview, setCampShowLivePreview] = useState(false);
+
+  // MailerLite groups — populated when composer opens. Each: { id, name, total, active }
+  const [mlGroups, setMlGroups] = useState([]);
+  const [mlGroupsLoading, setMlGroupsLoading] = useState(false);
+  const [mlGroupsError, setMlGroupsError] = useState('');
+  // Selected group ids (strings, as they come back from ML). Empty = send to all active contacts.
+  const [campGroupIds, setCampGroupIds] = useState([]);
+
+  // AI agent panel state
+  const [aiMessages, setAiMessages] = useState([]); // { role: 'user'|'ai'|'system', text, message? }
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSelection, setAiSelection] = useState(null); // { refId, text, tag }
+  const [aiHistory, setAiHistory] = useState([]); // previous HTMLs for "undo last AI change"
 
   // Tag context form
   const [newTagName, setNewTagName] = useState('');
@@ -640,6 +654,86 @@ export default function EmailMarketing() {
     setCreatingClient(false);
   }
 
+  // ── Load MailerLite groups when composer opens ──
+  useEffect(() => {
+    if (!showComposer || !selectedClientId) return;
+    (async () => {
+      setMlGroupsLoading(true); setMlGroupsError('');
+      try {
+        const res = await getMailerliteGroups(selectedClientId);
+        setMlGroups(res?.groups || []);
+      } catch (e) {
+        setMlGroupsError(e.message);
+        setMlGroups([]);
+      }
+      setMlGroupsLoading(false);
+    })();
+  }, [showComposer, selectedClientId]);
+
+  // ── AI agent handlers ──
+  async function handleAiSend() {
+    const instruction = aiInput.trim();
+    if (!instruction || !selectedClientId) return;
+    // Grab current HTML (prefer template-full doc if active, else campBody)
+    const currentHtml = campTemplateHtml
+      ? String(campTemplateHtml)
+          .replace(/\{\{body\}\}/g, campBody || '')
+          .replace(/\{\{cta_text\}\}/g, campCtaText || 'Learn more')
+          .replace(/\{\{cta_url\}\}/g, campCtaUrl || '#')
+      : campBody;
+    if (!currentHtml || !currentHtml.trim()) {
+      setAiMessages(prev => [...prev, { role: 'user', text: instruction }, { role: 'system', text: 'No email content yet — pick a template or write some content first.' }]);
+      setAiInput('');
+      return;
+    }
+    // Build selection payload if user has something tagged
+    let selection = null;
+    if (aiSelection?.refId && campBodyEditorRef.current?.getElementHtml) {
+      const outer = campBodyEditorRef.current.getElementHtml(aiSelection.refId);
+      selection = { ...aiSelection, outerHtml: outer || '' };
+    }
+    setAiMessages(prev => [...prev, { role: 'user', text: instruction, selection }]);
+    setAiInput('');
+    setAiLoading(true);
+    try {
+      // Snapshot current HTML for undo
+      setAiHistory(prev => [...prev.slice(-9), currentHtml]);
+      const res = await editEmailAI({
+        client_id: selectedClientId,
+        html: currentHtml,
+        instruction,
+        selection,
+      });
+      const newHtml = res?.html;
+      if (!newHtml) throw new Error('AI returned empty HTML');
+      // If wrapper-based, we can't really split body back out — so flip to
+      // standalone mode: stash the new HTML as the template body and clear the
+      // wrapper. That way the editor becomes the sole source of truth.
+      if (campTemplateHtml) {
+        setCampTemplateHtml(null);
+        setCampTemplateId('');
+        setCampTemplateName('');
+      }
+      setCampBody(newHtml);
+      // Tell the editor to re-render the iframe immediately
+      if (campBodyEditorRef.current?.setHtml) campBodyEditorRef.current.setHtml(newHtml);
+      setAiMessages(prev => [...prev, { role: 'ai', text: res.message || 'Updated.' }]);
+      setAiSelection(null);
+    } catch (e) {
+      setAiMessages(prev => [...prev, { role: 'system', text: 'Error: ' + e.message }]);
+    }
+    setAiLoading(false);
+  }
+
+  function handleAiUndo() {
+    if (!aiHistory.length) return;
+    const prev = aiHistory[aiHistory.length - 1];
+    setAiHistory(h => h.slice(0, -1));
+    setCampBody(prev);
+    if (campBodyEditorRef.current?.setHtml) campBodyEditorRef.current.setHtml(prev);
+    setAiMessages(m => [...m, { role: 'system', text: 'Reverted last AI change.' }]);
+  }
+
   // ── Campaign handlers ──
   async function handleCreateCampaign() {
     if (!campSubject.trim() || !selectedClientId) return;
@@ -650,7 +744,7 @@ export default function EmailMarketing() {
       const unwrapChips = (html) => (html || '')
         .replace(/<span[^>]*class=["'][^"']*merge-tag[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi, '$1')
         .replace(/&nbsp;/g, ' ');
-      const cleanBody = unwrapChips(campBody);
+      const cleanBody = stripEditorRefs(unwrapChips(campBody));
       // If a template wrapper is active, substitute the editable body + CTA into placeholders
       const finalHtml = campTemplateHtml
         ? String(campTemplateHtml)
@@ -658,20 +752,22 @@ export default function EmailMarketing() {
             .replace(/\{\{cta_text\}\}/g, campCtaText || 'Learn more')
             .replace(/\{\{cta_url\}\}/g, campCtaUrl || '#')
         : cleanBody;
-      await createEmailCampaign({
+      // Group IDs get prefixed "ml:" so the API can distinguish them from tag names.
+      const groupFilter = (campGroupIds || []).map(id => `ml:${id}`);
+      const result = await createEmailCampaign({
         client_id: selectedClientId,
         subject: campSubject,
         html_body: finalHtml,
         preview_text: campPreview,
-        tag_filter: campTags,
-        scheduled_at: campAutoTrigger ? null : (campSchedule || undefined),
-        trigger_type: campAutoTrigger ? campTriggerType : 'tag',
-        trigger_on_tag: campAutoTrigger && campTriggerType === 'tag' ? campTriggerTag : null,
-        auto_trigger_enabled: !!campAutoTrigger && (campTriggerType === 'birthday' || !!campTriggerTag),
+        tag_filter: groupFilter,
+        scheduled_at: campSchedule || undefined,
       });
-      setCampSubject(''); setCampBody(''); setCampPreview(''); setCampShowPreview(false); setCampTags([]); setCampSchedule('');
-      setCampAutoTrigger(false); setCampTriggerTag(''); setCampTriggerType('tag');
+      if (result?.schedule_warning) {
+        alert('Saved locally, but MailerLite schedule failed: ' + result.schedule_warning);
+      }
+      setCampSubject(''); setCampBody(''); setCampPreview(''); setCampShowPreview(false); setCampTags([]); setCampGroupIds([]); setCampSchedule('');
       setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName('');
+      setAiMessages([]); setAiHistory([]); setAiSelection(null);
       setCampCtaText('Get Access'); setCampCtaUrl('https://www.vernontm.com/book-call');
       setCampShowLivePreview(false);
       setShowComposer(false);
@@ -1583,282 +1679,258 @@ export default function EmailMarketing() {
     const filtered = campaigns.filter(statusTabs.find(t => t.key === campFilter)?.match || (() => true))
       .filter(c => !campSearch || (c.subject || '').toLowerCase().includes(campSearch.toLowerCase()));
 
-    // Composer modal — reused by "+ New Broadcast"
+    // ─────────────────────────────────────────────────────────────
+    // Composer modal — two-column layout:
+    //   LEFT: scrollable meta (subject/preview/audience/schedule) + editor
+    //   RIGHT: AI agent chat (click-to-tag element from editor)
+    // ─────────────────────────────────────────────────────────────
+    const activeClient = clients.find(c => c.id === selectedClientId);
+    const hasBrandBible = !!(activeClient?.brand_bible?.trim());
+
     const composer = showComposer && (
       <div onClick={() => setShowComposer(false)} style={{
         position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.55)', zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12,
       }}>
         <div onClick={e => e.stopPropagation()} style={{
-          background: 'var(--surface)', borderRadius: 14, maxWidth: 840, width: '100%', maxHeight: '94vh',
-          overflow: 'auto', padding: 0, display: 'flex', flexDirection: 'column',
+          background: 'var(--surface)', borderRadius: 14, maxWidth: 1400, width: '100%', height: '94vh',
+          display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', overflow: 'hidden',
         }}>
-          {/* Composer header */}
-          <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Edit3 size={16} /> New Broadcast
-            </div>
-            <button onClick={() => setShowComposer(false)} style={btnSecondary}><X size={14} /></button>
-          </div>
+          {/* ─── LEFT: form + editor ─── */}
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, borderRight: '1px solid var(--border)' }}>
+            {/* Header */}
+            <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <Edit3 size={16} color="var(--orange)" />
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>New Broadcast</div>
 
-          <div style={{ padding: 22 }}>
-            {/* Template picker — top of composer */}
-            <div style={{ marginBottom: 16, padding: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <FileText size={14} color="var(--orange)" />
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Start from template</label>
+              {/* Template picker — moved to header for compactness */}
               <select
                 value={campTemplateId}
                 onChange={(e) => {
                   const tplId = e.target.value;
-                  if (!tplId) {
-                    // "-- Select --" chosen → clear active template
-                    setCampTemplateId('');
-                    setCampTemplateHtml(null);
-                    setCampTemplateName('');
-                    return;
-                  }
+                  if (!tplId) { setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName(''); return; }
                   setTplPicker({
                     initialTemplateId: tplId,
                     onApply: ({ template_html, body_text, subject, preview_text, has_slot, name }) => {
                       if (has_slot && template_html) {
-                        setCampTemplateId(tplId);
-                        setCampTemplateHtml(template_html);
-                        setCampTemplateName(name || '');
-                        setCampBody(body_text || '');
+                        setCampTemplateId(tplId); setCampTemplateHtml(template_html); setCampTemplateName(name || ''); setCampBody(body_text || '');
                       } else {
-                        setCampTemplateId(tplId);
-                        setCampTemplateHtml(null);
-                        setCampTemplateName(name || '');
-                        setCampBody(template_html || '');
+                        setCampTemplateId(tplId); setCampTemplateHtml(null); setCampTemplateName(name || ''); setCampBody(template_html || '');
                       }
                       if (subject && !campSubject) setCampSubject(subject);
                       if (preview_text && !campPreview) setCampPreview(preview_text);
                     },
                   });
                 }}
-                style={{ flex: 1, minWidth: 200, padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}
+                style={{ marginLeft: 12, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, background: 'var(--surface-2)', color: 'var(--text)', cursor: 'pointer' }}
               >
-                <option value="">-- Select a template --</option>
-                {templates.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
+                <option value="">Start from template…</option>
+                {templates.map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
               </select>
-              {templates.length === 0 && (
-                <span style={{ fontSize: 11, color: 'var(--muted)' }}>No templates yet — create one in the Templates tab.</span>
-              )}
-            </div>
 
-            {/* Subject */}
-            <label style={labelStyle}>Subject line</label>
-            <VarButtons onInsert={token => insertAtCursor(campSubjectRef, campSubject, setCampSubject, token)} />
-            <input ref={campSubjectRef} style={{ ...inputStyle, fontSize: 15, padding: '12px 14px' }} placeholder="Your email subject line" value={campSubject} onChange={e => setCampSubject(e.target.value)} />
-
-            {/* Preview text */}
-            {!campShowPreview && (
-              <div style={{ marginTop: 8 }}>
-                <button type="button" onClick={() => setCampShowPreview(true)} style={{ ...btnSecondary, fontSize: 11, padding: '5px 10px' }}>
-                  <Plus size={12} /> Add preview text
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="datetime-local"
+                  style={{ ...inputStyle, width: 200, padding: '6px 10px', fontSize: 12 }}
+                  value={campSchedule}
+                  onChange={e => setCampSchedule(e.target.value)}
+                  title="Schedule (optional)"
+                />
+                <button onClick={() => setShowComposer(false)} style={{ ...btnSecondary, padding: '6px 10px' }}><X size={13} /></button>
+                <button onClick={handleCreateCampaign} disabled={creatingCamp || !campSubject.trim()} style={{ ...btnPrimary, padding: '6px 14px', opacity: creatingCamp ? 0.6 : 1 }}>
+                  {creatingCamp ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : campSchedule ? <Calendar size={13} /> : <Check size={13} />}
+                  {campSchedule ? 'Schedule' : 'Save Draft'}
                 </button>
               </div>
-            )}
-            {campShowPreview && (
-              <div style={{ marginTop: 12 }}>
-                <label style={labelStyle}>Preview text</label>
-                <input style={inputStyle} placeholder="Short teaser shown under subject in most inboxes" value={campPreview} onChange={e => setCampPreview(e.target.value)} />
-              </div>
-            )}
-
-            {/* Audience tags */}
-            <div style={{ marginTop: 16 }}>
-              <label style={labelStyle}>Audience <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(filter by tags — leave empty for all active contacts)</span></label>
-              {allKnownTags.length > 0 ? (
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {allKnownTags.map(tag => {
-                    const isSelected = campTags.includes(tag);
-                    const ctx = tagContexts.find(tc => tc.tag === tag);
-                    return (
-                      <button key={tag} type="button" title={ctx?.description || ''} onClick={() => {
-                        if (isSelected) setCampTags(campTags.filter(t => t !== tag));
-                        else setCampTags([...campTags, tag]);
-                      }} style={{
-                        padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: isSelected ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
-                        color: isSelected ? 'var(--surface)' : 'var(--muted)', border: 'none',
-                      }}>
-                        <Tag size={11} style={{ marginRight: 4 }} />{tag}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>No tags yet — add tags to contacts first.</div>
-              )}
             </div>
 
-            {/* Rich editor body */}
-            <div style={{ marginTop: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>
-                  Body {campTemplateHtml && <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11 }}>(editable slot only)</span>}
+            {/* Scrollable body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Subject + Preview row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>Subject line</label>
+                  <input ref={campSubjectRef} style={{ ...inputStyle, fontSize: 14, padding: '10px 12px' }} placeholder="Your email subject line" value={campSubject} onChange={e => setCampSubject(e.target.value)} />
+                  <div style={{ marginTop: 4 }}>
+                    <VarButtons onInsert={token => insertAtCursor(campSubjectRef, campSubject, setCampSubject, token)} />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Preview text <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span></label>
+                  <input style={{ ...inputStyle, fontSize: 14, padding: '10px 12px' }} placeholder="Teaser shown under subject" value={campPreview} onChange={e => setCampPreview(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Audience — MailerLite groups dropdown */}
+              <div>
+                <label style={labelStyle}>
+                  Send to <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(MailerLite groups — leave empty for all subscribers)</span>
                 </label>
-                {!campTemplateHtml && (
-                  <button
-                    type="button"
-                    onClick={() => setTplPicker({
-                      onApply: ({ template_html, body_text, subject, preview_text, has_slot, name, id }) => {
-                        if (has_slot && template_html) {
-                          setCampTemplateId(id || '');
-                          setCampTemplateHtml(template_html);
-                          setCampTemplateName(name || '');
-                          setCampBody(body_text || '');
-                        } else {
-                          setCampTemplateId(id || '');
-                          setCampTemplateHtml(null);
-                          setCampTemplateName(name || '');
-                          setCampBody(template_html || '');
-                        }
-                        if (subject && !campSubject) setCampSubject(subject);
-                        if (preview_text && !campPreview) setCampPreview(preview_text);
-                      },
+                {mlGroupsLoading ? (
+                  <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Loading groups from MailerLite…
+                  </div>
+                ) : mlGroupsError ? (
+                  <div style={{ fontSize: 12, color: '#ef4444' }}>MailerLite error: {mlGroupsError}</div>
+                ) : mlGroups.length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>No groups found in MailerLite yet.</div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {mlGroups.map(g => {
+                      const isSelected = campGroupIds.includes(g.id);
+                      return (
+                        <button key={g.id} type="button" onClick={() => {
+                          setCampGroupIds(isSelected ? campGroupIds.filter(id => id !== g.id) : [...campGroupIds, g.id]);
+                        }} style={{
+                          padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          background: isSelected ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-2)',
+                          color: isSelected ? 'var(--surface)' : 'var(--text)',
+                          border: '1px solid ' + (isSelected ? 'transparent' : 'var(--border)'),
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                        }}>
+                          <Users size={11} />{g.name}
+                          <span style={{ opacity: 0.7, fontWeight: 500 }}>{g.active || g.total || 0}</span>
+                        </button>
+                      );
                     })}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    <FileText size={12} /> Use template
-                  </button>
+                  </div>
                 )}
               </div>
+
+              {/* Template chip */}
               {campTemplateHtml && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid #bfdbfe', borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
-                  <FileText size={13} color="#2563eb" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid #1e3a5f', borderRadius: 8, fontSize: 12 }}>
+                  <FileText size={13} color="#60a5fa" />
                   <span style={{ color: '#60a5fa' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
-                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only the body paragraph below is editable.</span>
-                  <button
-                    type="button"
-                    onClick={() => { setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName(''); }}
-                    style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                  >
-                    <X size={11} /> Remove
-                  </button>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only body slot editable (AI edits apply to full HTML).</span>
+                  <button type="button" onClick={() => { setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName(''); }} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}><X size={11} /> Remove</button>
                 </div>
               )}
-              <VarButtons onInsert={token => {
-                const chip = `<span class="merge-tag" contenteditable="false" style="display:inline-block; background:#eff6ff; border:1px solid #60a5fa; color:#1d4ed8; padding:1px 7px; border-radius:5px; font-size:0.92em; font-weight:600; line-height:1.4; margin:0 1px; white-space:nowrap;">${token}</span>&nbsp;`;
-                if (campBodyEditorRef.current?.insertHtml) {
-                  campBodyEditorRef.current.insertHtml(chip);
-                } else {
-                  setCampBody((campBody || '') + token);
-                }
-              }} />
-              <EmailEditor ref={campBodyEditorRef} value={campBody} onChange={setCampBody} clientId={selectedClientId} placeholder={campTemplateHtml ? 'Type your message here — this is what goes in the editable slot.' : 'Hey {{name}},'} height={340} />
 
-              {/* CTA customization — shown when a template wrapper is active */}
+              {/* Merge tag buttons */}
+              <div>
+                <VarButtons onInsert={token => {
+                  const chip = `<span class="merge-tag" contenteditable="false" style="display:inline-block; background:#eff6ff; border:1px solid #60a5fa; color:#1d4ed8; padding:1px 7px; border-radius:5px; font-size:0.92em; font-weight:600; line-height:1.4; margin:0 1px; white-space:nowrap;">${token}</span>&nbsp;`;
+                  if (campBodyEditorRef.current?.insertHtml) campBodyEditorRef.current.insertHtml(chip);
+                  else setCampBody((campBody || '') + token);
+                }} />
+              </div>
+
+              {/* Editor — fills remaining height */}
+              <div style={{ flex: 1, minHeight: 420, display: 'flex', flexDirection: 'column' }}>
+                <EmailEditor
+                  ref={campBodyEditorRef}
+                  value={campBody}
+                  onChange={setCampBody}
+                  onSelectionChange={setAiSelection}
+                  clientId={selectedClientId}
+                  placeholder={campTemplateHtml ? 'Type your message here — slots into the template body.' : 'Hey {{name}},'}
+                  height={480}
+                />
+              </div>
+
+              {/* CTA inputs (only for slot templates) */}
               {campTemplateHtml && (
-                <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,155,38,0.08)', border: '1px solid #fed7aa', borderRadius: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#fb923c', marginBottom: 8, letterSpacing: 0.3 }}>CTA BUTTON</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1 1 200px', minWidth: 160 }}>
-                      <label style={{ ...labelStyle, color: '#fb923c' }}>Button text</label>
-                      <input style={inputStyle} placeholder="Get Access" value={campCtaText} onChange={e => setCampCtaText(e.target.value)} />
-                    </div>
-                    <div style={{ flex: '2 1 320px', minWidth: 240 }}>
-                      <label style={{ ...labelStyle, color: '#fb923c' }}>Button URL</label>
-                      <input style={inputStyle} placeholder="https://..." value={campCtaUrl} onChange={e => setCampCtaUrl(e.target.value)} />
-                    </div>
+                <div style={{ padding: 10, background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(251,146,60,0.3)', borderRadius: 8, display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
+                  <div>
+                    <label style={{ ...labelStyle, color: '#fb923c' }}>CTA text</label>
+                    <input style={inputStyle} placeholder="Get Access" value={campCtaText} onChange={e => setCampCtaText(e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, color: '#fb923c' }}>CTA URL</label>
+                    <input style={inputStyle} placeholder="https://..." value={campCtaUrl} onChange={e => setCampCtaUrl(e.target.value)} />
                   </div>
                 </div>
               )}
+            </div>
+          </div>
 
-              {/* Live preview toggle + iframe */}
-              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setCampShowLivePreview(v => !v)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: campShowLivePreview ? 'var(--surface-3)' : 'var(--surface-2)', color: campShowLivePreview ? 'var(--surface)' : 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                >
-                  <Eye size={13} /> {campShowLivePreview ? 'Hide preview' : 'Show live preview'}
+          {/* ─── RIGHT: AI agent panel ─── */}
+          <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface-2)', minWidth: 0 }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={15} color="var(--orange)" />
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>AI Editor</div>
+              {hasBrandBible && (
+                <span title="This client's brand bible is loaded — AI responses will match their voice" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: '#4ade80', background: 'rgba(34,197,94,0.1)', padding: '3px 8px', borderRadius: 12 }}>
+                  <BookOpenCheck size={10} /> Brand bible
+                </span>
+              )}
+              {aiHistory.length > 0 && (
+                <button onClick={handleAiUndo} title="Undo last AI change" style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11 }}>
+                  <RotateCcw size={11} /> Undo
                 </button>
-                <span style={{ fontSize: 11, color: 'var(--muted)' }}>See exactly how the email will look as you type.</span>
-              </div>
-              {campShowLivePreview && (
-                <div style={{ marginTop: 10, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: '#0a0a0a' }}>
-                  <iframe
-                    title="Live email preview"
-                    srcDoc={(() => {
-                      const unwrapChips = (html) => (html || '')
-                        .replace(/<span[^>]*class=["'][^"']*merge-tag[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi, '$1')
-                        .replace(/&nbsp;/g, ' ');
-                      const cleanBody = unwrapChips(campBody) || '<span style="opacity:0.4">[your message here]</span>';
-                      if (campTemplateHtml) {
-                        return String(campTemplateHtml)
-                          .replace(/\{\{body\}\}/g, cleanBody)
-                          .replace(/\{\{cta_text\}\}/g, campCtaText || 'Learn more')
-                          .replace(/\{\{cta_url\}\}/g, campCtaUrl || '#');
-                      }
-                      return `<div style="padding:24px; font-family:Helvetica,Arial,sans-serif; background:#fff;">${cleanBody}</div>`;
-                    })()}
-                    sandbox=""
-                    style={{ width: '100%', height: 560, border: 0, background: '#0a0a0a' }}
-                  />
-                </div>
               )}
             </div>
 
-            {/* Auto-trigger */}
-            <div style={{ marginTop: 16, padding: 12, background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                <input type="checkbox" checked={campAutoTrigger} onChange={e => setCampAutoTrigger(e.target.checked)} />
-                Automate (trigger on tag or birthday)
-              </label>
-              {campAutoTrigger && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                    {[
-                      { key: 'tag', label: 'On new contact with tag', Icon: Tag },
-                      { key: 'birthday', label: "On contact's birthday", Icon: Cake },
-                    ].map(opt => (
-                      <button key={opt.key} type="button" onClick={() => setCampTriggerType(opt.key)} style={{
-                        padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: campTriggerType === opt.key ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
-                        color: campTriggerType === opt.key ? 'var(--surface)' : 'var(--muted)',
-                      }}><opt.Icon size={12} /> {opt.label}</button>
-                    ))}
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {aiMessages.length === 0 && (
+                <div style={{ fontSize: 12, color: 'var(--muted)', padding: 10, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MessageSquare size={13} /> Ask me to edit anything
                   </div>
-                  {campTriggerType === 'tag' && (
-                    <>
-                      <label style={labelStyle}>Trigger tag</label>
-                      <select style={inputStyle} value={campTriggerTag} onChange={e => setCampTriggerTag(e.target.value)}>
-                        <option value="">-- select a tag --</option>
-                        {allKnownTags.map(tag => (<option key={tag} value={tag}>{tag}</option>))}
-                      </select>
-                    </>
-                  )}
-                  {campTriggerType === 'birthday' && (
-                    <div style={{ fontSize: 12, color: 'var(--muted)', padding: 10, background: 'rgba(255,155,38,0.08)', borderRadius: 8, border: '1px solid #fed7aa' }}>
-                      <Cake size={12} style={{ marginRight: 6, color: '#fbbf24' }} />
-                      Sends at 8am Chicago time each year on the contact's birthday.
+                  Try: "Rewrite this more professionally", "Remove the video card", "Change the CTA color to green", "Add a testimonials section".
+                  <div style={{ marginTop: 8, fontSize: 11, fontStyle: 'italic' }}>
+                    Tip: click any text in the editor first — the AI will target it.
+                  </div>
+                </div>
+              )}
+              {aiMessages.map((m, i) => (
+                <div key={i} style={{
+                  alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '92%',
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  fontSize: 12, lineHeight: 1.5,
+                  background: m.role === 'user' ? 'var(--orange)' : m.role === 'system' ? 'rgba(239,68,68,0.08)' : 'var(--surface)',
+                  color: m.role === 'user' ? 'var(--surface)' : m.role === 'system' ? '#fca5a5' : 'var(--text)',
+                  border: m.role !== 'user' ? '1px solid var(--border)' : 'none',
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {m.selection && (
+                    <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 4, fontStyle: 'italic' }}>
+                      → &lt;{m.selection.tag}&gt; "{(m.selection.text || '').slice(0, 60)}…"
                     </div>
                   )}
+                  {m.text}
+                </div>
+              ))}
+              {aiLoading && (
+                <div style={{ alignSelf: 'flex-start', padding: '8px 12px', fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Thinking…
                 </div>
               )}
             </div>
 
-            {/* Schedule + submit */}
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 16, flexWrap: 'wrap' }}>
-              {!campAutoTrigger && (
-                <div style={{ minWidth: 220 }}>
-                  <label style={labelStyle}>Schedule (optional)</label>
-                  <input type="datetime-local" style={inputStyle} value={campSchedule} onChange={e => setCampSchedule(e.target.value)} />
-                </div>
-              )}
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button onClick={() => setShowComposer(false)} style={btnSecondary}>Cancel</button>
-                <button onClick={handleCreateCampaign} disabled={creatingCamp || !campSubject.trim() || (campAutoTrigger && campTriggerType === 'tag' && !campTriggerTag)} style={{ ...btnPrimary, opacity: creatingCamp ? 0.6 : 1 }}>
-                  {creatingCamp ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : campAutoTrigger ? <Zap size={14} /> : campSchedule ? <Calendar size={14} /> : <Check size={14} />}
-                  {campAutoTrigger ? 'Create Automation' : campSchedule ? 'Schedule' : 'Save Draft'}
+            {/* Selection chip */}
+            {aiSelection && (
+              <div style={{ padding: '8px 12px', background: 'rgba(255,155,38,0.12)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                <MousePointer size={11} color="var(--orange)" />
+                <span style={{ color: 'var(--orange)', fontWeight: 600 }}>&lt;{aiSelection.tag}&gt;</span>
+                <span style={{ color: 'var(--muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  "{aiSelection.text}"
+                </span>
+                <button onClick={() => setAiSelection(null)} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}>
+                  <X size={11} />
                 </button>
               </div>
-            </div>
+            )}
+
+            {/* Composer input */}
+            <form onSubmit={e => { e.preventDefault(); handleAiSend(); }} style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 6 }}>
+              <textarea
+                value={aiInput}
+                onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAiSend(); } }}
+                placeholder={aiSelection ? `Edit this ${aiSelection.tag}…` : 'Ask the AI to edit your email…'}
+                rows={2}
+                disabled={aiLoading}
+                style={{ ...inputStyle, resize: 'none', fontSize: 13, padding: '8px 10px', fontFamily: 'inherit' }}
+              />
+              <button type="submit" disabled={aiLoading || !aiInput.trim()} style={{ ...btnPrimary, padding: '0 12px', opacity: (aiLoading || !aiInput.trim()) ? 0.5 : 1 }}>
+                <ArrowUp size={14} />
+              </button>
+            </form>
           </div>
         </div>
       </div>

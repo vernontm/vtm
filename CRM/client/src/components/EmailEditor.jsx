@@ -57,14 +57,14 @@ function extractYouTubeId(url) {
   return null;
 }
 
-const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId, placeholder, height = 480 }, ref) {
+const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelectionChange, clientId, placeholder, height = 480 }, ref) {
   const editorRef = useRef(null);
   const fileRef = useRef(null);
   const iframeRef = useRef(null);
+  const refCounter = useRef(0);
   const [uploading, setUploading] = useState(false);
-  // Default to visual if HTML looks like a full document; otherwise rich.
-  const initialMode = isFullDocument(value) ? 'visual' : 'rich';
-  const [mode, setMode] = useState(initialMode);
+  // Always default to visual — this is the click-to-edit "pretty" editor.
+  const [mode, setMode] = useState('visual');
   const [htmlSource, setHtmlSource] = useState(value || '');
   const [selectedInfo, setSelectedInfo] = useState(null); // { type: 'link'|'image', rect, href?, src?, alt? }
   const lastPropValue = useRef(value);
@@ -117,6 +117,23 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
       }
     },
     focus() { editorRef.current?.focus(); },
+    // Replace the entire document with new HTML (used by AI agent)
+    setHtml(newHtml) {
+      setHtmlSource(newHtml || '');
+      onChange?.(newHtml || '');
+      if (mode === 'visual') renderVisualDoc(newHtml);
+      else if (mode === 'rich' && editorRef.current) {
+        editorRef.current.innerHTML = sanitize(newHtml || '');
+      }
+    },
+    // Get the element tagged with a particular vtm-ref
+    getElementHtml(refId) {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) return null;
+      const el = doc.querySelector(`[data-vtm-ref="${refId}"]`);
+      return el ? el.outerHTML : null;
+    },
+    getMode() { return mode; },
   }));
 
   function applyHeading(tag) { exec('formatBlock', tag); }
@@ -171,44 +188,31 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
 
   // ───── VISUAL MODE (iframe WYSIWYG) ─────
 
-  // (Re)load iframe when entering visual mode or when source changes from outside
-  useEffect(() => {
-    if (mode !== 'visual') return;
+  function renderVisualDoc(src) {
     const iframe = iframeRef.current;
     if (!iframe) return;
     const doc = iframe.contentDocument;
     if (!doc) return;
-
-    const src = htmlSource || '';
     const content = isFullDocument(src)
-      ? sanitizeFullDoc(src)
-      : `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:system-ui;padding:20px;color:#333;margin:0}</style></head><body>${sanitize(src)}</body></html>`;
-
+      ? sanitizeFullDoc(src || '')
+      : `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:system-ui;padding:20px;color:#333;margin:0}</style></head><body>${sanitize(src || '')}</body></html>`;
     doc.open();
     doc.write(content);
     doc.close();
-
-    // Wait a tick so body exists
     setTimeout(() => installVisualEditing(iframe), 20);
+  }
+
+  // (Re)load iframe when entering visual mode
+  useEffect(() => {
+    if (mode !== 'visual') return;
+    renderVisualDoc(htmlSource || '');
   }, [mode]);
 
   // When parent pushes a new value, re-render iframe
   useEffect(() => {
     if (mode !== 'visual') return;
     if (value === lastPropValue.current) return;
-    // Force re-render
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const doc = iframe.contentDocument;
-    if (!doc) return;
-    const src = value || '';
-    const content = isFullDocument(src)
-      ? sanitizeFullDoc(src)
-      : `<!doctype html><html><head><meta charset="utf-8"></head><body>${sanitize(src)}</body></html>`;
-    doc.open();
-    doc.write(content);
-    doc.close();
-    setTimeout(() => installVisualEditing(iframe), 20);
+    renderVisualDoc(value || '');
   }, [value, mode]);
 
   function flushVisual() {
@@ -220,6 +224,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
     clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
     clone.querySelectorAll('[data-vtm-hover]').forEach(el => el.removeAttribute('data-vtm-hover'));
     clone.querySelectorAll('style[data-vtm-chrome]').forEach(el => el.remove());
+    // Keep data-vtm-ref so AI agent can target elements; they'll be stripped at save time.
     const html = '<!doctype html>\n' + clone.outerHTML;
     setHtmlSource(html);
     onChange?.(html);
@@ -242,12 +247,15 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
       doc.head.appendChild(s);
     }
 
-    // Make text blocks editable
+    // Make text blocks editable + assign stable refs for AI tagging
     const textTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'SPAN', 'LI', 'TD', 'DIV', 'A', 'STRONG', 'EM', 'B', 'I'];
     doc.body.querySelectorAll('*').forEach(el => {
-      // Only make leaf-ish elements editable (no block children of same kind)
       if (textTags.includes(el.tagName) && el.children.length === 0 && el.textContent.trim()) {
         el.setAttribute('contenteditable', 'true');
+      }
+      if ((textTags.includes(el.tagName) || el.tagName === 'IMG') && !el.getAttribute('data-vtm-ref')) {
+        refCounter.current += 1;
+        el.setAttribute('data-vtm-ref', `ref-${refCounter.current}`);
       }
     });
 
@@ -256,6 +264,18 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
     doc.body.addEventListener('mouseout', onUnhover);
     doc.body.addEventListener('click', onVisualClick, true);
     doc.body.addEventListener('input', onVisualInput, true);
+    doc.body.addEventListener('focusin', onFocusIn, true);
+
+    function onFocusIn(e) {
+      const el = e.target;
+      if (el.getAttribute && el.getAttribute('contenteditable') === 'true') {
+        const refId = el.getAttribute('data-vtm-ref');
+        if (refId && onSelectionChange) {
+          const text = (el.textContent || '').trim().slice(0, 120);
+          onSelectionChange({ refId, text, tag: el.tagName.toLowerCase() });
+        }
+      }
+    }
 
     function onHover(e) {
       const el = e.target;
@@ -519,6 +539,12 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, clientId,
 });
 
 export default EmailEditor;
+
+// Strip internal editor attributes from serialized HTML (use before save)
+export function stripEditorRefs(html) {
+  if (!html) return html;
+  return html.replace(/\s*data-vtm-ref="[^"]*"/g, '');
+}
 
 // Floating popover UI for link / image editing. Rendered in parent document
 // at fixed position aligned below the clicked element (position computed

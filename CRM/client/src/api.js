@@ -363,6 +363,12 @@ export const uploadClientLogo = (data) => request('/client-logo-upload', { metho
 // AI-generate an email template using the client's brand bible + logo + colors
 export const generateEmailTemplateAI = (data) => request('/email-template-ai', { method: 'POST', body: JSON.stringify(data) });
 
+// AI edit pass over existing HTML — body: { client_id, html, instruction, selection? }
+export const editEmailAI = (data) => request('/email-edit-ai', { method: 'POST', body: JSON.stringify(data) });
+
+// MailerLite groups for a client (for broadcast audience picker)
+export const getMailerliteGroups = (client_id) => request(`/mailerlite-groups?client_id=${client_id}`);
+
 // ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══
 // ══════════════════════════════════════════════════════════════

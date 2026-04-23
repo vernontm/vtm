@@ -43,7 +43,9 @@
     "api/crm/uploadpost.js": { "maxDuration": 60 },
     "api/crm/publish-cron.js": { "maxDuration": 60 },
     "api/crm/personalize-script.js": { "maxDuration": 30 },
-    "api/crm/email-template-ai.js": { "maxDuration": 60 }
+    "api/crm/email-template-ai.js": { "maxDuration": 60 },
+    "api/crm/email-edit-ai.js": { "maxDuration": 120 },
+    "api/crm/mailerlite-groups.js": { "maxDuration": 30 }
   },
   "crons": [
     { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" },
