@@ -1881,7 +1881,7 @@ export default function EmailMarketing() {
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
             Broadcasts <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 16 }}>{campaigns.length}</span>
           </div>
-          <button onClick={() => { setShowComposer(true); }} style={{ ...btnPrimary, background: 'var(--surface)', padding: '10px 18px' }}>
+          <button onClick={() => { setShowComposer(true); }} style={{ ...btnPrimary, background: 'var(--surface)', color: '#fff', padding: '10px 18px' }}>
             <Plus size={14} /> New Broadcast
           </button>
         </div>
