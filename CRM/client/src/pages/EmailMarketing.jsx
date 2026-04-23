@@ -295,7 +295,6 @@ export default function EmailMarketing() {
   const [savingTagCtx, setSavingTagCtx] = useState(false);
 
   // Settings form
-  const [cfgApiKey, setCfgApiKey] = useState('');            // Resend (legacy)
   const [cfgMlApiKey, setCfgMlApiKey] = useState('');        // MailerLite (primary)
   const [cfgFromEmail, setCfgFromEmail] = useState('');
   const [cfgFromName, setCfgFromName] = useState('');
@@ -346,7 +345,6 @@ export default function EmailMarketing() {
         setCfgFromEmail(cfg.from_email || '');
         setCfgFromName(cfg.from_name || '');
         setCfgDailyLimit(String(cfg.daily_limit || 100));
-        setCfgApiKey('');
         setCfgMlApiKey('');
         setMlTestStatus(null);
       }
@@ -734,10 +732,8 @@ export default function EmailMarketing() {
   // ── Config handler ──
   async function handleSaveConfig() {
     if (!cfgFromEmail.trim() || !selectedClientId) return;
-    // Either provider key (or already-saved config) is enough
     const hasMl = !!cfgMlApiKey.trim() || !!config?.mailerlite_api_key_masked;
-    const hasResend = !!cfgApiKey.trim() || !!config?.resend_api_key_masked;
-    if (!hasMl && !hasResend) { setError('MailerLite API key required'); return; }
+    if (!hasMl) { setError('MailerLite API key required'); return; }
     setSavingConfig(true); setError('');
     try {
       const payload = {
@@ -746,10 +742,8 @@ export default function EmailMarketing() {
         from_name: cfgFromName.trim(),
         daily_limit: parseInt(cfgDailyLimit) || 100,
       };
-      if (cfgApiKey.trim()) payload.resend_api_key = cfgApiKey.trim();
       if (cfgMlApiKey.trim()) payload.mailerlite_api_key = cfgMlApiKey.trim();
       await saveEmailConfig(payload);
-      setCfgApiKey('');
       setCfgMlApiKey('');
       const cfg = await getEmailConfig(selectedClientId);
       setConfig(cfg);
@@ -2286,12 +2280,10 @@ export default function EmailMarketing() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={cardStyle}>
           <div style={sectionTitle}>Email Provider — <span className="private-value">{selectedClient?.business_name}</span></div>
-          {config && (config.mailerlite_api_key_masked || config.resend_api_key_masked) && (
+          {config?.mailerlite_api_key_masked && (
             <div style={{ marginBottom: 14, padding: 12, background: 'rgba(34,197,94,0.08)', borderRadius: 8, fontSize: 12, color: '#1a7a3a' }}>
               <Check size={14} style={{ marginRight: 6 }} />
-              {config.mailerlite_api_key_masked && <>MailerLite: <code>{config.mailerlite_api_key_masked}</code></>}
-              {config.mailerlite_api_key_masked && config.resend_api_key_masked && <> &middot; </>}
-              {config.resend_api_key_masked && <>Resend: <code>{config.resend_api_key_masked}</code></>}
+              MailerLite connected: <code>{config.mailerlite_api_key_masked}</code>
               <> &middot; From: {config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email}</>
             </div>
           )}
@@ -2326,12 +2318,6 @@ export default function EmailMarketing() {
                 <input style={inputStyle} placeholder="Your Name" value={cfgFromName} onChange={e => setCfgFromName(e.target.value)} />
               </div>
             </div>
-            <details style={{ fontSize: 12, color: 'var(--muted)' }}>
-              <summary style={{ cursor: 'pointer' }}>Resend API Key (legacy — no longer used for sending)</summary>
-              <div style={{ marginTop: 8 }}>
-                <input style={inputStyle} type="password" placeholder="re_..." value={cfgApiKey} onChange={e => setCfgApiKey(e.target.value)} />
-              </div>
-            </details>
             <button onClick={handleSaveConfig} disabled={savingConfig || !cfgFromEmail.trim()} style={{ ...btnPrimary, alignSelf: 'flex-start', opacity: savingConfig ? 0.6 : 1 }}>
               {savingConfig ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
               Save Configuration
