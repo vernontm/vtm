@@ -364,17 +364,67 @@ export const uploadClientLogo = (data) => request('/client-logo-upload', { metho
 export const generateEmailTemplateAI = (data) => request('/email-template-ai', { method: 'POST', body: JSON.stringify(data) });
 
 // AI edit pass over existing HTML — body: { client_id, html, instruction, selection? }
-export const editEmailAI = async (data) => {
-  // AI edits can take a while; enforce a hard client-side timeout so the UI
-  // never hangs forever on "thinking" if the upstream call stalls.
+// editEmailAI streams progress via SSE from /email-edit-ai.
+// Signature: editEmailAI(data, { onProgress } = {}) -> Promise<{ html, message, mode }>
+// onProgress receives { phase, mode?, model?, chars? } events so the UI can
+// show live feedback while the AI writes.
+export const editEmailAI = async (data, { onProgress } = {}) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 110000); // 110s (server max is 120s)
+  const timeoutId = setTimeout(() => controller.abort(), 110000);
   try {
-    return await request('/email-edit-ai', {
+    const res = await fetch(`${BASE}/email-edit-ai`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(data),
       signal: controller.signal,
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || err.detail || `${res.status}: ${res.statusText}`);
+    }
+    const ct = res.headers.get('content-type') || '';
+    // Fallback for non-streaming response
+    if (!ct.includes('text/event-stream')) {
+      return await res.json();
+    }
+    if (!res.body || !res.body.getReader) throw new Error('Streaming not supported in this browser');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult = null;
+    let streamError = null;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buffer.indexOf('\n\n')) >= 0) {
+        const chunk = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        if (chunk.startsWith(':')) continue; // keepalive
+        const lines = chunk.split('\n');
+        let event = 'message', dataStr = '';
+        for (const l of lines) {
+          if (l.startsWith('event: ')) event = l.slice(7).trim();
+          else if (l.startsWith('data: ')) dataStr += l.slice(6);
+        }
+        if (!dataStr) continue;
+        let payload;
+        try { payload = JSON.parse(dataStr); } catch { continue; }
+        if (event === 'progress') onProgress?.(payload);
+        else if (event === 'done') finalResult = payload;
+        else if (event === 'error') streamError = payload.error || 'stream error';
+      }
+    }
+    if (streamError) throw new Error(streamError);
+    if (!finalResult) throw new Error('Stream ended without a result');
+    return finalResult;
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('AI request timed out after 110s. Try a shorter instruction or split into smaller edits.');
     throw err;

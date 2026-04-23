@@ -302,6 +302,7 @@ export default function EmailMarketing() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSelection, setAiSelection] = useState(null); // { refId, text, tag }
   const [aiHistory, setAiHistory] = useState([]); // previous HTMLs for "undo last AI change"
+  const [aiProgress, setAiProgress] = useState(null); // { mode, model, chars } while streaming
 
   // Tag context form
   const [newTagName, setNewTagName] = useState('');
@@ -716,6 +717,7 @@ export default function EmailMarketing() {
     setAiMessages(prev => [...prev, { role: 'user', text: instruction, selection }]);
     setAiInput('');
     setAiLoading(true);
+    setAiProgress({ phase: 'start' });
     try {
       // Snapshot current HTML for undo
       setAiHistory(prev => [...prev.slice(-9), currentHtml]);
@@ -724,6 +726,8 @@ export default function EmailMarketing() {
         html: currentHtml,
         instruction,
         selection,
+      }, {
+        onProgress: (p) => setAiProgress(prev => ({ ...(prev || {}), ...p })),
       });
       const newHtml = res?.html;
       if (!newHtml) throw new Error('AI returned empty HTML');
@@ -744,6 +748,7 @@ export default function EmailMarketing() {
       setAiMessages(prev => [...prev, { role: 'system', text: 'Error: ' + e.message }]);
     }
     setAiLoading(false);
+    setAiProgress(null);
   }
 
   function handleAiUndo() {
@@ -1937,7 +1942,19 @@ export default function EmailMarketing() {
               ))}
               {aiLoading && (
                 <div style={{ alignSelf: 'flex-start', padding: '8px 12px', fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Thinking…
+                  <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                  <span>
+                    {aiProgress?.phase === 'stream'
+                      ? `Writing… ${aiProgress.chars} chars`
+                      : aiProgress?.mode === 'patch'
+                        ? 'Thinking (fast patch)…'
+                        : aiProgress?.mode === 'full'
+                          ? 'Thinking (full rewrite)…'
+                          : 'Thinking…'}
+                  </span>
+                  {aiProgress?.phase === 'fallback' && (
+                    <span style={{ fontSize: 10, color: 'var(--orange)' }}>(fallback model)</span>
+                  )}
                 </div>
               )}
             </div>
