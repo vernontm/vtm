@@ -696,13 +696,17 @@ export default function EmailMarketing() {
   async function handleAiSend() {
     const instruction = aiInput.trim();
     if (!instruction || !selectedClientId) return;
-    // Grab current HTML (prefer template-full doc if active, else campBody)
-    const currentHtml = campTemplateHtml
+    // Grab current HTML. Prefer the editor's live iframe HTML because it
+    // carries the data-vtm-ref tags that patch-mode splicing relies on.
+    // Fallback to the template+body reconstruction if the editor ref isn't
+    // available yet.
+    const liveHtml = campBodyEditorRef.current?.getHtml ? campBodyEditorRef.current.getHtml() : null;
+    const currentHtml = liveHtml || (campTemplateHtml
       ? String(campTemplateHtml)
           .replace(/\{\{body\}\}/g, campBody || '')
           .replace(/\{\{cta_text\}\}/g, campCtaText || 'Learn more')
           .replace(/\{\{cta_url\}\}/g, campCtaUrl || '#')
-      : campBody;
+      : campBody);
     if (!currentHtml || !currentHtml.trim()) {
       setAiMessages(prev => [...prev, { role: 'user', text: instruction }, { role: 'system', text: 'No email content yet — pick a template or write some content first.' }]);
       setAiInput('');

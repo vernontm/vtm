@@ -134,6 +134,19 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
       const el = doc.querySelector(`[data-vtm-ref="${refId}"]`);
       return el ? el.outerHTML : null;
     },
+    // Get the current live HTML of the editor (with data-vtm-ref tags intact).
+    // In visual mode this serializes the iframe document so AI agents can
+    // splice by refId. In other modes it returns the current htmlSource.
+    getHtml() {
+      if (mode === 'visual' && iframeRef.current?.contentDocument) {
+        const clone = iframeRef.current.contentDocument.documentElement.cloneNode(true);
+        clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+        clone.querySelectorAll('[data-vtm-hover]').forEach(el => el.removeAttribute('data-vtm-hover'));
+        clone.querySelectorAll('style[data-vtm-chrome]').forEach(el => el.remove());
+        return '<!doctype html>\n' + clone.outerHTML;
+      }
+      return htmlSource;
+    },
     getMode() { return mode; },
   }));
 
