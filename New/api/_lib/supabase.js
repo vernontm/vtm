@@ -101,9 +101,17 @@ const ALL_PAGES = [
 // passed (VA admin tier), every synthesized client entry gets that restricted
 // page set instead of the full ALL_PAGES list.
 async function loadUserAccess(userId, isAdmin, allowedPagesGlobal = null) {
+  // Helper: intersect user's allowed_pages with the client's enabled_pages
+  // (if the client has a whitelist). Null/empty client whitelist = no filter.
+  const scope = (userPages, clientEnabled) => {
+    if (!Array.isArray(clientEnabled) || clientEnabled.length === 0) return userPages;
+    const set = new Set(clientEnabled);
+    return userPages.filter(p => set.has(p));
+  };
+
   if (isAdmin) {
-    const clients = await supaFetch(`crm_content_clients?select=id,business_name,brand_primary_color,logo_url&order=business_name.asc`);
-    const pages = Array.isArray(allowedPagesGlobal) && allowedPagesGlobal.length
+    const clients = await supaFetch(`crm_content_clients?select=id,business_name,brand_primary_color,logo_url,enabled_pages&order=business_name.asc`);
+    const base = Array.isArray(allowedPagesGlobal) && allowedPagesGlobal.length
       ? allowedPagesGlobal
       : ALL_PAGES;
     return {
@@ -114,12 +122,13 @@ async function loadUserAccess(userId, isAdmin, allowedPagesGlobal = null) {
         logo_url: c.logo_url || null,
         brand_primary_color: c.brand_primary_color || null,
         role: 'admin',
-        allowed_pages: pages,
+        allowed_pages: scope(base, c.enabled_pages),
+        enabled_pages: Array.isArray(c.enabled_pages) ? c.enabled_pages : null,
       })),
     };
   }
   const rows = await supaFetch(
-    `crm_user_access?user_id=eq.${userId}&select=role,allowed_pages,client:crm_content_clients(id,business_name,brand_primary_color,logo_url)`
+    `crm_user_access?user_id=eq.${userId}&select=role,allowed_pages,client:crm_content_clients(id,business_name,brand_primary_color,logo_url,enabled_pages)`
   );
   const clients = (rows || []).map(r => ({
     id: r.client?.id,
@@ -127,7 +136,8 @@ async function loadUserAccess(userId, isAdmin, allowedPagesGlobal = null) {
     logo_url: r.client?.logo_url || null,
     brand_primary_color: r.client?.brand_primary_color || null,
     role: r.role,
-    allowed_pages: r.allowed_pages || [],
+    allowed_pages: scope(r.allowed_pages || [], r.client?.enabled_pages),
+    enabled_pages: Array.isArray(r.client?.enabled_pages) ? r.client.enabled_pages : null,
   })).filter(c => c.id);
   return { is_admin: false, clients };
 }

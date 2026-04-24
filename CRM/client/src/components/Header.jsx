@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, RefreshCw, ChevronDown, Building2, Check } from 'lucide-react';
+import { Bell, Search, RefreshCw, ChevronDown, Building2, Check, SlidersHorizontal } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { useUi } from '../context/UiContext';
 import { useClient } from '../context/ClientContext';
 import { getNotifications } from '../api';
 import GlobalSearch from './GlobalSearch';
+import ClientPagesModal from './ClientPagesModal';
 
 /* ── Page metadata map ────────────────────────────────────────────────────── */
 const PAGE_META = {
@@ -59,7 +60,8 @@ export default function Header() {
   const [notifCount,  setNotifCount]  = useState(0);
   const [spinning,    setSpinning]    = useState(false);
   const [clientOpen,  setClientOpen]  = useState(false);
-  const { clients, selectedClient, setSelectedClientId, isAdmin } = useClient();
+  const [pagesModal,  setPagesModal]  = useState(false);
+  const { clients, selectedClient, setSelectedClientId, isAdmin, refresh } = useClient();
 
   const meta = getPageMeta(pathname);
 
@@ -205,9 +207,37 @@ export default function Header() {
                       {c.id === selectedClient.id && <Check size={12} color="var(--orange)" />}
                     </button>
                   ))}
+                  {isAdmin && (
+                    <>
+                      <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                      <button
+                        onClick={() => { setPagesModal(true); setClientOpen(false); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          width: '100%', padding: '8px 10px', borderRadius: 6,
+                          background: 'transparent', border: 'none',
+                          color: 'var(--muted)', cursor: 'pointer',
+                          fontSize: 11, fontFamily: 'var(--font-display)', fontWeight: 600, textAlign: 'left',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}
+                      >
+                        <SlidersHorizontal size={13} />
+                        Configure pages for {selectedClient.name}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
+          )}
+
+          {pagesModal && selectedClient && (
+            <ClientPagesModal
+              client={selectedClient}
+              onClose={() => setPagesModal(false)}
+              onSaved={async () => { setPagesModal(false); await refresh(); triggerRefresh(); }}
+            />
           )}
 
           {/* Page-specific action buttons injected by current route */}

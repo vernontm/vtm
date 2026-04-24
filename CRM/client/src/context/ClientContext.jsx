@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getMe, setCurrentClientId } from '../api';
 import { useAuth } from './AuthContext';
+import { useRefresh } from './RefreshContext';
 
 const STORAGE_KEY = 'vtm.crm.selectedClientId';
 
@@ -26,6 +27,7 @@ const ClientContext = createContext({
 
 export function ClientProvider({ children }) {
   const { session } = useAuth();
+  const { triggerRefresh } = useRefresh();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
@@ -56,11 +58,17 @@ export function ClientProvider({ children }) {
   useEffect(() => { load(); }, [load]);
 
   const setSelectedClientId = useCallback((id) => {
-    setSelectedClientIdState(id);
+    setSelectedClientIdState(prev => {
+      // Fire a global refresh whenever the active client actually changes so
+      // every mounted page re-fetches its data against the new scope (not just
+      // whatever page the user happens to be on).
+      if (prev !== id) triggerRefresh();
+      return id;
+    });
     setCurrentClientId(id || null);
     if (id) localStorage.setItem(STORAGE_KEY, id);
     else localStorage.removeItem(STORAGE_KEY);
-  }, []);
+  }, [triggerRefresh]);
 
   const selectedClient = clients.find(c => c.id === selectedClientId) || null;
   const isAdmin = !!user?.is_admin;
