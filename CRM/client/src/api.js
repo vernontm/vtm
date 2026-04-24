@@ -2,6 +2,19 @@ import { supabase } from './lib/supabase';
 
 const BASE = '/api/crm';
 
+// Module-level current client. ClientContext keeps this in sync with the
+// global switcher so every API call automatically scopes to the active client.
+let _currentClientId = null;
+try {
+  const stored = typeof localStorage !== 'undefined'
+    ? localStorage.getItem('vtm.crm.selectedClientId')
+    : null;
+  if (stored) _currentClientId = stored;
+} catch (_) { /* ignore */ }
+
+export function setCurrentClientId(id) { _currentClientId = id || null; }
+export function getCurrentClientId() { return _currentClientId; }
+
 async function request(path, options = {}) {
   // Get the current Supabase session token
   const { data: { session } } = await supabase.auth.getSession();
@@ -11,6 +24,7 @@ async function request(path, options = {}) {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...(_currentClientId ? { 'X-Client-Id': _currentClientId } : {}),
     },
     ...options,
   });

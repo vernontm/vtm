@@ -1,36 +1,44 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, supaFetch, requireClientScope } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+
+  const scope = await requireClientScope(req);
+  if (!scope.ok) return res.status(scope.status).json({ error: scope.error });
+  const { clientId, all } = scope;
+  const scopeFilter = all ? '' : `&client_id=eq.${clientId}`;
 
   const { id } = req.query;
 
   try {
     if (req.method === 'GET') {
       if (id) {
-        const [item] = await supaFetch(`crm_contacts?id=eq.${id}`);
+        const [item] = await supaFetch(`crm_contacts?id=eq.${id}${scopeFilter}`);
         return item ? res.json(item) : res.status(404).json({ error: 'Not found' });
       }
-      return res.json(await supaFetch('crm_contacts?order=created_at.desc'));
+      const filter = all ? '' : `client_id=eq.${clientId}&`;
+      return res.json(await supaFetch(`crm_contacts?${filter}order=created_at.desc`));
     }
 
     if (req.method === 'POST') {
+      if (!clientId) return res.status(400).json({ error: 'X-Client-Id header required for create' });
       if (!req.body.name) return res.status(400).json({ error: 'Name is required' });
-      const result = await supaFetch('crm_contacts', { method: 'POST', body: JSON.stringify(req.body) });
+      const payload = { ...req.body, client_id: clientId };
+      const result = await supaFetch('crm_contacts', { method: 'POST', body: JSON.stringify(payload) });
       return res.status(201).json(result[0] || result);
     }
 
     if (req.method === 'PUT' && id) {
-      const { id: _, ...data } = req.body;
+      const { id: _, client_id: __, ...data } = req.body;
       data.updated_at = new Date().toISOString();
-      const result = await supaFetch(`crm_contacts?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+      const result = await supaFetch(`crm_contacts?id=eq.${id}${scopeFilter}`, { method: 'PATCH', body: JSON.stringify(data) });
+      if (!result || (Array.isArray(result) && result.length === 0)) return res.status(404).json({ error: 'Not found' });
       return res.json(result[0] || result);
     }
 
     if (req.method === 'DELETE' && id) {
-      await supaFetch(`crm_contacts?id=eq.${id}`, { method: 'DELETE' });
+      await supaFetch(`crm_contacts?id=eq.${id}${scopeFilter}`, { method: 'DELETE' });
       return res.json({ success: true });
     }
 

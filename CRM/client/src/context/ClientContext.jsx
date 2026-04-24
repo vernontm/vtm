@@ -6,7 +6,7 @@
 // clients they have been granted access to. Page gating is driven by
 // allowed_pages on each client grant.
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { getMe } from '../api';
+import { getMe, setCurrentClientId } from '../api';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'vtm.crm.selectedClientId';
@@ -44,6 +44,7 @@ export function ClientProvider({ children }) {
       const stored = localStorage.getItem(STORAGE_KEY);
       const pickable = list.find(c => c.id === stored) || list[0] || null;
       setSelectedClientIdState(pickable?.id || null);
+      setCurrentClientId(pickable?.id || null);
       if (pickable?.id) localStorage.setItem(STORAGE_KEY, pickable.id);
     } catch (e) {
       setError(e.message || 'Failed to load user access');
@@ -56,6 +57,7 @@ export function ClientProvider({ children }) {
 
   const setSelectedClientId = useCallback((id) => {
     setSelectedClientIdState(id);
+    setCurrentClientId(id || null);
     if (id) localStorage.setItem(STORAGE_KEY, id);
     else localStorage.removeItem(STORAGE_KEY);
   }, []);

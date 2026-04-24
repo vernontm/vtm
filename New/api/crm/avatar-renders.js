@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, supaFetch, requireClientScope } = require('../_lib/supabase.js');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -42,14 +42,16 @@ module.exports = async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const auth = await requireAuth(req);
-  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  const scope = await requireClientScope(req);
+  if (!scope.ok) return res.status(scope.status).json({ error: scope.error });
+  const { clientId, all } = scope;
+  const scopeFilter = all ? '' : `&client_id=eq.${clientId}`;
 
   const { id, avatar_id, status, action } = req.query;
 
   // ── GET one ──
   if (req.method === 'GET' && id) {
-    const rows = await supaFetch(`crm_avatar_renders?id=eq.${id}`);
+    const rows = await supaFetch(`crm_avatar_renders?id=eq.${id}${scopeFilter}`);
     return res.json(rows[0] || null);
   }
 
@@ -58,6 +60,7 @@ module.exports = async function handler(req, res) {
     const filters = [];
     if (avatar_id) filters.push(`avatar_id=eq.${avatar_id}`);
     if (status)    filters.push(`status=eq.${status}`);
+    if (!all)      filters.push(`client_id=eq.${clientId}`);
     filters.push('order=created_at.desc');
     const rows = await supaFetch(`crm_avatar_renders?${filters.join('&')}`);
     return res.json(rows);
@@ -78,19 +81,22 @@ module.exports = async function handler(req, res) {
   // ── Schedule under client ──
   if (req.method === 'POST' && action === 'schedule') {
     if (!id) return res.status(400).json({ error: 'id required' });
-    const { client_id, caption = '', hashtags = '', title } = req.body || {};
-    if (!client_id) return res.status(400).json({ error: 'client_id required' });
+    const { caption = '', hashtags = '', title } = req.body || {};
+    // The schedule target is the current tenant (from header). Admins must
+    // have an active client selected to schedule.
+    const targetClient = clientId || req.body?.client_id;
+    if (!targetClient) return res.status(400).json({ error: 'X-Client-Id header or client_id required' });
 
-    const renders = await supaFetch(`crm_avatar_renders?id=eq.${id}`);
+    const renders = await supaFetch(`crm_avatar_renders?id=eq.${id}${scopeFilter}`);
     const render = renders[0];
     if (!render) return res.status(404).json({ error: 'render not found' });
     if (!render.final_video_url) return res.status(400).json({ error: 'render not yet complete' });
 
-    const existing = await supaFetch(`crm_content_scripts?client_id=eq.${client_id}&select=id`);
+    const existing = await supaFetch(`crm_content_scripts?client_id=eq.${targetClient}&select=id`);
     const baseOrder = (existing?.length || 0) + 1;
 
     const script = {
-      client_id,
+      client_id: targetClient,
       title: title || render.title || `${render.script.slice(0, 40)}...`,
       caption: caption || render.script,
       hashtags,
@@ -117,12 +123,14 @@ module.exports = async function handler(req, res) {
 
   // ── POST create ──
   if (req.method === 'POST') {
+    if (!clientId) return res.status(400).json({ error: 'X-Client-Id header required for create' });
     const body = req.body || {};
     if (!body.avatar_id || !body.script) {
       return res.status(400).json({ error: 'avatar_id and script required' });
     }
     const payload = {
       ...body,
+      client_id: clientId,
       status: body.status || 'pending',
     };
     const rows = await supaFetch('crm_avatar_renders', {
@@ -135,9 +143,10 @@ module.exports = async function handler(req, res) {
   // ── PUT patch ──
   if (req.method === 'PUT') {
     if (!id) return res.status(400).json({ error: 'id required' });
-    const rows = await supaFetch(`crm_avatar_renders?id=eq.${id}`, {
+    const { client_id: _, ...rest } = req.body || {};
+    const rows = await supaFetch(`crm_avatar_renders?id=eq.${id}${scopeFilter}`, {
       method: 'PATCH',
-      body: JSON.stringify(req.body || {}),
+      body: JSON.stringify(rest),
     });
     return res.json(rows[0] || null);
   }
@@ -145,7 +154,7 @@ module.exports = async function handler(req, res) {
   // ── DELETE ──
   if (req.method === 'DELETE') {
     if (!id) return res.status(400).json({ error: 'id required' });
-    await supaFetch(`crm_avatar_renders?id=eq.${id}`, { method: 'DELETE' });
+    await supaFetch(`crm_avatar_renders?id=eq.${id}${scopeFilter}`, { method: 'DELETE' });
     return res.json({ success: true });
   }
 

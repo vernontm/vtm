@@ -99,6 +99,29 @@ async function assertClientAccess(user, clientId) {
   return { ok: true, role: rows[0].role };
 }
 
+// One-stop helper for tenant-scoped endpoints. Returns:
+//   { ok: true,  user, clientId,  all }  — call filtering/writes with clientId
+//   { ok: false, status, error }         — send this back to the caller
+// Rules:
+//   - missing/invalid auth              -> 401
+//   - admin + no X-Client-Id header     -> all=true, clientId=null (legacy "see everything")
+//   - admin + X-Client-Id               -> clientId scoped, all=false
+//   - non-admin + no X-Client-Id        -> 400
+//   - non-admin + X-Client-Id           -> verify grant; 403 if missing
+async function requireClientScope(req) {
+  const user = await requireCrmUser(req);
+  if (!user) return { ok: false, status: 401, error: 'Unauthorized' };
+  const raw = req.headers['x-client-id'] || req.headers['X-Client-Id'];
+  const clientId = (typeof raw === 'string' && raw.trim()) ? raw.trim() : null;
+  if (!clientId) {
+    if (user.is_admin) return { ok: true, user, clientId: null, all: true };
+    return { ok: false, status: 400, error: 'X-Client-Id header required' };
+  }
+  const check = await assertClientAccess(user, clientId);
+  if (!check.ok) return check;
+  return { ok: true, user, clientId, all: false, role: check.role };
+}
+
 async function requireStudentAuth(req) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) return null;
@@ -135,4 +158,4 @@ async function supaFetch(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-module.exports = { SUPABASE_URL, SERVICE_KEY, ANON_KEY, headers, setCors, requireAuth, requireCrmUser, requireStudentAuth, requireAdminAuth, supaFetch, loadUserAccess, assertClientAccess };
+module.exports = { SUPABASE_URL, SERVICE_KEY, ANON_KEY, headers, setCors, requireAuth, requireCrmUser, requireStudentAuth, requireAdminAuth, supaFetch, loadUserAccess, assertClientAccess, requireClientScope };
