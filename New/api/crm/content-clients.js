@@ -5,7 +5,7 @@ const { setCors, requireCrmUser, supaFetch, loadUserAccess } = require('../_lib/
 // - POST/PUT/DELETE: admin-only (client creation moved out of Content page
 //   into the admin Users & Access UI per Phase 2)
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const user = await requireCrmUser(req);

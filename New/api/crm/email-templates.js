@@ -1,7 +1,7 @@
 const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   const user = await requireCrmUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });

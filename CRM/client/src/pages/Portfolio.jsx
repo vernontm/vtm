@@ -3,6 +3,7 @@ import { Plus, Trash2, Eye, EyeOff, Upload, X, Image, Video, GripVertical, Searc
 import { getPortfolio, createPortfolioItem, updatePortfolioItem, deletePortfolioItem, uploadBlogMedia } from '../api';
 import { usePageActions } from '../context/UiContext';
 import Modal from '../components/Modal';
+import { toast } from '../components/Toast';
 
 const CATEGORIES = ['Websites', 'Apps', 'Visuals', 'Graphics', 'Branding', 'Automation', 'Other'];
 
@@ -148,7 +149,7 @@ function EditModal({ item, onClose, onSave }) {
         media_type: isVideo ? 'video' : 'image',
       }));
     } catch (err) {
-      alert('Upload failed: ' + err.message);
+      toast('error', 'Upload failed: ' + err.message);
     } finally {
       setUploading(false);
     }
@@ -167,7 +168,7 @@ function EditModal({ item, onClose, onSave }) {
         media_url: f.media_url || result.url,
       }));
     } catch (err) {
-      alert('Upload failed: ' + err.message);
+      toast('error', 'Upload failed: ' + err.message);
     } finally {
       setUploadingThumb(false);
     }
@@ -180,7 +181,7 @@ function EditModal({ item, onClose, onSave }) {
       await onSave(form);
       onClose();
     } catch (err) {
-      alert(err.message);
+      toast('error', err.message);
     } finally {
       setSaving(false);
     }

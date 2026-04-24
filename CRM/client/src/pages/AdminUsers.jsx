@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
+import { useToast } from '../components/Toast';
 import {
   getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   upsertUserGrant, revokeUserGrant,
@@ -136,17 +137,24 @@ export default function AdminUsers() {
 }
 
 function UserRow({ user, clients, expanded, onToggle, onChanged }) {
+  const toast = useToast();
   async function toggleAdmin(e) {
     e.stopPropagation();
     if (!confirm(`${user.is_admin ? 'Revoke' : 'Grant'} admin for ${user.email}?`)) return;
-    try { await updateAdminUser(user.id, { is_admin: !user.is_admin }); onChanged(); }
-    catch (err) { alert(err.message); }
+    try {
+      await updateAdminUser(user.id, { is_admin: !user.is_admin });
+      toast.success(`${user.is_admin ? 'Revoked' : 'Granted'} admin for ${user.email}`);
+      onChanged();
+    } catch (err) { toast.error(err.message); }
   }
   async function remove(e) {
     e.stopPropagation();
     if (!confirm(`Delete ${user.email}? This cannot be undone.`)) return;
-    try { await deleteAdminUser(user.id); onChanged(); }
-    catch (err) { alert(err.message); }
+    try {
+      await deleteAdminUser(user.id);
+      toast.success(`Deleted ${user.email}`);
+      onChanged();
+    } catch (err) { toast.error(err.message); }
   }
 
   return (
@@ -183,6 +191,7 @@ function UserRow({ user, clients, expanded, onToggle, onChanged }) {
 }
 
 function GrantsEditor({ user, clients, onChanged }) {
+  const toast = useToast();
   // Clients the user doesn't yet have a grant for → candidates for the
   // "add grant" dropdown.
   const granted = new Set(user.grants.map(g => g.client_id));
@@ -199,8 +208,9 @@ function GrantsEditor({ user, clients, onChanged }) {
         allowed_pages: DEFAULT_PAGES,
         role: 'viewer',
       });
+      toast.success('Grant added');
       onChanged();
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast.error(e.message); }
     finally { setSaving(false); }
   }
 
@@ -232,6 +242,7 @@ function GrantsEditor({ user, clients, onChanged }) {
 }
 
 function GrantRow({ user, grant, onChanged }) {
+  const toast = useToast();
   const [pages, setPages] = useState(grant.allowed_pages || []);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -249,21 +260,25 @@ function GrantRow({ user, grant, onChanged }) {
     setSaving(true);
     try {
       await upsertUserGrant(user.id, { client_id: grant.client_id, allowed_pages: pages, role: grant.role });
+      toast.success('Access updated');
       onChanged();
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast.error(e.message); }
     finally { setSaving(false); }
   }
 
   async function revoke() {
     if (!confirm(`Revoke ${user.email}'s access to ${grant.client_name}?`)) return;
     setRemoving(true);
-    try { await revokeUserGrant(user.id, grant.client_id); onChanged(); }
-    catch (e) { alert(e.message); setRemoving(false); }
+    try {
+      await revokeUserGrant(user.id, grant.client_id);
+      toast.success('Access revoked');
+      onChanged();
+    } catch (e) { toast.error(e.message); setRemoving(false); }
   }
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, marginBottom: 10, background: 'var(--surface-2)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+      <div className="grant-row-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{grant.client_name || grant.client_id}</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {dirty && (
@@ -280,7 +295,7 @@ function GrantRow({ user, grant, onChanged }) {
       {PAGE_GROUPS.map(group => (
         <div key={group.label} style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{group.label}</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="access-pill-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {group.pages.map(p => (
               <button
                 key={p.slug}

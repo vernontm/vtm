@@ -10,10 +10,41 @@ const headers = {
   'Prefer': 'return=representation',
 };
 
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+// Lock CORS to production + local dev origins. Extra origins can be added
+// via CRM_ALLOWED_ORIGINS (comma-separated). Requests from unknown origins
+// receive no ACAO header, which the browser will reject.
+const DEFAULT_ORIGINS = [
+  'https://vernontm.com',
+  'https://www.vernontm.com',
+  'https://vtm-new.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+];
+const EXTRA_ORIGINS = (process.env.CRM_ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+const ALLOWED_ORIGINS = new Set([...DEFAULT_ORIGINS, ...EXTRA_ORIGINS]);
+
+// Backwards-compatible: if called with just (res), falls back to wildcard so
+// legacy endpoints keep working. If called with (res, req), enforces the
+// allowlist — unlisted origins get NO ACAO header and are blocked by the
+// browser. New and security-critical endpoints should pass req.
+function setCors(res, req) {
+  const origin = req?.headers?.origin;
+  if (req) {
+    // Strict mode: only allow listed origins.
+    if (origin && ALLOWED_ORIGINS.has(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+  } else {
+    // Legacy mode (TODO: migrate all endpoints to pass req).
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Client-Id');
 }
 
 async function requireAuth(req) {

@@ -66,7 +66,7 @@ async function publishScript(script, client) {
 }
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const cronSecret = req.headers['authorization'];

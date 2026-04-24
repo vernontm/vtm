@@ -5,6 +5,7 @@ import {
   Instagram, MapPin, ChevronDown, Save,
 } from 'lucide-react';
 import CoverFramePicker from './CoverFramePicker';
+import { toast } from './Toast';
 
 /**
  * Publer-style Edit Post modal.
@@ -65,7 +66,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
       });
       onClose();
     } catch (e) {
-      alert('Save failed: ' + e.message);
+      toast('error', 'Save failed: ' + e.message);
     }
     setSaving(false);
   };

@@ -36,7 +36,7 @@ function flat(resp) {
 }
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const auth = await requireAuth(req);

@@ -13,7 +13,7 @@ function stripDashes(text) {
 // The AI decides the client (if not given), number of emails, delays, subjects + bodies,
 // and qualification tags. It then creates the sequence + steps via supaFetch.
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 

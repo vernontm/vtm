@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Settings as SettingsIcon, Mail, CheckCircle, AlertCircle, Loader, ExternalLink } from 'lucide-react';
 import { getSettings, bulkUpdateSettings, getGmailStatus, connectGmail, disconnectGmail } from '../api';
+import { toast } from '../components/Toast';
 
 // ── Toggle switch ─────────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
@@ -124,7 +125,7 @@ export default function Settings() {
       setGmailStatus({ connected: false, email: '', expired: false });
       setGmailMsg('');
     } catch (e) {
-      alert('Failed to disconnect Gmail: ' + e.message);
+      toast('error', 'Failed to disconnect Gmail: ' + e.message);
     }
   };
 

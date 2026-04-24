@@ -4,6 +4,7 @@ import {
   RefreshCw, ChevronDown, ChevronUp, Search, Plus, X,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
+import { toast } from '../components/Toast';
 import {
   getInvoices, getManualInvoices, deleteInvoice, voidInvoice,
   deleteManualInvoice, updateManualInvoice, refreshInvoice,
@@ -111,7 +112,7 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
       });
       onCreated();
       onClose();
-    } catch (e) { alert('Failed: ' + e.message); }
+    } catch (e) { toast('error', 'Failed: ' + e.message); }
     finally { setSaving(false); }
   };
 

@@ -6,7 +6,7 @@ const BUCKET = 'client-logos';
 // Body: { client_id, filename, content_type, data_base64 }
 // Returns: { url, key }
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 

@@ -1,7 +1,7 @@
 import { setCors, requireStudentAuth, supaFetch } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { slug, public: isPublic } = req.query;

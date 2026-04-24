@@ -4,7 +4,7 @@ const { setCors, requireCrmUser, loadUserAccess } = require('../_lib/supabase.js
 // Returns: { user: { id, email, is_admin }, clients: [{ id, name, role, allowed_pages, ... }] }
 // Called on app boot to seed the ClientContext.
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
 

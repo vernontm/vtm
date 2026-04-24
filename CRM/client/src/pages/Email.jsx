@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
   Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap, Loader,
 } from 'lucide-react';
+import { toast } from '../components/Toast';
 import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
@@ -487,7 +488,7 @@ export default function EmailPage() {
       const created = await createLabelDef({ name: newLabelName.trim(), color: newLabelColor });
       setCustomLabels(prev => [...prev, created]);
       setNewLabelName(''); setShowNewLabel(false);
-    } catch (e) { alert('Failed: ' + e.message); }
+    } catch (e) { toast('error', 'Failed: ' + e.message); }
   };
   const handleDeleteLabel = async (id) => {
     try { await deleteLabelDef(id); setCustomLabels(prev => prev.filter(l => l.id !== id)); } catch {}
@@ -565,8 +566,8 @@ export default function EmailPage() {
     }
   };
 
-  const handleSendQueue = async id => { try { await sendQueueItem(id); await load(); setSelected(null); } catch(e) { alert('Send failed: '+e.message); } };
-  const handleDelete = async id => { try { await deleteQueueItem(id); await load(); if(selected?.id===id) setSelected(null); } catch(e) { alert('Delete failed: '+e.message); } };
+  const handleSendQueue = async id => { try { await sendQueueItem(id); await load(); setSelected(null); } catch(e) { toast('error', 'Send failed: '+e.message); } };
+  const handleDelete = async id => { try { await deleteQueueItem(id); await load(); if(selected?.id===id) setSelected(null); } catch(e) { toast('error', 'Delete failed: '+e.message); } };
   const handleTrashGmail = async (email, e) => {
     e.stopPropagation();
     if (!confirm('Move this email to trash?')) return;
@@ -575,24 +576,24 @@ export default function EmailPage() {
       const remove = prev => prev.filter(m => m.id !== email.id);
       setInboxMessages(remove); setSentMessages(remove); setDraftMessages(remove);
       if (selected?.id === email.id) setSelected(null);
-    } catch(err) { alert('Trash failed: ' + err.message); }
+    } catch(err) { toast('error', 'Trash failed: ' + err.message); }
   };
-  const handleApprove = async email => { try { await updateQueueItem(email.id, {status:'pending'}); await load(); } catch(e) { alert('Approve failed: '+e.message); } };
+  const handleApprove = async email => { try { await updateQueueItem(email.id, {status:'pending'}); await load(); } catch(e) { toast('error', 'Approve failed: '+e.message); } };
 
   const openCompose = () => { setComposeOpen(true); setSelected(null); };
   const openReply = () => { setComposeOpen(selected); };
 
   const handleComposeSend = async ({ to, subject, body, labels }) => {
     if(!to||!subject) return; setSending(true);
-    try { const c = await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); await sendQueueItem(c.id); setComposeOpen(false); await load(); } catch(e) { alert('Send failed: '+e.message); } finally { setSending(false); }
+    try { const c = await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); await sendQueueItem(c.id); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Send failed: '+e.message); } finally { setSending(false); }
   };
   const handleComposeSchedule = async ({ to, subject, body, scheduleDate, labels }) => {
     if(!to||!subject||!scheduleDate) return; setSending(true);
-    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft',follow_up_date:scheduleDate}); setComposeOpen(false); await load(); } catch(e) { alert('Schedule failed: '+e.message); } finally { setSending(false); }
+    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft',follow_up_date:scheduleDate}); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Schedule failed: '+e.message); } finally { setSending(false); }
   };
   const handleComposeDraft = async ({ to, subject, body, labels }) => {
     if(!to&&!subject&&!body) return;
-    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); setComposeOpen(false); await load(); } catch(e) { alert('Save failed: '+e.message); }
+    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Save failed: '+e.message); }
   };
 
   /* ── display helpers ─────────────────────────────────────────────────── */

@@ -4,7 +4,7 @@ import {
   Users, Briefcase, Star, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Receipt, StickyNote, LogOut,
   Eye, EyeOff, FileText, CreditCard, FolderOpen, Film,
-  GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2, UserCog,
+  GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2,
   Video, X, Package, Bell, FileCode, Sparkles,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
@@ -241,21 +241,13 @@ export default function Sidebar() {
             </>
           )}
 
-          {(isOwner || isAdmin) && !viewingAs && (
+          {isAdmin && !viewingAs && (
             <>
               <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Admin</div>
-              {isOwner && (
-                <NavLink to="/team" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                  <UserCog size={15} />
-                  <span>Team &amp; Access</span>
-                </NavLink>
-              )}
-              {isAdmin && (
-                <NavLink to="/admin-users" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                  <Users size={15} />
-                  <span>Users &amp; Access</span>
-                </NavLink>
-              )}
+              <NavLink to="/admin-users" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                <Users size={15} />
+                <span>Users &amp; Access</span>
+              </NavLink>
             </>
           )}
         </nav>

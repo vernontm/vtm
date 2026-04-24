@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
 import { usePageActions } from '../context/UiContext';
+import { toast } from '../components/Toast';
 
 const PROJECT_STATUSES = ['Active', 'In Progress', 'Working on it', 'Not Started', 'Completed', 'On Hold', 'Cancelled', 'Stuck'];
 const ITEM_STATUSES  = ['Not Started', 'Working on it', 'Done', 'Stuck', 'On Hold'];
@@ -117,7 +118,7 @@ export default function Projects() {
     try {
       await updateProject(project.id, { status });
       setProjects(ps => ps.map(p => p.id === project.id ? { ...p, status } : p));
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast('error', e.message); }
   };
 
   // ── Expand / load subitems ──
@@ -168,10 +169,10 @@ export default function Projects() {
     try {
       await createProject({ ...form, value: parseFloat(form.value) || 0 });
       await load(); setModal(null);
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
-    try { await deleteProject(selected.id); await load(); setModal(null); } catch (e) { alert(e.message); }
+    try { await deleteProject(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
 
   // Bulk actions

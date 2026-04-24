@@ -39,7 +39,7 @@ async function suggestTitleFromScript(script) {
 // - POST ?id=&action=schedule     — promote final_video_url into crm_content_scripts under a client
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const scope = await requireClientScope(req);

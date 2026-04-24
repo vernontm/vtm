@@ -4,7 +4,7 @@ import { getGmailAuth } from '../_lib/gmail.js';
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
 export default async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
 

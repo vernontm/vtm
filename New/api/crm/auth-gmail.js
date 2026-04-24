@@ -4,7 +4,7 @@ import { getAuthUrl, exchangeCode, setSetting, disconnectGmail } from '../_lib/g
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://vernontm.com';
 
 export default async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { callback, code, error } = req.query;

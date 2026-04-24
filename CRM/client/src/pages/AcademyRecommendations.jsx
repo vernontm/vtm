@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Plus, Pencil, Trash2, ExternalLink, X, Loader2, GripVertical } from 'lucide-react';
 import { getAcademyRecommendations, createAcademyRecommendation, updateAcademyRecommendation, deleteAcademyRecommendation } from '../api';
+import { toast } from '../components/Toast';
 
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
@@ -68,7 +69,7 @@ export default function AcademyRecommendations() {
   }
 
   async function handleSave() {
-    if (!form.title.trim()) return alert('Title is required');
+    if (!form.title.trim()) return toast('error', 'Title is required');
     try {
       setSaving(true);
       if (editingId) {
@@ -84,7 +85,7 @@ export default function AcademyRecommendations() {
       }
       closeModal();
     } catch (err) {
-      alert('Failed to save: ' + err.message);
+      toast('error', 'Failed to save: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -96,7 +97,7 @@ export default function AcademyRecommendations() {
       await deleteAcademyRecommendation(id);
       setRecs(prev => prev.filter(r => r.id !== id));
     } catch (err) {
-      alert('Failed to delete: ' + err.message);
+      toast('error', 'Failed to delete: ' + err.message);
     }
   }
 

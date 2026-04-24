@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, ToggleLeft, ToggleRight, Info, Loader2, Check } from 'lucide-react';
 import { getAcademySettings, updateAcademySetting } from '../api';
+import { toast } from '../components/Toast';
 
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
@@ -55,7 +56,7 @@ export default function AcademySettings() {
       setSaved(prev => ({ ...prev, [key]: true }));
       setTimeout(() => setSaved(prev => ({ ...prev, [key]: false })), 2000);
     } catch (err) {
-      alert('Failed to save: ' + err.message);
+      toast('error', 'Failed to save: ' + err.message);
     } finally {
       setSaving(prev => ({ ...prev, [key]: false }));
     }

@@ -14,7 +14,7 @@ const { setCors } = require('../_lib/supabase.js');
 // ─────────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // Auth pass-through (matches previous behavior so existing cron config works)

@@ -9,6 +9,7 @@ import {
   getResources, createResource, updateResource, deleteResource,
 } from '../api';
 import { usePageActions } from '../context/UiContext';
+import { toast } from '../components/Toast';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const LANGUAGES = ['markdown', 'python', 'javascript', 'typescript', 'bash', 'json', 'html', 'css', 'sql', 'text'];
@@ -75,11 +76,11 @@ export default function Resources() {
         onDelete={async (id) => {
           if (!confirm('Delete this category? Resources in it will keep their category slug but become orphaned.')) return;
           try { await deleteResourceCategory(id); await loadCategories(); }
-          catch (e) { alert(e.message); }
+          catch (e) { toast('error', e.message); }
         }}
         onTogglePublish={async (cat) => {
           try { await updateResourceCategory(cat.id, { published: !cat.published }); await loadCategories(); }
-          catch (e) { alert(e.message); }
+          catch (e) { toast('error', e.message); }
         }}
       />
     );
@@ -118,11 +119,11 @@ export default function Resources() {
         onDeleteResource={async (id) => {
           if (!confirm('Delete this resource?')) return;
           try { await deleteResource(id); await loadResources(view.category.slug); }
-          catch (e) { alert(e.message); }
+          catch (e) { toast('error', e.message); }
         }}
         onTogglePublishResource={async (r) => {
           try { await updateResource(r.id, { published: !r.published }); await loadResources(view.category.slug); }
-          catch (e) { alert(e.message); }
+          catch (e) { toast('error', e.message); }
         }}
       />
     );
@@ -235,7 +236,7 @@ function CategoryEditor({ initial, onCancel, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!cat.name?.trim()) { alert('Name is required'); return; }
+    if (!cat.name?.trim()) { toast('error', 'Name is required'); return; }
     const payload = { ...cat, slug: cat.slug || slugify(cat.name) };
     setSaving(true);
     try {
@@ -246,7 +247,7 @@ function CategoryEditor({ initial, onCancel, onSaved }) {
         await createResourceCategory(payload);
       }
       onSaved();
-    } catch (err) { alert('Save failed: ' + err.message); }
+    } catch (err) { toast('error', 'Save failed: ' + err.message); }
     finally { setSaving(false); }
   };
 
@@ -463,7 +464,7 @@ function ResourceEditor({ initial, category, onCancel, onSaved }) {
   };
 
   const handleSave = async () => {
-    if (!r.title?.trim()) { alert('Title is required'); return; }
+    if (!r.title?.trim()) { toast('error', 'Title is required'); return; }
     const payload = {
       ...r,
       category_slug: category.slug,
@@ -478,7 +479,7 @@ function ResourceEditor({ initial, category, onCancel, onSaved }) {
         await createResource(payload);
       }
       onSaved();
-    } catch (err) { alert('Save failed: ' + err.message); }
+    } catch (err) { toast('error', 'Save failed: ' + err.message); }
     finally { setSaving(false); }
   };
 

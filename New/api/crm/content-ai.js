@@ -3,7 +3,7 @@ const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const user = await requireCrmUser(req);

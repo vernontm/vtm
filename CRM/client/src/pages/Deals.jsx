@@ -15,6 +15,7 @@ import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
+import { toast } from '../components/Toast';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const STAGES = ['New', 'Discovery', 'Proposal', 'Negotiation', 'Won', 'Lost', 'Completed'];
@@ -693,12 +694,12 @@ export default function Deals() {
 
   const handleStageChange = async (deal, stage) => {
     try { await updateDeal(deal.id, { stage }); setDeals(ds => ds.map(d => d.id === deal.id ? { ...d, stage } : d)); }
-    catch (e) { alert(e.message); }
+    catch (e) { toast('error', e.message); }
   };
 
   const handlePaymentStatusChange = async (deal, payment_status) => {
     try { await updateDeal(deal.id, { payment_status }); setDeals(ds => ds.map(d => d.id === deal.id ? { ...d, payment_status } : d)); }
-    catch (e) { alert(e.message); }
+    catch (e) { toast('error', e.message); }
   };
 
   const handleAmountPaidSave = async (deal, rawVal) => {
@@ -726,11 +727,11 @@ export default function Deals() {
     try {
       await createDeal({ ...form, value, amount_paid, payment_status });
       await load(); setModal(null);
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
     try { await deleteDeal(selected.id); await load(); setModal(null); }
-    catch (e) { alert(e.message); }
+    catch (e) { toast('error', e.message); }
   };
 
   const handleRefreshInvoices = async (inv) => {

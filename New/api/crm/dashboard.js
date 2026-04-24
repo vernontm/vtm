@@ -1,32 +1,44 @@
-import { setCors, requireCrmUser, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireClientScope, supaFetch } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  // Dashboard aggregates Ray's business data (revenue, deals, invoices).
-  // Non-admins get an empty placeholder shape instead of a 403 so their
-  // landing page doesn't error.
-  if (!user.is_admin) {
-    return res.json({ limited: true, contacts: [], deals: [], projects: [], invoices: [], leads: [], stripeRevenue: null });
+  // Dashboard is scoped: admin + no client selected → sees everything,
+  // admin + selected client → sees only that client, non-admin → sees their
+  // scoped data (tenant-filtered queries below). Non-admins without any
+  // selected client get a limited placeholder instead of a 400.
+  const scope = await requireClientScope(req);
+  if (!scope.ok) {
+    // Non-admin without X-Client-Id → return limited placeholder (legacy UX).
+    if (scope.status === 400) {
+      return res.json({ limited: true, contacts: [], deals: [], projects: [], invoices: [], leads: [], stripeRevenue: null });
+    }
+    return res.status(scope.status).json({ error: scope.error });
   }
+  const { user, clientId, all } = scope;
+  // Optional filter appended to every supabase query. Admins with no client
+  // selected (all=true) use an empty filter and see global aggregates.
+  const q = all ? '' : `&client_id=eq.${clientId}`;
+  const qStart = all ? '' : `client_id=eq.${clientId}&`;
 
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const [contacts, deals, projects, invoices, leads] = await Promise.all([
-      supaFetch('crm_contacts?select=id,archived'),
-      supaFetch('crm_deals?select=id,name,stage,value,amount_paid,payment_status,created_at,updated_at,archived'),
-      supaFetch('crm_projects?select=id,status,value,archived'),
-      supaFetch('crm_invoices?select=id,status,amount'),
-      supaFetch('crm_leads?select=id,status,interest,lead_segment,archived,created_at'),
+      supaFetch(`crm_contacts?select=id,archived${q}`),
+      supaFetch(`crm_deals?select=id,name,stage,value,amount_paid,payment_status,created_at,updated_at,archived${q}`),
+      supaFetch(`crm_projects?select=id,status,value,archived${q}`),
+      supaFetch(`crm_invoices?select=id,status,amount${q}`),
+      supaFetch(`crm_leads?select=id,status,interest,lead_segment,archived,created_at${q}`),
     ]);
 
     // ── Stripe Revenue ────────────────────────────────────────────────────────
+    // Stripe connects to Ray's account, so only pull it when we're showing
+    // the global admin view. When scoped to a specific client, skip it
+    // until per-client Stripe accounts are supported.
     let stripeRevenue = null;
     const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
-    if (STRIPE_KEY && !STRIPE_KEY.includes('REPLACE')) {
+    if (all && STRIPE_KEY && !STRIPE_KEY.includes('REPLACE')) {
       try {
         const stripeHeaders = { 'Authorization': `Bearer ${STRIPE_KEY}` };
         const stripeFetch = async (path) => {
@@ -34,14 +46,30 @@ export default async function handler(req, res) {
           if (!r.ok) throw new Error(`Stripe ${r.status}`);
           return r.json();
         };
+        // Walk Stripe's cursor pagination until has_more=false or hard cap.
+        // Without this, a busy account silently under-reports annual revenue.
+        const stripeFetchAll = async (path, { maxPages = 25 } = {}) => {
+          const all = [];
+          let starting_after = null;
+          for (let i = 0; i < maxPages; i++) {
+            const sep = path.includes('?') ? '&' : '?';
+            const url = `${path}${sep}limit=100${starting_after ? `&starting_after=${starting_after}` : ''}`;
+            const page = await stripeFetch(url);
+            const data = page.data || [];
+            all.push(...data);
+            if (!page.has_more || data.length === 0) break;
+            starting_after = data[data.length - 1].id;
+          }
+          return { data: all };
+        };
 
         const thirtyDaysAgoTs = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
         const yearAgoTs = Math.floor((Date.now() - 365 * 24 * 60 * 60 * 1000) / 1000);
 
         const [balance, recentCharges, yearCharges] = await Promise.all([
           stripeFetch('/balance'),
-          stripeFetch(`/charges?created[gte]=${thirtyDaysAgoTs}&limit=100`),
-          stripeFetch(`/charges?created[gte]=${yearAgoTs}&limit=100&status=succeeded`),
+          stripeFetchAll(`/charges?created[gte]=${thirtyDaysAgoTs}`),
+          stripeFetchAll(`/charges?created[gte]=${yearAgoTs}&status=succeeded`),
         ]);
 
         const availableBalance = balance.available.reduce((s, b) => s + b.amount, 0) / 100;
@@ -51,11 +79,11 @@ export default async function handler(req, res) {
         const last30Revenue = succeededRecent.reduce((s, c) => s + c.amount, 0) / 100;
         const totalStripeRevenue = yearCharges.data.reduce((s, c) => s + c.amount, 0) / 100;
 
-        const stripeByMonth = {};
+        const stripeMonthly = {};
         yearCharges.data.forEach(c => {
           const d = new Date(c.created * 1000);
           const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-          stripeByMonth[k] = (stripeByMonth[k] || 0) + c.amount / 100;
+          stripeMonthly[k] = (stripeMonthly[k] || 0) + c.amount / 100;
         });
 
         const recentPayments = succeededRecent.slice(0, 10).map(c => ({
@@ -73,7 +101,7 @@ export default async function handler(req, res) {
           last30Days: last30Revenue,
           last30Count: succeededRecent.length,
           total: totalStripeRevenue,
-          byMonth: stripeByMonth,
+          byMonth: stripeMonthly,
           recentPayments,
         };
       } catch (stripeErr) {

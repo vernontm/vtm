@@ -17,6 +17,7 @@ import StatusBadge from '../components/StatusBadge';
 import SelectionBar from '../components/SelectionBar';
 import BulkImport from '../components/BulkImport';
 import CopyCell from '../components/CopyCell';
+import { toast } from '../components/Toast';
 
 // ─── Lead Statuses ────────────────────────────────────────────────────────────
 const LEAD_STATUSES = ['New', 'Interested', 'Not Interested', 'Follow Up', 'Call Scheduled', 'Called', 'Won'];
@@ -637,7 +638,7 @@ function RecordingCard({ recording: rawR, onDeleted }) {
       await deleteRecording(r.id);
       onDeleted?.(r.id);
     } catch (e) {
-      alert(`Delete failed: ${e.message}`);
+      toast('error', `Delete failed: ${e.message}`);
       setDeleting(false);
     }
   };
@@ -658,7 +659,7 @@ function RecordingCard({ recording: rawR, onDeleted }) {
       if (data.summary) setSummary(data.summary);
       else if (!res.ok) throw new Error(data.error || 'Failed');
     } catch (e) {
-      alert(`AI summary failed: ${e.message}`);
+      toast('error', `AI summary failed: ${e.message}`);
     } finally {
       setSummarizing(false);
     }
@@ -680,7 +681,7 @@ function RecordingCard({ recording: rawR, onDeleted }) {
         if (error) throw error;
         setUrl(data.signedUrl);
       } catch (e) {
-        alert(`Could not load audio: ${e.message}`);
+        toast('error', `Could not load audio: ${e.message}`);
         setLoading(false);
         return;
       }
@@ -1743,13 +1744,13 @@ export default function Leads() {
 
   const handleSave = async () => {
     if (!form.name.trim() && !form.company?.trim()) return;
-    try { await createLead(form); await load(); setModal(null); } catch (e) { alert(e.message); }
+    try { await createLead(form); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
-    try { await deleteLead(selected.id); await load(); setModal(null); } catch (e) { alert(e.message); }
+    try { await deleteLead(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
   const handleConvert = async () => {
-    try { await convertLead(selected.id); await load(); setModal(null); } catch (e) { alert(e.message); }
+    try { await convertLead(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
 
   const handleBulkDelete = async () => {

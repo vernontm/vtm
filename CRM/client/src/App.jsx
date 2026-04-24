@@ -1,17 +1,43 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { RefreshProvider, useRefresh } from './context/RefreshContext';
 import { PrivacyProvider, usePrivacy } from './context/PrivacyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ClientProvider, useClient } from './context/ClientContext';
 // Gate a route by page slug. Admins bypass; anyone else needs the slug
-// in their current client's allowed_pages. Blocked users are redirected
-// to the dashboard (which is always allowed).
+// in their current client's allowed_pages. Blocked users get a friendly
+// /no-access page so they know *why* they can't see something (instead of
+// a silent redirect, which looks like a bug).
 function Gated({ slug, adminOnly = false, children }) {
   const { isAdmin, canAccess } = useClient();
-  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
-  if (!canAccess(slug)) return <Navigate to="/dashboard" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to={`/no-access?page=${encodeURIComponent(slug || 'page')}&reason=admin`} replace />;
+  if (!canAccess(slug)) return <Navigate to={`/no-access?page=${encodeURIComponent(slug || 'page')}`} replace />;
   return children;
+}
+
+function NoAccess() {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page') || 'this page';
+  const reason = params.get('reason');
+  return (
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 32px', textAlign: 'center' }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Access required</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 16 }}>
+          {reason === 'admin'
+            ? <>The <strong>{page}</strong> page is admin-only.</>
+            : <>You don't have access to <strong>{page}</strong> for the current client.</>}
+          <br />Ask your admin to enable it for your account.
+        </div>
+        <button
+          onClick={() => { window.location.href = '/admin/dashboard'; }}
+          style={{ padding: '10px 20px', borderRadius: 10, background: 'var(--orange)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+        >
+          Back to dashboard
+        </button>
+      </div>
+    </div>
+  );
 }
 import { RecorderProvider } from './context/RecorderContext';
 import { TeamProvider } from './context/TeamContext';
@@ -35,29 +61,40 @@ import Blog from './pages/Blog';
 import EmailPage from './pages/Email';
 import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
-import ContentScheduler from './pages/ContentScheduler';
-import Avatars from './pages/Avatars';
-import EmailMarketing from './pages/EmailMarketing';
 import GlobalAgent from './components/GlobalAgent';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './components/Toast';
 
-// Academy Admin Pages
-import AcademyDashboard from './pages/AcademyDashboard';
-import AcademyCourses from './pages/AcademyCourses';
-import AcademyCourseEdit from './pages/AcademyCourseEdit';
-import AcademyLessonEdit from './pages/AcademyLessonEdit';
-import AcademyStudents from './pages/AcademyStudents';
-import AcademyHomework from './pages/AcademyHomework';
-import AcademyMessages from './pages/AcademyMessages';
-import AcademyCommunity from './pages/AcademyCommunity';
-import AcademyRecommendations from './pages/AcademyRecommendations';
-import AcademySettings from './pages/AcademySettings';
-import Team from './pages/Team';
-import AdminUsers from './pages/AdminUsers';
-import Training from './pages/Training';
-import Scripts from './pages/Scripts';
-import Products from './pages/Products';
-import Resources from './pages/Resources';
+// Heavy routes — code-split so they don't ship on first paint.
+const ContentScheduler = lazy(() => import('./pages/ContentScheduler'));
+const Avatars = lazy(() => import('./pages/Avatars'));
+const EmailMarketing = lazy(() => import('./pages/EmailMarketing'));
+
+// Academy Admin Pages (admin-only, never loaded for non-admins)
+const AcademyDashboard = lazy(() => import('./pages/AcademyDashboard'));
+const AcademyCourses = lazy(() => import('./pages/AcademyCourses'));
+const AcademyCourseEdit = lazy(() => import('./pages/AcademyCourseEdit'));
+const AcademyLessonEdit = lazy(() => import('./pages/AcademyLessonEdit'));
+const AcademyStudents = lazy(() => import('./pages/AcademyStudents'));
+const AcademyHomework = lazy(() => import('./pages/AcademyHomework'));
+const AcademyMessages = lazy(() => import('./pages/AcademyMessages'));
+const AcademyCommunity = lazy(() => import('./pages/AcademyCommunity'));
+const AcademyRecommendations = lazy(() => import('./pages/AcademyRecommendations'));
+const AcademySettings = lazy(() => import('./pages/AcademySettings'));
+
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const Training = lazy(() => import('./pages/Training'));
+const Scripts = lazy(() => import('./pages/Scripts'));
+const Products = lazy(() => import('./pages/Products'));
+const Resources = lazy(() => import('./pages/Resources'));
+
+function RouteFallback() {
+  return (
+    <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 13 }}>
+      Loading…
+    </div>
+  );
+}
 
 export const MobileContext = createContext({ sidebarOpen: false, setSidebarOpen: () => {} });
 export const useMobile = () => useContext(MobileContext);
@@ -88,8 +125,10 @@ function AppLayout() {
           <Header />
           <main key={refreshKey} className="app-main" style={{ flex: 1, overflow: 'auto' }}>
             <ErrorBoundary>
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/no-access" element={<NoAccess />} />
               <Route path="/dashboard" element={<Gated slug="dashboard"><Dashboard /></Gated>} />
               <Route path="/leads" element={<Gated slug="leads"><Leads /></Gated>} />
               <Route path="/contacts" element={<Gated slug="contacts"><Contacts /></Gated>} />
@@ -118,13 +157,15 @@ function AppLayout() {
               <Route path="/academy/community" element={<Gated slug="academy-community" adminOnly><AcademyCommunity /></Gated>} />
               <Route path="/academy/recommendations" element={<Gated slug="academy-recommendations" adminOnly><AcademyRecommendations /></Gated>} />
               <Route path="/academy/settings" element={<Gated slug="academy-settings" adminOnly><AcademySettings /></Gated>} />
-              <Route path="/team" element={<Team />} />
+              {/* /team retired — redirect any bookmarks to the new Users & Access page */}
+              <Route path="/team" element={<Navigate to="/admin-users" replace />} />
               <Route path="/admin-users" element={<Gated slug="admin-users" adminOnly><AdminUsers /></Gated>} />
               <Route path="/training" element={<Gated slug="training"><Training /></Gated>} />
               <Route path="/scripts" element={<Gated slug="scripts"><Scripts /></Gated>} />
               <Route path="/products" element={<Gated slug="products"><Products /></Gated>} />
               <Route path="/resources" element={<Gated slug="resources"><Resources /></Gated>} />
             </Routes>
+            </Suspense>
             </ErrorBoundary>
           </main>
           <GlobalAgent />
@@ -214,11 +255,13 @@ function AuthGate() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter basename="/admin">
-        <AuthProvider>
-          <AuthGate />
-        </AuthProvider>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter basename="/admin">
+          <AuthProvider>
+            <AuthGate />
+          </AuthProvider>
+        </BrowserRouter>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

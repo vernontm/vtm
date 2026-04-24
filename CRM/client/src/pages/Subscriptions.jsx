@@ -3,6 +3,7 @@ import {
   CreditCard, RefreshCw, Search, Plus, X, Trash2, Edit3, Scan, Check,
   DollarSign, Calendar, Tag,
 } from 'lucide-react';
+import { toast } from '../components/Toast';
 import {
   getSubscriptions, createSubscription, updateSubscription, deleteSubscription, scanSubscriptions,
 } from '../api';
@@ -70,7 +71,7 @@ export default function SubscriptionsPage() {
         }
         await load();
       }
-    } catch (e) { alert('Scan failed: ' + e.message); }
+    } catch (e) { toast('error', 'Scan failed: ' + e.message); }
     setScanning(false);
   };
 
@@ -86,7 +87,7 @@ export default function SubscriptionsPage() {
       setShowAdd(false); setEditing(null);
       setForm({ service:'', amount:'', billing_cycle:'monthly', next_renewal:'', category:'software', status:'active', notes:'' });
       await load();
-    } catch (e) { alert('Save failed: ' + e.message); }
+    } catch (e) { toast('error', 'Save failed: ' + e.message); }
   };
 
   const handleEdit = (sub) => {
@@ -104,7 +105,7 @@ export default function SubscriptionsPage() {
   };
 
   const handleDelete = async (id) => {
-    try { await deleteSubscription(id); await load(); } catch (e) { alert('Delete failed: ' + e.message); }
+    try { await deleteSubscription(id); await load(); } catch (e) { toast('error', 'Delete failed: ' + e.message); }
   };
 
   // Filter and search

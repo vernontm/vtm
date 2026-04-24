@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Search, Circle, Loader2 } from 'lucide-react';
 import { getAcademyThreads, getAcademyThread, sendAcademyMessage } from '../api';
+import { toast } from '../components/Toast';
 
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 0, marginBottom: 16, overflow: 'hidden' };
@@ -100,7 +101,7 @@ export default function AcademyMessages() {
       setMessageText('');
       await loadMessages(studentId, true);
     } catch (err) {
-      alert('Failed to send: ' + err.message);
+      toast('error', 'Failed to send: ' + err.message);
     } finally {
       setSending(false);
     }

@@ -4,7 +4,7 @@ const { setCors, supaFetch, requireClientScope, assertClientAccess } = require('
 // Reads take client_id from the X-Client-Id header (admin bypass permitted)
 // or from ?client_id=, then enforce access.
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const scope = await requireClientScope(req);

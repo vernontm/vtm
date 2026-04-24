@@ -469,6 +469,44 @@ textarea:focus, select:focus {
   .search-input { width: 160px; }
 }
 
+/* ── Mobile polish ─────────────────────────────────────────────────────────── */
+/* At narrower widths, trim the header and stack AdminUsers controls so nothing
+   overflows horizontally. */
+@media (max-width: 640px) {
+  /* Header: hide "Search" label + the ⌘K chip; keep the icon-only button. */
+  .app-main header .search-label,
+  .app-main .header-search-label { display: none; }
+  /* Client switcher: cap width and truncate long client names. */
+  .client-switcher-btn {
+    max-width: 140px !important;
+  }
+  .client-switcher-btn > span:not([class]) {
+    max-width: 80px;
+  }
+  /* Page title: shrink a touch so the header doesn't wrap. */
+  .app-main header .page-title { font-size: 15px !important; }
+  .app-main header .page-sub { display: none; }
+}
+
+@media (max-width: 560px) {
+  /* Modal: full-width at the smallest sizes. */
+  .modal-content { width: calc(100vw - 24px) !important; max-width: none !important; }
+  /* AdminUsers page-toggle pills: wrap into a neat grid instead of overflowing. */
+  .access-pill-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px !important;
+  }
+  .access-pill-group > button { width: 100%; justify-content: center; }
+  /* Stack grant row header buttons under the client name. */
+  .grant-row-header {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  /* Charts that forget to reflow. */
+  .dashboard-chart { min-width: 0 !important; }
+}
+
 /* ── Utility ────────────────────────────────────────────────────────────────── */
 .text-muted   { color: var(--muted); }
 .text-orange  { color: var(--orange); }

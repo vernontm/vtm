@@ -12,6 +12,7 @@ import {
 } from '../api';
 import EmailEditor, { stripEditorRefs } from '../components/EmailEditor';
 import { useClient } from '../context/ClientContext';
+import { toast } from '../components/Toast';
 import {
   Mail, Users, FileText, Send, Plus, Trash2, Loader, Check, X, ChevronDown,
   Settings, Tag, Clock, RefreshCw, Eye, Calendar, Zap, BookOpen, Info, Cake, Gift,
@@ -768,7 +769,7 @@ export default function EmailMarketing() {
         scheduled_at: campSchedule || undefined,
       });
       if (result?.schedule_warning) {
-        alert('Saved locally, but MailerLite schedule failed: ' + result.schedule_warning);
+        toast('error', 'Saved locally, but MailerLite schedule failed: ' + result.schedule_warning);
       }
       setCampSubject(''); setCampBody(''); setCampPreview(''); setCampShowPreview(false); setCampTags([]); setCampGroupIds([]); setCampSchedule('');
       setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName('');
@@ -787,7 +788,7 @@ export default function EmailMarketing() {
     try {
       const result = await sendEmailCampaign({ campaign_id: id });
       const msg = `Sent: ${result.sent}, Failed: ${result.failed}${result.rolled_over ? `, Rolled over: ${result.rolled_over}` : ''}`;
-      alert(msg);
+      toast('error', msg);
       const camp = await getEmailCampaigns(selectedClientId);
       setCampaigns(camp || []);
     } catch (e) { setError(e.message); }
@@ -2086,7 +2087,7 @@ export default function EmailMarketing() {
     if (!editingSeq) return;
     try {
       const r = await enrollSequenceMatching(editingSeq.id);
-      alert(`Enrolled ${r.enrolled || 0} contact(s).`);
+      toast('error', `Enrolled ${r.enrolled || 0} contact(s).`);
       const d = await getEmailSequenceDetail(editingSeq.id);
       setEditingSeq(d); reloadSequences();
     } catch (e) { setError(e.message); }

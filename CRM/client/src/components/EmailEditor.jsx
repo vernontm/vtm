@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { uploadEmailImage } from '../api';
+import { toast } from './Toast';
 
 // Sanitize HTML before assigning to innerHTML / dangerouslySetInnerHTML.
 function sanitize(html) {
@@ -178,7 +179,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
         flushVisual();
       }
     } catch (e) {
-      alert('Upload failed: ' + e.message);
+      toast('error', 'Upload failed: ' + e.message);
     }
     setUploading(false);
     if (fileRef.current) fileRef.current.value = '';

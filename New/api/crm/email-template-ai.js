@@ -11,7 +11,7 @@ function stripDashes(s) {
 // Body: { client_id, prompt?, template_type? }
 // Returns: { subject, preview_text, html_body }
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 

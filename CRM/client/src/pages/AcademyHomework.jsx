@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ClipboardCheck, CheckCircle, Clock, XCircle, X, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { getAcademyHomework, updateAcademyHomework } from '../api';
+import { toast } from '../components/Toast';
 
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
@@ -61,7 +62,7 @@ export default function AcademyHomework() {
       setExpandedId(null);
       setFeedbackText('');
     } catch (err) {
-      alert('Failed to update: ' + err.message);
+      toast('error', 'Failed to update: ' + err.message);
     } finally {
       setSaving(null);
     }

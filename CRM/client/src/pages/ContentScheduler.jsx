@@ -28,6 +28,7 @@ import EditPostModal from '../components/EditPostModal';
 import { useUi } from '../context/UiContext';
 import { useClient } from '../context/ClientContext';
 import CoverFramePicker from '../components/CoverFramePicker';
+import { toast } from '../components/Toast';
 
 const STATUS_COLORS = {
   draft: { bg: '#f0f0f5', text: '#8e8ea0', label: 'Draft' },
@@ -474,7 +475,7 @@ export default function ContentScheduler() {
   // ── CSV Export ──
   function exportCSV() {
     const selected = scripts.filter(s => selectedScripts.has(s.id) && s.status !== 'exported');
-    if (!selected.length) { alert('No unexported scripts selected'); return; }
+    if (!selected.length) { toast('error', 'No unexported scripts selected'); return; }
 
     // Build list of platform IDs that are filled in
     const platformIds = [
@@ -521,7 +522,7 @@ export default function ContentScheduler() {
   // ── Export approved generated content to CSV ──
   function exportApprovedCSV() {
     const approved = genResults.filter(r => r.approved && !r.rejected);
-    if (!approved.length) { alert('No approved posts to export'); return; }
+    if (!approved.length) { toast('error', 'No approved posts to export'); return; }
     if (!client) return;
 
     const platformIds = [
@@ -592,7 +593,7 @@ export default function ContentScheduler() {
       await loadClientData(client.id);
       setPublishModal(null);
     } catch (e) {
-      alert('Publish failed: ' + (e.message || 'Unknown error'));
+      toast('error', 'Publish failed: ' + (e.message || 'Unknown error'));
     }
     setPublishLoading(false);
   }
@@ -772,7 +773,7 @@ export default function ContentScheduler() {
     try {
       await updateContentClient(client.id, { threads_style: threadsStyle });
       await loadClientData(client.id);
-    } catch (e) { alert('Failed to save: ' + e.message); }
+    } catch (e) { toast('error', 'Failed to save: ' + e.message); }
   }
 
   // ── Upload carousel template image ──
@@ -804,7 +805,7 @@ export default function ContentScheduler() {
       // Auto-save to server
       await saveCarouselTemplates({ client_id: client.id, templates: updated });
     } catch (err) {
-      alert('Template upload failed: ' + err.message);
+      toast('error', 'Template upload failed: ' + err.message);
     }
   }
 
@@ -814,7 +815,7 @@ export default function ContentScheduler() {
     try {
       await saveCarouselTemplates({ client_id: client.id, templates: carouselTemplates });
       await loadClientData(client.id);
-    } catch (e) { alert('Failed to save: ' + e.message); }
+    } catch (e) { toast('error', 'Failed to save: ' + e.message); }
     setTemplateSaving(false);
   }
 
@@ -844,7 +845,7 @@ export default function ContentScheduler() {
       await loadClientData(client.id);
     } catch (e) {
       setGenResults(prev => prev.map((r, i) => i === index ? { ...r, approving: false } : r));
-      alert('Failed to approve: ' + e.message);
+      toast('error', 'Failed to approve: ' + e.message);
     }
   }
 
@@ -868,7 +869,7 @@ export default function ContentScheduler() {
       await loadClientData(client.id);
     } catch (e) {
       setCarouselResult(prev => prev ? { ...prev, approving: false } : prev);
-      alert('Failed to approve carousel: ' + e.message);
+      toast('error', 'Failed to approve carousel: ' + e.message);
     }
   }
 
@@ -996,7 +997,7 @@ export default function ContentScheduler() {
       await saveScheduleConfig({ client_id: client.id, time_slots: schedTimeslots, timezone: schedTimezone });
       setShowScheduleModal(false);
       loadClientData(client.id);
-    } catch (e) { alert('Failed: ' + e.message); }
+    } catch (e) { toast('error', 'Failed: ' + e.message); }
   }
 
   // ── Client add/edit ──
@@ -1075,7 +1076,7 @@ export default function ContentScheduler() {
         setClientForm(prev => ({ ...prev, brand_bible: brand_bible }));
       }
     } catch (err) {
-      alert('Failed to process file: ' + err.message);
+      toast('error', 'Failed to process file: ' + err.message);
     }
     setProcessingBible(false);
   }
@@ -1097,7 +1098,7 @@ export default function ContentScheduler() {
       await refreshClientList(); // keep the global switcher in sync
       if (editingClient) await loadClientData(editingClient.id);
       setShowClientModal(false);
-    } catch (e) { alert('Failed: ' + e.message); }
+    } catch (e) { toast('error', 'Failed: ' + e.message); }
     setSavingClient(false);
   }
 
@@ -1400,7 +1401,7 @@ export default function ContentScheduler() {
                     try {
                       await createContentScript([{ client_id: client.id, title: 'New Script', full_script: '', status: 'draft', sort_order: scripts.length + 1 }]);
                       await loadClientData(client.id);
-                    } catch (err) { console.error('Add row failed:', err); alert('Failed to add row: ' + err.message); }
+                    } catch (err) { console.error('Add row failed:', err); toast('error', 'Failed to add row: ' + err.message); }
                   }}>
                     <Plus size={13} /> Add Row
                   </button>
@@ -1429,8 +1430,8 @@ export default function ContentScheduler() {
                         const ids = selectedScripts.size > 0 ? Array.from(selectedScripts) : undefined;
                         const result = await generateCaptions({ client_id: client.id, script_ids: ids });
                         await loadClientData(client.id);
-                        if (result?.updated === 0) alert('No scripts needed captions (all already have them). Select specific rows to regenerate.');
-                      } catch (e) { alert('Caption generation failed: ' + e.message); }
+                        if (result?.updated === 0) toast('error', 'No scripts needed captions (all already have them). Select specific rows to regenerate.');
+                      } catch (e) { toast('error', 'Caption generation failed: ' + e.message); }
                       setActionLoading('');
                     }}>
                     {actionLoading === 'captions' ? <><Loader size={13} className="spin" /> Generating...</> : <><Sparkles size={13} /> Generate Captions</>}
@@ -1444,7 +1445,7 @@ export default function ContentScheduler() {
                       }
                       await autoScheduleContent({ client_id: client.id });
                       await loadClientData(client.id);
-                    } catch (e) { alert('Schedule failed: ' + e.message); }
+                    } catch (e) { toast('error', 'Schedule failed: ' + e.message); }
                     setActionLoading('');
                   }}>
                     <Calendar size={13} /> Auto Schedule
@@ -1806,7 +1807,7 @@ export default function ContentScheduler() {
                                     try {
                                       await generateCaptions({ client_id: client.id, script_ids: [script.id] });
                                       await loadClientData(client.id);
-                                    } catch (e) { alert('Failed: ' + e.message); }
+                                    } catch (e) { toast('error', 'Failed: ' + e.message); }
                                     setActionLoading('');
                                   }} style={{ ...btnGhost, padding: '4px 6px' }} title="Regenerate caption"
                                     disabled={actionLoading === 'captions_' + script.id}>
@@ -1849,7 +1850,7 @@ export default function ContentScheduler() {
                                             }
                                             const rows = await getMonitors(client.id);
                                             setMonitors(rows || []);
-                                          } catch (e) { alert('AutoDM error: ' + e.message); }
+                                          } catch (e) { toast('error', 'AutoDM error: ' + e.message); }
                                           setMonitorLoading(null);
                                         }}
                                         style={{ ...btnGhost, padding: '4px 6px', color: monitor ? '#E8650A' : '#8e8ea0' }}
@@ -2709,7 +2710,7 @@ export default function ContentScheduler() {
                             try {
                               const data = await getIGComments(client.uploadpost_user, igPostUrl);
                               setIgComments(data.comments || data || []);
-                            } catch (e) { alert('Failed: ' + e.message); }
+                            } catch (e) { toast('error', 'Failed: ' + e.message); }
                             setIgCommentsLoading(false);
                           }}>
                           {igCommentsLoading ? <Loader size={13} className="spin" /> : <RefreshCw size={13} />} Load
@@ -2735,7 +2736,7 @@ export default function ContentScheduler() {
                                 try {
                                   await replyIGComment({ user: client.uploadpost_user, comment_id: c.id, message: replyText[`priv_${c.id}`] });
                                   setReplyText({ ...replyText, [`priv_${c.id}`]: '' });
-                                } catch (e) { alert('Failed: ' + e.message); }
+                                } catch (e) { toast('error', 'Failed: ' + e.message); }
                               }}>
                               <MessageSquare size={11} /> DM Reply
                             </button>
@@ -2748,7 +2749,7 @@ export default function ContentScheduler() {
                                 try {
                                   await publicReplyIGComment({ user: client.uploadpost_user, comment_id: c.id, message: replyText[`pub_${c.id}`] });
                                   setReplyText({ ...replyText, [`pub_${c.id}`]: '' });
-                                } catch (e) { alert('Failed: ' + e.message); }
+                                } catch (e) { toast('error', 'Failed: ' + e.message); }
                               }}>
                               <MessageCircle size={11} /> Public Reply
                             </button>
@@ -2783,8 +2784,8 @@ export default function ContentScheduler() {
                               try {
                                 await sendIGDM({ user: client.uploadpost_user, recipient_id: dmRecipient, message: dmMessage });
                                 setDmMessage('');
-                                alert('DM sent!');
-                              } catch (e) { alert('Failed: ' + e.message); }
+                                toast('error', 'DM sent!');
+                              } catch (e) { toast('error', 'Failed: ' + e.message); }
                             }}>
                             <Send size={13} /> Send
                           </button>
@@ -2800,7 +2801,7 @@ export default function ContentScheduler() {
                             try {
                               const data = await getIGConversations(client.uploadpost_user);
                               setDmConversations(data.conversations || data || []);
-                            } catch (e) { alert('Failed: ' + e.message); }
+                            } catch (e) { toast('error', 'Failed: ' + e.message); }
                             setDmLoading(false);
                           }}>
                           {dmLoading ? <Loader size={11} className="spin" /> : <RefreshCw size={11} />} Refresh
@@ -2910,8 +2911,8 @@ export default function ContentScheduler() {
                               setAutoDMKeywords('');
                               const rows = await getMonitors(client.id);
                               setMonitors(rows || []);
-                              alert('AutoDM monitor started!');
-                            } catch (e) { alert('Failed: ' + e.message); }
+                              toast('error', 'AutoDM monitor started!');
+                            } catch (e) { toast('error', 'Failed: ' + e.message); }
                             setAutoDMLoading(false);
                           }}>
                           {autoDMLoading ? <Loader size={13} className="spin" /> : <Zap size={13} />} Start Monitor
@@ -2927,7 +2928,7 @@ export default function ContentScheduler() {
                             try {
                               const data = await getAutoDMStatus();
                               setAutoDMMonitors(data.monitors || data || []);
-                            } catch (e) { alert('Failed: ' + e.message); }
+                            } catch (e) { toast('error', 'Failed: ' + e.message); }
                             setAutoDMLoading(false);
                           }}>
                           {autoDMLoading ? <Loader size={11} className="spin" /> : <RefreshCw size={11} />} Refresh
@@ -2952,7 +2953,7 @@ export default function ContentScheduler() {
                                 <button style={{ ...btnGhost, padding: '3px 8px', fontSize: 11 }}
                                   onClick={async () => {
                                     try { await pauseAutoDM(m.id || m.monitor_id); const data = await getAutoDMStatus(); setAutoDMMonitors(data.monitors || data || []); }
-                                    catch (e) { alert('Failed: ' + e.message); }
+                                    catch (e) { toast('error', 'Failed: ' + e.message); }
                                   }}>
                                   <Pause size={11} /> Pause
                                 </button>
@@ -2961,7 +2962,7 @@ export default function ContentScheduler() {
                                 <button style={{ ...btnGhost, padding: '3px 8px', fontSize: 11 }}
                                   onClick={async () => {
                                     try { await resumeAutoDM(m.id || m.monitor_id); const data = await getAutoDMStatus(); setAutoDMMonitors(data.monitors || data || []); }
-                                    catch (e) { alert('Failed: ' + e.message); }
+                                    catch (e) { toast('error', 'Failed: ' + e.message); }
                                   }}>
                                   <Play size={11} /> Resume
                                 </button>
@@ -2974,7 +2975,7 @@ export default function ContentScheduler() {
                                       await deleteAutoDM(m.id || m.monitor_id);
                                       const data = await getAutoDMStatus();
                                       setAutoDMMonitors(data.monitors || data || []);
-                                    } catch (e) { alert('Failed: ' + e.message); }
+                                    } catch (e) { toast('error', 'Failed: ' + e.message); }
                                   }
                                 }}>
                                 <Square size={11} /> Stop
@@ -2987,7 +2988,7 @@ export default function ContentScheduler() {
                               try {
                                 const data = await getAutoDMLogs(m.id || m.monitor_id);
                                 setAutoDMLogs({ ...autoDMLogs, [m.id || m.monitor_id]: data.logs || data || [] });
-                              } catch (e) { alert('Failed: ' + e.message); }
+                              } catch (e) { toast('error', 'Failed: ' + e.message); }
                             }}>
                             View Logs
                           </button>
@@ -3339,7 +3340,7 @@ export default function ContentScheduler() {
                     updated.media_urls[carouselIndex] = result.url;
                     setShowMediaModal(updated);
                     await loadClientData(client?.id);
-                  } catch (e) { alert('Regenerate failed: ' + e.message); }
+                  } catch (e) { toast('error', 'Regenerate failed: ' + e.message); }
                   setSlideRegenLoading(null);
                 }}
                   disabled={slideRegenLoading !== null}
@@ -3388,7 +3389,7 @@ export default function ContentScheduler() {
                           setShowMediaModal(updated);
                           setSlideEditPrompt('');
                           await loadClientData(client?.id);
-                        } catch (e) { alert('Edit failed: ' + e.message); }
+                        } catch (e) { toast('error', 'Edit failed: ' + e.message); }
                         setSlideRegenLoading(null);
                       })();
                     }
@@ -3412,7 +3413,7 @@ export default function ContentScheduler() {
                     setShowMediaModal(updated);
                     setSlideEditPrompt('');
                     await loadClientData(client?.id);
-                  } catch (e) { alert('Edit failed: ' + e.message); }
+                  } catch (e) { toast('error', 'Edit failed: ' + e.message); }
                   setSlideRegenLoading(null);
                 }} disabled={!slideEditPrompt.trim() || slideRegenLoading !== null}
                   style={{ ...btnPrimary, fontSize: 12, padding: '8px 16px' }}>

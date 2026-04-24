@@ -42,8 +42,43 @@ async function statsForSequence(sequenceId) {
   };
 }
 
+// Batched stats for a set of sequences — one query each for enrollments and
+// sends, then grouped in JS. Turns the list endpoint from O(2N+1) fetches
+// into O(3) regardless of sequence count.
+async function statsForSequences(sequenceIds) {
+  if (!sequenceIds.length) return {};
+  const ids = sequenceIds.map(id => `"${id}"`).join(',');
+  const [enrollments, sends] = await Promise.all([
+    supaFetch(`crm_email_sequence_enrollments?sequence_id=in.(${ids})&select=sequence_id,status`),
+    supaFetch(`crm_email_sequence_sends?sequence_id=in.(${ids})&select=sequence_id,opened_at,clicked_at`),
+  ]);
+  const out = {};
+  for (const id of sequenceIds) {
+    out[id] = { subscribers: 0, unsubscribers: 0, open_rate: 0, click_rate: 0, total_sent: 0, _opened: 0, _clicked: 0 };
+  }
+  for (const e of (enrollments || [])) {
+    const bucket = out[e.sequence_id]; if (!bucket) continue;
+    if (e.status === 'unsubscribed') bucket.unsubscribers++; else bucket.subscribers++;
+  }
+  for (const s of (sends || [])) {
+    const bucket = out[s.sequence_id]; if (!bucket) continue;
+    bucket.total_sent++;
+    if (s.opened_at) bucket._opened++;
+    if (s.clicked_at) bucket._clicked++;
+  }
+  for (const id of sequenceIds) {
+    const b = out[id];
+    if (b.total_sent > 0) {
+      b.open_rate  = (b._opened  / b.total_sent) * 100;
+      b.click_rate = (b._clicked / b.total_sent) * 100;
+    }
+    delete b._opened; delete b._clicked;
+  }
+  return out;
+}
+
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   const user = await requireCrmUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -62,13 +97,25 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET' && !action) {
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
       const rows = await supaFetch(`crm_email_sequences?client_id=eq.${client_id}&order=created_at.desc`);
-      const out = [];
-      for (const seq of rows || []) {
-        const steps = await supaFetch(`crm_email_sequence_steps?sequence_id=eq.${seq.id}&order=step_order.asc`);
-        const stats = await statsForSequence(seq.id);
-        const totalDays = (steps || []).reduce((acc, s) => acc + ((s.delay_unit === 'days' ? (s.delay_amount || 0) : 0)), 0);
-        out.push({ ...seq, steps_count: (steps || []).length, total_days: totalDays, ...stats });
+      const list = rows || [];
+      if (!list.length) return res.json([]);
+      const ids = list.map(s => s.id);
+      // Batched fetches — O(3) queries regardless of sequence count.
+      const idsIn = ids.map(id => `"${id}"`).join(',');
+      const [allSteps, allStats] = await Promise.all([
+        supaFetch(`crm_email_sequence_steps?sequence_id=in.(${idsIn})&order=step_order.asc`),
+        statsForSequences(ids),
+      ]);
+      // Group steps by sequence for quick lookup.
+      const stepsBySeq = {};
+      for (const s of (allSteps || [])) {
+        (stepsBySeq[s.sequence_id] = stepsBySeq[s.sequence_id] || []).push(s);
       }
+      const out = list.map(seq => {
+        const steps = stepsBySeq[seq.id] || [];
+        const totalDays = steps.reduce((acc, s) => acc + (s.delay_unit === 'days' ? (s.delay_amount || 0) : 0), 0);
+        return { ...seq, steps_count: steps.length, total_days: totalDays, ...(allStats[seq.id] || {}) };
+      });
       return res.json(out);
     }
 
@@ -189,15 +236,19 @@ module.exports = async function handler(req, res) {
       const firstStep = steps?.[0];
       if (!firstStep) return res.status(400).json({ error: 'Sequence has no steps' });
 
-      // Fetch all active contacts for client, then filter in JS (PostgREST can't do multi-tag AND easily across jsonb)
-      const contacts = await supaFetch(
-        `crm_email_contacts?client_id=eq.${seq.client_id}&status=eq.active`
-      );
+      // Narrow with PostgREST array-contains filter when we can, then refine
+      // in JS for the "none of these tags" rule. `cs` (contains) works on
+      // both jsonb and text[] columns.
+      let query = `crm_email_contacts?client_id=eq.${seq.client_id}&status=eq.active&select=id,tags`;
+      if (tagsAll.length) {
+        const encoded = tagsAll.map(t => `"${String(t).replace(/"/g, '\\"')}"`).join(',');
+        query += `&tags=cs.[${encoded}]`;
+      }
+      const contacts = await supaFetch(query);
       const matching = (contacts || []).filter(c => {
+        if (!tagsNone.length) return true;
         const tags = c.tags || [];
-        const hasAll = tagsAll.every(t => tags.includes(t));
-        const hasNoneOfExcluded = tagsNone.every(t => !tags.includes(t));
-        return hasAll && hasNoneOfExcluded;
+        return tagsNone.every(t => !tags.includes(t));
       });
       const existing = await supaFetch(`crm_email_sequence_enrollments?sequence_id=eq.${sequence_id}&select=contact_id`);
       const already = new Set((existing || []).map(e => e.contact_id));

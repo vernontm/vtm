@@ -610,12 +610,9 @@ export const getMonitors                 = (client_id)   => request(`/uploadpost
 export const startMonitor                = (data)        => request('/uploadpost?action=start-monitor', { method: 'POST', body: JSON.stringify(data) });
 export const stopMonitor                 = (data)        => request('/uploadpost?action=stop-monitor', { method: 'POST', body: JSON.stringify(data) });
 
-// Team & Access
-export const getTeamMembers   = ()           => request('/team');
-export const getMyTeamRecord  = ()           => request('/team?action=me');
-export const inviteTeamMember = (data)       => request('/team', { method: 'POST', body: JSON.stringify(data) });
-export const updateTeamMember = (id, data)   => request(`/team?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-export const removeTeamMember = (id)         => request(`/team?id=${id}`, { method: 'DELETE' });
+// Team & Access — retired. Use the admin-users helpers instead
+// (getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
+// upsertUserGrant, revokeUserGrant).
 
 // Training
 export const getTrainingVideos    = ()            => request('/training');

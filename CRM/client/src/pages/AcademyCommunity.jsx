@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Pin, Trash2, MessageCircle, Loader2 } from 'lucide-react';
 import { getAcademyCommunityPosts, deleteAcademyPost, pinAcademyPost } from '../api';
+import { toast } from '../components/Toast';
 
 const pageStyle = { padding: '24px 28px', background: 'var(--bg)', minHeight: '100vh' };
 const cardStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 };
@@ -55,7 +56,7 @@ export default function AcademyCommunity() {
       await pinAcademyPost(id);
       setPosts(prev => prev.map(p => p.id === id ? { ...p, pinned: !p.pinned } : p));
     } catch (err) {
-      alert('Failed to update pin: ' + err.message);
+      toast('error', 'Failed to update pin: ' + err.message);
     } finally {
       setActionLoading(null);
     }
@@ -68,7 +69,7 @@ export default function AcademyCommunity() {
       await deleteAcademyPost(id);
       setPosts(prev => prev.filter(p => p.id !== id));
     } catch (err) {
-      alert('Failed to delete: ' + err.message);
+      toast('error', 'Failed to delete: ' + err.message);
     } finally {
       setActionLoading(null);
     }

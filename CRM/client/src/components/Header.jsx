@@ -24,7 +24,7 @@ const PAGE_META = {
   '/content-scheduler':           { title: 'Content',             sub: 'Social media scheduling' },
   '/email-marketing':             { title: 'Email Marketing',     sub: 'Campaigns & lists' },
   '/settings':                    { title: 'Settings',            sub: 'Account & preferences' },
-  '/team':                        { title: 'Team & Access',       sub: 'Members & permissions' },
+  '/admin-users':                 { title: 'Users & Access',      sub: 'Accounts & per-client permissions' },
   '/training':                    { title: 'Training',            sub: 'Videos & resources' },
   '/scripts':                     { title: 'Call Scripts',        sub: 'Sales playbook' },
   '/products':                    { title: 'Products & Services', sub: 'Packages & pricing' },
@@ -109,7 +109,7 @@ export default function Header() {
 
         {/* ── Left: page title + subtitle ── */}
         <div style={{ minWidth: 0 }}>
-          <div style={{
+          <div className="page-title" style={{
             fontSize: 18, fontWeight: 800, color: 'var(--text)',
             fontFamily: 'var(--font-display)', lineHeight: 1.2,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -117,7 +117,7 @@ export default function Header() {
             {meta.title}
           </div>
           {meta.sub && (
-            <div style={{
+            <div className="page-sub" style={{
               fontSize: 11, color: 'var(--muted)',
               fontFamily: 'var(--font-display)', marginTop: 1,
             }}>
@@ -133,6 +133,7 @@ export default function Header() {
           {selectedClient && (
             <div style={{ position: 'relative' }}>
               <button
+                className="client-switcher-btn"
                 onClick={() => setClientOpen(o => !o)}
                 onBlur={() => setTimeout(() => setClientOpen(false), 150)}
                 title="Switch client workspace"
@@ -233,8 +234,8 @@ export default function Header() {
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
           >
             <Search size={13} style={{ flexShrink: 0 }} />
-            <span>Search</span>
-            <span style={{
+            <span className="header-search-label">Search</span>
+            <span className="header-search-label" style={{
               fontSize: 10, background: 'var(--surface-2)',
               border: '1px solid var(--border)', borderRadius: 4,
               padding: '1px 5px', color: 'var(--muted)',

@@ -20,7 +20,7 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 //     We send the whole document and ask for the whole document back. Uses
 //     Sonnet, 16000 output tokens. Typical latency 20-60s.
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 

@@ -4,6 +4,7 @@ import {
   FileText, Code, Search, ExternalLink, GripVertical, Paperclip, Download,
 } from 'lucide-react';
 import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost, uploadBlogMedia, uploadBlogFile } from '../api';
+import { toast } from '../components/Toast';
 
 const CATEGORIES = ['Web Design', 'Marketing', 'Social Media', 'Branding', 'Technology', 'Business', 'Case Study', 'Tutorial'];
 
@@ -57,7 +58,7 @@ export default function Blog() {
       setEditing(null);
       await load();
     } catch (err) {
-      alert('Save failed: ' + err.message);
+      toast('error', 'Save failed: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -69,7 +70,7 @@ export default function Blog() {
       await deleteBlogPost(id);
       await load();
     } catch (err) {
-      alert('Delete failed: ' + err.message);
+      toast('error', 'Delete failed: ' + err.message);
     }
   };
 
@@ -78,7 +79,7 @@ export default function Blog() {
       await updateBlogPost(post.id, { published: !post.published });
       await load();
     } catch (err) {
-      alert('Update failed: ' + err.message);
+      toast('error', 'Update failed: ' + err.message);
     }
   };
 
@@ -91,7 +92,7 @@ export default function Blog() {
       const type = file.type.startsWith('video') ? 'video' : 'image';
       setEditing(prev => ({ ...prev, media_url: url, media_type: type }));
     } catch (err) {
-      alert('Upload failed: ' + err.message);
+      toast('error', 'Upload failed: ' + err.message);
     } finally {
       setUploading(false);
     }
@@ -105,7 +106,7 @@ export default function Blog() {
       const { url } = await uploadBlogFile(file);
       setEditing(prev => ({ ...prev, file_url: url, file_name: file.name }));
     } catch (err) {
-      alert('File upload failed: ' + err.message);
+      toast('error', 'File upload failed: ' + err.message);
     } finally {
       setUploadingFile(false);
     }

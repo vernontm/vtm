@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
 import { usePageActions } from '../context/UiContext';
+import { toast } from '../components/Toast';
 
 const INDUSTRIES = ['', 'Technology', 'Marketing', 'Logistics', 'Finance', 'Healthcare', 'Education', 'Real Estate', 'Media', 'Retail', 'Other'];
 const EMPTY = { name: '', industry: '', email: '', phone: '', address: '', website: '', notes: '' };
@@ -58,10 +59,10 @@ export default function Accounts() {
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
-    try { await createAccount(form); await load(); setModal(null); } catch (e) { alert(e.message); }
+    try { await createAccount(form); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
-    try { await deleteAccount(selected.id); await load(); setModal(null); } catch (e) { alert(e.message); }
+    try { await deleteAccount(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
 
   // Bulk actions

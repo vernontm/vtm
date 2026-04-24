@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useRef, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { toast } from '../components/Toast';
 
 const RecorderContext = createContext(null);
 export const useRecorder = () => useContext(RecorderContext);
@@ -90,7 +91,7 @@ export function RecorderProvider({ children }) {
     } catch (err) {
       cleanupStreams();
       setStatus('idle');
-      alert(`Could not start recording: ${err.message}`);
+      toast('error', `Could not start recording: ${err.message}`);
     }
   }, []);
 
@@ -138,7 +139,7 @@ export function RecorderProvider({ children }) {
 
         } catch (err) {
           console.error('Failed to save recording:', err);
-          alert(`Recording saved locally but upload failed: ${err.message}`);
+          toast('error', `Recording saved locally but upload failed: ${err.message}`);
         }
 
         cleanupStreams();

@@ -2,7 +2,7 @@ const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_
 const { syncContactToMailerlite } = require('../_lib/mailerlite.js');
 
 module.exports = async function handler(req, res) {
-  setCors(res);
+  setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   const user = await requireCrmUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
@@ -32,18 +32,23 @@ module.exports = async function handler(req, res) {
   }
 
   // POST — add contact(s) + auto-welcome
-  if (req.method === 'POST' && action !== 'update-tags') {
+  if (req.method === 'POST' && action !== 'update-tags' && action !== 'update-contact') {
     try {
       const { client_id, contacts } = req.body;
       if (!client_id || !contacts?.length) {
         return res.status(400).json({ error: 'client_id and contacts array required' });
       }
+      // Re-verify the body client_id (header check already ran above, but this
+      // guards against header/body mismatch).
+      const chk2 = await assertClientAccess(user, client_id);
+      if (!chk2.ok) return res.status(chk2.status).json({ error: chk2.error });
 
       // Onboarding is handled exclusively by email sequences (see email-cron.js).
       // No welcome template or auto-trigger campaign sending here — sequences are
       // the single source of truth for onboarding flows.
 
       const results = [];
+      const mailerliteErrors = [];
       for (const c of contacts) {
         if (!c.email) continue;
         try {
@@ -79,7 +84,10 @@ module.exports = async function handler(req, res) {
                 tags: contact.tags || [],
                 source: contact.source || null,
               });
-            } catch (e) { console.error('mailerlite sync failed:', e.message); }
+            } catch (e) {
+              console.error('mailerlite sync failed:', e.message);
+              mailerliteErrors.push({ email: contact.email, error: e.message });
+            }
           }
           results.push(contact);
         } catch (e) {
@@ -88,7 +96,12 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      return res.json({ added: results.length, contacts: results });
+      return res.json({
+        added: results.length,
+        contacts: results,
+        mailerlite_sync_failed: mailerliteErrors.length,
+        mailerlite_errors: mailerliteErrors.slice(0, 5),
+      });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -99,6 +112,11 @@ module.exports = async function handler(req, res) {
     try {
       const { contact_id, tags } = req.body;
       if (!contact_id) return res.status(400).json({ error: 'contact_id required' });
+      // Verify the contact belongs to a client the caller can access.
+      const existing = await supaFetch(`crm_email_contacts?id=eq.${contact_id}&select=client_id`);
+      if (!existing?.[0]) return res.status(404).json({ error: 'Contact not found' });
+      const ownerChk = await assertClientAccess(user, existing[0].client_id);
+      if (!ownerChk.ok) return res.status(ownerChk.status).json({ error: ownerChk.error });
       const rows = await supaFetch(`crm_email_contacts?id=eq.${contact_id}`, {
         method: 'PATCH',
         body: JSON.stringify({ tags: tags || [], updated_at: new Date().toISOString() }),
@@ -128,6 +146,11 @@ module.exports = async function handler(req, res) {
     try {
       const { contact_id, name, birthday_month, birthday_day, tags, discount_code, signed_up_at, city, state, country } = req.body;
       if (!contact_id) return res.status(400).json({ error: 'contact_id required' });
+      // Verify ownership before patching.
+      const existing = await supaFetch(`crm_email_contacts?id=eq.${contact_id}&select=client_id`);
+      if (!existing?.[0]) return res.status(404).json({ error: 'Contact not found' });
+      const ownerChk = await assertClientAccess(user, existing[0].client_id);
+      if (!ownerChk.ok) return res.status(ownerChk.status).json({ error: ownerChk.error });
       const update = { updated_at: new Date().toISOString() };
       if (name !== undefined) update.name = name;
       if (tags !== undefined) update.tags = tags;
@@ -167,6 +190,11 @@ module.exports = async function handler(req, res) {
     try {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'id required' });
+      // Verify ownership before deleting.
+      const existing = await supaFetch(`crm_email_contacts?id=eq.${id}&select=client_id`);
+      if (!existing?.[0]) return res.status(404).json({ error: 'Contact not found' });
+      const ownerChk = await assertClientAccess(user, existing[0].client_id);
+      if (!ownerChk.ok) return res.status(ownerChk.status).json({ error: ownerChk.error });
       await supaFetch(`crm_email_contacts?id=eq.${id}`, { method: 'DELETE' });
       return res.json({ deleted: true });
     } catch (err) {
