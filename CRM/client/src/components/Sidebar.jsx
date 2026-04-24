@@ -11,6 +11,7 @@ import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../context/TeamContext';
+import { useClient } from '../context/ClientContext';
 import { useMobile } from '../App';
 import { getGmailInbox } from '../api';
 
@@ -75,6 +76,7 @@ export default function Sidebar() {
   const [emailCount, setEmailCount] = useState(0);
 
   const { hasPermission, isOwner, viewingAs, clearViewingAs } = useTeam();
+  const { isAdmin } = useClient();
   const { triggerRefresh } = useRefresh();
 
   function handleRefresh() {
@@ -232,13 +234,21 @@ export default function Sidebar() {
             </>
           )}
 
-          {isOwner && !viewingAs && (
+          {(isOwner || isAdmin) && !viewingAs && (
             <>
               <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Admin</div>
-              <NavLink to="/team" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                <UserCog size={15} />
-                <span>Team &amp; Access</span>
-              </NavLink>
+              {isOwner && (
+                <NavLink to="/team" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <UserCog size={15} />
+                  <span>Team &amp; Access</span>
+                </NavLink>
+              )}
+              {isAdmin && (
+                <NavLink to="/admin-users" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <Users size={15} />
+                  <span>Users &amp; Access</span>
+                </NavLink>
+              )}
             </>
           )}
         </nav>

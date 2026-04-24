@@ -38,6 +38,14 @@ async function request(path, options = {}) {
 // Current user + accessible clients (multi-tenant bootstrap)
 export const getMe = () => request('/me');
 
+// Admin: user management
+export const getAdminUsers    = () => request('/admin-users');
+export const createAdminUser  = (data) => request('/admin-users', { method: 'POST', body: JSON.stringify(data) });
+export const updateAdminUser  = (id, data) => request(`/admin-users?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteAdminUser  = (id) => request(`/admin-users?id=${id}`, { method: 'DELETE' });
+export const upsertUserGrant  = (id, data) => request(`/admin-users?id=${id}&action=grant`, { method: 'POST', body: JSON.stringify(data) });
+export const revokeUserGrant  = (id, client_id) => request(`/admin-users?id=${id}&client_id=${client_id}&action=grant`, { method: 'DELETE' });
+
 // Leads
 export const getLeads    = () => request('/leads');
 export const createLead  = (data) => request('/leads', { method: 'POST', body: JSON.stringify(data) });

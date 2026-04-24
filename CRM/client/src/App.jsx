@@ -44,6 +44,7 @@ import AcademyCommunity from './pages/AcademyCommunity';
 import AcademyRecommendations from './pages/AcademyRecommendations';
 import AcademySettings from './pages/AcademySettings';
 import Team from './pages/Team';
+import AdminUsers from './pages/AdminUsers';
 import Training from './pages/Training';
 import Scripts from './pages/Scripts';
 import Products from './pages/Products';
@@ -109,6 +110,7 @@ function AppLayout() {
               <Route path="/academy/recommendations" element={<AcademyRecommendations />} />
               <Route path="/academy/settings" element={<AcademySettings />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/admin-users" element={<AdminUsers />} />
               <Route path="/training" element={<Training />} />
               <Route path="/scripts" element={<Scripts />} />
               <Route path="/products" element={<Products />} />
