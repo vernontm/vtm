@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { RefreshProvider, useRefresh } from './context/RefreshContext';
 import { PrivacyProvider, usePrivacy } from './context/PrivacyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ClientProvider, useClient } from './context/ClientContext';
 import { RecorderProvider } from './context/RecorderContext';
 import { TeamProvider } from './context/TeamContext';
 import { UiProvider } from './context/UiContext';
@@ -122,6 +123,41 @@ function AppLayout() {
   );
 }
 
+// Blocks app render until the /me call resolves. Shows a friendly message if
+// the user has no client grants yet (common for a freshly created non-admin).
+function ClientGate({ children }) {
+  const { loading, error, clients, isAdmin, refresh } = useClient();
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--muted)', fontSize: 14, fontFamily: 'var(--font-display)' }}>Loading workspace...</div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 32px', textAlign: 'center' }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Couldn't load your workspace</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>{error}</div>
+          <button onClick={refresh} style={{ padding: '10px 20px', borderRadius: 10, background: 'var(--orange)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Try again</button>
+        </div>
+      </div>
+    );
+  }
+  if (!isAdmin && clients.length === 0) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 32px', textAlign: 'center' }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>No client access yet</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>Your account is active but hasn't been granted access to a client workspace. Please ask an admin to assign you.</div>
+        </div>
+      </div>
+    );
+  }
+  return children;
+}
+
 function AuthGate() {
   const { session, loading, authError, retry } = useAuth();
 
@@ -150,13 +186,15 @@ function AuthGate() {
   return (
     <RefreshProvider>
       <PrivacyProvider>
-        <TeamProvider>
-          <RecorderProvider>
-            <UiProvider>
-              <AppLayout />
-            </UiProvider>
-          </RecorderProvider>
-        </TeamProvider>
+        <ClientProvider>
+          <TeamProvider>
+            <RecorderProvider>
+              <UiProvider>
+                <ClientGate><AppLayout /></ClientGate>
+              </UiProvider>
+            </RecorderProvider>
+          </TeamProvider>
+        </ClientProvider>
       </PrivacyProvider>
     </RefreshProvider>
   );

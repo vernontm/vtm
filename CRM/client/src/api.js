@@ -21,6 +21,9 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// Current user + accessible clients (multi-tenant bootstrap)
+export const getMe = () => request('/me');
+
 // Leads
 export const getLeads    = () => request('/leads');
 export const createLead  = (data) => request('/leads', { method: 'POST', body: JSON.stringify(data) });

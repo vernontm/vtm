@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, RefreshCw } from 'lucide-react';
+import { Bell, Search, RefreshCw, ChevronDown, Building2, Check } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { useUi } from '../context/UiContext';
+import { useClient } from '../context/ClientContext';
 import { getNotifications } from '../api';
 import GlobalSearch from './GlobalSearch';
 
@@ -57,6 +58,8 @@ export default function Header() {
   const [searchOpen,  setSearchOpen]  = useState(false);
   const [notifCount,  setNotifCount]  = useState(0);
   const [spinning,    setSpinning]    = useState(false);
+  const [clientOpen,  setClientOpen]  = useState(false);
+  const { clients, selectedClient, setSelectedClientId, isAdmin } = useClient();
 
   const meta = getPageMeta(pathname);
 
@@ -123,8 +126,88 @@ export default function Header() {
           )}
         </div>
 
-        {/* ── Right: page actions · search · bell · refresh ── */}
+        {/* ── Right: client switcher · page actions · search · bell · refresh ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+
+          {/* Global client switcher — drives what every page shows. */}
+          {selectedClient && (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setClientOpen(o => !o)}
+                onBlur={() => setTimeout(() => setClientOpen(false), 150)}
+                title="Switch client workspace"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 10px 6px 8px', borderRadius: 8,
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  color: 'var(--text)', cursor: 'pointer', fontSize: 12,
+                  fontFamily: 'var(--font-display)', fontWeight: 600,
+                  maxWidth: 220,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,155,38,0.4)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+              >
+                {selectedClient.logo_url ? (
+                  <img src={selectedClient.logo_url} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <span style={{
+                    width: 18, height: 18, borderRadius: 4,
+                    background: selectedClient.brand_primary_color || 'var(--orange)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 10, fontWeight: 800, flexShrink: 0,
+                  }}>
+                    {selectedClient.name?.[0]?.toUpperCase() || '?'}
+                  </span>
+                )}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedClient.name}</span>
+                <ChevronDown size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+              </button>
+              {clientOpen && (
+                <div
+                  onMouseDown={e => e.preventDefault()}
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    minWidth: 240, maxHeight: 360, overflowY: 'auto', zIndex: 50,
+                    padding: 4,
+                  }}
+                >
+                  <div style={{ padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {isAdmin ? 'All clients' : 'Your clients'}
+                  </div>
+                  {clients.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => { setSelectedClientId(c.id); setClientOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        width: '100%', padding: '8px 10px', borderRadius: 6,
+                        background: c.id === selectedClient.id ? 'var(--surface-2)' : 'transparent',
+                        border: 'none', color: 'var(--text)', cursor: 'pointer',
+                        fontSize: 12, fontFamily: 'var(--font-display)', fontWeight: 500, textAlign: 'left',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = c.id === selectedClient.id ? 'var(--surface-2)' : 'transparent'; }}
+                    >
+                      {c.logo_url ? (
+                        <img src={c.logo_url} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                      ) : (
+                        <span style={{
+                          width: 20, height: 20, borderRadius: 4,
+                          background: c.brand_primary_color || 'var(--orange)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 10, fontWeight: 800, flexShrink: 0,
+                        }}>{c.name?.[0]?.toUpperCase() || '?'}</span>
+                      )}
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                      {c.id === selectedClient.id && <Check size={12} color="var(--orange)" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Page-specific action buttons injected by current route */}
           {pageActions && (
