@@ -76,7 +76,11 @@ export default function Sidebar() {
   const [emailCount, setEmailCount] = useState(0);
 
   const { hasPermission, isOwner, viewingAs, clearViewingAs } = useTeam();
-  const { isAdmin } = useClient();
+  const { isAdmin, canAccess } = useClient();
+  // A nav item is visible when the user has BOTH legacy team permission
+  // (for sub-team filtering) AND a page grant in their current client.
+  // Admins bypass both.
+  const canSee = (slug) => hasPermission(slug) && canAccess(slug);
   const { triggerRefresh } = useRefresh();
 
   function handleRefresh() {
@@ -106,9 +110,10 @@ export default function Sidebar() {
   const { signOut } = useAuth();
   const { sidebarOpen } = useMobile();
 
-  const visibleNav        = nav.filter(item => hasPermission(item.slug));
-  const visibleNavTools   = navTools.filter(item => hasPermission(item.slug));
-  const visibleNavAcademy = navAcademy.filter(item => hasPermission(item.slug));
+  const visibleNav        = nav.filter(item => canSee(item.slug));
+  const visibleNavTools   = navTools.filter(item => canSee(item.slug));
+  // Academy section is admin-only for now per product decision
+  const visibleNavAcademy = isAdmin ? navAcademy.filter(item => hasPermission(item.slug)) : [];
 
   return (
     <>
@@ -212,25 +217,27 @@ export default function Sidebar() {
             </>
           )}
 
-          {(hasPermission('training') || hasPermission('scripts')) && (
+          {(canSee('training') || canSee('scripts') || canSee('products')) && (
             <>
               <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Training</div>
-              {hasPermission('training') && (
+              {canSee('training') && (
                 <NavLink to="/training" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
                   <Video size={15} />
                   <span>Training Videos</span>
                 </NavLink>
               )}
-              {hasPermission('scripts') && (
+              {canSee('scripts') && (
                 <NavLink to="/scripts" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
                   <FileText size={15} />
                   <span>Call Scripts</span>
                 </NavLink>
               )}
-              <NavLink to="/products" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                <Package size={15} />
-                <span>Products &amp; Services</span>
-              </NavLink>
+              {canSee('products') && (
+                <NavLink to="/products" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <Package size={15} />
+                  <span>Products &amp; Services</span>
+                </NavLink>
+              )}
             </>
           )}
 

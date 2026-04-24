@@ -4,6 +4,15 @@ import { RefreshProvider, useRefresh } from './context/RefreshContext';
 import { PrivacyProvider, usePrivacy } from './context/PrivacyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ClientProvider, useClient } from './context/ClientContext';
+// Gate a route by page slug. Admins bypass; anyone else needs the slug
+// in their current client's allowed_pages. Blocked users are redirected
+// to the dashboard (which is always allowed).
+function Gated({ slug, adminOnly = false, children }) {
+  const { isAdmin, canAccess } = useClient();
+  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
+  if (!canAccess(slug)) return <Navigate to="/dashboard" replace />;
+  return children;
+}
 import { RecorderProvider } from './context/RecorderContext';
 import { TeamProvider } from './context/TeamContext';
 import { UiProvider } from './context/UiContext';
@@ -81,40 +90,40 @@ function AppLayout() {
             <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/leads" element={<Leads />} />
-              <Route path="/contacts" element={<Contacts />} />
-              <Route path="/projects" element={<Deals />} />
-              <Route path="/meetings/:eventId" element={<MeetingDetail />} />
-              <Route path="/meetings" element={<Meetings />} />
+              <Route path="/dashboard" element={<Gated slug="dashboard"><Dashboard /></Gated>} />
+              <Route path="/leads" element={<Gated slug="leads"><Leads /></Gated>} />
+              <Route path="/contacts" element={<Gated slug="contacts"><Contacts /></Gated>} />
+              <Route path="/projects" element={<Gated slug="projects"><Deals /></Gated>} />
+              <Route path="/meetings/:eventId" element={<Gated slug="meetings"><MeetingDetail /></Gated>} />
+              <Route path="/meetings" element={<Gated slug="meetings"><Meetings /></Gated>} />
               <Route path="/notifications" element={<Notifications />} />
-              <Route path="/invoices" element={<Invoices />} />
-              <Route path="/quick-notes" element={<QuickNotes />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/email" element={<EmailPage />} />
-              <Route path="/subscriptions" element={<Subscriptions />} />
-              <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/content-scheduler" element={<ContentScheduler />} />
-              <Route path="/avatars" element={<Avatars />} />
-              <Route path="/email-marketing" element={<EmailMarketing />} />
+              <Route path="/invoices" element={<Gated slug="invoices"><Invoices /></Gated>} />
+              <Route path="/quick-notes" element={<Gated slug="quick-notes"><QuickNotes /></Gated>} />
+              <Route path="/blog" element={<Gated slug="blog"><Blog /></Gated>} />
+              <Route path="/email" element={<Gated slug="email"><EmailPage /></Gated>} />
+              <Route path="/subscriptions" element={<Gated slug="subscriptions"><Subscriptions /></Gated>} />
+              <Route path="/portfolio" element={<Gated slug="portfolio"><Portfolio /></Gated>} />
+              <Route path="/content-scheduler" element={<Gated slug="content-scheduler"><ContentScheduler /></Gated>} />
+              <Route path="/avatars" element={<Gated slug="avatars"><Avatars /></Gated>} />
+              <Route path="/email-marketing" element={<Gated slug="email-marketing"><EmailMarketing /></Gated>} />
               <Route path="/settings" element={<Settings />} />
-              {/* Academy Admin */}
-              <Route path="/academy" element={<AcademyDashboard />} />
-              <Route path="/academy/courses" element={<AcademyCourses />} />
-              <Route path="/academy/courses/:id/edit" element={<AcademyCourseEdit />} />
-              <Route path="/academy/lessons/:id/edit" element={<AcademyLessonEdit />} />
-              <Route path="/academy/students" element={<AcademyStudents />} />
-              <Route path="/academy/homework" element={<AcademyHomework />} />
-              <Route path="/academy/messages" element={<AcademyMessages />} />
-              <Route path="/academy/community" element={<AcademyCommunity />} />
-              <Route path="/academy/recommendations" element={<AcademyRecommendations />} />
-              <Route path="/academy/settings" element={<AcademySettings />} />
+              {/* Academy Admin (admin-only) */}
+              <Route path="/academy" element={<Gated slug="academy" adminOnly><AcademyDashboard /></Gated>} />
+              <Route path="/academy/courses" element={<Gated slug="academy-courses" adminOnly><AcademyCourses /></Gated>} />
+              <Route path="/academy/courses/:id/edit" element={<Gated slug="academy-courses" adminOnly><AcademyCourseEdit /></Gated>} />
+              <Route path="/academy/lessons/:id/edit" element={<Gated slug="academy-courses" adminOnly><AcademyLessonEdit /></Gated>} />
+              <Route path="/academy/students" element={<Gated slug="academy-students" adminOnly><AcademyStudents /></Gated>} />
+              <Route path="/academy/homework" element={<Gated slug="academy-homework" adminOnly><AcademyHomework /></Gated>} />
+              <Route path="/academy/messages" element={<Gated slug="academy-messages" adminOnly><AcademyMessages /></Gated>} />
+              <Route path="/academy/community" element={<Gated slug="academy-community" adminOnly><AcademyCommunity /></Gated>} />
+              <Route path="/academy/recommendations" element={<Gated slug="academy-recommendations" adminOnly><AcademyRecommendations /></Gated>} />
+              <Route path="/academy/settings" element={<Gated slug="academy-settings" adminOnly><AcademySettings /></Gated>} />
               <Route path="/team" element={<Team />} />
-              <Route path="/admin-users" element={<AdminUsers />} />
-              <Route path="/training" element={<Training />} />
-              <Route path="/scripts" element={<Scripts />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/resources" element={<Resources />} />
+              <Route path="/admin-users" element={<Gated slug="admin-users" adminOnly><AdminUsers /></Gated>} />
+              <Route path="/training" element={<Gated slug="training"><Training /></Gated>} />
+              <Route path="/scripts" element={<Gated slug="scripts"><Scripts /></Gated>} />
+              <Route path="/products" element={<Gated slug="products"><Products /></Gated>} />
+              <Route path="/resources" element={<Gated slug="resources"><Resources /></Gated>} />
             </Routes>
             </ErrorBoundary>
           </main>

@@ -67,11 +67,21 @@ export function ClientProvider({ children }) {
   // Active page list = pages allowed for the currently selected client
   const allowedPages = selectedClient?.allowed_pages || [];
 
+  // Imperative access check (usable inside arrays/filters without a hook).
+  // Admins bypass. Some pages are always available (login-adjacent pages).
+  const ALWAYS_ALLOWED = ['notifications', 'settings'];
+  const canAccess = useCallback((slug) => {
+    if (isAdmin) return true;
+    if (!slug) return true;
+    if (ALWAYS_ALLOWED.includes(slug)) return true;
+    return allowedPages.includes(slug);
+  }, [isAdmin, allowedPages]);
+
   return (
     <ClientContext.Provider value={{
       loading, error, user, clients,
       selectedClientId, selectedClient,
-      isAdmin, allowedPages,
+      isAdmin, allowedPages, canAccess,
       setSelectedClientId,
       refresh: load,
     }}>
