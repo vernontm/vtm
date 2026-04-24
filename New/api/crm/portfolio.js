@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireCrmUser, supaFetch } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -18,7 +18,9 @@ export default async function handler(req, res) {
   }
 
   // All other actions require auth
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user.is_admin) return res.status(403).json({ error: 'Admin only' });
 
   try {
     // GET all portfolio items (admin)

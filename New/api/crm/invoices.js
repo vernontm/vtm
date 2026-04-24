@@ -1,9 +1,11 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireCrmUser, supaFetch } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user.is_admin) return res.status(403).json({ error: 'Admin only' });
 
   const { id, deal_id, action } = req.query;
 

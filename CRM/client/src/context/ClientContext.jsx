@@ -69,7 +69,9 @@ export function ClientProvider({ children }) {
 
   // Imperative access check (usable inside arrays/filters without a hook).
   // Admins bypass. Some pages are always available (login-adjacent pages).
-  const ALWAYS_ALLOWED = ['notifications', 'settings'];
+  // 'dashboard' is always allowed to avoid a redirect loop (Gated sends
+  // blocked users there). Notifications + settings are global user-level.
+  const ALWAYS_ALLOWED = ['dashboard', 'notifications', 'settings'];
   const canAccess = useCallback((slug) => {
     if (isAdmin) return true;
     if (!slug) return true;

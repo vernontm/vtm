@@ -1,9 +1,16 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireCrmUser, supaFetch } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  // Dashboard aggregates Ray's business data (revenue, deals, invoices).
+  // Non-admins get an empty placeholder shape instead of a 403 so their
+  // landing page doesn't error.
+  if (!user.is_admin) {
+    return res.json({ limited: true, contacts: [], deals: [], projects: [], invoices: [], leads: [], stripeRevenue: null });
+  }
 
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 

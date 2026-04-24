@@ -1,9 +1,13 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireCrmUser, supaFetch } from '../_lib/supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  // Activities are a timeline for leads/contacts; non-admins may see them
+  // for their own tenant data. (Stronger filtering by tenant is a later
+  // hardening step — today leads/contacts themselves are already scoped.)
 
   const { id, lead_id, contact_id } = req.query;
 

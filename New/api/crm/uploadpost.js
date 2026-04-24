@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireCrmUser, supaFetch, assertClientAccess } from '../_lib/supabase.js';
 
 const UP_BASE = 'https://api.upload-post.com/api';
 const UP_KEY  = process.env.UPLOADPOST_API_KEY;
@@ -19,7 +19,17 @@ async function upFetch(path, options = {}) {
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  // Tenant guard on any referenced client_id
+  {
+    const refClient = req.query?.client_id || req.body?.client_id;
+    if (refClient) {
+      const chk = await assertClientAccess(user, refClient);
+      if (!chk.ok) return res.status(chk.status).json({ error: chk.error });
+    }
+  }
 
   if (!UP_KEY) return res.status(500).json({ error: 'UPLOADPOST_API_KEY not configured' });
 

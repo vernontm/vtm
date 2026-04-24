@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -17,8 +17,17 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const auth = await requireAuth(req);
-  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  // Tenant guard on any referenced client_id
+  {
+    const refClient = req.query?.client_id || req.body?.client_id;
+    if (refClient) {
+      const chk = await assertClientAccess(user, refClient);
+      if (!chk.ok) return res.status(chk.status).json({ error: chk.error });
+    }
+  }
 
   try {
     const { prompt, client_id: bodyClientId, client_name, conversation } = req.body || {};

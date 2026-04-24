@@ -1,11 +1,20 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 
 // Tag context — descriptions per tag for AI awareness
 module.exports = async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const auth = await requireAuth(req);
-  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  // Tenant guard on any referenced client_id
+  {
+    const refClient = req.query?.client_id || req.body?.client_id;
+    if (refClient) {
+      const chk = await assertClientAccess(user, refClient);
+      if (!chk.ok) return res.status(chk.status).json({ error: chk.error });
+    }
+  }
 
   // GET — list tag contexts for a client (joined with contact counts)
   if (req.method === 'GET') {
