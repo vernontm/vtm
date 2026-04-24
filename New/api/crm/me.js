@@ -12,9 +12,14 @@ module.exports = async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const access = await loadUserAccess(user.id, user.is_admin);
+    const access = await loadUserAccess(user.id, user.is_admin, user.allowed_pages_global);
     return res.json({
-      user: { id: user.id, email: user.email, is_admin: user.is_admin },
+      user: {
+        id: user.id,
+        email: user.email,
+        is_admin: user.is_admin,
+        allowed_pages_global: user.allowed_pages_global || null,
+      },
       clients: access.clients,
     });
   } catch (err) {

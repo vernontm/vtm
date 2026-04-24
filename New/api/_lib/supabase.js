@@ -75,24 +75,37 @@ async function requireCrmUser(req) {
   });
   if (!res.ok) return null;
   const user = await res.json();
+  // allowed_pages_global restricts an admin to a subset of pages across ALL
+  // clients (for VAs who need cross-client admin power but only for e.g.
+  // contacts + email). Empty/missing = unrestricted (Ray).
+  const gRaw = user?.user_metadata?.allowed_pages_global ?? user?.app_metadata?.allowed_pages_global;
+  const allowed_pages_global = Array.isArray(gRaw) && gRaw.length ? gRaw : null;
   return {
     id: user.id,
     email: user.email,
     is_admin: !!user?.user_metadata?.is_admin || !!user?.app_metadata?.is_admin,
+    allowed_pages_global,
   };
 }
 
+// Canonical list of page slugs. Keep in sync with AdminUsers.jsx PAGE_GROUPS.
+const ALL_PAGES = [
+  'dashboard','leads','contacts','projects','blog','portfolio','resources',
+  'content-scheduler','avatars','email-marketing','email','meetings','invoices',
+  'subscriptions','quick-notes','notifications','settings','deals','scripts',
+  'training','team','products','accounts','admin-users',
+];
+
 // Load { is_admin, clients: [{ id, name, role, allowed_pages, ... }] } for a user.
-// Admins get ALL clients regardless of access table.
-async function loadUserAccess(userId, isAdmin) {
+// Admins get ALL clients regardless of access table. If allowedPagesGlobal is
+// passed (VA admin tier), every synthesized client entry gets that restricted
+// page set instead of the full ALL_PAGES list.
+async function loadUserAccess(userId, isAdmin, allowedPagesGlobal = null) {
   if (isAdmin) {
     const clients = await supaFetch(`crm_content_clients?select=id,business_name,brand_primary_color,logo_url&order=business_name.asc`);
-    const ALL_PAGES = [
-      'dashboard','leads','contacts','projects','blog','portfolio','resources',
-      'content-scheduler','avatars','email-marketing','email','meetings','invoices',
-      'subscriptions','quick-notes','notifications','settings','deals','scripts',
-      'training','team','products','accounts',
-    ];
+    const pages = Array.isArray(allowedPagesGlobal) && allowedPagesGlobal.length
+      ? allowedPagesGlobal
+      : ALL_PAGES;
     return {
       is_admin: true,
       clients: (clients || []).map(c => ({
@@ -101,7 +114,7 @@ async function loadUserAccess(userId, isAdmin) {
         logo_url: c.logo_url || null,
         brand_primary_color: c.brand_primary_color || null,
         role: 'admin',
-        allowed_pages: ALL_PAGES,
+        allowed_pages: pages,
       })),
     };
   }
@@ -189,4 +202,4 @@ async function supaFetch(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-module.exports = { SUPABASE_URL, SERVICE_KEY, ANON_KEY, headers, setCors, requireAuth, requireCrmUser, requireStudentAuth, requireAdminAuth, supaFetch, loadUserAccess, assertClientAccess, requireClientScope };
+module.exports = { SUPABASE_URL, SERVICE_KEY, ANON_KEY, headers, setCors, requireAuth, requireCrmUser, requireStudentAuth, requireAdminAuth, supaFetch, loadUserAccess, assertClientAccess, requireClientScope, ALL_PAGES };

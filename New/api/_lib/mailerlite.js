@@ -26,7 +26,16 @@ async function ml(apiKey, path, { method = 'GET', body } = {}) {
   let json = null;
   try { json = txt ? JSON.parse(txt) : null; } catch { /* non-JSON */ }
   if (!res.ok) {
-    const msg = json?.message || json?.error || txt || res.statusText;
+    // MailerLite returns { message, errors: { 'field.path': ['msg', ...] } }
+    // on 422 — include the first couple of field errors so the cause is
+    // obvious instead of hiding behind the generic top-level message.
+    const fieldErrs = json?.errors && typeof json.errors === 'object'
+      ? Object.entries(json.errors).slice(0, 3)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join('; ') : v}`)
+          .join(' | ')
+      : '';
+    const base = json?.message || json?.error || txt || res.statusText;
+    const msg = fieldErrs ? `${base} [${fieldErrs}]` : base;
     const err = new Error(`MailerLite ${method} ${path} → ${res.status}: ${msg}`);
     err.status = res.status;
     err.body = json || txt;
@@ -153,19 +162,37 @@ async function syncContactToMailerlite({ client_id, contact_id, email, name, tag
 // ───── Campaigns ─────
 
 // Create a MailerLite campaign. type='regular'. Returns the full campaign object.
+// NOTE: MailerLite's validator returns a misleading "emails.0 field must be an
+// array" error whenever emails[0] fails any sub-field validation (missing
+// subject/from/from_name/content). We sanitize everything here so the request
+// never trips that guardrail, and we tack language_id on because some accounts
+// require it.
 async function createCampaign(apiKey, { name, subject, from, from_name, html, preview_text, groupIds = [] }) {
-  const body = {
-    name: name || subject || 'Untitled',
-    type: 'regular',
-    emails: [{
-      subject,
-      from_name,
-      from,
-      content: html,
-      ...(preview_text ? { preview_text } : {}),
-    }],
-    groups: (groupIds || []).map(String),
+  const safeSubject = (subject || name || 'Untitled').toString().trim() || 'Untitled';
+  const safeFrom = (from || '').toString().trim();
+  const safeFromName = (from_name || '').toString().trim();
+  const safeHtml = (html || '').toString();
+  if (!safeFrom) throw new Error('MailerLite: from_email missing on client config');
+  if (!safeFromName) throw new Error('MailerLite: from_name missing on client config');
+  if (!safeHtml.trim()) throw new Error('MailerLite: campaign body is empty');
+
+  const emailEntry = {
+    subject: safeSubject,
+    from_name: safeFromName,
+    from: safeFrom,
+    content: safeHtml,
   };
+  if (preview_text) emailEntry.preview_text = String(preview_text);
+
+  const body = {
+    name: (name || safeSubject).toString().trim() || 'Untitled',
+    language_id: 1,
+    type: 'regular',
+    emails: [emailEntry],
+  };
+  const groupsArr = (groupIds || []).filter(Boolean).map(String);
+  if (groupsArr.length) body.groups = groupsArr;
+
   const res = await ml(apiKey, '/campaigns', { method: 'POST', body });
   return res?.data;
 }

@@ -64,26 +64,34 @@ export function ClientProvider({ children }) {
 
   const selectedClient = clients.find(c => c.id === selectedClientId) || null;
   const isAdmin = !!user?.is_admin;
-  // Active page list = pages allowed for the currently selected client
+  // VA admins: cross-client admin BUT restricted to a subset of pages.
+  // Empty/null = unrestricted admin (Ray).
+  const allowedPagesGlobal = Array.isArray(user?.allowed_pages_global) && user.allowed_pages_global.length
+    ? user.allowed_pages_global
+    : null;
+  const isRestrictedAdmin = isAdmin && !!allowedPagesGlobal;
+  // Active page list = pages allowed for the currently selected client.
+  // For restricted admins this is already intersected server-side.
   const allowedPages = selectedClient?.allowed_pages || [];
 
   // Imperative access check (usable inside arrays/filters without a hook).
-  // Admins bypass. Some pages are always available (login-adjacent pages).
-  // 'dashboard' is always allowed to avoid a redirect loop (Gated sends
-  // blocked users there). Notifications + settings are global user-level.
+  // Full admins (no global restriction) bypass. Restricted admins and
+  // regular users go through the allow-list. Some pages are always available
+  // (login-adjacent + global user-level pages).
   const ALWAYS_ALLOWED = ['dashboard', 'notifications', 'settings'];
   const canAccess = useCallback((slug) => {
-    if (isAdmin) return true;
     if (!slug) return true;
     if (ALWAYS_ALLOWED.includes(slug)) return true;
+    if (isAdmin && !allowedPagesGlobal) return true;
     return allowedPages.includes(slug);
-  }, [isAdmin, allowedPages]);
+  }, [isAdmin, allowedPagesGlobal, allowedPages]);
 
   return (
     <ClientContext.Provider value={{
       loading, error, user, clients,
       selectedClientId, selectedClient,
-      isAdmin, allowedPages, canAccess,
+      isAdmin, isRestrictedAdmin, allowedPagesGlobal,
+      allowedPages, canAccess,
       setSelectedClientId,
       refresh: load,
     }}>
@@ -97,7 +105,6 @@ export const useClient = () => useContext(ClientContext);
 // Helper: returns true if the current user+client can see this page slug.
 // Admins pass for everything.
 export function useCanAccess(pageSlug) {
-  const { isAdmin, allowedPages } = useClient();
-  if (isAdmin) return true;
-  return allowedPages.includes(pageSlug);
+  const { canAccess } = useClient();
+  return canAccess(pageSlug);
 }

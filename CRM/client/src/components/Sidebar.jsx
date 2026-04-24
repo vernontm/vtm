@@ -241,7 +241,7 @@ export default function Sidebar() {
             </>
           )}
 
-          {isAdmin && !viewingAs && (
+          {isAdmin && !viewingAs && canAccess('admin-users') && (
             <>
               <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Admin</div>
               <NavLink to="/admin-users" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>

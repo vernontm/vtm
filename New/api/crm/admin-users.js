@@ -83,26 +83,35 @@ module.exports = async function handler(req, res) {
           allowed_pages: g.allowed_pages || [],
         });
       }
-      const out = authUsers.map(u => ({
-        id: u.id,
-        email: u.email,
-        created_at: u.created_at,
-        is_admin: !!(u.user_metadata?.is_admin || u.app_metadata?.is_admin),
-        grants: byUser[u.id] || [],
-      }));
+      const out = authUsers.map(u => {
+        const gRaw = u.user_metadata?.allowed_pages_global ?? u.app_metadata?.allowed_pages_global;
+        return {
+          id: u.id,
+          email: u.email,
+          created_at: u.created_at,
+          is_admin: !!(u.user_metadata?.is_admin || u.app_metadata?.is_admin),
+          allowed_pages_global: Array.isArray(gRaw) && gRaw.length ? gRaw : null,
+          grants: byUser[u.id] || [],
+        };
+      });
       return res.json(out);
     }
 
     if (req.method === 'POST') {
-      const { email, password, is_admin = false, grants = [] } = req.body || {};
+      const { email, password, is_admin = false, allowed_pages_global = null, grants = [] } = req.body || {};
       if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+      const meta = {};
+      if (is_admin) meta.is_admin = true;
+      if (is_admin && Array.isArray(allowed_pages_global) && allowed_pages_global.length) {
+        meta.allowed_pages_global = allowed_pages_global;
+      }
       const created = await adminFetch('users', {
         method: 'POST',
         body: JSON.stringify({
           email,
           password,
           email_confirm: true,
-          user_metadata: is_admin ? { is_admin: true } : {},
+          user_metadata: meta,
         }),
       });
       const uid = created?.id;
@@ -123,11 +132,32 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'PUT' && id) {
-      const { is_admin } = req.body || {};
-      if (typeof is_admin !== 'boolean') return res.status(400).json({ error: 'is_admin (bool) required' });
+      const { is_admin, allowed_pages_global } = req.body || {};
+      // Fetch existing metadata so we can do a partial merge instead of
+      // blowing other fields away.
+      const existing = await adminFetch(`users/${id}`);
+      const currentMeta = existing?.user_metadata || {};
+      const nextMeta = { ...currentMeta };
+      if (typeof is_admin === 'boolean') {
+        nextMeta.is_admin = is_admin;
+        // Demoting to non-admin? Clear the global page restriction (it only
+        // applies to admins).
+        if (!is_admin) delete nextMeta.allowed_pages_global;
+      }
+      if (allowed_pages_global !== undefined) {
+        if (Array.isArray(allowed_pages_global) && allowed_pages_global.length) {
+          nextMeta.allowed_pages_global = allowed_pages_global;
+        } else {
+          // null / [] → unrestricted admin
+          delete nextMeta.allowed_pages_global;
+        }
+      }
+      if (typeof is_admin !== 'boolean' && allowed_pages_global === undefined) {
+        return res.status(400).json({ error: 'is_admin (bool) or allowed_pages_global (array|null) required' });
+      }
       await adminFetch(`users/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ user_metadata: { is_admin } }),
+        body: JSON.stringify({ user_metadata: nextMeta }),
       });
       return res.json({ success: true });
     }

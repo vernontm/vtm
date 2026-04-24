@@ -1,7 +1,7 @@
 // Admin-only page to manage CRM user accounts + per-client page access.
 // Non-admins see a friendly "not authorized" card instead.
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check } from 'lucide-react';
+import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { useToast } from '../components/Toast';
 import {
@@ -41,7 +41,17 @@ const PAGE_GROUPS = [
   ]},
 ];
 
+// Pages that only make sense for admins (VA admins can be granted these via
+// allowed_pages_global). Not shown on the per-client grant editor.
+const ADMIN_PAGE_GROUPS = [
+  { label: 'Admin', pages: [
+    { slug: 'admin-users', name: 'Users & Access' },
+  ]},
+];
+
 const DEFAULT_PAGES = ['leads','contacts','content-scheduler','avatars','email-marketing'];
+// Flat list of every toggle-able slug (mirrors PAGE_GROUPS).
+const ALL_SLUGS = PAGE_GROUPS.flatMap(g => g.pages.map(p => p.slug));
 
 const card = {
   background: 'var(--surface)', border: '1px solid var(--border)',
@@ -138,6 +148,7 @@ export default function AdminUsers() {
 
 function UserRow({ user, clients, expanded, onToggle, onChanged }) {
   const toast = useToast();
+  const isRestricted = user.is_admin && Array.isArray(user.allowed_pages_global) && user.allowed_pages_global.length > 0;
   async function toggleAdmin(e) {
     e.stopPropagation();
     if (!confirm(`${user.is_admin ? 'Revoke' : 'Grant'} admin for ${user.email}?`)) return;
@@ -163,13 +174,22 @@ function UserRow({ user, clients, expanded, onToggle, onChanged }) {
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{user.email}</div>
-            {user.is_admin && (
+            {user.is_admin && !isRestricted && (
               <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(255,155,38,0.15)', color: 'var(--orange)', fontWeight: 700 }}>ADMIN</span>
+            )}
+            {isRestricted && (
+              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.18)', color: '#a5b4fc', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Lock size={9} /> VA ADMIN
+              </span>
             )}
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-            {user.grants.length === 0 ? 'No client grants' :
-              `${user.grants.length} client${user.grants.length === 1 ? '' : 's'}: ${user.grants.map(g => g.client_name).filter(Boolean).join(', ')}`}
+            {user.is_admin
+              ? (isRestricted
+                  ? `Cross-client admin · limited to ${user.allowed_pages_global.length} page${user.allowed_pages_global.length === 1 ? '' : 's'}`
+                  : 'Full admin · all clients, all pages')
+              : (user.grants.length === 0 ? 'No client grants' :
+                  `${user.grants.length} client${user.grants.length === 1 ? '' : 's'}: ${user.grants.map(g => g.client_name).filter(Boolean).join(', ')}`)}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -184,7 +204,95 @@ function UserRow({ user, clients, expanded, onToggle, onChanged }) {
       </div>
 
       {expanded && (
-        <GrantsEditor user={user} clients={clients} onChanged={onChanged} />
+        user.is_admin
+          ? <GlobalPagesEditor user={user} onChanged={onChanged} />
+          : <GrantsEditor user={user} clients={clients} onChanged={onChanged} />
+      )}
+    </div>
+  );
+}
+
+// Global-pages editor for admins. Toggles user_metadata.allowed_pages_global.
+// Empty list = unrestricted admin. Any subset = VA admin.
+function GlobalPagesEditor({ user, onChanged }) {
+  const toast = useToast();
+  const isInitiallyRestricted = Array.isArray(user.allowed_pages_global) && user.allowed_pages_global.length > 0;
+  const [restrict, setRestrict] = useState(isInitiallyRestricted);
+  const [pages, setPages] = useState(
+    isInitiallyRestricted ? user.allowed_pages_global : [...DEFAULT_PAGES, 'admin-users']
+  );
+  const [saving, setSaving] = useState(false);
+
+  function togglePage(slug) {
+    setPages(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+  }
+
+  const dirty = useMemo(() => {
+    const wasRestricted = isInitiallyRestricted;
+    if (wasRestricted !== restrict) return true;
+    if (!restrict) return false; // both unrestricted
+    const a = [...(user.allowed_pages_global || [])].sort().join(',');
+    const b = [...pages].sort().join(',');
+    return a !== b;
+  }, [pages, restrict, isInitiallyRestricted, user.allowed_pages_global]);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await updateAdminUser(user.id, {
+        allowed_pages_global: restrict ? pages : null,
+      });
+      toast.success(restrict ? 'VA page access updated' : 'Admin restrictions removed');
+      onChanged();
+    } catch (e) { toast.error(e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
+        <input type="checkbox" checked={restrict} onChange={e => setRestrict(e.target.checked)} />
+        <span style={{ fontWeight: 700 }}>Restrict to specific pages (VA admin)</span>
+      </label>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.5 }}>
+        {restrict
+          ? 'Admin sees every client, but only the pages you select below. Leave unchecked for full access like yours.'
+          : 'Full access: every client, every page. Check the box above to turn this admin into a VA with limited page access.'}
+      </div>
+
+      {restrict && (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: 'var(--surface-2)' }}>
+          {[...PAGE_GROUPS, ...ADMIN_PAGE_GROUPS].map(group => (
+            <div key={group.label} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{group.label}</div>
+              <div className="access-pill-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {group.pages.map(p => (
+                  <button
+                    key={p.slug}
+                    onClick={() => togglePage(p.slug)}
+                    style={{
+                      padding: '5px 10px', borderRadius: 20,
+                      background: pages.includes(p.slug) ? 'var(--orange)' : 'var(--surface)',
+                      color: pages.includes(p.slug) ? '#fff' : 'var(--text)',
+                      border: `1px solid ${pages.includes(p.slug) ? 'var(--orange)' : 'var(--border)'}`,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {dirty && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+          <button style={btnPrimary} onClick={save} disabled={saving}>
+            <Check size={13} /> {saving ? 'Saving…' : 'Save access'}
+          </button>
+        </div>
       )}
     </div>
   );
@@ -322,9 +430,15 @@ function CreateUserModal({ clients, onClose, onCreated }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [restrictAdmin, setRestrictAdmin] = useState(false);
+  const [adminPages, setAdminPages] = useState([...DEFAULT_PAGES, 'admin-users']);
   const [clientId, setClientId] = useState(clients[0]?.id || '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
+
+  function toggleAdminPage(slug) {
+    setAdminPages(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -333,7 +447,11 @@ function CreateUserModal({ clients, onClose, onCreated }) {
       const grants = (!isAdmin && clientId)
         ? [{ client_id: clientId, allowed_pages: DEFAULT_PAGES, role: 'viewer' }]
         : [];
-      await createAdminUser({ email, password, is_admin: isAdmin, grants });
+      const payload = { email, password, is_admin: isAdmin, grants };
+      if (isAdmin && restrictAdmin && adminPages.length) {
+        payload.allowed_pages_global = adminPages;
+      }
+      await createAdminUser(payload);
       onCreated();
     } catch (e) { setErr(e.message); }
     finally { setSaving(false); }
@@ -357,8 +475,42 @@ function CreateUserModal({ clients, onClose, onCreated }) {
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
           <input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} />
-          Make admin (full access to all clients)
+          Make admin (access every client)
         </label>
+
+        {isAdmin && (
+          <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={restrictAdmin} onChange={e => setRestrictAdmin(e.target.checked)} />
+              Restrict to specific pages (VA admin)
+            </label>
+            {restrictAdmin && (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10, marginBottom: 12, background: 'var(--surface-2)', maxHeight: 260, overflowY: 'auto' }}>
+                {[...PAGE_GROUPS, ...ADMIN_PAGE_GROUPS].map(group => (
+                  <div key={group.label} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{group.label}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {group.pages.map(p => (
+                        <button
+                          key={p.slug}
+                          type="button"
+                          onClick={() => toggleAdminPage(p.slug)}
+                          style={{
+                            padding: '4px 9px', borderRadius: 20,
+                            background: adminPages.includes(p.slug) ? 'var(--orange)' : 'var(--surface)',
+                            color: adminPages.includes(p.slug) ? '#fff' : 'var(--text)',
+                            border: `1px solid ${adminPages.includes(p.slug) ? 'var(--orange)' : 'var(--border)'}`,
+                            fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >{p.name}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
         {!isAdmin && (
           <>
