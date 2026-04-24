@@ -20,17 +20,20 @@ export function TeamProvider({ children }) {
 }
 
 export function useTeam() {
-  const { isAdmin, user, loading, canAccess } = useClient();
+  const { isAdmin, user, loading, canAccess, viewingAs, clearViewingAs } = useClient();
   return useMemo(() => ({
     currentMember:        user,
     isOwner:              isAdmin,
-    viewingAs:            null,
+    // Surface the ClientContext impersonation so legacy banners
+    // ({viewingAs && ...}) keep working without each component knowing
+    // which context owns "view-as" now.
+    viewingAs:            viewingAs ? { email: viewingAs.label, name: viewingAs.label } : null,
     effectivePermissions: isAdmin ? null : [],
     allowedClientIds:     null,
     defaultClientId:      null,
     loading,
     hasPermission:        canAccess || (() => true),
     setViewingAs:         () => {},
-    clearViewingAs:       () => {},
-  }), [isAdmin, user, loading, canAccess]);
+    clearViewingAs:       clearViewingAs || (() => {}),
+  }), [isAdmin, user, loading, canAccess, viewingAs, clearViewingAs]);
 }

@@ -1,7 +1,7 @@
 // Admin-only page to manage CRM user accounts + per-client page access.
 // Non-admins see a friendly "not authorized" card instead.
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock } from 'lucide-react';
+import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { useToast } from '../components/Toast';
 import {
@@ -75,7 +75,7 @@ const inputStyle = {
 };
 
 export default function AdminUsers() {
-  const { isAdmin, clients } = useClient();
+  const { isAdmin, clients, viewAsUser, realUser } = useClient();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -131,6 +131,8 @@ export default function AdminUsers() {
             expanded={expandedId === u.id}
             onToggle={() => setExpandedId(expandedId === u.id ? null : u.id)}
             onChanged={load}
+            onViewAs={() => viewAsUser(u)}
+            isSelf={u.id === realUser?.id}
           />
         ))}
       </div>
@@ -146,7 +148,7 @@ export default function AdminUsers() {
   );
 }
 
-function UserRow({ user, clients, expanded, onToggle, onChanged }) {
+function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSelf }) {
   const toast = useToast();
   const isRestricted = user.is_admin && Array.isArray(user.allowed_pages_global) && user.allowed_pages_global.length > 0;
   async function toggleAdmin(e) {
@@ -193,6 +195,15 @@ function UserRow({ user, clients, expanded, onToggle, onChanged }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
+          {!isSelf && (
+            <button
+              style={btnGhost}
+              onClick={e => { e.stopPropagation(); onViewAs?.(); }}
+              title={`See the CRM as ${user.email}`}
+            >
+              <Eye size={13} /> View as
+            </button>
+          )}
           <button style={btnGhost} onClick={toggleAdmin} title={user.is_admin ? 'Revoke admin' : 'Grant admin'}>
             {user.is_admin ? <ShieldOff size={13} /> : <Shield size={13} />}
             {user.is_admin ? 'Revoke admin' : 'Make admin'}
