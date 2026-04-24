@@ -25,8 +25,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import EditPostModal from '../components/EditPostModal';
-import { useTeam } from '../context/TeamContext';
 import { useUi } from '../context/UiContext';
+import { useClient } from '../context/ClientContext';
 import CoverFramePicker from '../components/CoverFramePicker';
 
 const STATUS_COLORS = {
@@ -85,15 +85,14 @@ const SIDEBAR_SECTIONS = [
 ];
 
 export default function ContentScheduler() {
-  const { allowedClientIds, defaultClientId } = useTeam();
   const { setContentContext } = useUi();
-
-  // Client state
+  // Client is driven by the global header switcher. We still keep a local
+  // `clients` list so the old editor profile UI can read brand details for
+  // the currently selected client without a refactor of that whole section.
+  const { selectedClientId, setSelectedClientId, refresh: refreshClientList } = useClient();
   const [clients, setClients] = useState([]);
-  const [selectedClientId, setSelectedClientId] = useState('');
   const [client, setClient] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Content state
   const [scripts, setScripts] = useState([]);
@@ -263,22 +262,7 @@ export default function ContentScheduler() {
   async function loadClients() {
     try {
       const data = await getContentClients();
-      // Filter to only allowed clients for restricted team members
-      const visible = allowedClientIds?.length
-        ? (data || []).filter(c => allowedClientIds.includes(c.id))
-        : (data || []);
-      setClients(visible);
-
-      // Pick default: explicit defaultClientId → first allowed → rayvaughnceo fallback
-      const pick =
-        (defaultClientId && visible.find(c => c.id === defaultClientId)) ||
-        (allowedClientIds?.length && visible[0]) ||
-        visible.find(c => c.uploadpost_user === 'rayvaughnceo' || c.business_name?.toLowerCase().includes('rayvaughn'));
-
-      if (pick) {
-        setSelectedClientId(pick.id);
-        setSidebarCollapsed(true);
-      }
+      setClients(data || []);
     } catch (e) { console.error(e); }
   }
 
@@ -1103,10 +1087,14 @@ export default function ContentScheduler() {
       if (editingClient) {
         await updateContentClient(editingClient.id, clientForm);
       } else {
+        // Creating clients is now an admin-only action. This branch is
+        // effectively dead from the UI but kept for safety in case the
+        // modal is opened programmatically.
         const created = await createContentClient(clientForm);
         if (created?.id) setSelectedClientId(created.id);
       }
       await loadClients();
+      await refreshClientList(); // keep the global switcher in sync
       if (editingClient) await loadClientData(editingClient.id);
       setShowClientModal(false);
     } catch (e) { alert('Failed: ' + e.message); }
@@ -1154,84 +1142,13 @@ export default function ContentScheduler() {
   // ── Render ──
   return (
     <div className="cs-page" style={{ height: '100%', display: 'flex', flexDirection: 'row' }}>
-      {/* ══════ LEFT SIDEBAR ══════ */}
-      <div className="cs-sidebar" style={{
-        width: sidebarCollapsed ? 0 : 200, background: 'var(--surface)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', flexShrink: 0,
-        overflow: 'hidden', transition: 'width 0.2s ease',
-      }}>
-        {/* Sidebar header */}
-        <div style={{ padding: '18px 16px 10px', fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
-          Content Scheduler
-        </div>
-
-        {/* Client list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px' }}>
-          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Clients
-          </div>
-          {clients.length === 0 && (
-            <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--muted)' }}>No clients yet</div>
-          )}
-          {clients.map(c => (
-            <div
-              key={c.id}
-              onClick={() => { setSelectedClientId(c.id); setSidebarCollapsed(true); }}
-              style={{
-                padding: '8px 16px',
-                fontSize: 13,
-                cursor: 'pointer',
-                color: selectedClientId === c.id ? 'var(--orange)' : 'var(--text)',
-                background: selectedClientId === c.id ? 'rgba(74,108,247,0.06)' : 'transparent',
-                borderLeft: selectedClientId === c.id ? '3px solid var(--orange)' : '3px solid transparent',
-                fontWeight: selectedClientId === c.id ? 600 : 400,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                transition: 'all 0.15s',
-              }}
-            >
-              <span className="private-value">{c.business_name}</span>
-            </div>
-          ))}
-
-        </div>
-
-        {/* Sidebar bottom buttons */}
-        <div style={{ padding: '8px 12px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <button onClick={openAddClient} style={{
-            ...btnGhost, width: '100%', justifyContent: 'center', fontSize: 12, padding: '7px 10px',
-          }}>
-            <Plus size={13} /> Add Client
-          </button>
-          {client && (
-            <button onClick={() => setShowScheduleModal(true)} style={{
-              ...btnGhost, width: '100%', justifyContent: 'center', fontSize: 12, padding: '7px 10px',
-            }}>
-              <Settings size={13} /> Schedule Settings
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ══════ SECTIONS SIDEBAR ══════ */}
+      {/* ══════ SECTIONS SIDEBAR (client picker lives in the global header) ══════ */}
       {client && (
         <div className="cs-sections" style={{
           width: 56, background: 'var(--surface-2)', borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0,
           paddingTop: 8, gap: 4,
         }}>
-          {/* Expand/collapse client list toggle */}
-          <button
-            onClick={() => setSidebarCollapsed(v => !v)}
-            title={sidebarCollapsed ? 'Show clients' : 'Hide clients'}
-            style={{
-              width: 42, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: 'transparent', color: 'var(--muted)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', marginBottom: 4,
-              transition: 'color 0.15s',
-            }}
-          >
-            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
           {SIDEBAR_SECTIONS.map(({ key, label, Icon }) => (
             <button key={key} onClick={() => setActiveSection(key)} title={label}
               style={{

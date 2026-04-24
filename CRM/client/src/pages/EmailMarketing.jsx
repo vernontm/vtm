@@ -11,6 +11,7 @@ import {
   saveSequenceStep, deleteSequenceStep, enrollSequenceMatching, deleteEmailSequence,
 } from '../api';
 import EmailEditor, { stripEditorRefs } from '../components/EmailEditor';
+import { useClient } from '../context/ClientContext';
 import {
   Mail, Users, FileText, Send, Plus, Trash2, Loader, Check, X, ChevronDown,
   Settings, Tag, Clock, RefreshCw, Eye, Calendar, Zap, BookOpen, Info, Cake, Gift,
@@ -180,9 +181,12 @@ function VarButtons({ onInsert }) {
 }
 
 export default function EmailMarketing() {
+  // Client is now driven by the global client switcher in the top bar.
+  // We still fetch the full crm_content_clients rows locally so we can read
+  // business_name / brand_bible / logo_url for this client's detail panel
+  // without refactoring every lookup right now.
+  const { selectedClientId } = useClient();
   const [clients, setClients] = useState([]);
-  const [selectedClientId, setSelectedClientId] = useState('');
-  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('contacts');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -248,14 +252,8 @@ export default function EmailMarketing() {
   const [aiGenLoading, setAiGenLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef(null);
-  // New client modal
-  const [newClientOpen, setNewClientOpen] = useState(false);
-  const [newClientName, setNewClientName] = useState('');
-  const [newClientWebsite, setNewClientWebsite] = useState('');
-  const [newClientTone, setNewClientTone] = useState('');
-  const [newClientPrimary, setNewClientPrimary] = useState('#E8650A');
-  const [newClientSecondary, setNewClientSecondary] = useState('var(--surface-3)');
-  const [creatingClient, setCreatingClient] = useState(false);
+  // (Creating new clients moved to the admin area; this page only edits
+  // the currently-selected client.)
 
   // Campaign form
   const [campSubject, setCampSubject] = useState('');
@@ -632,29 +630,6 @@ export default function EmailMarketing() {
     } catch (e) { setError('Color save failed: ' + e.message); }
   }
 
-  // ── New client ──
-  async function handleCreateClient() {
-    if (!newClientName.trim()) return;
-    setCreatingClient(true); setError('');
-    try {
-      const created = await createContentClient({
-        business_name: newClientName.trim(),
-        website_url: newClientWebsite.trim() || null,
-        preferred_tone: newClientTone.trim() || null,
-        brand_primary_color: newClientPrimary,
-        brand_secondary_color: newClientSecondary,
-      });
-      const data = await getContentClients();
-      setClients(data || []);
-      const newId = created?.id || created?.[0]?.id;
-      if (newId) setSelectedClientId(newId);
-      setNewClientOpen(false);
-      setNewClientName(''); setNewClientWebsite(''); setNewClientTone('');
-      setNewClientPrimary('#E8650A'); setNewClientSecondary('var(--surface-3)');
-    } catch (e) { setError('Create client failed: ' + e.message); }
-    setCreatingClient(false);
-  }
-
   // ── Load MailerLite groups when composer opens ──
   useEffect(() => {
     if (!showComposer || !selectedClientId) return;
@@ -908,55 +883,7 @@ export default function EmailMarketing() {
 
   return (
     <div style={{ fontFamily: 'var(--font-display)', height: '100%', minHeight: '100vh', display: 'flex', background: 'var(--surface-2)' }}>
-      {/* ══════ LEFT CLIENT SIDEBAR ══════ */}
-      <div style={{
-        width: 220, background: 'var(--surface)', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', flexShrink: 0,
-      }}>
-        <div style={{ padding: '18px 16px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Mail size={18} color="var(--orange)" />
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Email Marketing</span>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 8px' }}>
-          <div style={{ padding: '6px 16px 4px', fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Clients
-          </div>
-          {clients.length === 0 && (
-            <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--muted)' }}>No clients yet</div>
-          )}
-          <div style={{ padding: '4px 12px 10px' }}>
-            <button onClick={() => setNewClientOpen(true)} style={{
-              width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.15)',
-              background: 'var(--accent-dim)', color: 'var(--orange)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}>
-              <Plus size={13} /> New Client
-            </button>
-          </div>
-          {clients.map(c => (
-            <div
-              key={c.id}
-              onClick={() => setSelectedClientId(c.id)}
-              style={{
-                padding: '8px 16px',
-                fontSize: 13,
-                cursor: 'pointer',
-                color: selectedClientId === c.id ? 'var(--orange)' : 'var(--text)',
-                background: selectedClientId === c.id ? 'rgba(255,155,38,0.06)' : 'transparent',
-                borderLeft: selectedClientId === c.id ? '3px solid var(--orange)' : '3px solid transparent',
-                fontWeight: selectedClientId === c.id ? 600 : 400,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                transition: 'all 0.15s',
-              }}
-            >
-              <span className="private-value">{c.business_name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ══════ RIGHT MAIN AREA ══════ */}
+      {/* ══════ MAIN AREA (client comes from global header switcher) ══════ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar with client name + tabs + status */}
         <div style={{
@@ -1172,64 +1099,6 @@ export default function EmailMarketing() {
           </div>
         );
       })()}
-
-      {/* New client modal */}
-      {newClientOpen && (
-        <div onClick={() => !creatingClient && setNewClientOpen(false)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(10,20,40,0.5)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 12, maxWidth: 480, width: '100%', padding: 22 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Create New Client</div>
-              <button onClick={() => setNewClientOpen(false)} disabled={creatingClient} style={btnSecondary}><X size={13} /></button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Business Name *</label>
-                <input style={inputStyle} placeholder="Acme Coffee Co." value={newClientName} onChange={e => setNewClientName(e.target.value)} autoFocus />
-              </div>
-              <div>
-                <label style={labelStyle}>Website (optional)</label>
-                <input style={inputStyle} placeholder="https://example.com" value={newClientWebsite} onChange={e => setNewClientWebsite(e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Preferred Tone (optional)</label>
-                <input style={inputStyle} placeholder="warm, confident, direct" value={newClientTone} onChange={e => setNewClientTone(e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Primary Color</label>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input type="color" value={newClientPrimary} onChange={e => setNewClientPrimary(e.target.value)}
-                      style={{ width: 44, height: 36, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
-                    <input style={inputStyle} value={newClientPrimary} onChange={e => setNewClientPrimary(e.target.value)} />
-                  </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Secondary Color</label>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input type="color" value={newClientSecondary} onChange={e => setNewClientSecondary(e.target.value)}
-                      style={{ width: 44, height: 36, border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'none' }} />
-                    <input style={inputStyle} value={newClientSecondary} onChange={e => setNewClientSecondary(e.target.value)} />
-                  </div>
-                </div>
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                Logo and brand bible can be added from Settings after creation.
-              </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button onClick={handleCreateClient} disabled={creatingClient || !newClientName.trim()}
-                  style={{ ...btnPrimary, opacity: (creatingClient || !newClientName.trim()) ? 0.6 : 1 }}>
-                  {creatingClient ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
-                  Create Client
-                </button>
-                <button onClick={() => setNewClientOpen(false)} disabled={creatingClient} style={btnSecondary}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* AI template generator modal */}
       {aiGenOpen && (
