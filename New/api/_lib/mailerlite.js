@@ -167,14 +167,27 @@ async function syncContactToMailerlite({ client_id, contact_id, email, name, tag
 // subject/from/from_name/content). We sanitize everything here so the request
 // never trips that guardrail, and we tack language_id on because some accounts
 // require it.
+// Our composer uses Mustache-style {{name}} merge tags. MailerLite's tag
+// syntax is {$name} and their validator flags {{ }} in subjects as
+// "forbidden characters". Translate before sending so the rest of the app
+// can stay on the {{...}} convention.
+function convertMergeTags(s) {
+  if (s == null) return s;
+  return String(s).replace(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*\}\}/g, (_, key) => {
+    // first_name → name (MailerLite has no first_name field by default)
+    const map = { first_name: 'name', firstname: 'name' };
+    return `{$${map[key.toLowerCase()] || key}}`;
+  });
+}
+
 // MailerLite's subject/name validator rejects "forbidden characters" (a 422
 // with no useful detail). Empirically the things it bans: HTML angle brackets,
-// ASCII control chars (incl. newlines/tabs), null bytes, and zero-width /
-// invisible unicode that often comes along with copy-pasted rich-text.
-// Smart quotes, em dashes, and emoji are fine — leave those alone.
+// ASCII control chars (incl. newlines/tabs), null bytes, zero-width /
+// invisible unicode that comes along with copy-pasted rich-text, and the
+// Mustache {{...}} syntax. Smart quotes, em dashes, and emoji are fine.
 function sanitizeMlText(s, maxLen = 255) {
   if (s == null) return '';
-  let out = String(s);
+  let out = convertMergeTags(s);
   // Strip HTML angle brackets entirely (subjects are plain text).
   out = out.replace(/[<>]/g, '');
   // Strip ASCII controls (0x00–0x1F and 0x7F) — newlines, tabs, etc.
@@ -191,7 +204,9 @@ async function createCampaign(apiKey, { name, subject, from, from_name, html, pr
   const safeSubject = sanitizeMlText(subject || name) || 'Untitled';
   const safeFrom = (from || '').toString().trim();
   const safeFromName = sanitizeMlText(from_name);
-  const safeHtml = (html || '').toString();
+  // HTML body keeps tags/structure, but we still translate {{name}} → {$name}
+  // so MailerLite actually personalizes the rendered email.
+  const safeHtml = convertMergeTags((html || '').toString());
   if (!safeFrom) throw new Error('MailerLite: from_email missing on client config');
   if (!safeFromName) throw new Error('MailerLite: from_name missing on client config');
   if (!safeHtml.trim()) throw new Error('MailerLite: campaign body is empty');
@@ -243,6 +258,7 @@ async function updateCampaign(apiKey, campaignId, patch) {
       const out = { ...e };
       if (out.subject != null)   out.subject   = sanitizeMlText(out.subject);
       if (out.from_name != null) out.from_name = sanitizeMlText(out.from_name);
+      if (out.content != null)   out.content   = convertMergeTags(out.content);
       return out;
     });
   }
