@@ -167,10 +167,30 @@ async function syncContactToMailerlite({ client_id, contact_id, email, name, tag
 // subject/from/from_name/content). We sanitize everything here so the request
 // never trips that guardrail, and we tack language_id on because some accounts
 // require it.
+// MailerLite's subject/name validator rejects "forbidden characters" (a 422
+// with no useful detail). Empirically the things it bans: HTML angle brackets,
+// ASCII control chars (incl. newlines/tabs), null bytes, and zero-width /
+// invisible unicode that often comes along with copy-pasted rich-text.
+// Smart quotes, em dashes, and emoji are fine — leave those alone.
+function sanitizeMlText(s, maxLen = 255) {
+  if (s == null) return '';
+  let out = String(s);
+  // Strip HTML angle brackets entirely (subjects are plain text).
+  out = out.replace(/[<>]/g, '');
+  // Strip ASCII controls (0x00–0x1F and 0x7F) — newlines, tabs, etc.
+  out = out.replace(/[\x00-\x1F\x7F]/g, ' ');
+  // Strip zero-width / invisible unicode (BOM, ZWSP, ZWNJ, ZWJ, word joiner).
+  out = out.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, '');
+  // Collapse runs of whitespace and trim.
+  out = out.replace(/\s+/g, ' ').trim();
+  if (out.length > maxLen) out = out.slice(0, maxLen).trim();
+  return out;
+}
+
 async function createCampaign(apiKey, { name, subject, from, from_name, html, preview_text, groupIds = [] }) {
-  const safeSubject = (subject || name || 'Untitled').toString().trim() || 'Untitled';
+  const safeSubject = sanitizeMlText(subject || name) || 'Untitled';
   const safeFrom = (from || '').toString().trim();
-  const safeFromName = (from_name || '').toString().trim();
+  const safeFromName = sanitizeMlText(from_name);
   const safeHtml = (html || '').toString();
   if (!safeFrom) throw new Error('MailerLite: from_email missing on client config');
   if (!safeFromName) throw new Error('MailerLite: from_name missing on client config');
@@ -189,7 +209,7 @@ async function createCampaign(apiKey, { name, subject, from, from_name, html, pr
   };
 
   const body = {
-    name: (name || safeSubject).toString().trim() || 'Untitled',
+    name: sanitizeMlText(name) || safeSubject || 'Untitled',
     language_id: 1,
     type: 'regular',
     emails: [emailEntry],
@@ -214,7 +234,19 @@ async function createCampaign(apiKey, { name, subject, from, from_name, html, pr
 }
 
 async function updateCampaign(apiKey, campaignId, patch) {
-  const res = await ml(apiKey, `/campaigns/${campaignId}`, { method: 'PUT', body: patch });
+  // Mirror createCampaign's sanitization so updates don't trip the same
+  // "Input contains forbidden characters" 422 on name / subject / from_name.
+  const safe = { ...(patch || {}) };
+  if (safe.name != null) safe.name = sanitizeMlText(safe.name);
+  if (Array.isArray(safe.emails)) {
+    safe.emails = safe.emails.map(e => {
+      const out = { ...e };
+      if (out.subject != null)   out.subject   = sanitizeMlText(out.subject);
+      if (out.from_name != null) out.from_name = sanitizeMlText(out.from_name);
+      return out;
+    });
+  }
+  const res = await ml(apiKey, `/campaigns/${campaignId}`, { method: 'PUT', body: safe });
   return res?.data;
 }
 
