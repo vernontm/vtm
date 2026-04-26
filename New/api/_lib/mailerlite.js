@@ -176,13 +176,17 @@ async function createCampaign(apiKey, { name, subject, from, from_name, html, pr
   if (!safeFromName) throw new Error('MailerLite: from_name missing on client config');
   if (!safeHtml.trim()) throw new Error('MailerLite: campaign body is empty');
 
+  // Per MailerLite Connect API docs (developers.mailerlite.com/docs/campaigns.html)
+  // emails[*] required: subject, from_name, from. Optional: reply_to, content
+  // (HTML, Advanced plan). preview_text is NOT a documented sub-field — the
+  // validator rejects unknown keys silently and reports "emails.0 must be an
+  // array", which is why we strip it here.
   const emailEntry = {
     subject: safeSubject,
     from_name: safeFromName,
     from: safeFrom,
     content: safeHtml,
   };
-  if (preview_text) emailEntry.preview_text = String(preview_text);
 
   const body = {
     name: (name || safeSubject).toString().trim() || 'Untitled',
@@ -193,8 +197,20 @@ async function createCampaign(apiKey, { name, subject, from, from_name, html, pr
   const groupsArr = (groupIds || []).filter(Boolean).map(String);
   if (groupsArr.length) body.groups = groupsArr;
 
-  const res = await ml(apiKey, '/campaigns', { method: 'POST', body });
-  return res?.data;
+  try {
+    const res = await ml(apiKey, '/campaigns', { method: 'POST', body });
+    return res?.data;
+  } catch (e) {
+    // Surface the request shape on failure so we can diagnose schema drift.
+    // (preview_text was removed; if this still fires the cause is elsewhere —
+    // typically an unverified `from` address or content rejected by plan.)
+    console.error('MailerLite createCampaign payload:', JSON.stringify({
+      ...body,
+      emails: body.emails.map(e => ({ ...e, content: `[${(e.content || '').length} chars]` })),
+    }));
+    if (e.body) console.error('MailerLite createCampaign response body:', JSON.stringify(e.body));
+    throw e;
+  }
 }
 
 async function updateCampaign(apiKey, campaignId, patch) {

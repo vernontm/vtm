@@ -76,6 +76,9 @@ async function pushCampaignToMailerlite(campaign, cfg) {
   let remoteId = campaign.mailerlite_campaign_id;
   if (remoteId) {
     try {
+      // preview_text is NOT a valid sub-field of emails[*] in MailerLite's
+      // schema — including it makes the validator reject the whole entry
+      // with a misleading "emails.0 must be an array" error.
       await ML.updateCampaign(apiKey, remoteId, {
         name: payload.name,
         emails: [{
@@ -83,7 +86,6 @@ async function pushCampaignToMailerlite(campaign, cfg) {
           from_name: payload.from_name,
           from: payload.from,
           content: payload.html,
-          ...(payload.preview_text ? { preview_text: payload.preview_text } : {}),
         }],
         groups: groupIds.map(String),
       });
