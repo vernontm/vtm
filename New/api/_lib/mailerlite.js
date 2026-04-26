@@ -311,6 +311,51 @@ async function getAccount(apiKey) {
   return ml(apiKey, '/account');
 }
 
+// ───── Subscriber listing (used for per-contact stats) ─────
+// Pulls every subscriber the API key can see. Each subscriber object
+// includes aggregate fields (opens_count, clicks_count, etc.) — that's
+// what powers the SENT / OPENED columns on the Contacts table.
+//
+// MailerLite Connect uses cursor pagination; max page size is 1000.
+async function listAllSubscribers(apiKey) {
+  const out = [];
+  let cursor = null;
+  for (let i = 0; i < 100; i++) { // safety cap = 100k subs
+    const path = `/subscribers?limit=1000${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    const r = await ml(apiKey, path);
+    const data = r?.data || [];
+    out.push(...data);
+    cursor = r?.meta?.next_cursor || null;
+    if (!cursor || data.length === 0) break;
+  }
+  return out;
+}
+
+// 5-minute in-process cache so a Contacts page reload doesn't slam ML.
+const _statsCache = new Map(); // client_id → { at, byEmail, bySubId }
+const STATS_TTL_MS = 5 * 60 * 1000;
+
+async function getContactStatsFromMailerlite(apiKey, client_id) {
+  const cached = _statsCache.get(client_id);
+  if (cached && Date.now() - cached.at < STATS_TTL_MS) return cached;
+  const subs = await listAllSubscribers(apiKey);
+  const byEmail = new Map();
+  const bySubId = new Map();
+  for (const s of subs) {
+    const stat = {
+      sent:    Number(s.sent ?? s.total ?? 0),
+      opened:  Number(s.opens_count ?? s.opens ?? 0),
+      clicked: Number(s.clicks_count ?? s.clicks ?? 0),
+      failed:  s.status === 'bounced' ? 1 : 0,
+    };
+    if (s.email) byEmail.set(String(s.email).toLowerCase(), stat);
+    if (s.id)    bySubId.set(String(s.id), stat);
+  }
+  const entry = { at: Date.now(), byEmail, bySubId };
+  _statsCache.set(client_id, entry);
+  return entry;
+}
+
 module.exports = {
   ml,
   GENERAL_LIST_GROUP_NAME,
@@ -325,4 +370,6 @@ module.exports = {
   deleteCampaign,
   getCampaignActivity,
   getAccount,
+  listAllSubscribers,
+  getContactStatsFromMailerlite,
 };

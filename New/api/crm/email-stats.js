@@ -1,4 +1,5 @@
 const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
+const ML = require('../_lib/mailerlite.js');
 
 // Per-contact send stats and send history
 module.exports = async function handler(req, res) {
@@ -52,33 +53,34 @@ module.exports = async function handler(req, res) {
   }
 
   // GET ?action=contact-stats&client_id=... — per-contact aggregate counts
-  // from campaign sends (crm_email_sends). Local sequences were removed; drip
-  // delivery is handled by MailerLite Automations.
+  // pulled live from MailerLite. We fetch every subscriber visible to the
+  // client's API key (cached for 5 min in mailerlite.js) and join on email
+  // OR mailerlite_subscriber_id, whichever the local contact has.
+  // Returned shape: { [contact_id]: { sent, opened, clicked, failed } }
   if (action === 'contact-stats') {
     try {
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
+
+      const cfgRows = await supaFetch(
+        `crm_email_config?client_id=eq.${client_id}&select=mailerlite_api_key`
+      );
+      const apiKey = cfgRows?.[0]?.mailerlite_api_key;
       const stats = {};
-      const bump = (contactId, key) => {
-        if (!contactId) return;
-        if (!stats[contactId]) stats[contactId] = { sent: 0, failed: 0, opened: 0, clicked: 0 };
-        stats[contactId][key]++;
-      };
+      if (!apiKey) return res.json(stats); // no key configured → empty stats
 
-      // Campaign sends scoped by client's campaigns
-      const campaigns = await supaFetch(`crm_email_campaigns?client_id=eq.${client_id}&select=id`);
-      const campaignIds = (campaigns || []).map(c => c.id);
-      if (campaignIds.length) {
-        const sends = await supaFetch(
-          `crm_email_sends?campaign_id=in.(${campaignIds.join(',')})&select=contact_id,status,opened_at,clicked_at`
-        );
-        for (const s of (sends || [])) {
-          if (s.status === 'sent' || s.status === 'delivered') bump(s.contact_id, 'sent');
-          if (s.status === 'failed' || s.status === 'bounced') bump(s.contact_id, 'failed');
-          if (s.opened_at) bump(s.contact_id, 'opened');
-          if (s.clicked_at) bump(s.contact_id, 'clicked');
-        }
+      const contacts = await supaFetch(
+        `crm_email_contacts?client_id=eq.${client_id}&select=id,email,mailerlite_subscriber_id`
+      );
+      if (!contacts?.length) return res.json(stats);
+
+      const { byEmail, bySubId } = await ML.getContactStatsFromMailerlite(apiKey, client_id);
+      for (const c of contacts) {
+        const stat =
+          (c.mailerlite_subscriber_id && bySubId.get(String(c.mailerlite_subscriber_id))) ||
+          (c.email && byEmail.get(String(c.email).toLowerCase())) ||
+          null;
+        if (stat) stats[c.id] = stat;
       }
-
       return res.json(stats);
     } catch (err) {
       return res.status(500).json({ error: err.message });
