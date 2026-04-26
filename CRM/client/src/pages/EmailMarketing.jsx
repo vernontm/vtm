@@ -41,8 +41,8 @@ function StatusPill({ status }) {
 
 const TABS = [
   { key: 'contacts', label: 'Contacts', Icon: Users },
-  { key: 'templates', label: 'Templates', Icon: FileText },
   { key: 'campaigns', label: 'Campaigns', Icon: Send },
+  { key: 'templates', label: 'Templates', Icon: FileText },
   { key: 'tags', label: 'Tag Context', Icon: BookOpen },
   { key: 'settings', label: 'Settings', Icon: Settings },
 ];
