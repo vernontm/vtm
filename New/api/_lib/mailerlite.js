@@ -218,6 +218,31 @@ async function updateCampaign(apiKey, campaignId, patch) {
   return res?.data;
 }
 
+// MailerLite assigns each timezone an integer id (id 1 is NOT UTC — it's
+// usually around UTC-11 in their list). We have to look up the real UTC
+// id once per process and cache it; otherwise scheduled sends fire at the
+// wrong time or, if the resulting moment is in the past, MailerLite
+// silently parks the campaign in Drafts instead of Scheduled.
+let _utcTimezoneId = null;
+async function resolveUtcTimezoneId(apiKey) {
+  if (_utcTimezoneId) return _utcTimezoneId;
+  try {
+    const res = await ml(apiKey, '/timezones');
+    const list = Array.isArray(res?.data) ? res.data : [];
+    // Match in order of preference: exact "UTC" name, code "UTC", offset 0
+    // with a UTC-ish name, then Etc/UTC.
+    const pick =
+      list.find(t => /^utc$/i.test(t.name) || /^utc$/i.test(t.code))
+      || list.find(t => /\(utc[+-]?00:?00\)/i.test(t.title || t.name || ''))
+      || list.find(t => (t.offset === 0 || t.offset === '0') && /utc|coordinated/i.test(t.name || ''))
+      || list.find(t => /etc\/utc/i.test(t.name || ''));
+    if (pick?.id) _utcTimezoneId = pick.id;
+  } catch (e) {
+    console.error('MailerLite timezones lookup failed:', e.message);
+  }
+  return _utcTimezoneId;
+}
+
 // Schedule a campaign. `scheduledAt` is a Date or ISO string (UTC).
 // If omitted, schedules for "instant" (MailerLite's immediate send).
 async function scheduleCampaign(apiKey, campaignId, scheduledAt) {
@@ -229,17 +254,38 @@ async function scheduleCampaign(apiKey, campaignId, scheduledAt) {
     return res?.data;
   }
   const d = scheduledAt instanceof Date ? scheduledAt : new Date(scheduledAt);
-  const body = {
-    delivery: 'scheduled',
-    schedule: {
-      date: d.toISOString().slice(0, 10),             // YYYY-MM-DD
-      hours: String(d.getUTCHours()).padStart(2, '0'),
-      minutes: String(d.getUTCMinutes()).padStart(2, '0'),
-      timezone_id: 1,                                  // UTC
-    },
+  if (isNaN(d.getTime())) throw new Error(`Invalid scheduled_at: ${scheduledAt}`);
+  if (d.getTime() <= Date.now() + 60 * 1000) {
+    // MailerLite rejects past times and silently parks "too soon" times in
+    // Drafts. Surface this as a real error rather than a silent miss.
+    throw new Error(`scheduled_at must be at least 1 min in the future (got ${d.toISOString()})`);
+  }
+
+  // Year/month/day/hours/minutes — taken from UTC parts so they pair with the
+  // UTC timezone id below.
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const schedule = {
+    date: `${yyyy}-${mm}-${dd}`,
+    hours: String(d.getUTCHours()).padStart(2, '0'),
+    minutes: String(d.getUTCMinutes()).padStart(2, '0'),
   };
-  const res = await ml(apiKey, `/campaigns/${campaignId}/schedule`, { method: 'POST', body });
-  return res?.data;
+  const utcId = await resolveUtcTimezoneId(apiKey);
+  if (utcId) schedule.timezone_id = utcId;
+  // If we can't resolve UTC, omit timezone_id — MailerLite falls back to the
+  // account's default timezone. The send time will be wrong relative to UTC,
+  // but at least the campaign appears as Scheduled instead of vanishing.
+
+  const body = { delivery: 'scheduled', schedule };
+  try {
+    const res = await ml(apiKey, `/campaigns/${campaignId}/schedule`, { method: 'POST', body });
+    return res?.data;
+  } catch (e) {
+    console.error('MailerLite schedule payload:', JSON.stringify(body));
+    if (e.body) console.error('MailerLite schedule response body:', JSON.stringify(e.body));
+    throw e;
+  }
 }
 
 async function cancelCampaign(apiKey, campaignId) {

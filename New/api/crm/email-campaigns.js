@@ -164,8 +164,13 @@ module.exports = async function handler(req, res) {
         try {
           const cfg = await loadMailerliteConfig(client_id);
           const remoteId = await pushCampaignToMailerlite(created, cfg);
-          await ML.scheduleCampaign(cfg.mailerlite_api_key, remoteId, scheduled_at);
+          const schedResp = await ML.scheduleCampaign(cfg.mailerlite_api_key, remoteId, scheduled_at);
           created.mailerlite_campaign_id = remoteId;
+          // Echo MailerLite's reported status so the UI can show
+          // "scheduled in MailerLite at <time>" and we can spot silent
+          // fall-back-to-draft cases.
+          created.mailerlite_status = schedResp?.status || 'scheduled';
+          created.mailerlite_scheduled_for = schedResp?.scheduled_for || schedResp?.delivery_schedule || null;
         } catch (e) {
           console.error('Schedule-on-create failed:', e.message);
           // Keep local row, but bubble up the error so the UI can surface it
