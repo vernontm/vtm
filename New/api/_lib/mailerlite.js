@@ -200,6 +200,17 @@ function sanitizeMlText(s, maxLen = 255) {
   return out;
 }
 
+// Campaign `name` is MailerLite's internal label (admin-only). Their
+// validator rejects ANY merge-tag syntax there ({{x}} or {$x}), so we
+// strip the patterns out instead of translating them.
+function sanitizeMlCampaignName(s) {
+  if (s == null) return '';
+  let out = String(s)
+    .replace(/\{\{\s*[a-zA-Z_][a-zA-Z0-9_.]*\s*\}\}/g, '')
+    .replace(/\{\$[a-zA-Z_][a-zA-Z0-9_.]*\}/g, '');
+  return sanitizeMlText(out, 100); // ML caps name at 100ish; be safe
+}
+
 async function createCampaign(apiKey, { name, subject, from, from_name, html, preview_text, groupIds = [] }) {
   const safeSubject = sanitizeMlText(subject || name) || 'Untitled';
   const safeFrom = (from || '').toString().trim();
@@ -223,8 +234,11 @@ async function createCampaign(apiKey, { name, subject, from, from_name, html, pr
     content: safeHtml,
   };
 
+  // Build the internal label: prefer explicit name, fall back to subject
+  // with merge tags stripped, then "Untitled".
+  const labelSource = name || subject || 'Untitled';
   const body = {
-    name: sanitizeMlText(name) || safeSubject || 'Untitled',
+    name: sanitizeMlCampaignName(labelSource) || 'Untitled',
     language_id: 1,
     type: 'regular',
     emails: [emailEntry],
@@ -252,7 +266,7 @@ async function updateCampaign(apiKey, campaignId, patch) {
   // Mirror createCampaign's sanitization so updates don't trip the same
   // "Input contains forbidden characters" 422 on name / subject / from_name.
   const safe = { ...(patch || {}) };
-  if (safe.name != null) safe.name = sanitizeMlText(safe.name);
+  if (safe.name != null) safe.name = sanitizeMlCampaignName(safe.name);
   if (Array.isArray(safe.emails)) {
     safe.emails = safe.emails.map(e => {
       const out = { ...e };
