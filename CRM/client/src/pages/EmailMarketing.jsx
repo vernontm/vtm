@@ -2130,7 +2130,7 @@ export default function EmailMarketing() {
               <button onClick={() => setSeqView('list')} style={{ padding: '7px 10px', background: seqView === 'list' ? 'var(--surface-3)' : 'var(--surface)', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="List view">☰</button>
               <button onClick={() => setSeqView('grid')} style={{ padding: '7px 10px', background: seqView === 'grid' ? 'var(--surface-3)' : 'var(--surface)', border: 'none', cursor: 'pointer', color: 'var(--muted)' }} title="Grid view">▦</button>
             </div>
-            <button onClick={() => setNewSeqOpen(true)} style={{ ...btnPrimary, background: 'var(--surface)' }}>
+            <button onClick={() => setNewSeqOpen(true)} style={{ ...btnPrimary, background: 'var(--surface)', color: '#fff' }}>
               <Plus size={14} /> New sequence
             </button>
           </div>
