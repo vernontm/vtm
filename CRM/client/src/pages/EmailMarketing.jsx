@@ -881,15 +881,6 @@ export default function EmailMarketing() {
             {selectedClient ? <span className="private-value">{selectedClient.business_name}</span> : 'Select a Client'}
           </h2>
           {selectedClientId && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-              {config ? (
-                <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Resend connected</span>
-              ) : (
-                <span style={{ color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4 }}><Settings size={14} /> Setup needed</span>
-              )}
-            </div>
-          )}
-          {selectedClientId && (
             <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexWrap: 'wrap' }}>
               {TABS.map(t => (
                 <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
