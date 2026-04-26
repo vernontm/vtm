@@ -157,7 +157,6 @@ export const trashGmailMessage = (messageId) => request('/gmail-trash', { method
 // AI Follow-ups
 export const getAIFollowups = () => request('/ai-followups');
 export const emailAgent = (data) => request('/email-agent', { method: 'POST', body: JSON.stringify(data) });
-export const sequenceAgent = (data) => request('/sequence-agent', { method: 'POST', body: JSON.stringify(data) });
 
 // Subscriptions
 export const getSubscriptions = (params = {}) => {
@@ -359,16 +358,6 @@ export const sendEmailCampaign = (data) => request('/email-campaigns?action=send
 export const scheduleEmailCampaign = (data) => request('/email-campaigns?action=schedule', { method: 'POST', body: JSON.stringify(data) });
 export const updateEmailCampaign = (id, data) => request(`/email-campaigns?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteEmailCampaign = (id) => request(`/email-campaigns?id=${id}`, { method: 'DELETE' });
-
-// Email sequences
-export const getEmailSequences = (clientId) => request(`/email-sequences?client_id=${clientId}`);
-export const getEmailSequenceDetail = (id) => request(`/email-sequences?action=detail&id=${id}`);
-export const createEmailSequence = (data) => request('/email-sequences', { method: 'POST', body: JSON.stringify(data) });
-export const updateEmailSequence = (data) => request('/email-sequences?action=update', { method: 'POST', body: JSON.stringify(data) });
-export const saveSequenceStep = (data) => request('/email-sequences?action=save-step', { method: 'POST', body: JSON.stringify(data) });
-export const deleteSequenceStep = (id) => request('/email-sequences?action=delete-step', { method: 'POST', body: JSON.stringify({ id }) });
-export const enrollSequenceMatching = (sequence_id) => request('/email-sequences?action=enroll-matching', { method: 'POST', body: JSON.stringify({ sequence_id }) });
-export const deleteEmailSequence = (id) => request(`/email-sequences?id=${id}`, { method: 'DELETE' });
 
 // Tag context (descriptions per tag for AI)
 export const getTagContexts = (clientId) => request(`/email-tag-context?client_id=${clientId}`);

@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
 
     if (!sendUpdate) return res.json({ ok: true, skipped: `unhandled ${type}` });
 
-    const results = { campaign_updated: 0, sequence_updated: 0 };
+    const results = { campaign_updated: 0 };
 
     // ── Update campaign send ──
     try {
@@ -103,30 +103,7 @@ module.exports = async function handler(req, res) {
       }
     } catch (e) { console.error('campaign send update failed:', e.message); }
 
-    // ── Update sequence send ──
-    try {
-      const seqRows = await supaFetch(`crm_email_sequence_sends?resend_id=eq.${emailId}&limit=1`);
-      const seqSend = seqRows?.[0];
-      if (seqSend) {
-        const patch = { ...sendUpdate };
-        if (patch.opened_at && seqSend.opened_at) delete patch.opened_at;
-        if (patch.clicked_at && seqSend.clicked_at) delete patch.clicked_at;
-        if (Object.keys(patch).length) {
-          await supaFetch(`crm_email_sequence_sends?id=eq.${seqSend.id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(patch),
-          });
-          results.sequence_updated++;
-        }
-        // If bounced/complained, mark enrollment as unsubscribed so we don't keep sending
-        if ((type === 'email.bounced' || type === 'email.complained') && seqSend.contact_id && seqSend.sequence_id) {
-          await supaFetch(`crm_email_sequence_enrollments?sequence_id=eq.${seqSend.sequence_id}&contact_id=eq.${seqSend.contact_id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'unsubscribed' }),
-          });
-        }
-      }
-    } catch (e) { console.error('sequence send update failed:', e.message); }
+    // (Local sequence send tracking removed — MailerLite Automations now own drips.)
 
     // If bounced or complained, also mark the contact
     if (type === 'email.bounced' || type === 'email.complained') {

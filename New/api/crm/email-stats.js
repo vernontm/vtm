@@ -39,23 +39,8 @@ module.exports = async function handler(req, res) {
         source: 'campaign',
       }));
 
-      // Sequence sends
-      const seqSends = await supaFetch(`crm_email_sequence_sends?contact_id=eq.${contact_id}&order=sent_at.desc&limit=200`);
-      const stepIds = [...new Set((seqSends || []).map(s => s.step_id).filter(Boolean))];
-      let steps = [];
-      if (stepIds.length) {
-        steps = await supaFetch(`crm_email_sequence_steps?id=in.(${stepIds.join(',')})&select=id,subject,step_order,sequence_id`);
-      }
-      const stepMap = {};
-      for (const st of (steps || [])) stepMap[st.id] = st;
-      const sequenceHistory = (seqSends || []).map(s => ({
-        ...s,
-        subject: stepMap[s.step_id]?.subject || '',
-        step_order: stepMap[s.step_id]?.step_order || null,
-        source: 'sequence',
-      }));
-
-      const combined = [...campaignHistory, ...sequenceHistory].sort((a, b) => {
+      // (Local sequence sends were removed — MailerLite Automations handle drips.)
+      const combined = [...campaignHistory].sort((a, b) => {
         const da = new Date(a.sent_at || a.created_at || 0).getTime();
         const db = new Date(b.sent_at || b.created_at || 0).getTime();
         return db - da;
@@ -67,9 +52,8 @@ module.exports = async function handler(req, res) {
   }
 
   // GET ?action=contact-stats&client_id=... — per-contact aggregate counts
-  // Aggregates both campaign sends (crm_email_sends) AND sequence sends
-  // (crm_email_sequence_sends) so a contact who only got sequence emails still
-  // has a non-zero SENT/OPENED on the contacts table.
+  // from campaign sends (crm_email_sends). Local sequences were removed; drip
+  // delivery is handled by MailerLite Automations.
   if (action === 'contact-stats') {
     try {
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
@@ -88,21 +72,6 @@ module.exports = async function handler(req, res) {
           `crm_email_sends?campaign_id=in.(${campaignIds.join(',')})&select=contact_id,status,opened_at,clicked_at`
         );
         for (const s of (sends || [])) {
-          if (s.status === 'sent' || s.status === 'delivered') bump(s.contact_id, 'sent');
-          if (s.status === 'failed' || s.status === 'bounced') bump(s.contact_id, 'failed');
-          if (s.opened_at) bump(s.contact_id, 'opened');
-          if (s.clicked_at) bump(s.contact_id, 'clicked');
-        }
-      }
-
-      // Sequence sends scoped by client's sequences
-      const sequences = await supaFetch(`crm_email_sequences?client_id=eq.${client_id}&select=id`);
-      const sequenceIds = (sequences || []).map(s => s.id);
-      if (sequenceIds.length) {
-        const seqSends = await supaFetch(
-          `crm_email_sequence_sends?sequence_id=in.(${sequenceIds.join(',')})&select=contact_id,status,opened_at,clicked_at`
-        );
-        for (const s of (seqSends || [])) {
           if (s.status === 'sent' || s.status === 'delivered') bump(s.contact_id, 'sent');
           if (s.status === 'failed' || s.status === 'bounced') bump(s.contact_id, 'failed');
           if (s.opened_at) bump(s.contact_id, 'opened');
