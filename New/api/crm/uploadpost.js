@@ -125,13 +125,16 @@ export default async function handler(req, res) {
 
       const requestId = upBody.request_id || upBody.requestId;
 
-      // Save request_id + status to script record
+      // Save request_id + status + chosen platforms to script record so the
+      // queued/scheduled UI can show what's about to send and let the user
+      // re-edit the platform list later.
       if (script_id) {
         await supaFetch(`crm_content_scripts?id=eq.${script_id}`, {
           method: 'PATCH',
           body: JSON.stringify({
             uploadpost_request_id: requestId,
             publish_status: scheduled_date ? 'scheduled' : 'publishing',
+            platforms: Array.isArray(platforms) ? platforms : null,
             updated_at: new Date().toISOString(),
           }),
         }).catch(() => {});

@@ -1795,6 +1795,21 @@ export default function ContentScheduler() {
                                     await updateContentScript(script.id, { status: script.scheduled_datetime ? 'scheduled' : 'caption_ready' });
                                     loadClientData(client.id);
                                   }} />
+                                  {/* Per-post platforms — only when something's been chosen */}
+                                  {Array.isArray(script.platforms) && script.platforms.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                                      {script.platforms.map(key => {
+                                        const p = ALL_PLATFORMS.find(pp => pp.key === key);
+                                        if (!p) return null;
+                                        return (
+                                          <span key={key} title={p.label} style={{
+                                            fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 8,
+                                            background: 'var(--surface-3)', color: p.color, whiteSpace: 'nowrap',
+                                          }}>{p.label}</span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                   {script.publish_status && (() => {
                                     // Suppress redundant "Scheduled" pill when the main status already says Scheduled
                                     if (script.publish_status === 'scheduled' && script.status === 'scheduled') return null;
@@ -1832,11 +1847,19 @@ export default function ContentScheduler() {
                                   {(
                                     <button onClick={() => {
                                       setPublishModal(script);
-                                      setPublishPlatforms(client.uploadpost_platforms || ['tiktok', 'instagram']);
+                                      // Prefer the platforms previously chosen for THIS post, fall back
+                                      // to the client default.
+                                      const prior = Array.isArray(script.platforms) && script.platforms.length
+                                        ? script.platforms
+                                        : null;
+                                      setPublishPlatforms(prior || client.uploadpost_platforms || ['tiktok', 'instagram']);
                                       setPublishScheduleDate(script.scheduled_datetime
                                         ? new Date(script.scheduled_datetime).toISOString().slice(0, 16) : '');
                                       setCoverTimestampMs(null);
-                                    }} style={{ ...btnGhost, padding: '4px 6px', color: '#16a34a' }} title="Publish / Schedule">
+                                    }} style={{ ...btnGhost, padding: '4px 6px', color: '#16a34a' }}
+                                    title={Array.isArray(script.platforms) && script.platforms.length
+                                      ? `Publish / Edit platforms (currently: ${script.platforms.join(', ')})`
+                                      : 'Publish / Schedule'}>
                                       <Send size={12} />
                                     </button>
                                   )}
@@ -3175,6 +3198,19 @@ export default function ContentScheduler() {
               </h3>
               <button onClick={() => !publishLoading && setPublishModal(null)} style={{ ...btnGhost, padding: '4px 8px' }}><X size={16} /></button>
             </div>
+
+            {/* If this post is already scheduled with UploadPost, warn that
+                resending creates a new request — the prior one stays unless
+                you cancel it on UploadPost's side. */}
+            {!publishModal._bulk && publishModal.uploadpost_request_id && (
+              <div style={{
+                background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.4)',
+                color: '#d97706', fontSize: 11, lineHeight: 1.4,
+                padding: '8px 10px', borderRadius: 8, marginBottom: 14,
+              }}>
+                Already scheduled. Saving will queue a <strong>new</strong> publish job — the previous one will still fire unless you cancel it in UploadPost.
+              </div>
+            )}
 
             <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 8 }}>Platforms</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
