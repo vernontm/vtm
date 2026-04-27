@@ -879,24 +879,33 @@ export default function ContentScheduler() {
   }
 
 
-  // ── Bulk video upload ──
+  // ── Bulk media upload (videos, audio, and images) ──
   async function handleBulkUpload(e) {
     e.preventDefault();
     setBulkDragOver(false);
     const files = Array.from(e.dataTransfer?.files || e.target?.files || []);
-    const videoFiles = files.filter(f => f.type.startsWith('video/') || f.type.startsWith('audio/') || /\.(mp4|mov|avi|mkv|webm|mp3|m4a|wav)$/i.test(f.name));
-    if (!videoFiles.length || !client) return;
+    const mediaFiles = files.filter(f =>
+      f.type.startsWith('video/') ||
+      f.type.startsWith('audio/') ||
+      f.type.startsWith('image/') ||
+      /\.(mp4|mov|avi|mkv|webm|mp3|m4a|wav|jpe?g|png|webp|gif|heic|heif)$/i.test(f.name)
+    );
+    if (!mediaFiles.length || !client) return;
     if (e.target?.value) e.target.value = '';
 
     // Initialize tracking
-    const uploads = videoFiles.map((f, i) => ({
-      id: `bulk-${Date.now()}-${i}`,
-      name: f.name,
-      file: f,
-      status: 'queued', // queued → uploading → transcribing → generating → done → error
-      progress: 0,
-      error: null,
-    }));
+    const uploads = mediaFiles.map((f, i) => {
+      const isImg = f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name);
+      return {
+        id: `bulk-${Date.now()}-${i}`,
+        name: f.name,
+        file: f,
+        kind: isImg ? 'image' : 'video',
+        status: 'queued', // queued → uploading → transcribing/captioning → generating → done → error
+        progress: 0,
+        error: null,
+      };
+    });
     setBulkUploads(prev => [...prev, ...uploads]);
 
     // Process each file sequentially
@@ -936,7 +945,7 @@ export default function ContentScheduler() {
           client_id: client.id,
           title: upload.file.name.replace(/\.[^.]+$/, ''),
           media_urls: [publicUrl],
-          media_type: 'video',
+          media_type: upload.kind === 'image' ? 'image' : 'video',
           status: 'draft',
           sort_order: (scripts.length || 0) + uploads.indexOf(upload) + 1,
         };
@@ -945,7 +954,11 @@ export default function ContentScheduler() {
 
         if (!scriptId) throw new Error('Failed to create script row');
 
-        setBulkUploads(prev => prev.map(u => u.id === upload.id ? { ...u, status: 'transcribing', progress: 50 } : u));
+        setBulkUploads(prev => prev.map(u => u.id === upload.id ? {
+          ...u,
+          status: upload.kind === 'image' ? 'captioning' : 'transcribing',
+          progress: 50,
+        } : u));
 
         // Step 3: Transcribe + AI generate via API (pass storage_path for server-side download with service key)
         const result = await processBulkUpload({
@@ -1249,7 +1262,7 @@ export default function ContentScheduler() {
           {client && activeSection === 'content' && (
             <>
 
-              {/* Bulk Video Upload */}
+              {/* Bulk Media Upload (videos + images) */}
               <div
                 onDragOver={e => { e.preventDefault(); setBulkDragOver(true); }}
                 onDragLeave={() => setBulkDragOver(false)}
@@ -1263,7 +1276,7 @@ export default function ContentScheduler() {
                   transition: 'all 0.2s',
                 }}
               >
-                <input type="file" ref={bulkUploadRef} accept="video/*,audio/*,.mp4,.mov,.avi,.mkv,.webm,.mp3,.m4a,.wav" multiple onChange={handleBulkUpload} style={{ display: 'none' }} />
+                <input type="file" ref={bulkUploadRef} accept="video/*,audio/*,image/*,.mp4,.mov,.avi,.mkv,.webm,.mp3,.m4a,.wav,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" multiple onChange={handleBulkUpload} style={{ display: 'none' }} />
                 <div style={{
                   width: 40, height: 40, borderRadius: 10, flexShrink: 0,
                   background: 'var(--orange)',
@@ -1273,10 +1286,10 @@ export default function ContentScheduler() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
-                    Bulk Video Upload
+                    Bulk Media Upload
                   </p>
                   <p style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    Drag & drop video files here. Each video will be transcribed and auto-generate title, caption, hashtags & first comment using the client's brand bible.
+                    Drag & drop videos or images here. Videos get transcribed; images get analyzed by Claude vision. Either way, title, caption, hashtags & first comment are auto-generated from the brand bible.
                   </p>
                 </div>
                 <Upload size={18} color="#8e8ea0" />
@@ -1308,6 +1321,7 @@ export default function ContentScheduler() {
                         {u.status === 'queued' && 'Queued...'}
                         {u.status === 'uploading' && 'Uploading...'}
                         {u.status === 'transcribing' && 'Transcribing...'}
+                        {u.status === 'captioning' && 'Captioning image...'}
                         {u.status === 'generating' && 'AI Generating...'}
                         {u.status === 'done' && <span style={{ color: '#22c55e', fontWeight: 600 }}>✓ Done</span>}
                         {u.status === 'error' && <span style={{ color: '#ef4444' }} title={u.error}>✕ Failed</span>}
