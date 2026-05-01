@@ -11,6 +11,11 @@ function upAuthHeader() {
   return { 'Authorization': `Apikey ${UP_KEY}` };
 }
 
+// UploadPost endpoints differ between video and photo:
+//   POST /api/upload         → video=URL (form-urlencoded ok)
+//   POST /api/upload_photos  → photos[]=<binary file> (multipart REQUIRED)
+// The photo endpoint does NOT accept URLs — we have to fetch the image
+// from storage server-side and re-upload as a real file part.
 async function publishScript(script, client) {
   const platforms = Array.isArray(client.uploadpost_platforms) && client.uploadpost_platforms.length
     ? client.uploadpost_platforms
@@ -20,13 +25,54 @@ async function publishScript(script, client) {
   const hashtags  = script.hashtags || '';
   const title     = script.title || '';
   const mediaType = script.media_type || 'video';
-  const mediaUrl  = (script.media_urls || [])[0] || null;
+  const mediaUrls = Array.isArray(script.media_urls) ? script.media_urls.filter(Boolean) : [];
+  const mediaUrl  = mediaUrls[0] || null;
   const fullCaption = [caption, hashtags].filter(Boolean).join('\n\n');
 
   const titlePlatforms = ['youtube', 'linkedin'];
   const needsTitle = platforms.some(p => titlePlatforms.includes(p));
   const hasTikTok  = platforms.includes('tiktok');
 
+  const isPhoto = mediaType === 'photo' || mediaType === 'image' || mediaType === 'carousel';
+
+  // ── Photo path: multipart form-data, fetch binaries, /api/upload_photos ──
+  if (isPhoto && mediaUrl) {
+    const form = new FormData();
+    form.append('user', client.uploadpost_user);
+    platforms.forEach(p => form.append('platform[]', p));
+    if (needsTitle && title) form.append('title', title);
+    if (fullCaption)         form.append('description', fullCaption);
+    if (hasTikTok && fullCaption) form.append('tiktok_title', fullCaption.slice(0, 2200));
+    if (script.first_comment) form.append('first_comment', script.first_comment);
+    form.append('async_upload', 'true');
+
+    // Pull each image into memory and attach as photos[] file part
+    for (let i = 0; i < mediaUrls.length; i++) {
+      const url = mediaUrls[i];
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`Failed to fetch image ${i + 1}: ${r.status}`);
+      const ab = await r.arrayBuffer();
+      const ext = (url.match(/\.([a-z0-9]+)(?:\?|$)/i)?.[1] || 'jpg').toLowerCase();
+      const mime = ext === 'png' ? 'image/png'
+        : ext === 'webp' ? 'image/webp'
+        : ext === 'gif'  ? 'image/gif'
+        : 'image/jpeg';
+      const fname = `image_${i + 1}.${ext}`;
+      form.append('photos[]', new Blob([ab], { type: mime }), fname);
+    }
+
+    const res = await fetch(`${UP_BASE}/upload_photos`, {
+      method: 'POST',
+      headers: upAuthHeader(), // do NOT set Content-Type; FormData picks the boundary
+      body: form,
+    });
+    const text = await res.text();
+    let body; try { body = JSON.parse(text); } catch { body = { raw: text }; }
+    if (!res.ok) throw new Error(body?.error || body?.message || text.slice(0, 300));
+    return body.request_id || body.requestId || null;
+  }
+
+  // ── Video path: form-urlencoded, /api/upload, video=URL is fine ──
   const form = new URLSearchParams();
   form.append('user', client.uploadpost_user);
   platforms.forEach(p => form.append('platform[]', p));
@@ -41,17 +87,10 @@ async function publishScript(script, client) {
   }
   form.append('async_upload', 'true');
 
-  // Normalize: bulk-image uploads write media_type='image', the rest of the
-  // pipeline expects 'photo'. Treat them as the same thing here.
-  const isPhoto = mediaType === 'photo' || mediaType === 'image';
-
   let endpoint;
   if (mediaType === 'video' && mediaUrl) {
     form.append('video', mediaUrl);
     endpoint = '/upload';
-  } else if (isPhoto && mediaUrl) {
-    form.append('photo', mediaUrl);
-    endpoint = '/uploadposts/photo';
   } else {
     endpoint = '/uploadposts/text';
   }
@@ -151,7 +190,11 @@ module.exports = async function handler(req, res) {
         results.errors.push(`Script ${script.id}: ${e.message}`);
         await supaFetch(`crm_content_scripts?id=eq.${script.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ publish_status: 'failed', updated_at: new Date().toISOString() }),
+          body: JSON.stringify({
+            publish_status: 'failed',
+            publish_error: (e.message || 'unknown').slice(0, 500),
+            updated_at: new Date().toISOString(),
+          }),
         }).catch(() => {});
       }
     }

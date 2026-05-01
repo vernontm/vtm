@@ -103,26 +103,59 @@ export default async function handler(req, res) {
       if (thumb_offset != null)                       form.append('thumb_offset', String(thumb_offset));
       if (pinterest_cover_image_key_frame_time != null) form.append('pinterest_cover_image_key_frame_time', String(pinterest_cover_image_key_frame_time));
 
-      // Normalize: bulk-image uploads use media_type='image'; UploadPost
-      // expects the same form key whether we call it photo or image.
-      const isPhoto = media_type === 'photo' || media_type === 'image';
+      // Photo uploads use a different endpoint and require multipart with the
+      // image as a real file part — UploadPost's /api/upload_photos does NOT
+      // accept URL strings. Fetch each image and re-upload as photos[].
+      const isPhoto = media_type === 'photo' || media_type === 'image' || media_type === 'carousel';
 
-      let endpoint;
-      if (media_type === 'video' && mediaUrl) {
-        form.append('video', mediaUrl);
-        endpoint = '/upload';
-      } else if (isPhoto && mediaUrl) {
-        form.append('photo', mediaUrl);
-        endpoint = '/uploadposts/photo';
+      let upRes;
+      if (isPhoto && mediaUrl) {
+        const photoForm = new FormData();
+        photoForm.append('user', user);
+        (platforms || []).forEach(p => photoForm.append('platform[]', p));
+        if (needsTitle && title) photoForm.append('title', title);
+        if (fullCaption)         photoForm.append('description', fullCaption);
+        if (hasTikTok && fullCaption) photoForm.append('tiktok_title', fullCaption.slice(0, 2200));
+        if (scheduled_date) photoForm.append('scheduled_date', scheduled_date);
+        if (timezone)       photoForm.append('timezone', timezone);
+        if (first_comment)  photoForm.append('first_comment', first_comment);
+        photoForm.append('async_upload', 'true');
+        if (tiktok_privacy)        photoForm.append('privacy_level', tiktok_privacy);
+        if (facebook_page_id)      photoForm.append('facebook_page_id', facebook_page_id);
+
+        const urls = (media_urls || []).filter(Boolean);
+        for (let i = 0; i < urls.length; i++) {
+          const r = await fetch(urls[i]);
+          if (!r.ok) return res.status(502).json({ error: `Failed to fetch image ${i + 1}: ${r.status}` });
+          const ab = await r.arrayBuffer();
+          const ext = (urls[i].match(/\.([a-z0-9]+)(?:\?|$)/i)?.[1] || 'jpg').toLowerCase();
+          const mime = ext === 'png' ? 'image/png'
+            : ext === 'webp' ? 'image/webp'
+            : ext === 'gif'  ? 'image/gif'
+            : 'image/jpeg';
+          photoForm.append('photos[]', new Blob([ab], { type: mime }), `image_${i + 1}.${ext}`);
+        }
+
+        upRes = await fetch(`${UP_BASE}/upload_photos`, {
+          method: 'POST',
+          headers: { 'Authorization': `Apikey ${UP_KEY}` }, // FormData picks Content-Type
+          body: photoForm,
+        });
       } else {
-        endpoint = '/uploadposts/text';
-      }
+        let endpoint;
+        if (media_type === 'video' && mediaUrl) {
+          form.append('video', mediaUrl);
+          endpoint = '/upload';
+        } else {
+          endpoint = '/uploadposts/text';
+        }
 
-      const upRes = await fetch(`${UP_BASE}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Apikey ${UP_KEY}` },
-        body: form,
-      });
+        upRes = await fetch(`${UP_BASE}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Apikey ${UP_KEY}` },
+          body: form,
+        });
+      }
       const upText = await upRes.text();
       let upBody; try { upBody = JSON.parse(upText); } catch { upBody = { raw: upText }; }
       if (!upRes.ok) return res.status(upRes.status).json({ error: upBody?.error || upText });
