@@ -42,7 +42,13 @@ async function publishScript(script, client) {
     platforms.forEach(p => form.append('platform[]', p));
     if (needsTitle && title) form.append('title', title);
     if (fullCaption)         form.append('description', fullCaption);
-    if (hasTikTok && fullCaption) form.append('tiktok_title', fullCaption.slice(0, 2200));
+    // TikTok photo-post title cap is 90 chars (vs 2200 on video). Trim
+    // gracefully on a word boundary so it doesn't end mid-sentence.
+    if (hasTikTok && (title || fullCaption)) {
+      const src = (title || fullCaption).replace(/\s+/g, ' ').trim();
+      const tt = src.length <= 90 ? src : src.slice(0, 90).replace(/\s+\S*$/, '');
+      form.append('tiktok_title', tt);
+    }
     if (script.first_comment) form.append('first_comment', script.first_comment);
     form.append('async_upload', 'true');
 

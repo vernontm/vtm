@@ -115,7 +115,14 @@ export default async function handler(req, res) {
         (platforms || []).forEach(p => photoForm.append('platform[]', p));
         if (needsTitle && title) photoForm.append('title', title);
         if (fullCaption)         photoForm.append('description', fullCaption);
-        if (hasTikTok && fullCaption) photoForm.append('tiktok_title', fullCaption.slice(0, 2200));
+        // TikTok caps photo-post titles at 90 chars (description goes
+        // separately). Prefer the script's title; fall back to the caption
+        // trimmed to a word boundary.
+        if (hasTikTok && (title || fullCaption)) {
+          const src = (title || fullCaption).replace(/\s+/g, ' ').trim();
+          const tt = src.length <= 90 ? src : src.slice(0, 90).replace(/\s+\S*$/, '');
+          photoForm.append('tiktok_title', tt);
+        }
         if (scheduled_date) photoForm.append('scheduled_date', scheduled_date);
         if (timezone)       photoForm.append('timezone', timezone);
         if (first_comment)  photoForm.append('first_comment', first_comment);
