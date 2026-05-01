@@ -5,15 +5,31 @@ import {
   createRender, suggestTitle,
 } from '../api';
 
-// Split a script into sentences. Keeps trailing punctuation, trims, drops empties.
+// Split a script into sentences. Keeps trailing punctuation, trims, drops
+// empties. Avoids the lookbehind regex `(?<=[.!?])\s+` because older Safari
+// (< 16.4) and older iOS WebKit reject lookbehind with "Invalid regular
+// expression: invalid group specifier name", which crashes the whole page.
 function splitSentences(text) {
   if (!text) return [];
-  const parts = text
-    .replace(/\r/g, '')
-    .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim())
-    .filter(Boolean);
-  return parts;
+  const src = text.replace(/\r/g, '');
+  const out = [];
+  let buf = '';
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    buf += ch;
+    if (ch === '.' || ch === '!' || ch === '?') {
+      // Look ahead for whitespace (or end-of-string) to confirm sentence break.
+      const next = src[i + 1];
+      if (next === undefined || /\s/.test(next)) {
+        const trimmed = buf.trim();
+        if (trimmed) out.push(trimmed);
+        buf = '';
+      }
+    }
+  }
+  const tail = buf.trim();
+  if (tail) out.push(tail);
+  return out;
 }
 
 // Rough cost estimates — pessimistic pay-as-you-go rates. Override in code if
