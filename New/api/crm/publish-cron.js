@@ -41,11 +41,15 @@ async function publishScript(script, client) {
   }
   form.append('async_upload', 'true');
 
+  // Normalize: bulk-image uploads write media_type='image', the rest of the
+  // pipeline expects 'photo'. Treat them as the same thing here.
+  const isPhoto = mediaType === 'photo' || mediaType === 'image';
+
   let endpoint;
   if (mediaType === 'video' && mediaUrl) {
     form.append('video', mediaUrl);
     endpoint = '/upload';
-  } else if (mediaType === 'photo' && mediaUrl) {
+  } else if (isPhoto && mediaUrl) {
     form.append('photo', mediaUrl);
     endpoint = '/uploadposts/photo';
   } else {

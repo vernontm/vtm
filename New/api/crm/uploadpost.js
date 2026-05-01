@@ -103,11 +103,15 @@ export default async function handler(req, res) {
       if (thumb_offset != null)                       form.append('thumb_offset', String(thumb_offset));
       if (pinterest_cover_image_key_frame_time != null) form.append('pinterest_cover_image_key_frame_time', String(pinterest_cover_image_key_frame_time));
 
+      // Normalize: bulk-image uploads use media_type='image'; UploadPost
+      // expects the same form key whether we call it photo or image.
+      const isPhoto = media_type === 'photo' || media_type === 'image';
+
       let endpoint;
       if (media_type === 'video' && mediaUrl) {
         form.append('video', mediaUrl);
         endpoint = '/upload';
-      } else if (media_type === 'photo' && mediaUrl) {
+      } else if (isPhoto && mediaUrl) {
         form.append('photo', mediaUrl);
         endpoint = '/uploadposts/photo';
       } else {
