@@ -76,6 +76,40 @@ module.exports = async function handler(req, res) {
       return res.json(looks);
     }
 
+    // Refresh expired HeyGen image URLs for an existing avatar's looks.
+    // HeyGen signs preview URLs with ~24-48h expiries — when the cached URL
+    // expires, the browser shows broken images. Re-fetch the group's looks
+    // and patch each row's image_url in place (matched by heygen_look_id).
+    if (req.method === 'POST' && action === 'refresh-looks') {
+      const { avatar_id } = req.body || {};
+      if (!avatar_id) return res.status(400).json({ error: 'avatar_id required' });
+
+      const avatars = await supaFetch(`crm_avatars?id=eq.${avatar_id}&select=id,heygen_group_id`);
+      const avatar = avatars?.[0];
+      if (!avatar) return res.status(404).json({ error: 'Avatar not found' });
+      if (!avatar.heygen_group_id) return res.status(400).json({ error: 'Avatar has no heygen_group_id' });
+
+      const resp = await heygen(`/v2/avatar_group/${avatar.heygen_group_id}/avatars`);
+      const fresh = flat(resp).map(l => ({
+        heygen_look_id: l.id || l.avatar_id || l.photo_avatar_id,
+        image_url:      l.image_url || l.preview_image_url || l.normal_preview,
+      })).filter(l => l.heygen_look_id && l.image_url);
+
+      let updated = 0;
+      for (const f of fresh) {
+        const r = await supaFetch(
+          `crm_avatar_looks?avatar_id=eq.${avatar_id}&heygen_look_id=eq.${encodeURIComponent(f.heygen_look_id)}`,
+          {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify({ image_url: f.image_url }),
+          }
+        ).catch(() => null);
+        if (Array.isArray(r) && r.length) updated += r.length;
+      }
+      return res.json({ ok: true, updated, total_in_heygen: fresh.length });
+    }
+
     // Import: create/link an avatar row and bulk-insert its looks from HeyGen.
     // Body: { name, heygen_group_id, elevenlabs_voice_id?, looks: [{heygen_look_id, image_url, name}] }
     if (req.method === 'POST' && action === 'import') {

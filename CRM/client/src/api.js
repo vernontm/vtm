@@ -646,6 +646,7 @@ export const bulkAssignLooks = (ids, outfit_id) => request('/avatar-looks?action
 export const getHeyGenGroups = ()           => request('/avatar-heygen?action=groups');
 export const getHeyGenLooks  = (group_id)   => request(`/avatar-heygen?action=looks&group_id=${encodeURIComponent(group_id)}`);
 export const importFromHeyGen = (data)      => request('/avatar-heygen?action=import', { method: 'POST', body: JSON.stringify(data) });
+export const refreshHeyGenLooks = (avatar_id) => request('/avatar-heygen?action=refresh-looks', { method: 'POST', body: JSON.stringify({ avatar_id }) });
 
 // Avatar Renders
 export const getRenders      = (avatar_id) => request(`/avatar-renders${avatar_id ? `?avatar_id=${avatar_id}` : ''}`);

@@ -8,7 +8,7 @@ import {
   getAvatars, createAvatar, updateAvatar, deleteAvatar,
   getOutfits, createOutfit, updateOutfit, deleteOutfit,
   getLooks, bulkAssignLooks, deleteLook,
-  getHeyGenGroups, getHeyGenLooks, importFromHeyGen,
+  getHeyGenGroups, getHeyGenLooks, importFromHeyGen, refreshHeyGenLooks,
   uploadBlogMedia,
   getRenders, getRender, deleteRender,
 } from '../api';
@@ -444,7 +444,28 @@ function OutfitPanel({ avatar, onReimport }) {
     getLooks(avatar.id).then(setLooks);
   }, [avatar.id]);
 
-  useEffect(() => { reloadOutfits(); reloadLooks(); }, [reloadOutfits, reloadLooks]);
+  // HeyGen signs preview URLs with short expiries (~24-48h). When the cached
+  // URL is past its `Expires=` query param, the browser shows broken images.
+  // On load, peek at the first look's URL — if expired, ask the backend to
+  // re-fetch fresh URLs from HeyGen and reload.
+  useEffect(() => {
+    reloadOutfits();
+    (async () => {
+      const fetched = await getLooks(avatar.id);
+      setLooks(fetched);
+      const first = (fetched || []).find(l => l.image_url);
+      if (!first) return;
+      try {
+        const exp = new URL(first.image_url).searchParams.get('Expires');
+        const expired = exp && Number(exp) * 1000 < Date.now();
+        if (expired) {
+          await refreshHeyGenLooks(avatar.id);
+          const re = await getLooks(avatar.id);
+          setLooks(re);
+        }
+      } catch { /* not a parseable URL — leave it */ }
+    })();
+  }, [avatar.id, reloadOutfits]);
 
   const visibleLooks = useMemo(() => {
     if (activeOutfit === 'all') return looks;
