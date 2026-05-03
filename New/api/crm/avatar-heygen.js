@@ -148,11 +148,18 @@ module.exports = async function handler(req, res) {
             angle_order: i,
           }));
         if (rows.length) {
-          await supaFetch('crm_avatar_looks', {
-            method: 'POST',
-            headers: { 'Prefer': 'return=representation,resolution=ignore-duplicates' },
-            body: JSON.stringify(rows),
-          });
+          // Upsert: on the (avatar_id, heygen_look_id) unique key, refresh the
+          // image_url (HeyGen URLs expire ~24-48h, re-importing should refresh).
+          // PostgREST needs both on_conflict in the URL AND resolution=merge-duplicates
+          // for it to actually skip/merge instead of throwing 409.
+          await supaFetch(
+            'crm_avatar_looks?on_conflict=avatar_id,heygen_look_id',
+            {
+              method: 'POST',
+              headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' },
+              body: JSON.stringify(rows),
+            }
+          );
         }
       }
 
