@@ -137,29 +137,50 @@ module.exports = async function handler(req, res) {
         avatar = created[0];
       }
 
-      // Bulk insert looks; ON CONFLICT handled by unique index on (avatar_id, heygen_look_id)
+      // Re-importing should be safe AND refresh expired HeyGen image URLs.
+      // The unique key on (avatar_id, heygen_look_id) is a partial index
+      // (WHERE heygen_look_id IS NOT NULL), which PostgREST's on_conflict=
+      // can't target — so we dedupe in app code: PATCH existing rows by
+      // heygen_look_id, INSERT only the truly-new ones.
       if (looks.length) {
-        const rows = looks
+        const incoming = looks
           .filter(l => l.heygen_look_id && l.image_url)
           .map((l, i) => ({
-            avatar_id: avatar.id,
             heygen_look_id: l.heygen_look_id,
             image_url: l.image_url,
             angle_order: i,
           }));
-        if (rows.length) {
-          // Upsert: on the (avatar_id, heygen_look_id) unique key, refresh the
-          // image_url (HeyGen URLs expire ~24-48h, re-importing should refresh).
-          // PostgREST needs both on_conflict in the URL AND resolution=merge-duplicates
-          // for it to actually skip/merge instead of throwing 409.
-          await supaFetch(
-            'crm_avatar_looks?on_conflict=avatar_id,heygen_look_id',
-            {
+
+        if (incoming.length) {
+          const existing = await supaFetch(
+            `crm_avatar_looks?avatar_id=eq.${avatar.id}&select=heygen_look_id`
+          ).catch(() => []);
+          const existingIds = new Set((existing || []).map(r => r.heygen_look_id).filter(Boolean));
+
+          const toInsert = incoming
+            .filter(r => !existingIds.has(r.heygen_look_id))
+            .map(r => ({ ...r, avatar_id: avatar.id }));
+          const toUpdate = incoming.filter(r => existingIds.has(r.heygen_look_id));
+
+          if (toInsert.length) {
+            await supaFetch('crm_avatar_looks', {
               method: 'POST',
-              headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' },
-              body: JSON.stringify(rows),
-            }
-          );
+              headers: { 'Prefer': 'return=minimal' },
+              body: JSON.stringify(toInsert),
+            });
+          }
+          // Refresh image_url + angle_order on rows we already have so a
+          // re-import picks up fresh signed URLs.
+          for (const r of toUpdate) {
+            await supaFetch(
+              `crm_avatar_looks?avatar_id=eq.${avatar.id}&heygen_look_id=eq.${encodeURIComponent(r.heygen_look_id)}`,
+              {
+                method: 'PATCH',
+                headers: { 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ image_url: r.image_url, angle_order: r.angle_order }),
+              }
+            ).catch(() => {});
+          }
         }
       }
 
