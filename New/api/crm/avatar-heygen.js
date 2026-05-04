@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireAuth, supaFetch, requireClientScope } = require('../_lib/supabase.js');
 
 const HEYGEN_BASE = 'https://api.heygen.com';
 const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY;
@@ -117,22 +117,40 @@ module.exports = async function handler(req, res) {
       const { name, heygen_group_id, elevenlabs_voice_id, looks = [] } = body;
       if (!heygen_group_id) return res.status(400).json({ error: 'heygen_group_id required' });
 
+      // Pull the active client from the X-Client-Id header (same scoping the
+      // list endpoint uses). Without this, looks get inserted with NULL
+      // client_id and disappear from the UI because avatar-looks GET filters
+      // by &client_id=eq.<active>.
+      const scope = await requireClientScope(req);
+      if (!scope.ok) return res.status(scope.status).json({ error: scope.error });
+      const { clientId } = scope;
+
       // Upsert-by-group: if an avatar row already exists for this group, reuse it
       const existing = await supaFetch(`crm_avatars?heygen_group_id=eq.${heygen_group_id}`);
       let avatar;
       if (existing[0]) {
         avatar = existing[0];
-        if (elevenlabs_voice_id && !avatar.elevenlabs_voice_id) {
+        const patch = {};
+        if (elevenlabs_voice_id && !avatar.elevenlabs_voice_id) patch.elevenlabs_voice_id = elevenlabs_voice_id;
+        if (clientId && !avatar.client_id) patch.client_id = clientId; // backfill
+        if (Object.keys(patch).length) {
           const upd = await supaFetch(`crm_avatars?id=eq.${avatar.id}`, {
             method: 'PATCH',
-            body: JSON.stringify({ elevenlabs_voice_id }),
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify(patch),
           });
-          avatar = upd[0] || avatar;
+          avatar = upd[0] || { ...avatar, ...patch };
         }
       } else {
         const created = await supaFetch('crm_avatars', {
           method: 'POST',
-          body: JSON.stringify({ name: name || 'Imported Avatar', heygen_group_id, elevenlabs_voice_id: elevenlabs_voice_id || null }),
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify({
+            name: name || 'Imported Avatar',
+            heygen_group_id,
+            elevenlabs_voice_id: elevenlabs_voice_id || null,
+            client_id: clientId || null,
+          }),
         });
         avatar = created[0];
       }
@@ -159,7 +177,7 @@ module.exports = async function handler(req, res) {
 
           const toInsert = incoming
             .filter(r => !existingIds.has(r.heygen_look_id))
-            .map(r => ({ ...r, avatar_id: avatar.id }));
+            .map(r => ({ ...r, avatar_id: avatar.id, client_id: clientId || null }));
           const toUpdate = incoming.filter(r => existingIds.has(r.heygen_look_id));
 
           if (toInsert.length) {
@@ -170,14 +188,31 @@ module.exports = async function handler(req, res) {
             });
           }
           // Refresh image_url + angle_order on rows we already have so a
-          // re-import picks up fresh signed URLs.
+          // re-import picks up fresh signed URLs. Also backfill client_id
+          // for rows imported before this column was being set, so they
+          // become visible in the tenant-scoped looks list.
           for (const r of toUpdate) {
+            const patch = { image_url: r.image_url, angle_order: r.angle_order };
+            if (clientId) patch.client_id = clientId;
             await supaFetch(
               `crm_avatar_looks?avatar_id=eq.${avatar.id}&heygen_look_id=eq.${encodeURIComponent(r.heygen_look_id)}`,
               {
                 method: 'PATCH',
                 headers: { 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ image_url: r.image_url, angle_order: r.angle_order }),
+                body: JSON.stringify(patch),
+              }
+            ).catch(() => {});
+          }
+          // Catch any pre-existing rows for this avatar whose client_id is
+          // still NULL (e.g. rows that aren't in the current HeyGen response
+          // anymore) so the avatar isn't half-visible.
+          if (clientId) {
+            await supaFetch(
+              `crm_avatar_looks?avatar_id=eq.${avatar.id}&client_id=is.null`,
+              {
+                method: 'PATCH',
+                headers: { 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ client_id: clientId }),
               }
             ).catch(() => {});
           }
