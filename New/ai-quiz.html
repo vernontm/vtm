@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Free AI Quiz — Find the Best Way to Use AI in Your Business | Vernon Tech & Media</title>
+    <meta name="description" content="Take the free 60-second quiz and get a personalized breakdown of the single best way to put AI to work in your business." />
+    <meta property="og:title" content="What's the best way to use AI in YOUR business?" />
+    <meta property="og:description" content="A free 60-second quiz. Answer 5 questions, get your personalized AI game plan." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,700;0,800;1,200&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --orange: #ff9b26;
+            --orange-dark: #ee4c27;
+            --bg: #111112;
+            --surface: #1a1a1c;
+            --surface-2: #222226;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0f0f0;
+            --muted: #6b6b72;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        html, body {
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.10) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.06) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* NAV */
+        nav {
+            padding: 24px 40px;
+            display: flex; align-items: center; justify-content: space-between;
+            animation: fadeDown 0.6s ease both;
+            position: relative; z-index: 101;
+        }
+        .logo img { height: 46px; width: auto; display: block; }
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links a {
+            font-size: 0.875rem; font-weight: 400; color: var(--muted);
+            text-decoration: none; letter-spacing: 0.01em; transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-mode-btn {
+            font-size: 0.85rem; font-weight: 600; color: #ffffff;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border: none; padding: 8px 18px; border-radius: 100px; cursor: pointer;
+            text-decoration: none; transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(255,155,38,0.2);
+        }
+        .nav-mode-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,155,38,0.3); }
+        .hamburger {
+            width: 40px; height: 40px;
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 10px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 5px; padding: 0; transition: all 0.2s;
+        }
+        .hamburger:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+        .hamburger span {
+            display: block; width: 18px; height: 1.5px;
+            background: var(--text); border-radius: 2px; transition: all 0.3s;
+        }
+        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
+
+        .menu-overlay {
+            position: fixed; inset: 0;
+            background: rgba(10,10,12,0.97);
+            z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.35s, visibility 0.35s;
+        }
+        .menu-overlay.open { opacity: 1; visibility: visible; }
+        .menu-overlay a {
+            font-family: var(--font-display); font-size: clamp(1.8rem, 5vw, 3rem);
+            font-weight: 300; color: var(--text); text-decoration: none;
+            padding: 16px 0; opacity: 0; transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s, color 0.2s;
+        }
+        .menu-overlay.open a { opacity: 1; transform: translateY(0); }
+        .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+        .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+        .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay a:hover { color: var(--orange); }
+
+        /* HERO */
+        .hero {
+            padding: 40px 24px 60px;
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center;
+        }
+        .pill {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255,155,38,0.08);
+            border: 1px solid rgba(255,155,38,0.25);
+            color: var(--orange);
+            padding: 6px 14px; border-radius: 100px;
+            font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            animation: fadeUp 0.7s 0.05s ease both;
+        }
+        .pill::before {
+            content: ''; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--orange); box-shadow: 0 0 8px var(--orange);
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.4rem);
+            font-weight: 300; line-height: 1.08; letter-spacing: -0.03em;
+            max-width: 820px; margin: 0 auto 18px;
+            animation: fadeUp 0.7s 0.1s ease both;
+        }
+        h1 em { font-style: normal; font-weight: 800; }
+        h1 .grad {
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800; font-style: normal;
+        }
+
+        .sub {
+            font-size: 1.05rem; color: var(--muted); font-weight: 300;
+            max-width: 560px; margin: 0 auto 36px; line-height: 1.55;
+            animation: fadeUp 0.7s 0.2s ease both;
+        }
+
+        /* QUIZ CARD */
+        .quiz-card {
+            width: 100%; max-width: 600px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 28px 26px 26px;
+            box-shadow: 0 0 0 1px rgba(255,155,38,0.04), 0 24px 60px rgba(0,0,0,0.5);
+            animation: fadeUp 0.7s 0.3s ease both;
+            text-align: left;
+        }
+
+        /* progress */
+        .progress-wrap { margin-bottom: 22px; }
+        .progress-meta {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.75rem; color: var(--muted); margin-bottom: 8px;
+            letter-spacing: 0.03em; text-transform: uppercase; font-weight: 600;
+        }
+        .progress-track {
+            height: 6px; border-radius: 100px;
+            background: var(--surface-2); overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            border-radius: 100px; transition: width 0.4s ease;
+        }
+
+        .q-text {
+            font-family: var(--font-display);
+            font-size: clamp(1.25rem, 3vw, 1.55rem);
+            font-weight: 700; line-height: 1.25; letter-spacing: -0.02em;
+            margin-bottom: 20px;
+        }
+
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option {
+            display: flex; align-items: center; gap: 14px;
+            width: 100%; text-align: left;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-body); font-size: 0.95rem; font-weight: 400;
+            padding: 15px 16px; border-radius: 12px; cursor: pointer;
+            transition: border 0.18s, background 0.18s, transform 0.12s;
+        }
+        .option:hover {
+            border-color: rgba(255,155,38,0.45);
+            background: #26262a;
+            transform: translateX(2px);
+        }
+        .option .dot {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid var(--muted);
+            flex-shrink: 0; transition: all 0.18s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .option:hover .dot { border-color: var(--orange); }
+        .option.selected {
+            border-color: var(--orange);
+            background: rgba(255,155,38,0.08);
+        }
+        .option.selected .dot {
+            border-color: var(--orange);
+            background: var(--orange);
+        }
+        .option.selected .dot::after {
+            content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff;
+        }
+
+        .quiz-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 22px;
+        }
+        .back-btn {
+            background: none; border: none; color: var(--muted);
+            font-family: var(--font-body); font-size: 0.88rem; font-weight: 500;
+            cursor: pointer; padding: 8px 4px; transition: color 0.2s;
+        }
+        .back-btn:hover { color: var(--text); }
+        .back-btn:disabled { opacity: 0; pointer-events: none; }
+
+        /* EMAIL GATE */
+        .gate { text-align: center; }
+        .gate-icon {
+            width: 56px; height: 56px; border-radius: 15px;
+            margin: 0 auto 16px;
+            background: rgba(255,155,38,0.12);
+            border: 1px solid rgba(255,155,38,0.3);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--orange);
+        }
+        .gate h3 {
+            font-family: var(--font-display); font-weight: 800; font-size: 1.4rem;
+            letter-spacing: -0.02em; margin-bottom: 8px;
+        }
+        .gate p { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 22px; max-width: 420px; margin-left: auto; margin-right: auto; }
+        .gate-form { display: flex; flex-direction: column; gap: 12px; max-width: 420px; margin: 0 auto; }
+        .gate-form input {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.95rem; font-weight: 300;
+            padding: 14px 16px;
+            border-radius: 12px;
+            outline: none;
+            transition: border 0.2s, background 0.2s;
+        }
+        .gate-form input::placeholder { color: var(--muted); opacity: 0.7; }
+        .gate-form input:focus { border-color: rgba(255,155,38,0.45); background: #232327; }
+        .gate-form button {
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            color: #fff;
+            font-family: var(--font-body); font-size: 0.95rem; font-weight: 700;
+            border: none; border-radius: 12px;
+            padding: 14px 18px; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 6px 20px rgba(255,155,38,0.25);
+        }
+        .gate-form button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(255,155,38,0.35); }
+        .gate-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .gate-note { font-size: 0.78rem; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+
+        /* RESULT */
+        .result { text-align: left; }
+        .result-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255,155,38,0.1);
+            color: var(--orange);
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 6px 12px; border-radius: 100px;
+            margin-bottom: 16px;
+        }
+        .result h2 {
+            font-family: var(--font-display);
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 800; line-height: 1.15; letter-spacing: -0.025em;
+            margin-bottom: 14px;
+        }
+        .result h2 .grad {
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .result-lede { font-size: 1rem; color: var(--text); opacity: 0.85; line-height: 1.6; margin-bottom: 24px; }
+
+        .moves-title {
+            font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+        }
+        .moves { display: flex; flex-direction: column; gap: 10px; margin-bottom: 26px; }
+        .move {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 14px 16px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .move .num {
+            width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            color: #fff; font-size: 0.8rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .move .move-body { flex: 1; }
+        .move .move-h { font-size: 0.92rem; font-weight: 700; margin-bottom: 3px; }
+        .move .move-p { font-size: 0.84rem; color: var(--muted); line-height: 1.5; }
+
+        /* AI PROMPTS */
+        .prompts { margin-bottom: 26px; }
+        .prompt {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .prompt-top {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; margin-bottom: 8px;
+        }
+        .prompt-label { font-size: 0.9rem; font-weight: 700; }
+        .copy-btn {
+            flex-shrink: 0;
+            background: rgba(255,155,38,0.1);
+            color: var(--orange);
+            border: 1px solid rgba(255,155,38,0.25);
+            border-radius: 8px;
+            font-family: var(--font-body);
+            font-size: 0.74rem; font-weight: 700;
+            padding: 6px 13px; cursor: pointer;
+            transition: background 0.18s, color 0.18s, border-color 0.18s;
+        }
+        .copy-btn:hover { background: rgba(255,155,38,0.18); }
+        .copy-btn.copied { background: var(--orange); color: #fff; border-color: var(--orange); }
+        .prompt-text {
+            font-size: 0.84rem; color: var(--muted); line-height: 1.55;
+            white-space: pre-wrap;
+        }
+        .prompt-text .ph { color: var(--orange); opacity: 0.85; }
+
+        .result-cta {
+            padding: 22px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(255,155,38,0.08), rgba(238,76,39,0.06));
+            border: 1px solid rgba(255,155,38,0.22);
+            text-align: center;
+        }
+        .result-cta h4 {
+            font-family: var(--font-display); font-size: 1.1rem; font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .result-cta p { font-size: 0.88rem; color: var(--muted); line-height: 1.55; margin-bottom: 16px; }
+        .result-cta a.btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+            color: #fff; text-decoration: none; font-weight: 700; font-size: 0.92rem;
+            padding: 13px 24px; border-radius: 100px;
+            box-shadow: 0 6px 20px rgba(255,155,38,0.25);
+            transition: transform 0.15s;
+        }
+        .result-cta a.btn:hover { transform: translateY(-1px); }
+        .result-cta .secondary {
+            display: block; margin-top: 14px;
+            color: var(--muted); font-size: 0.82rem; text-decoration: none;
+        }
+        .result-cta .secondary:hover { color: var(--text); }
+
+        .fade-step { animation: fadeUp 0.4s ease both; }
+
+        /* TRUST STRIP */
+        .proof { padding: 0 24px 60px; text-align: center; }
+        .proof-items {
+            display: flex; flex-wrap: wrap; justify-content: center;
+            gap: 30px; color: var(--muted); font-size: 0.85rem;
+        }
+        .proof-items span { display: inline-flex; align-items: center; gap: 8px; }
+        .proof-items svg { width: 14px; height: 14px; color: var(--orange); }
+
+        /* FOOTER */
+        footer { text-align: center; padding: 20px 20px 40px; margin-top: auto; }
+        .footer-socials { display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .footer-socials a {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 10px;
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--muted); text-decoration: none; transition: all 0.2s;
+        }
+        .footer-socials a:hover {
+            color: var(--text); border-color: rgba(255,155,38,0.3);
+            background: rgba(255,155,38,0.06); transform: translateY(-2px);
+        }
+        .footer-socials a svg { width: 18px; height: 18px; fill: currentColor; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 640px) {
+            nav { padding: 20px 24px; }
+            .logo img { display: none; }
+            .nav-links a:not(.nav-mode-btn) { display: none; }
+            .hero { padding: 20px 18px 40px; }
+            .quiz-card { padding: 24px 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Nav -->
+        <nav>
+            <a href="/" class="logo">
+                <img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" />
+            </a>
+            <div class="nav-links">
+                <a href="/services">Services</a>
+                <a href="/portfolio">Portfolio</a>
+                <a href="/about">About</a>
+                <a href="/contact" class="nav-mode-btn">Contact</a>
+                <button class="hamburger" id="menuToggle" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="menu-overlay" id="menuOverlay">
+            <a href="/services">Services</a>
+            <a href="/portfolio">Portfolio</a>
+            <a href="/about">About Us</a>
+            <a href="/creators">For Creators</a>
+            <a href="/contact">Contact</a>
+        </div>
+
+        <!-- Hero -->
+        <section class="hero">
+            <div class="pill">Free Quiz · 60 Seconds</div>
+            <h1>What's the <span class="grad">best way</span> to use AI <em>in your business?</em></h1>
+            <p class="sub">
+                Answer 6 quick questions and I'll show you the single highest-leverage way to put AI
+                to work for you, plus the exact first moves and prompts to use.
+            </p>
+
+            <div class="quiz-card" id="quizCard">
+                <!-- Quiz steps render here -->
+            </div>
+        </section>
+
+        <!-- Trust strip -->
+        <section class="proof">
+            <div class="proof-items">
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Takes under a minute
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Personalized to your business
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Built by Ray at VTM
+                </span>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-socials">
+                <a href="https://instagram.com/rayvaughn.ceo" aria-label="Instagram" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                </a>
+                <a href="https://tiktok.com/@rayvaughn.ceo" aria-label="TikTok" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.48V13a8.28 8.28 0 005.58 2.17v-3.44a4.85 4.85 0 01-3.77-1.82V6.69h3.77z"/></svg>
+                </a>
+                <a href="https://youtube.com/@vernontm" aria-label="YouTube" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="https://x.com/rayvaughnceo" aria-label="X" target="_blank">
+                    <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ---------- Menu toggle ----------
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('open');
+            menuOverlay.classList.toggle('open');
+            document.body.style.overflow = menuOverlay.classList.contains('open') ? 'hidden' : '';
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menuOverlay.classList.contains('open')) {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        });
+        menuOverlay.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+        });
+
+        // ---------- Quiz config ----------
+        // Each option carries a "score" object adding weight to one of the
+        // four AI archetypes: ops, leads, support, content.
+        const QUESTIONS = [
+            {
+                q: "First up, what's your business called?",
+                type: "text",
+                placeholder: "Your business name",
+            },
+            {
+                q: "What kind of business is it?",
+                options: [
+                    { label: "Service business (agency, contractor, pro services)", score: { ops: 1 } },
+                    { label: "E-commerce or physical product", score: { support: 1 } },
+                    { label: "Creator, content, or personal brand", score: { content: 1 } },
+                    { label: "Coaching or consulting", score: { leads: 1 } },
+                    { label: "Local or brick-and-mortar", score: { support: 1 } },
+                ],
+            },
+            {
+                q: "How big is your social media following?",
+                key: "followers",
+                options: [
+                    { label: "Just getting started (under 1K)", bucket: "under-1k", score: {} },
+                    { label: "1K to 10K", bucket: "1k-10k", score: {} },
+                    { label: "10K to 50K", bucket: "10k-50k", score: {} },
+                    { label: "50K to 100K", bucket: "50k-100k", score: {} },
+                    { label: "Over 100K", bucket: "100k-plus", score: {} },
+                ],
+            },
+            {
+                q: "Where does most of your time go right now?",
+                options: [
+                    { label: "Admin, scheduling, and follow-ups", score: { ops: 1 } },
+                    { label: "Answering the same customer questions", score: { support: 1 } },
+                    { label: "Making content (posts, emails, videos)", score: { content: 1 } },
+                    { label: "Chasing leads and closing sales", score: { leads: 1 } },
+                    { label: "Pulling reports and making sense of data", score: { ops: 1 } },
+                ],
+            },
+            {
+                q: "How are you using AI today?",
+                level: true,
+                options: [
+                    { label: "Not really at all yet", level: "beginner", score: {} },
+                    { label: "ChatGPT here and there", level: "beginner", score: {} },
+                    { label: "A few tools, but nothing connected", level: "intermediate", score: {} },
+                    { label: "Pretty dialed in, want to go deeper", level: "advanced", score: {} },
+                ],
+            },
+            {
+                q: "If AI could fix ONE thing this quarter, what would it be?",
+                weight: 2,
+                options: [
+                    { label: "Free up my time", score: { ops: 2 } },
+                    { label: "Bring in more leads", score: { leads: 2 } },
+                    { label: "Handle customer questions for me", score: { support: 2 } },
+                    { label: "Pump out more content", score: { content: 2 } },
+                    { label: "Tighten up my operations", score: { ops: 2 } },
+                ],
+            },
+        ];
+
+        const RESULTS = {
+            ops: {
+                tag: "AI Operations System",
+                title: "An <span class=\"grad\">AI operations system</span> that runs the busywork for you",
+                lede: "Your biggest leak isn't leads or content, it's time. You're buried in admin, scheduling, and follow-up that eats the hours you should spend growing. The play here is to wire AI into your back office so the repetitive stuff runs itself.",
+                moves: [
+                    { h: "Automate your follow-ups", p: "Set up AI that drafts and sends follow-up emails and reminders the moment a lead or client goes quiet." },
+                    { h: "Build a simple AI command center", p: "One place where your leads, tasks, and calendar live, with AI summarizing what needs your attention each morning." },
+                    { h: "Kill the copy-paste work", p: "Hand the recurring data entry, reporting, and scheduling to AI so you stop being the bottleneck." },
+                ],
+                prompts: [
+                    { label: "Find what to automate first", text: "Act as an operations consultant. Here is how I spend a typical work week: [list your recurring tasks and roughly how long each takes]. Identify the 5 tasks I should hand to AI or automate first, ranked by time saved versus effort to set up. For each one, suggest a specific tool or approach." },
+                    { label: "Draft your follow-up system", text: "You are my operations assistant. Write 4 reusable follow-up email templates for my [your industry] business: (1) a new lead within the first hour, (2) no reply after 3 days, (3) right after a call, and (4) re-engaging a cold lead after 30 days. Keep each one short, warm, and easy to personalize." },
+                ],
+            },
+            leads: {
+                tag: "AI Lead & Sales Engine",
+                title: "An <span class=\"grad\">AI lead and sales engine</span> that fills your pipeline",
+                lede: "Your business doesn't have a product problem, it has a pipeline problem. The highest-leverage move is putting AI to work qualifying, nurturing, and following up with leads so you talk to more of the right people without doing it all by hand.",
+                moves: [
+                    { h: "Add an AI lead-capture assistant", p: "A smart chat or form on your site that qualifies visitors and books calls while you sleep." },
+                    { h: "Automate nurture sequences", p: "Let AI write and personalize the email and text follow-ups that turn cold leads warm." },
+                    { h: "Score and prioritize", p: "Use AI to rank your leads so you spend time on the ones most likely to buy." },
+                ],
+                prompts: [
+                    { label: "Build your lead-qualifying questions", text: "Act as a sales strategist for my [type of business] business. My ideal customer is [describe them]. Write the 5 questions an AI assistant should ask a website visitor to find out if they are a good fit and ready to buy, plus how to score each answer so I know who to call first." },
+                    { label: "Write your nurture sequence", text: "Write a 5-email nurture sequence for leads who showed interest but have not booked a call yet. My offer is [describe it]. The goal is to build trust and get them to book. Keep each email under 150 words with one clear call to action, in a [describe your tone] voice." },
+                ],
+            },
+            support: {
+                tag: "AI Customer Support",
+                title: "An <span class=\"grad\">AI support layer</span> that answers for you 24/7",
+                lede: "You're answering the same handful of questions over and over, and it's pulling you out of the real work. The move is an AI support layer that handles the repeat questions instantly and only routes the tricky stuff to you.",
+                moves: [
+                    { h: "Deploy an AI support assistant", p: "Trained on your FAQs, policies, and products so it answers customers accurately, day or night." },
+                    { h: "Automate order and status replies", p: "Let AI handle the where's-my-order and how-does-this-work messages automatically." },
+                    { h: "Escalate smartly", p: "AI handles the routine 80%, and only the real edge cases land in your inbox." },
+                ],
+                prompts: [
+                    { label: "Brief your AI support assistant", text: "I run a [type of business] business. Here are the questions customers ask most often: [paste 10 to 15 questions]. Write a clear, on-brand answer for each, then summarize the key policies an AI support assistant would need to know to handle these on its own." },
+                    { label: "Create your canned replies", text: "Write 8 reusable customer-support replies for these situations: order status, refund request, how-to question, shipping delay, and [add your own]. Make them friendly, short, and easy to drop a customer name into." },
+                ],
+            },
+            content: {
+                tag: "AI Content Engine",
+                title: "An <span class=\"grad\">AI content engine</span> that keeps you visible",
+                lede: "Your growth lives and dies by how consistently you show up, and right now content is the thing that keeps slipping. The play is an AI content engine that turns one idea into a week of posts, emails, and scripts in your voice.",
+                moves: [
+                    { h: "Build a repurposing pipeline", p: "Feed AI one video or idea and get back captions, emails, and short clips ready to post." },
+                    { h: "Train AI on your voice", p: "So everything it writes actually sounds like you, not generic AI mush." },
+                    { h: "Batch a month in an afternoon", p: "Use AI to plan and draft weeks of content at once so you're never scrambling." },
+                ],
+                prompts: [
+                    { label: "Turn one idea into a week", text: "Take this one idea: [paste your idea or a video transcript]. Turn it into a week of content: 3 short-form video hooks with scripts, 2 carousel post outlines, and 1 email. Match this voice: [paste 2 or 3 sentences you have written]." },
+                    { label: "Plan a month of content", text: "Act as my content strategist. My niche is [your topic], my audience is [describe them], and my goal is [grow or sell]. Give me 10 content pillars and 3 post ideas under each so I can batch a month of content in one sitting." },
+                ],
+            },
+        };
+
+        // ---------- Quiz state ----------
+        const state = { step: 0, answers: [], scores: { ops: 0, leads: 0, support: 0, content: 0 }, level: 'beginner', resultKey: null, email: '', name: '', business: '', followers: '' };
+        const card = document.getElementById('quizCard');
+
+        function esc(s) {
+            return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function computeScores() {
+            const scores = { ops: 0, leads: 0, support: 0, content: 0 };
+            let level = 'beginner';
+            state.answers.forEach((optIdx, qIdx) => {
+                if (optIdx == null) return;
+                const opt = QUESTIONS[qIdx].options[optIdx];
+                Object.entries(opt.score || {}).forEach(([k, v]) => { scores[k] += v; });
+                if (opt.level) level = opt.level;
+                if (QUESTIONS[qIdx].key === 'followers' && opt.bucket) state.followers = opt.bucket;
+            });
+            state.scores = scores;
+            state.level = level;
+        }
+
+        function topArchetype() {
+            // Tie-break priority leans toward the strongest commercial signal.
+            const order = ['leads', 'ops', 'content', 'support'];
+            let best = order[0], bestVal = -1;
+            order.forEach(k => { if (state.scores[k] > bestVal) { bestVal = state.scores[k]; best = k; } });
+            return best;
+        }
+
+        // ---------- Renderers ----------
+        function renderTextQuestion(qIdx, Q, pct) {
+            card.innerHTML = `
+                <div class="fade-step">
+                    <div class="progress-wrap">
+                        <div class="progress-meta">
+                            <span>Question ${qIdx + 1} of ${QUESTIONS.length}</span>
+                            <span>${pct}%</span>
+                        </div>
+                        <div class="progress-track"><div class="progress-bar" style="width:${pct}%"></div></div>
+                    </div>
+                    <div class="q-text">${Q.q}</div>
+                    <form class="gate-form" id="textForm" novalidate style="max-width:none;">
+                        <input type="text" id="textInput" placeholder="${Q.placeholder || ''}" autocomplete="organization" value="${esc(state.business)}" />
+                        <button type="submit" id="textNext">Continue →</button>
+                    </form>
+                    <div class="quiz-nav">
+                        <button class="back-btn" id="backBtn"${qIdx === 0 ? ' disabled' : ''}>← Back</button>
+                        <span style="font-size:0.78rem;color:var(--muted);">Press enter to continue</span>
+                    </div>
+                </div>
+            `;
+            const input = document.getElementById('textInput');
+            input.focus();
+            document.getElementById('textForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                state.business = input.value.trim();
+                if (state.step < QUESTIONS.length - 1) { state.step++; renderQuestion(); }
+                else { renderGate(); }
+            });
+            document.getElementById('backBtn').addEventListener('click', () => {
+                if (state.step > 0) { state.step--; renderQuestion(); }
+            });
+        }
+
+        function renderQuestion() {
+            const qIdx = state.step;
+            const Q = QUESTIONS[qIdx];
+            const selected = state.answers[qIdx];
+            const pct = Math.round((qIdx / QUESTIONS.length) * 100);
+
+            if (Q.type === 'text') { renderTextQuestion(qIdx, Q, pct); return; }
+
+            card.innerHTML = `
+                <div class="fade-step">
+                    <div class="progress-wrap">
+                        <div class="progress-meta">
+                            <span>Question ${qIdx + 1} of ${QUESTIONS.length}</span>
+                            <span>${pct}%</span>
+                        </div>
+                        <div class="progress-track"><div class="progress-bar" style="width:${pct}%"></div></div>
+                    </div>
+                    <div class="q-text">${Q.q}</div>
+                    <div class="options" id="options">
+                        ${Q.options.map((o, i) => `
+                            <button class="option${selected === i ? ' selected' : ''}" data-i="${i}">
+                                <span class="dot"></span>
+                                <span>${o.label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="quiz-nav">
+                        <button class="back-btn" id="backBtn"${qIdx === 0 ? ' disabled' : ''}>← Back</button>
+                        <span style="font-size:0.78rem;color:var(--muted);">Tap an answer to continue</span>
+                    </div>
+                </div>
+            `;
+
+            card.querySelectorAll('.option').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const i = parseInt(btn.dataset.i, 10);
+                    state.answers[qIdx] = i;
+                    card.querySelectorAll('.option').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    setTimeout(() => {
+                        if (state.step < QUESTIONS.length - 1) {
+                            state.step++;
+                            renderQuestion();
+                        } else {
+                            renderGate();
+                        }
+                    }, 220);
+                });
+            });
+
+            const backBtn = document.getElementById('backBtn');
+            backBtn.addEventListener('click', () => {
+                if (state.step > 0) { state.step--; renderQuestion(); }
+            });
+        }
+
+        function renderGate() {
+            computeScores();
+            state.resultKey = topArchetype();
+            card.innerHTML = `
+                <div class="fade-step gate">
+                    <div class="progress-wrap">
+                        <div class="progress-meta">
+                            <span>Your results are ready</span>
+                            <span>100%</span>
+                        </div>
+                        <div class="progress-track"><div class="progress-bar" style="width:100%"></div></div>
+                    </div>
+                    <div class="gate-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                            <path d="M7 11V7a5 5 0 0110 0v4"></path>
+                        </svg>
+                    </div>
+                    <h3>${state.business ? esc(state.business) + "'s AI game plan is ready" : 'Your AI game plan is ready'}</h3>
+                    <p>Drop your name and email and I'll unlock your personalized result, plus send a copy straight to your inbox so you've got it to act on.</p>
+                    <form class="gate-form" id="gateForm" novalidate>
+                        <input type="text" id="nameInput" placeholder="First name" autocomplete="given-name" required />
+                        <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email" required />
+                        <button type="submit" id="gateBtn">Show me my result →</button>
+                    </form>
+                    <p class="gate-note">No spam, ever. Unsubscribe anytime.</p>
+                    <button class="back-btn" id="backBtn" style="margin-top:14px;opacity:0.7;">← Back</button>
+                </div>
+            `;
+
+            document.getElementById('backBtn').addEventListener('click', () => {
+                state.step = QUESTIONS.length - 1;
+                renderQuestion();
+            });
+
+            const form = document.getElementById('gateForm');
+            const gateBtn = document.getElementById('gateBtn');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('nameInput').value.trim();
+                const email = document.getElementById('emailInput').value.trim();
+                if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
+                gateBtn.disabled = true;
+                gateBtn.textContent = 'Unlocking…';
+
+                state.name = name;
+                state.email = email;
+
+                try {
+                    await fetch('/api/crm/lead-magnet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name, email,
+                            business: state.business || null,
+                            source: new URLSearchParams(location.search).get('utm_source') || null,
+                            tags: ['ai-quiz', 'quiz:' + state.resultKey, 'level:' + state.level, ...(state.followers ? ['followers:' + state.followers] : [])],
+                        }),
+                    });
+                } catch (err) {
+                    // Don't block the result on a network hiccup; we still show it.
+                    console.error('lead-magnet submit failed:', err);
+                }
+
+                if (window.dataLayer) window.dataLayer.push({ event: 'ai_quiz_complete', email, result: state.resultKey });
+                renderResult();
+            });
+        }
+
+        function renderResult() {
+            const r = RESULTS[state.resultKey];
+            const first = (state.name || '').split(' ')[0];
+            const biz = state.business;
+            card.innerHTML = `
+                <div class="fade-step result">
+                    <span class="result-badge">${[esc(first), esc(biz)].filter(Boolean).join(' · ') || 'Your result'}</span>
+                    <h2>${r.title}</h2>
+                    <p class="result-lede">${r.lede}</p>
+                    <div class="moves-title">Your first 3 moves</div>
+                    <div class="moves">
+                        ${r.moves.map((m, i) => `
+                            <div class="move">
+                                <span class="num">${i + 1}</span>
+                                <div class="move-body">
+                                    <div class="move-h">${m.h}</div>
+                                    <div class="move-p">${m.p}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${r.prompts && r.prompts.length ? `
+                    <div class="moves-title">Plug-and-play AI prompts</div>
+                    <div class="prompts">
+                        ${r.prompts.map((p, i) => `
+                            <div class="prompt">
+                                <div class="prompt-top">
+                                    <span class="prompt-label">${esc(p.label)}</span>
+                                    <button class="copy-btn" data-pi="${i}">Copy</button>
+                                </div>
+                                <p class="prompt-text">${esc(p.text).replace(/\[([^\]]+)\]/g, '<span class="ph">[$1]</span>')}</p>
+                            </div>
+                        `).join('')}
+                    </div>` : ''}
+                    <div class="result-cta">
+                        <h4>Want me to build this for you?</h4>
+                        <p>This is exactly the kind of system we set up at Vernon Tech &amp; Media. Book a free call and I'll map out how to put ${biz ? esc(biz) + "'s" : 'your'} ${r.tag.toLowerCase().replace(/^ai\b/, 'AI')} in place.</p>
+                        <a href="/book-call" class="btn">Book a free strategy call →</a>
+                        <a href="/services" class="secondary">Or browse what we do →</a>
+                    </div>
+                </div>
+            `;
+
+            card.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const pi = parseInt(btn.dataset.pi, 10);
+                    const text = (RESULTS[state.resultKey].prompts[pi] || {}).text || '';
+                    try {
+                        await navigator.clipboard.writeText(text);
+                    } catch (e) {
+                        const ta = document.createElement('textarea');
+                        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                        document.body.appendChild(ta); ta.select();
+                        document.execCommand('copy'); ta.remove();
+                    }
+                    btn.classList.add('copied');
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1600);
+                });
+            });
+
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // ---------- Boot ----------
+        renderQuestion();
+    </script>
+</body>
+</html>
