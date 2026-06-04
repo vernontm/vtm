@@ -105,7 +105,7 @@
     <h3>Why build instead of rent</h3>
     <p>Most people pay $100 to $500 a month for a CRM like HubSpot, GoHighLevel, or Salesforce, and after years of paying, they own nothing. The truth is, the core of a CRM is simple: a place to store people, track deals, and see what's happening. With AI doing the heavy lifting, you can build one yourself in an afternoon and own it forever.</p>
     <p>I'm not a classically trained developer. I built this whole thing with AI, and this guide hands you the exact path. Whether you want to run your own business on it or build CRMs for other people, this is your starting point.</p>
-    <div class="note"><b>How to use the prompts.</b> Throughout this guide you'll see orange <span style="color:var(--orange)">AI PROMPT</span> boxes. Paste them into your AI coding assistant (Claude, Cursor, or similar) alongside the step, and it will generate the code for you. You describe what you want, the AI builds it.</div>
+    <div class="note"><b>How to use the prompts.</b> Throughout this guide you'll see orange <span style="color:var(--orange)">AI PROMPT</span> boxes. Paste them into <b>Claude Code</b> in your terminal alongside the step, and it builds the files for you, right in your project. You describe what you want, Claude Code writes it.</div>
   </div>
 </section>
 
@@ -114,12 +114,11 @@
   <div class="wrap">
     <h2>Step 1</h2>
     <h3>Set up your tools</h3>
-    <p>You need four free things. Don't overthink this, just get them installed.</p>
+    <p>You need three free things. Don't overthink this, just get them installed.</p>
     <ul>
       <li><b>Node.js</b> — the engine that runs the project. Download the LTS version from <a href="https://nodejs.org">nodejs.org</a>.</li>
-      <li><b>A code editor with AI</b> — <a href="https://cursor.com">Cursor</a> or VS Code. This is where you paste the prompts and the AI writes the code.</li>
+      <li><b>Claude Code</b> — Anthropic's AI that lives in your terminal and writes the code for you. This is your build partner. Install it once with <code class="inl">npm install -g @anthropic-ai/claude-code</code>, then run <code class="inl">claude</code> inside your project folder. Get it at <a href="https://claude.com/claude-code">claude.com/claude-code</a>.</li>
       <li><b>A Supabase account</b> — your free database and login system. Sign up at <a href="https://supabase.com">supabase.com</a>.</li>
-      <li><b>An AI assistant</b> — Claude or the AI built into Cursor. This is your build partner.</li>
     </ul>
     <p class="muted">That's the entire stack: <b>Node + React + Supabase</b>, deployed on Vercel. Nothing exotic, nothing expensive.</p>
   </div>
