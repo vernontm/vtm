@@ -29,7 +29,14 @@
   .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:0 22px;}
   .bar{position:relative;z-index:1;background:linear-gradient(90deg,var(--orange-dark),var(--orange));color:#fff;font-size:13px;font-weight:700;padding:9px 16px;letter-spacing:.01em;}
   .hero{position:relative;padding:30px 0 56px;}
-  .hgrid{display:flex;flex-direction:column;gap:28px;max-width:680px;margin:0 auto;}
+  /* Mobile-first: single column. .col wrappers dissolve (display:contents) so
+     children place by grid-area, keeping order headline -> video -> form -> bullets. */
+  .hgrid{display:grid;grid-template-columns:1fr;grid-template-areas:"head" "video" "form" "bul";gap:22px;max-width:680px;margin:0 auto;}
+  .col{display:contents;}
+  .head{grid-area:head;}
+  .col-right .video{grid-area:video;}
+  .col-right .form{grid-area:form;}
+  .bul{grid-area:bul;}
   .eyebrow{display:inline-block;font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--orange);background:var(--soft);border:1px solid rgba(255,155,38,0.35);padding:6px 12px;border-radius:999px;margin-bottom:16px;}
   h1{font-family:var(--fd);font-size:44px;line-height:1.05;font-weight:800;letter-spacing:-0.02em;}
   h1 .hot{color:var(--orange);}
@@ -74,6 +81,21 @@
     section.block{padding:40px 0;}
     h2{font-size:25px;}
   }
+  /* Desktop: two columns — copy + bullets left, video + form right. */
+  @media(min-width:821px){
+    .hero{padding:52px 0 64px;}
+    .hgrid{grid-template-columns:1.04fr 0.96fr;grid-template-areas:none;gap:56px;max-width:1060px;align-items:center;text-align:left;}
+    .col{display:flex;flex-direction:column;gap:22px;}
+    .col-left{justify-content:center;}
+    .col-right{justify-content:center;align-items:stretch;}
+    h1{font-size:40px;}
+    .sub{margin-left:0;margin-right:0;max-width:34em;}
+    ul.bul{display:flex;flex-direction:column;gap:6px;}
+    ul.bul li{justify-content:flex-start;text-align:left;}
+    .video{max-width:none;}
+    .form{margin:0;max-width:none;}
+    .micro{text-align:center;}
+  }
 </style>
 </head>
 <body>
@@ -82,32 +104,35 @@
 
 <header class="hero">
   <div class="wrap hgrid">
-    <div class="head">
-      <span class="eyebrow">Free Guide · Instant Access</span>
-      <h1>Build your own CRM <span class="hot">with AI</span>, even if you've never coded</h1>
-      <p class="sub">The Simple CRM Blueprint walks you through the exact system I use to build a CRM you actually own. The stack, the steps in order, and the prompts that do the heavy lifting.</p>
+    <div class="col col-left">
+      <div class="head">
+        <span class="eyebrow">Free Guide · Instant Access</span>
+        <h1>Build your own CRM <span class="hot">with AI</span>, even if you've never coded</h1>
+        <p class="sub">The Simple CRM Blueprint walks you through the exact system I use to build a CRM you actually own. The stack, the steps in order, and the prompts that do the heavy lifting.</p>
+      </div>
+      <ul class="bul">
+        <li><span class="tick">✓</span> The exact stack I use (no CS degree required)</li>
+        <li><span class="tick">✓</span> The steps in order, so you never stare at a blank screen</li>
+        <li><span class="tick">✓</span> The prompts that build it for you</li>
+      </ul>
     </div>
 
-    <div class="video">
-      <video src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-landing.mp4"
-             poster="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-blueprint-poster.jpg"
-             controls playsinline preload="metadata"></video>
+    <div class="col col-right">
+      <div class="video">
+        <video src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-landing.mp4"
+               poster="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-blueprint-poster.jpg"
+               controls playsinline preload="metadata"></video>
+      </div>
+
+      <form class="form" id="optin">
+        <div class="fh">Get the Simple CRM Blueprint free</div>
+        <input type="text" name="hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true" />
+        <input type="email" name="email" placeholder="you@email.com" required />
+        <button type="submit" class="btn">Send me the blueprint</button>
+        <p class="micro">No spam. Unsubscribe anytime.</p>
+        <p class="err" id="optin-err"></p>
+      </form>
     </div>
-
-    <form class="form" id="optin">
-      <div class="fh">Get the Simple CRM Blueprint free</div>
-      <input type="text" name="hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true" />
-      <input type="email" name="email" placeholder="you@email.com" required />
-      <button type="submit" class="btn">Send me the blueprint</button>
-      <p class="micro">No spam. Unsubscribe anytime.</p>
-      <p class="err" id="optin-err"></p>
-    </form>
-
-    <ul class="bul">
-      <li><span class="tick">✓</span> The exact stack I use (no CS degree required)</li>
-      <li><span class="tick">✓</span> The steps in order, so you never stare at a blank screen</li>
-      <li><span class="tick">✓</span> The prompts that build it for you</li>
-    </ul>
   </div>
 </header>
 
