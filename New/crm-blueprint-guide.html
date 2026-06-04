@@ -88,7 +88,7 @@
     <h1>Build your own CRM <span class="hot">with AI</span>, step by step</h1>
     <p class="deck">You're going to build a real CRM just by talking to Claude in plain English. No code, no terminal. I'll give you the exact words to say, in order. Even if you've never built anything in your life.</p>
     <p class="byline">By Ray Vernon · Vernon Tech &amp; Media</p>
-    <a class="btn" style="margin-top:22px;font-size:15px;padding:13px 26px;" href="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-blueprint-guide.pdf?download=The-Simple-CRM-Blueprint.pdf">Download the PDF (7 pages)</a>
+    <a class="btn" style="margin-top:22px;font-size:15px;padding:13px 26px;" href="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-blueprint-guide.pdf?download=The-Simple-CRM-Blueprint.pdf">Download the PDF (9 pages)</a>
   </div>
 </header>
 
@@ -115,14 +115,13 @@
 <section class="step">
   <div class="wrap">
     <h2>Step 1</h2>
-    <h3>Get set up — a one-time, 10-minute thing</h3>
-    <p>Three free things to install once. No typing, no commands — just click through the installers and sign up.</p>
+    <h3>Get set up — about 5 minutes</h3>
+    <p>Just two free things, and you barely have to do anything. No coding tools to install, no setup, no expertise needed.</p>
     <ul>
-      <li><b>Node.js</b> — the quiet engine your app runs on. Go to <a href="https://nodejs.org">nodejs.org</a>, click the big green <b>LTS</b> button, open the file it downloads, and click Next until it's done. You'll never have to think about it again.</li>
-      <li><b>The Claude desktop app</b> — this is your builder. Download it from <a href="https://claude.com/download">claude.com/download</a>, install it, and sign in (you'll need a paid Claude plan). Open the <b>Code</b> side of the app — that's the part that builds real projects for you, no terminal in sight.</li>
-      <li><b>A free Supabase account</b> — this is where your CRM stores its data. Sign up at <a href="https://supabase.com">supabase.com</a> and create one new project. You'll paste two keys from it into Claude in Step 3.</li>
+      <li><b>The Claude desktop app</b> — this is the only thing that does the work. Download it from <a href="https://claude.com/download">claude.com/download</a>, install it, sign in (you'll need a paid Claude plan), and open the <b>Code</b> side. It builds the whole project, downloads and installs anything your computer needs to run it, and keeps it running — all by itself. You never open a terminal.</li>
+      <li><b>A free Supabase account</b> — where your CRM stores its data. Sign up at <a href="https://supabase.com">supabase.com</a> and create one new project. You'll paste two keys from it into Claude in Step 3.</li>
     </ul>
-    <p class="muted">That's the entire setup. From here on you don't install anything or type any commands — you just talk to Claude.</p>
+    <p class="muted">That's it. You don't install Node, you don't install developer tools, you don't type a single command. If your computer needs anything to run the app, Claude downloads and sets it up for you during the build. Honestly, you need almost no expertise — you just talk to it.</p>
   </div>
 </section>
 
@@ -180,10 +179,14 @@
 <section class="step">
   <div class="wrap">
     <h2>Step 6</h2>
-    <h3>Make it look like a real product</h3>
-    <p>Now make it feel polished — a sidebar to move around and a dashboard home screen with your numbers at a glance. This one prompt turns it from "an app" into "your CRM."</p>
-    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Make my CRM look like a polished, professional product. Add a dark sidebar on the left with my logo at the top and links for Dashboard, Leads, Contacts, Deals, and Settings, each with a small icon. Add a home Dashboard page with cards across the top showing Total Leads, Active Deals, Revenue, and Meetings This Week, and a Recent Activity list underneath. Use a clean dark theme with a red accent color."</p></div>
-    <p class="muted">That dashboard at the very top of this guide? That's exactly what this prompt produces.</p>
+    <h3>Make it look exactly like this</h3>
+    <p>Here's the secret to a professional look with zero design skill: <b>show Claude a picture.</b> Save the dashboard image below (right-click it, or long-press on a phone), then <b>drag that image straight into Claude</b> and tell it to copy the look. Claude can see the image, so it matches the real thing — fonts, colors, gradients, spacing — instead of guessing.</p>
+    <figure>
+      <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-dashboard.jpg" alt="Drag this screenshot into Claude as your design reference" />
+      <figcaption>Save this image, drag it into Claude, then paste the prompt below.</figcaption>
+    </figure>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude (with the image attached)</div><p>"Here's a screenshot of exactly how I want my CRM to look. Make mine match it as closely as you possibly can — copy the fonts, the colors, the red gradients, the spacing, and the dark theme exactly. Build the same dark sidebar with my logo at the top and links for Dashboard, Leads, Contacts, Deals, and Settings, and the same home Dashboard with the stat cards across the top (Total Leads, Active Deals, Revenue, Meetings This Week) and a Recent Activity list underneath. I want it to look identical to this picture."</p></div>
+    <p class="muted">Want the Leads page to match too? Drag in the leads screenshot from earlier in this guide and say "make my Leads page look exactly like this." Same trick, every screen.</p>
   </div>
 </section>
 
@@ -191,10 +194,23 @@
 <section class="step">
   <div class="wrap">
     <h2>Step 7</h2>
+    <h3>Save your project to GitHub</h3>
+    <p>GitHub is a free, safe home for your project online — it's your backup, and it's what makes putting your CRM on the web (next step) one click. The good news: <b>Claude does all the GitHub work for you</b>, right inside the app. You don't learn any commands.</p>
+    <p>First, make a free account at <a href="https://github.com">github.com</a>. Then tell Claude:</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Save my whole project to GitHub for me. Create a new private repository called crm, set everything up, and push all my files up to it. If you need me to log in or approve anything, tell me exactly what to click."</p></div>
+    <p>Claude sets up Git, saves a snapshot of your work, and pushes it to GitHub for you. When you sign into GitHub, all your files are there.</p>
+    <div class="note"><b>Updating it later is just as easy.</b> Any time you change something, say to Claude: <i>"Save my changes and push them to GitHub."</i> It does the commit and the push for you — no commands, ever — and once Vercel is connected in the next step, your live CRM updates automatically.</div>
+  </div>
+</section>
+
+<!-- STEP 8 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 8</h2>
     <h3>Put it online</h3>
-    <p>Right now your CRM only runs on your own computer. One more prompt puts it on the internet, for free, so you can use it from your phone or anywhere else.</p>
-    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Put my CRM online for free so I can use it from any device. Walk me through it one step at a time in plain English, and make sure my Supabase keys stay private and are never exposed in the public code."</p></div>
-    <p>Follow Claude's steps and a minute later you'll have a live web address for your very own CRM. That's it.</p>
+    <p>Now make your CRM live on the internet, for free, so you can use it from your phone or anywhere else. Vercel reads your GitHub project and gives it a real web address.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Now put my CRM online for free using Vercel, connected to the GitHub repository you just made. Walk me through it one step at a time in plain English, and make sure my Supabase keys are added as private settings, never exposed in the public code."</p></div>
+    <p>Follow Claude's steps and a minute later you'll have a live web address for your very own CRM. From now on, every time you push changes to GitHub, this live site updates itself. That's it — you're done.</p>
   </div>
 </section>
 
