@@ -98,9 +98,7 @@
       </span>
     </label>
 
-    <div class="priceline"><span class="price-pill" id="pricePill">$17 once</span></div>
-
-    <button class="btn" id="buy">Get the CRM Build →</button>
+    <button class="btn" id="buy">Get the CRM Build — $17 →</button>
     <button class="btn ghost" id="decline">No thanks, I'll build it myself</button>
 
     <p class="micro">Yours forever · Not a subscription · 30-day money-back guarantee</p>
@@ -128,15 +126,16 @@
 
 <script>
 (function(){
-  var bump=document.getElementById('bump'),pill=document.getElementById('pricePill');
+  var bump=document.getElementById('bump');
   var buy=document.getElementById('buy'),decline=document.getElementById('decline');
   var modal=document.getElementById('modal'),stay=document.getElementById('stay'),confirmDecline=document.getElementById('confirmDecline');
   var err=document.getElementById('err'),merr=document.getElementById('merr');
   var email='';try{email=(localStorage.getItem('funnel_email')||'').toLowerCase();}catch(_){}
 
   function price(){return bump.checked?26:17;}
+  function buyLabel(){return 'Get the CRM Build — $'+price()+' →';}
   function showErr(el,m){el.textContent=m||'Something went wrong. Please try again.';el.classList.add('show');}
-  bump.addEventListener('change',function(){pill.textContent='$'+price()+' once';});
+  bump.addEventListener('change',function(){buy.textContent=buyLabel();});
 
   try{if(window.fbq)fbq('track','ViewContent',{content_name:'CRM Build',content_category:'tripwire',value:17,currency:'USD'});}catch(_){}
   try{if(window.gtag)gtag('event','view_item',{currency:'USD',value:17,items:[{item_id:'crm-build',item_name:'The CRM Build'}]});}catch(_){}
@@ -152,7 +151,7 @@
       var j=await r.json().catch(function(){return{};});
       if(!r.ok||!j.url)throw new Error(j.error||'Could not start checkout.');
       window.location.href=j.url;
-    }catch(e){buy.disabled=false;buy.textContent='Get the CRM Build →';showErr(err,e.message);}
+    }catch(e){buy.disabled=false;buy.textContent=buyLabel();showErr(err,e.message);}
   });
 
   decline.addEventListener('click',function(){modal.classList.add('open');});
