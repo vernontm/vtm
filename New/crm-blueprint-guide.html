@@ -86,9 +86,9 @@
   <div class="wrap">
     <span class="eyebrow">The Simple CRM Blueprint</span>
     <h1>Build your own CRM <span class="hot">with AI</span>, step by step</h1>
-    <p class="deck">This is the exact system I use to build a CRM you actually own. The stack, the steps in order, and the prompts that do the heavy lifting. Even if you've never written a real line of code.</p>
+    <p class="deck">You're going to build a real CRM just by talking to Claude in plain English. No code, no terminal. I'll give you the exact words to say, in order. Even if you've never built anything in your life.</p>
     <p class="byline">By Ray Vernon · Vernon Tech &amp; Media</p>
-    <a class="btn" style="margin-top:22px;font-size:15px;padding:13px 26px;" href="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-blueprint-guide.pdf?download=The-Simple-CRM-Blueprint.pdf">Download the PDF (10 pages)</a>
+    <a class="btn" style="margin-top:22px;font-size:15px;padding:13px 26px;" href="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-blueprint-guide.pdf?download=The-Simple-CRM-Blueprint.pdf">Download the PDF (7 pages)</a>
   </div>
 </header>
 
@@ -105,8 +105,9 @@
     <h2>Before you start</h2>
     <h3>Why build instead of rent</h3>
     <p>Most people pay $100 to $500 a month for a CRM like HubSpot, GoHighLevel, or Salesforce, and after years of paying, they own nothing. The truth is, the core of a CRM is simple: a place to store people, track deals, and see what's happening. With AI doing the heavy lifting, you can build one yourself in an afternoon and own it forever.</p>
-    <p>I'm not a classically trained developer. I built this whole thing with AI, and this guide hands you the exact path. Whether you want to run your own business on it or build CRMs for other people, this is your starting point.</p>
-    <div class="note"><b>How to use the prompts.</b> Throughout this guide you'll see orange <span style="color:var(--orange)">AI PROMPT</span> boxes. Paste them into <b>Claude Code</b> in your terminal alongside the step, and it builds the files for you, right in your project. You describe what you want, Claude Code writes it.</div>
+    <p>I'm not a classically trained developer. I built this whole thing by talking to AI in plain English, and this guide hands you the exact words to say. Whether you want to run your own business on it or build CRMs for other people, this is your starting point.</p>
+    <div class="note"><b>How this works.</b> You build this entire CRM just by <b>talking to Claude</b> in plain English. The Claude desktop app writes the files, installs what it needs, and runs your CRM for you. You never open a terminal or write a line of code. Every orange <span style="color:var(--orange)">SAY THIS TO CLAUDE</span> box below is the exact thing to type — copy it, paste it into Claude, press enter.</div>
+    <div class="note" style="border-left-color:var(--green);"><b>The one rule for non-coders:</b> if anything ever looks broken or you see a scary error message, don't panic. Copy it, paste it to Claude, and say <i>"fix this for me."</i> That's how you solve problems now. You describe it, Claude handles it.</div>
   </div>
 </section>
 
@@ -114,14 +115,14 @@
 <section class="step">
   <div class="wrap">
     <h2>Step 1</h2>
-    <h3>Set up your tools</h3>
-    <p>You need three free things. Don't overthink this, just get them installed.</p>
+    <h3>Get set up — a one-time, 10-minute thing</h3>
+    <p>Three free things to install once. No typing, no commands — just click through the installers and sign up.</p>
     <ul>
-      <li><b>Node.js</b> — the engine that runs the project. Download the LTS version from <a href="https://nodejs.org">nodejs.org</a>.</li>
-      <li><b>Claude Code</b> — Anthropic's AI that lives in your terminal and writes the code for you. This is your build partner. Install it once with <code class="inl">npm install -g @anthropic-ai/claude-code</code>, then run <code class="inl">claude</code> inside your project folder. Get it at <a href="https://claude.com/claude-code">claude.com/claude-code</a>.</li>
-      <li><b>A Supabase account</b> — your free database and login system. Sign up at <a href="https://supabase.com">supabase.com</a>.</li>
+      <li><b>Node.js</b> — the quiet engine your app runs on. Go to <a href="https://nodejs.org">nodejs.org</a>, click the big green <b>LTS</b> button, open the file it downloads, and click Next until it's done. You'll never have to think about it again.</li>
+      <li><b>The Claude desktop app</b> — this is your builder. Download it from <a href="https://claude.com/download">claude.com/download</a>, install it, and sign in (you'll need a paid Claude plan). Open the <b>Code</b> side of the app — that's the part that builds real projects for you, no terminal in sight.</li>
+      <li><b>A free Supabase account</b> — this is where your CRM stores its data. Sign up at <a href="https://supabase.com">supabase.com</a> and create one new project. You'll paste two keys from it into Claude in Step 3.</li>
     </ul>
-    <p class="muted">That's the entire stack: <b>Node + React + Supabase</b>, deployed on Vercel. Nothing exotic, nothing expensive.</p>
+    <p class="muted">That's the entire setup. From here on you don't install anything or type any commands — you just talk to Claude.</p>
   </div>
 </section>
 
@@ -129,18 +130,10 @@
 <section class="step">
   <div class="wrap">
     <h2>Step 2</h2>
-    <h3>Create the project</h3>
-    <p>Open your terminal and scaffold a fresh React app with Vite. This gives you a clean, fast foundation in seconds.</p>
-    <div class="code"><div class="clabel">terminal</div><pre><span class="c"># create the project</span>
-npm create vite@latest crm -- --template react
-
-<span class="c"># move into it and install</span>
-cd crm
-npm install
-
-<span class="c"># start it up</span>
-npm run dev</pre></div>
-    <p>Open the local URL it prints (usually <code class="inl">http://localhost:5173</code>) and you'll see the starter page. That's your blank canvas.</p>
+    <h3>Tell Claude to build your CRM</h3>
+    <p>Open the Claude desktop app and go to the <b>Code</b> side. Make a new empty folder for your project (call it <b>crm</b>) and point Claude at it. Then paste the words below and press enter. Claude builds the project, installs everything it needs, and starts it running. A couple of minutes later it tells you it's ready and a blank app opens in your browser.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Build me a simple CRM web app that I can run on my own computer. Use React. I am not a coder, so handle all of the technical setup for me, install anything you need, and start the app running so I can see it. When it's ready, tell me how to open it in my browser."</p></div>
+    <p>Now you've got a live app running on your computer. It's blank — that's your canvas. Everything after this is just telling Claude what to add.</p>
   </div>
 </section>
 
@@ -148,14 +141,9 @@ npm run dev</pre></div>
 <section class="step">
   <div class="wrap">
     <h2>Step 3</h2>
-    <h3>Install the three libraries you need</h3>
-    <p>A CRM needs three things on top of React: pages that route, a database client, and icons. That's it.</p>
-    <div class="code"><div class="clabel">terminal</div><pre>npm install react-router-dom @supabase/supabase-js lucide-react</pre></div>
-    <ul>
-      <li><code class="inl">react-router-dom</code> — moves between pages (Dashboard, Leads, Settings).</li>
-      <li><code class="inl">@supabase/supabase-js</code> — talks to your database and handles login.</li>
-      <li><code class="inl">lucide-react</code> — clean icons for the sidebar and cards.</li>
-    </ul>
+    <h3>Connect your database</h3>
+    <p>Your CRM needs somewhere to store people and deals. That's what Supabase is for. Tell Claude to connect it. Claude will ask you for two things from your Supabase account — your <b>Project URL</b> and your <b>anon key</b>. You find both inside Supabase under <b>Project Settings → API</b>. Copy them and paste them to Claude when it asks.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Connect my CRM to my Supabase database so it saves real data. Tell me exactly where to click inside Supabase to find my Project URL and my anon key, then wire them in for me. Keep those keys private and safe, and don't expose them anywhere public."</p></div>
   </div>
 </section>
 
@@ -163,19 +151,13 @@ npm run dev</pre></div>
 <section class="step">
   <div class="wrap">
     <h2>Step 4</h2>
-    <h3>Connect your database</h3>
-    <p>In Supabase, create a new project. Once it's ready, go to <b>Project Settings → API</b> and copy two things: your <b>Project URL</b> and your <b>anon public key</b>.</p>
-    <p>Back in your project, create a file called <code class="inl">.env</code> in the root and paste them in. The <code class="inl">VITE_</code> prefix is required.</p>
-    <div class="code"><div class="clabel">.env</div><pre>VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here</pre></div>
-    <p>Now make one small file that connects to Supabase. Everything in the app will use this.</p>
-    <div class="code"><div class="clabel">src/lib/supabase.js</div><pre><span class="k">import</span> { createClient } <span class="k">from</span> <span class="s">'@supabase/supabase-js'</span>
-
-<span class="k">const</span> url = import.meta.env.VITE_SUPABASE_URL
-<span class="k">const</span> key = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-<span class="k">export const</span> <span class="t">supabase</span> = createClient(url, key)</pre></div>
-    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a Supabase client file at src/lib/supabase.js using @supabase/supabase-js. Read the URL and anon key from Vite env vars (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) and throw a clear error if either is missing."</p></div>
+    <h3>Add a login screen</h3>
+    <p>Give your CRM a front door so only you can get in. One sentence to Claude and it's handled.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Add a login screen to my CRM using Supabase, with email and password. After I log in, keep me logged in even if I refresh the page. Make the login page look clean and modern on a dark background with a big bold title."</p></div>
+    <figure>
+      <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-login.jpg" alt="The CRM login screen" />
+      <figcaption>This is what you get — a clean, branded login screen, with zero code written by you.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -183,31 +165,14 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here</pre></div>
 <section class="step">
   <div class="wrap">
     <h2>Step 5</h2>
-    <h3>Add login</h3>
-    <p>A CRM needs a front door. Supabase gives you authentication for free. You'll build two pieces: an <b>auth context</b> that remembers who's logged in, and a <b>login screen</b>.</p>
+    <h3>Add your leads</h3>
+    <p>This is the heart of any CRM: the list of people you're working. Tell Claude to build the page where you add them and see them.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Add a Leads page to my CRM. I want to add people and see them in a clean table showing each person's name, email, company, a status (new, qualified, negotiation, or won), and their deal value. Add a button that opens a simple form to add a new lead, and save everything to my Supabase database so it's still there when I come back."</p></div>
     <figure>
-      <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-login.jpg" alt="The CRM login screen" />
-      <figcaption>Your login screen — clean, branded, and powered by Supabase auth.</figcaption>
+      <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-leads.jpg" alt="The CRM leads table with real data" />
+      <figcaption>Your leads in a clean table — name, company, status, value. Real data, in your own CRM.</figcaption>
     </figure>
-    <p>The auth context wraps your whole app and tracks the session. Here's the heart of it:</p>
-    <div class="code"><div class="clabel">src/context/AuthContext.jsx (core)</div><pre><span class="c">// track the session and expose sign in / sign out</span>
-<span class="k">const</span> [session, setSession] = useState(<span class="k">null</span>)
-
-useEffect(() => {
-  supabase.auth.getSession().then(({ data }) => setSession(data.session))
-  <span class="k">const</span> { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
-  <span class="k">return</span> () => data.subscription.unsubscribe()
-}, [])
-
-<span class="k">const</span> signIn = (email, password) =>
-  supabase.auth.signInWithPassword({ email, password })
-
-<span class="k">const</span> signOut = () => supabase.auth.signOut()</pre></div>
-    <p>Then your app shows the login screen when nobody's signed in, and the CRM when they are:</p>
-    <div class="code"><div class="clabel">src/App.jsx (the gate)</div><pre><span class="k">if</span> (loading) <span class="k">return</span> &lt;LoadingScreen /&gt;
-<span class="k">if</span> (!session) <span class="k">return</span> &lt;Login /&gt;
-<span class="k">return</span> &lt;AppShell /&gt;   <span class="c">// the real CRM</span></pre></div>
-    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Build a React AuthContext using my Supabase client. It should track the session with getSession and onAuthStateChange, and expose signIn(email, password), signOut(), and the current user. Then create a dark, modern Login page with email + password fields that calls signIn and shows any error. Use Plus Jakarta Sans for headings and an orange gradient button."</p></div>
+    <div class="note"><b>This is the whole trick.</b> Every part of a CRM is the same move: "add a page where I can see and add ___." Say it for <b>Contacts</b>. Say it for <b>Deals</b>. That's 80% of any CRM, one sentence at a time.</div>
   </div>
 </section>
 
@@ -215,19 +180,10 @@ useEffect(() => {
 <section class="step">
   <div class="wrap">
     <h2>Step 6</h2>
-    <h3>Build the shell — sidebar, header, routing</h3>
-    <p>Every CRM has the same frame: a sidebar on the left to move around, a header on top, and a content area in the middle. Build it once and every page lives inside it.</p>
-    <p>Wire up routing in <code class="inl">main.jsx</code> with a <code class="inl">BrowserRouter</code>, then define your pages in <code class="inl">App.jsx</code>:</p>
-    <div class="code"><div class="clabel">src/App.jsx (routes)</div><pre>&lt;Routes&gt;
-  &lt;Route path=<span class="s">"/"</span> element={&lt;Navigate to=<span class="s">"/dashboard"</span> /&gt;} /&gt;
-  &lt;Route path=<span class="s">"/dashboard"</span> element={&lt;Dashboard /&gt;} /&gt;
-  &lt;Route path=<span class="s">"/leads"</span>     element={&lt;Leads /&gt;} /&gt;
-  &lt;Route path=<span class="s">"/contacts"</span>  element={&lt;Contacts /&gt;} /&gt;
-  &lt;Route path=<span class="s">"/deals"</span>     element={&lt;Deals /&gt;} /&gt;
-  &lt;Route path=<span class="s">"/settings"</span>  element={&lt;Settings /&gt;} /&gt;
-&lt;/Routes&gt;</pre></div>
-    <p>The sidebar is just a list of links with icons. The active page gets a highlight. Don't hand-build all of it — describe it and let AI generate it.</p>
-    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a fixed 220px sidebar component for a dark CRM. Brand at the top ('CRM' with a lightning icon), a Workspace nav with Dashboard, Leads, Contacts, Deals, Meetings, Email, and Settings using lucide-react icons and react-router NavLink. Highlight the active link with a subtle red gradient and a glowing dot. At the bottom, a user chip and a Sign out button. Then build a sticky header with the page title, a search input, a notifications bell, and a red 'New' button."</p></div>
+    <h3>Make it look like a real product</h3>
+    <p>Now make it feel polished — a sidebar to move around and a dashboard home screen with your numbers at a glance. This one prompt turns it from "an app" into "your CRM."</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Make my CRM look like a polished, professional product. Add a dark sidebar on the left with my logo at the top and links for Dashboard, Leads, Contacts, Deals, and Settings, each with a small icon. Add a home Dashboard page with cards across the top showing Total Leads, Active Deals, Revenue, and Meetings This Week, and a Recent Activity list underneath. Use a clean dark theme with a red accent color."</p></div>
+    <p class="muted">That dashboard at the very top of this guide? That's exactly what this prompt produces.</p>
   </div>
 </section>
 
@@ -235,58 +191,10 @@ useEffect(() => {
 <section class="step">
   <div class="wrap">
     <h2>Step 7</h2>
-    <h3>Build the dashboard</h3>
-    <p>The dashboard is the home screen: a row of stat cards and a recent-activity feed. Each stat card is a small reusable component you feed a label, a number, an icon, and a trend.</p>
-    <div class="code"><div class="clabel">src/components/StatCard.jsx (shape)</div><pre>&lt;StatCard label=<span class="s">"Total Leads"</span> value=<span class="s">"1,284"</span>
-          icon={UserPlus} delta=<span class="s">"+12.5%"</span> /&gt;</pre></div>
-    <p>Lay four of them in a grid, add a "Recent Activity" card underneath, and your home screen is done.</p>
-    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a reusable StatCard component (label, value, icon, delta) styled as a dark rounded card with an icon chip and a trend pill. Then build a Dashboard page with a responsive grid of four StatCards (Total Leads, Active Deals, Revenue, Meetings This Week) and a 'Recent Activity' card below it that lists recent events with an icon, a description, and a timestamp."</p></div>
-  </div>
-</section>
-
-<!-- STEP 8 -->
-<section class="step">
-  <div class="wrap">
-    <h2>Step 8</h2>
-    <h3>Add real data — your leads table</h3>
-    <p>Now make it a real CRM. In Supabase, open the <b>SQL Editor</b> and create a <code class="inl">leads</code> table. This is where your actual contacts live.</p>
-    <div class="code"><div class="clabel">Supabase SQL Editor</div><pre><span class="k">create table</span> leads (
-  id uuid <span class="k">primary key default</span> gen_random_uuid(),
-  name text <span class="k">not null</span>,
-  email text,
-  company text,
-  status text <span class="k">default</span> <span class="s">'new'</span>,
-  value numeric <span class="k">default</span> 0,
-  created_at timestamptz <span class="k">default</span> now()
-);</pre></div>
-    <p>Then read it into a Leads page. Supabase makes the query one line:</p>
-    <div class="code"><div class="clabel">src/pages/Leads.jsx (fetch)</div><pre><span class="k">const</span> { data: leads } = <span class="k">await</span> supabase
-  .from(<span class="s">'leads'</span>)
-  .select(<span class="s">'*'</span>)
-  .order(<span class="s">'created_at'</span>, { ascending: <span class="k">false</span> })</pre></div>
-    <p>Map those rows into a table and you've got this:</p>
-    <figure>
-      <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-leads.jpg" alt="The CRM leads table with real data" />
-      <figcaption>A live leads table — name, company, status, value, last contact. Your data, your CRM.</figcaption>
-    </figure>
-    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a 'leads' table in Supabase with id, name, email, company, status, value, and created_at. Then build a Leads page in React that fetches all leads from Supabase, ordered by newest, and renders them in a dark table with a colored avatar, name + email, company, a status pill (new / qualified / negotiation / won), the value formatted as currency, and a relative 'last contact' time. Add a 'New Lead' button that opens a form to insert a row."</p></div>
-    <div class="note">Repeat this same pattern for <b>Contacts</b> and <b>Deals</b>: a table in Supabase, a page that reads it, a form that writes to it. That's 80% of any CRM.</div>
-  </div>
-</section>
-
-<!-- STEP 9 -->
-<section class="step">
-  <div class="wrap">
-    <h2>Step 9</h2>
     <h3>Put it online</h3>
-    <p>Your CRM runs on your machine. To use it anywhere, deploy it free on Vercel.</p>
-    <ul>
-      <li>Push your project to a new <b>GitHub</b> repo.</li>
-      <li>Go to <a href="https://vercel.com">vercel.com</a>, click <b>Import Project</b>, and pick your repo.</li>
-      <li>Add your two environment variables (<code class="inl">VITE_SUPABASE_URL</code> and <code class="inl">VITE_SUPABASE_ANON_KEY</code>) in the Vercel settings.</li>
-      <li>Click <b>Deploy</b>. In about a minute you'll have a live URL.</li>
-    </ul>
-    <p>That's it. You now own a working CRM, running on the internet, that costs you nothing per month.</p>
+    <p>Right now your CRM only runs on your own computer. One more prompt puts it on the internet, for free, so you can use it from your phone or anywhere else.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> Say this to Claude</div><p>"Put my CRM online for free so I can use it from any device. Walk me through it one step at a time in plain English, and make sure my Supabase keys stay private and are never exposed in the public code."</p></div>
+    <p>Follow Claude's steps and a minute later you'll have a live web address for your very own CRM. That's it.</p>
   </div>
 </section>
 
@@ -295,10 +203,10 @@ useEffect(() => {
   <div class="wrap">
     <h2>You did it</h2>
     <h3>What you just built</h3>
-    <p>A real CRM with login, a dashboard, and a live leads table — on a stack you own (React + Supabase + Vercel). From here you extend it the exact same way: a Supabase table, a page that reads it, a form that writes to it. Contacts, a deal pipeline, email, notes. Same pattern, every time.</p>
+    <p>A real CRM with a login, a dashboard, and a live leads table — and you built it by <b>talking</b>, not coding. From here you grow it the exact same way: just tell Claude what you want next. <i>"Add a Contacts page." "Add a deals pipeline I can drag cards across." "Email me when a new lead comes in."</i> Same move every time. You describe it, Claude builds it.</p>
     <div class="cta">
       <h3>Want the finished build instead of starting from scratch?</h3>
-      <p>Skip the setup. Get the full repo for the exact CRM in this guide, clone it, and customize from there.</p>
+      <p>Skip the build. Get the full project for the exact CRM in this guide, open it in Claude, and just tell it what to change.</p>
       <a class="btn" href="/crm-build">Get the CRM Build →</a>
     </div>
   </div>
