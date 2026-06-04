@@ -114,6 +114,35 @@ Run `npm install` in the project folder. (If Node/npm isn't available on their m
    ```
    (Later, when there are multiple users, tighten these to per-user/per-owner rules. For a single-owner CRM, "authenticated only" is the right baseline.)
 
+5b. **Ready-made Contacts and Deals tables.** When the user asks for those pages, create these in the SQL Editor (same RLS pattern as `leads` above — enable RLS, then four `authenticated`-only policies per table):
+   ```sql
+   create table contacts (
+     id uuid primary key default gen_random_uuid(),
+     name text not null,
+     email text,
+     phone text,
+     company text,
+     title text,
+     notes text,
+     created_at timestamptz default now()
+   );
+
+   create table deals (
+     id uuid primary key default gen_random_uuid(),
+     title text not null,
+     contact_id uuid references contacts(id) on delete set null,
+     stage text default 'new',        -- new | qualified | proposal | negotiation | won | lost
+     value numeric default 0,
+     expected_close date,
+     created_at timestamptz default now()
+   );
+
+   alter table contacts enable row level security;
+   alter table deals    enable row level security;
+   -- repeat the four authenticated-only policies (select/insert/update/delete) from step 5 for each table.
+   ```
+   For the Deals page, a kanban grouped by `stage` (drag a card to change its `stage`) is the nicest UX. The `contact_id` link lets a deal belong to a contact.
+
 6. **Create a login user.** In Supabase **Authentication → Users**, add the user's email + password so they can sign in. (Or build a signup screen if they want one.)
 
 ### Step C — Run it locally
