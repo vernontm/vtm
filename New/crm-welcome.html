@@ -75,8 +75,8 @@
    ============================================================ */
 var ASSETS = {
   blueprint: '/crm-blueprint-guide',                         // free Simple CRM Blueprint (hosted guide)
-  repo:      'https://github.com/#TODO-crm-repo',            // the CRM Build repo (or repo-access page)
-  context:   'https://vernontm.com/#TODO-context-file',      // The Context File for Claude (the $9 bump)
+  repo:      '/api/funnel/download?asset=repo',              // gated: paid build .zip (session appended below)
+  context:   '/api/funnel/download?asset=context',          // gated: $9 Context File / CLAUDE.md (session appended below)
   lab:       'https://vernontm.com/#TODO-crm-lab-access',    // CRM Lab member area
   bookCall:  '/book-call'                                    // founding 1:1 onboarding (Google Calendar redirect)
 };
@@ -93,6 +93,11 @@ var ASSETS = {
   function link(label,href){return '<a href="'+href+'" target="_blank" rel="noopener"><span>'+label+'</span><span class="arrow">Open →</span></a>';}
 
   var sid=params.get('session')||'';
+  // Gate the paid downloads behind the buyer's Stripe session.
+  if(sid){
+    ASSETS.repo='/api/funnel/download?asset=repo&session='+encodeURIComponent(sid);
+    ASSETS.context='/api/funnel/download?asset=context&session='+encodeURIComponent(sid);
+  }
   var rows=[], purchaseValue=0;
 
   if(product==='blueprint'){
@@ -111,18 +116,18 @@ var ASSETS = {
     subhead.textContent='Your CRM Build, the blueprint, and a full year inside CRM Lab are all unlocked. Let’s get you set up.';
     rows.push(link('CRM Lab — member area',ASSETS.lab));
     rows.push(link('Book your founding 1:1 onboarding call',ASSETS.bookCall));
-    rows.push(link('The CRM Build (repo)',ASSETS.repo));
+    rows.push(link('Download the CRM Build (.zip)',ASSETS.repo));
     rows.push(link('The Simple CRM Blueprint',ASSETS.blueprint));
-    rows.push(link('The Context File for Claude',ASSETS.context));
+    rows.push(link('Download the Context File (CLAUDE.md)',ASSETS.context));
     purchaseValue=297;
     // Lab member — already at the top of the ladder. No second-chance card.
   } else {
     // crm-build (and bump) buyer — second chance = join CRM Lab (one-click against saved card).
     headline.textContent='Your CRM Build is ready.';
-    subhead.textContent='Clone the repo, follow the blueprint, and make it yours. Everything’s below.';
-    rows.push(link('The CRM Build (repo)',ASSETS.repo));
+    subhead.textContent='Download the build, open it in Claude, and make it yours. Everything’s below.';
+    rows.push(link('Download the CRM Build (.zip)',ASSETS.repo));
     rows.push(link('The Simple CRM Blueprint',ASSETS.blueprint));
-    rows.push(link('The Context File for Claude',ASSETS.context));
+    rows.push(link('Download the Context File (CLAUDE.md)',ASSETS.context));
     purchaseValue=17;
     if(sid){
       nextOffer.style.display='';

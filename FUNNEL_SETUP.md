@@ -36,15 +36,17 @@ Add these:
 | `FUNNEL_STRIPE_WEBHOOK_SECRET` | `whsec_…` | Signing secret for the funnel webhook (step 3). Falls back to `STRIPE_WEBHOOK_SECRET` if you reuse one endpoint. |
 | `FUNNEL_CLIENT_ID` | *(optional)* | Defaults to VTM's email-list client `27231196-0aac-45f6-ad3c-427bf09310ae` (same as the public lead form). |
 
-## 2. Fill in the asset URLs
+## 2. Asset delivery
 
-Open `New/crm-welcome.html` and replace the `ASSETS` block placeholders (all marked `#TODO`):
+Most deliverables are wired. The welcome page (`New/crm-welcome.html`) `ASSETS`:
 
-- `blueprint` — the free Simple CRM Blueprint PDF/guide link
-- `repo` — the CRM Build GitHub repo (or a repo-access/invite page)
-- `context` — the Context File for Claude download (the $9 bump)
-- `lab` — the CRM Lab member area
-- `bookCall` — already set to `/book-call` (your existing Google Calendar redirect)
+- `blueprint` — ✅ the hosted guide at `/crm-blueprint-guide` (free; PDF download button lives on it).
+- `repo` — ✅ **gated**. `/api/funnel/download?asset=repo&session=…` verifies the paid Stripe session, then 302s to a short-lived signed URL for `crm-build.zip` in the **private** `funnel-deliverables` Supabase bucket. The example GitHub repo (`vernontm/CRM_build_example`) is now **private**, so the build is only available through purchase.
+- `context` — ✅ **gated**, same endpoint with `asset=context` → `CLAUDE.md` (the $9 bump). Requires the order included the bump (`metadata.bump='1'`).
+- `lab` — ⏳ still a `#TODO` (the CRM Lab member area doesn't exist yet — fill in when CRM Lab is built).
+- `bookCall` — ✅ `/book-call` (your Google Calendar redirect).
+
+**Endpoint:** `New/api/funnel/download.js`. **Files:** private bucket `funnel-deliverables/crm-build.zip` + `funnel-deliverables/CLAUDE.md` on the VTM Supabase project. To update either deliverable, re-zip / re-edit and re-upload (overwrite) to that bucket — the signed URLs always serve the latest. Source of truth for the build is the (now private) `CRM_build_example` repo; the Context File source is `CLAUDE.md`.
 
 ## 3. Stripe webhook
 
