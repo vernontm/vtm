@@ -83,6 +83,7 @@
     { "source": "/crm-build", "destination": "/crm-build.html" },
     { "source": "/crm-lab", "destination": "/crm-lab.html" },
     { "source": "/crm-welcome", "destination": "/crm-welcome.html" },
+    { "source": "/crm-blueprint-guide", "destination": "/crm-blueprint-guide.html" },
     { "source": "/claude-guide", "destination": "/claude-guide.html" },
     { "source": "/services", "destination": "/services.html" },
     { "source": "/resources", "destination": "/resources/index.html" },

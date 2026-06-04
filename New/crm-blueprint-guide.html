@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<title>The Simple CRM Blueprint — Build Your Own CRM With AI | Vernon Tech &amp; Media</title>
+<meta name="description" content="A free step-by-step guide to building your own simple CRM with AI — the stack, the steps in order, and the exact prompts that do the heavy lifting. No CS degree required." />
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#ff9b26;--orange-dark:#ee4c27;
+    --bg:#111112;--surface:#1a1a1c;--surface-2:#222226;--code:#16161a;
+    --border:rgba(255,255,255,0.08);--text:#f0f0f0;--muted:#9a9aa3;--green:#37d27a;
+    --soft:rgba(255,155,38,0.12);
+    --fd:'Plus Jakarta Sans',sans-serif;--fb:'DM Sans',sans-serif;--fm:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--fb);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -8%,rgba(255,155,38,0.10),transparent 70%);pointer-events:none;z-index:0;}
+  a{color:var(--orange);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  .wrap{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:0 22px;}
+  .bar{position:relative;z-index:1;background:linear-gradient(90deg,var(--orange-dark),var(--orange));color:#fff;font-size:13px;font-weight:700;text-align:center;padding:9px 16px;}
+
+  header.hero{text-align:center;padding:48px 0 26px;}
+  .eyebrow{display:inline-block;font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--orange);background:var(--soft);border:1px solid rgba(255,155,38,0.35);padding:6px 12px;border-radius:999px;margin-bottom:18px;}
+  h1{font-family:var(--fd);font-size:40px;line-height:1.08;font-weight:800;letter-spacing:-0.02em;}
+  h1 .hot{color:var(--orange);}
+  .deck{margin:16px auto 0;font-size:18px;color:var(--muted);max-width:34em;}
+  .byline{margin-top:18px;font-size:13px;color:var(--muted);letter-spacing:.02em;}
+
+  figure{margin:30px 0;}
+  figure img{width:100%;border-radius:14px;border:1px solid var(--border);box-shadow:0 30px 70px rgba(0,0,0,0.55);display:block;}
+  figcaption{margin-top:10px;font-size:13px;color:var(--muted);text-align:center;}
+
+  h2{font-family:var(--fd);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);font-weight:800;margin:0 0 6px;}
+  .step{padding:40px 0;border-top:1px solid var(--border);}
+  .step h3{font-family:var(--fd);font-size:27px;line-height:1.2;font-weight:800;letter-spacing:-0.015em;margin-bottom:14px;}
+  .step p{margin:0 0 14px;color:#e3e3e8;}
+  .step p .muted,.muted{color:var(--muted);}
+  .step ul{margin:0 0 16px;padding-left:0;list-style:none;}
+  .step ul li{position:relative;padding-left:26px;margin:9px 0;color:#e3e3e8;}
+  .step ul li::before{content:'';position:absolute;left:4px;top:11px;width:7px;height:7px;border-radius:50%;background:var(--orange);}
+  code.inl{font-family:var(--fm);font-size:13px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;color:#ffd9a8;}
+
+  .code{background:var(--code);border:1px solid var(--border);border-radius:12px;margin:18px 0;overflow:hidden;}
+  .code .clabel{font-family:var(--fm);font-size:11px;color:var(--muted);padding:9px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);display:flex;align-items:center;gap:8px;}
+  .code .clabel::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--orange);box-shadow:14px 0 0 #2a2a30,28px 0 0 #2a2a30;margin-right:18px;}
+  .code pre{margin:0;padding:16px;overflow-x:auto;font-family:var(--fm);font-size:13px;line-height:1.6;color:#d6d6dd;}
+  .code pre .t{color:#7fd1b9;}.code pre .k{color:#ff9b26;}.code pre .c{color:#6b6b76;font-style:italic;}.code pre .s{color:#ffd9a8;}
+
+  .prompt{background:linear-gradient(180deg,rgba(255,155,38,0.07),rgba(255,155,38,0.02));border:1px solid rgba(255,155,38,0.4);border-radius:14px;padding:18px 20px;margin:20px 0;}
+  .prompt .ph{display:flex;align-items:center;gap:8px;font-family:var(--fd);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--orange);margin-bottom:10px;}
+  .prompt .ph .ico{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:grid;place-items:center;font-size:11px;}
+  .prompt p{font-family:var(--fm);font-size:13px;line-height:1.65;color:#f1e2cf;margin:0;}
+
+  .note{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:10px;padding:14px 18px;margin:18px 0;font-size:14.5px;color:#d8d8de;}
+  .note b{color:var(--text);}
+
+  .cta{margin:8px 0 0;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:30px 26px;text-align:center;box-shadow:0 0 0 1px rgba(255,155,38,0.12);}
+  .cta h3{font-family:var(--fd);font-size:24px;font-weight:800;margin-bottom:10px;}
+  .cta p{color:var(--muted);max-width:30em;margin:0 auto 20px;}
+  .btn{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:16px;padding:15px 28px;border-radius:12px;box-shadow:0 12px 30px rgba(255,155,38,0.3);}
+  .btn:hover{text-decoration:none;transform:translateY(-1px);}
+
+  footer{border-top:1px solid var(--border);padding:30px 0 56px;color:var(--muted);font-size:13px;text-align:center;position:relative;z-index:1;}
+
+  @media(max-width:680px){
+    header.hero{padding:30px 0 18px;}
+    h1{font-size:30px;}
+    .deck{font-size:16px;}
+    .step{padding:32px 0;}
+    .step h3{font-size:23px;}
+    .code pre{font-size:12px;}
+  }
+</style>
+</head>
+<body>
+<div class="bar">The Simple CRM Blueprint · Free guide from Vernon Tech &amp; Media</div>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">The Simple CRM Blueprint</span>
+    <h1>Build your own CRM <span class="hot">with AI</span>, step by step</h1>
+    <p class="deck">This is the exact system I use to build a CRM you actually own. The stack, the steps in order, and the prompts that do the heavy lifting. Even if you've never written a real line of code.</p>
+    <p class="byline">By Ray Vernon · Vernon Tech &amp; Media</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <figure>
+    <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-dashboard.jpg" alt="The finished CRM dashboard" />
+    <figcaption>This is what you're building — a real, working CRM dashboard you own outright.</figcaption>
+  </figure>
+</div>
+
+<!-- INTRO -->
+<section class="step" style="border-top:none;">
+  <div class="wrap">
+    <h2>Before you start</h2>
+    <h3>Why build instead of rent</h3>
+    <p>Most people pay $100 to $500 a month for a CRM like HubSpot, GoHighLevel, or Salesforce, and after years of paying, they own nothing. The truth is, the core of a CRM is simple: a place to store people, track deals, and see what's happening. With AI doing the heavy lifting, you can build one yourself in an afternoon and own it forever.</p>
+    <p>I'm not a classically trained developer. I built this whole thing with AI, and this guide hands you the exact path. Whether you want to run your own business on it or build CRMs for other people, this is your starting point.</p>
+    <div class="note"><b>How to use the prompts.</b> Throughout this guide you'll see orange <span style="color:var(--orange)">AI PROMPT</span> boxes. Paste them into your AI coding assistant (Claude, Cursor, or similar) alongside the step, and it will generate the code for you. You describe what you want, the AI builds it.</div>
+  </div>
+</section>
+
+<!-- STEP 1 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 1</h2>
+    <h3>Set up your tools</h3>
+    <p>You need four free things. Don't overthink this, just get them installed.</p>
+    <ul>
+      <li><b>Node.js</b> — the engine that runs the project. Download the LTS version from <a href="https://nodejs.org">nodejs.org</a>.</li>
+      <li><b>A code editor with AI</b> — <a href="https://cursor.com">Cursor</a> or VS Code. This is where you paste the prompts and the AI writes the code.</li>
+      <li><b>A Supabase account</b> — your free database and login system. Sign up at <a href="https://supabase.com">supabase.com</a>.</li>
+      <li><b>An AI assistant</b> — Claude or the AI built into Cursor. This is your build partner.</li>
+    </ul>
+    <p class="muted">That's the entire stack: <b>Node + React + Supabase</b>, deployed on Vercel. Nothing exotic, nothing expensive.</p>
+  </div>
+</section>
+
+<!-- STEP 2 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 2</h2>
+    <h3>Create the project</h3>
+    <p>Open your terminal and scaffold a fresh React app with Vite. This gives you a clean, fast foundation in seconds.</p>
+    <div class="code"><div class="clabel">terminal</div><pre><span class="c"># create the project</span>
+npm create vite@latest crm -- --template react
+
+<span class="c"># move into it and install</span>
+cd crm
+npm install
+
+<span class="c"># start it up</span>
+npm run dev</pre></div>
+    <p>Open the local URL it prints (usually <code class="inl">http://localhost:5173</code>) and you'll see the starter page. That's your blank canvas.</p>
+  </div>
+</section>
+
+<!-- STEP 3 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 3</h2>
+    <h3>Install the three libraries you need</h3>
+    <p>A CRM needs three things on top of React: pages that route, a database client, and icons. That's it.</p>
+    <div class="code"><div class="clabel">terminal</div><pre>npm install react-router-dom @supabase/supabase-js lucide-react</pre></div>
+    <ul>
+      <li><code class="inl">react-router-dom</code> — moves between pages (Dashboard, Leads, Settings).</li>
+      <li><code class="inl">@supabase/supabase-js</code> — talks to your database and handles login.</li>
+      <li><code class="inl">lucide-react</code> — clean icons for the sidebar and cards.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- STEP 4 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 4</h2>
+    <h3>Connect your database</h3>
+    <p>In Supabase, create a new project. Once it's ready, go to <b>Project Settings → API</b> and copy two things: your <b>Project URL</b> and your <b>anon public key</b>.</p>
+    <p>Back in your project, create a file called <code class="inl">.env</code> in the root and paste them in. The <code class="inl">VITE_</code> prefix is required.</p>
+    <div class="code"><div class="clabel">.env</div><pre>VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here</pre></div>
+    <p>Now make one small file that connects to Supabase. Everything in the app will use this.</p>
+    <div class="code"><div class="clabel">src/lib/supabase.js</div><pre><span class="k">import</span> { createClient } <span class="k">from</span> <span class="s">'@supabase/supabase-js'</span>
+
+<span class="k">const</span> url = import.meta.env.VITE_SUPABASE_URL
+<span class="k">const</span> key = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+<span class="k">export const</span> <span class="t">supabase</span> = createClient(url, key)</pre></div>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a Supabase client file at src/lib/supabase.js using @supabase/supabase-js. Read the URL and anon key from Vite env vars (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) and throw a clear error if either is missing."</p></div>
+  </div>
+</section>
+
+<!-- STEP 5 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 5</h2>
+    <h3>Add login</h3>
+    <p>A CRM needs a front door. Supabase gives you authentication for free. You'll build two pieces: an <b>auth context</b> that remembers who's logged in, and a <b>login screen</b>.</p>
+    <figure>
+      <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-login.jpg" alt="The CRM login screen" />
+      <figcaption>Your login screen — clean, branded, and powered by Supabase auth.</figcaption>
+    </figure>
+    <p>The auth context wraps your whole app and tracks the session. Here's the heart of it:</p>
+    <div class="code"><div class="clabel">src/context/AuthContext.jsx (core)</div><pre><span class="c">// track the session and expose sign in / sign out</span>
+<span class="k">const</span> [session, setSession] = useState(<span class="k">null</span>)
+
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => setSession(data.session))
+  <span class="k">const</span> { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+  <span class="k">return</span> () => data.subscription.unsubscribe()
+}, [])
+
+<span class="k">const</span> signIn = (email, password) =>
+  supabase.auth.signInWithPassword({ email, password })
+
+<span class="k">const</span> signOut = () => supabase.auth.signOut()</pre></div>
+    <p>Then your app shows the login screen when nobody's signed in, and the CRM when they are:</p>
+    <div class="code"><div class="clabel">src/App.jsx (the gate)</div><pre><span class="k">if</span> (loading) <span class="k">return</span> &lt;LoadingScreen /&gt;
+<span class="k">if</span> (!session) <span class="k">return</span> &lt;Login /&gt;
+<span class="k">return</span> &lt;AppShell /&gt;   <span class="c">// the real CRM</span></pre></div>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Build a React AuthContext using my Supabase client. It should track the session with getSession and onAuthStateChange, and expose signIn(email, password), signOut(), and the current user. Then create a dark, modern Login page with email + password fields that calls signIn and shows any error. Use Plus Jakarta Sans for headings and an orange gradient button."</p></div>
+  </div>
+</section>
+
+<!-- STEP 6 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 6</h2>
+    <h3>Build the shell — sidebar, header, routing</h3>
+    <p>Every CRM has the same frame: a sidebar on the left to move around, a header on top, and a content area in the middle. Build it once and every page lives inside it.</p>
+    <p>Wire up routing in <code class="inl">main.jsx</code> with a <code class="inl">BrowserRouter</code>, then define your pages in <code class="inl">App.jsx</code>:</p>
+    <div class="code"><div class="clabel">src/App.jsx (routes)</div><pre>&lt;Routes&gt;
+  &lt;Route path=<span class="s">"/"</span> element={&lt;Navigate to=<span class="s">"/dashboard"</span> /&gt;} /&gt;
+  &lt;Route path=<span class="s">"/dashboard"</span> element={&lt;Dashboard /&gt;} /&gt;
+  &lt;Route path=<span class="s">"/leads"</span>     element={&lt;Leads /&gt;} /&gt;
+  &lt;Route path=<span class="s">"/contacts"</span>  element={&lt;Contacts /&gt;} /&gt;
+  &lt;Route path=<span class="s">"/deals"</span>     element={&lt;Deals /&gt;} /&gt;
+  &lt;Route path=<span class="s">"/settings"</span>  element={&lt;Settings /&gt;} /&gt;
+&lt;/Routes&gt;</pre></div>
+    <p>The sidebar is just a list of links with icons. The active page gets a highlight. Don't hand-build all of it — describe it and let AI generate it.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a fixed 220px sidebar component for a dark CRM. Brand at the top ('CRM' with a lightning icon), a Workspace nav with Dashboard, Leads, Contacts, Deals, Meetings, Email, and Settings using lucide-react icons and react-router NavLink. Highlight the active link with a subtle red gradient and a glowing dot. At the bottom, a user chip and a Sign out button. Then build a sticky header with the page title, a search input, a notifications bell, and a red 'New' button."</p></div>
+  </div>
+</section>
+
+<!-- STEP 7 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 7</h2>
+    <h3>Build the dashboard</h3>
+    <p>The dashboard is the home screen: a row of stat cards and a recent-activity feed. Each stat card is a small reusable component you feed a label, a number, an icon, and a trend.</p>
+    <div class="code"><div class="clabel">src/components/StatCard.jsx (shape)</div><pre>&lt;StatCard label=<span class="s">"Total Leads"</span> value=<span class="s">"1,284"</span>
+          icon={UserPlus} delta=<span class="s">"+12.5%"</span> /&gt;</pre></div>
+    <p>Lay four of them in a grid, add a "Recent Activity" card underneath, and your home screen is done.</p>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a reusable StatCard component (label, value, icon, delta) styled as a dark rounded card with an icon chip and a trend pill. Then build a Dashboard page with a responsive grid of four StatCards (Total Leads, Active Deals, Revenue, Meetings This Week) and a 'Recent Activity' card below it that lists recent events with an icon, a description, and a timestamp."</p></div>
+  </div>
+</section>
+
+<!-- STEP 8 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 8</h2>
+    <h3>Add real data — your leads table</h3>
+    <p>Now make it a real CRM. In Supabase, open the <b>SQL Editor</b> and create a <code class="inl">leads</code> table. This is where your actual contacts live.</p>
+    <div class="code"><div class="clabel">Supabase SQL Editor</div><pre><span class="k">create table</span> leads (
+  id uuid <span class="k">primary key default</span> gen_random_uuid(),
+  name text <span class="k">not null</span>,
+  email text,
+  company text,
+  status text <span class="k">default</span> <span class="s">'new'</span>,
+  value numeric <span class="k">default</span> 0,
+  created_at timestamptz <span class="k">default</span> now()
+);</pre></div>
+    <p>Then read it into a Leads page. Supabase makes the query one line:</p>
+    <div class="code"><div class="clabel">src/pages/Leads.jsx (fetch)</div><pre><span class="k">const</span> { data: leads } = <span class="k">await</span> supabase
+  .from(<span class="s">'leads'</span>)
+  .select(<span class="s">'*'</span>)
+  .order(<span class="s">'created_at'</span>, { ascending: <span class="k">false</span> })</pre></div>
+    <p>Map those rows into a table and you've got this:</p>
+    <figure>
+      <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/guide-leads.jpg" alt="The CRM leads table with real data" />
+      <figcaption>A live leads table — name, company, status, value, last contact. Your data, your CRM.</figcaption>
+    </figure>
+    <div class="prompt"><div class="ph"><span class="ico">✦</span> AI Prompt — copy &amp; paste</div><p>"Create a 'leads' table in Supabase with id, name, email, company, status, value, and created_at. Then build a Leads page in React that fetches all leads from Supabase, ordered by newest, and renders them in a dark table with a colored avatar, name + email, company, a status pill (new / qualified / negotiation / won), the value formatted as currency, and a relative 'last contact' time. Add a 'New Lead' button that opens a form to insert a row."</p></div>
+    <div class="note">Repeat this same pattern for <b>Contacts</b> and <b>Deals</b>: a table in Supabase, a page that reads it, a form that writes to it. That's 80% of any CRM.</div>
+  </div>
+</section>
+
+<!-- STEP 9 -->
+<section class="step">
+  <div class="wrap">
+    <h2>Step 9</h2>
+    <h3>Put it online</h3>
+    <p>Your CRM runs on your machine. To use it anywhere, deploy it free on Vercel.</p>
+    <ul>
+      <li>Push your project to a new <b>GitHub</b> repo.</li>
+      <li>Go to <a href="https://vercel.com">vercel.com</a>, click <b>Import Project</b>, and pick your repo.</li>
+      <li>Add your two environment variables (<code class="inl">VITE_SUPABASE_URL</code> and <code class="inl">VITE_SUPABASE_ANON_KEY</code>) in the Vercel settings.</li>
+      <li>Click <b>Deploy</b>. In about a minute you'll have a live URL.</li>
+    </ul>
+    <p>That's it. You now own a working CRM, running on the internet, that costs you nothing per month.</p>
+  </div>
+</section>
+
+<!-- WRAP -->
+<section class="step">
+  <div class="wrap">
+    <h2>You did it</h2>
+    <h3>What you just built</h3>
+    <p>A real CRM with login, a dashboard, and a live leads table — on a stack you own (React + Supabase + Vercel). From here you extend it the exact same way: a Supabase table, a page that reads it, a form that writes to it. Contacts, a deal pipeline, email, notes. Same pattern, every time.</p>
+    <div class="cta">
+      <h3>Want the finished build instead of starting from scratch?</h3>
+      <p>Skip the setup. Get the full repo for the exact CRM in this guide, clone it, and customize from there.</p>
+      <a class="btn" href="/crm-build">Get the CRM Build →</a>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">By Ray Vernon · Vernon Tech &amp; Media · <a href="https://vernontm.com">vernontm.com</a></div></footer>
+</body>
+</html>
