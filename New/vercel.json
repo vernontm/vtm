@@ -45,7 +45,10 @@
     "api/crm/personalize-script.js": { "maxDuration": 30 },
     "api/crm/email-template-ai.js": { "maxDuration": 60 },
     "api/crm/email-edit-ai.js": { "maxDuration": 120 },
-    "api/crm/mailerlite-groups.js": { "maxDuration": 30 }
+    "api/crm/mailerlite-groups.js": { "maxDuration": 30 },
+    "api/funnel/checkout.js": { "maxDuration": 30 },
+    "api/funnel/oto.js": { "maxDuration": 30 },
+    "api/funnel/stripe-webhook.js": { "maxDuration": 30 }
   },
   "crons": [
     { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" },
@@ -76,6 +79,10 @@
     { "source": "/portfolio", "destination": "/portfolio.html" },
     { "source": "/free-gift", "destination": "/free-gift.html" },
     { "source": "/ai-quiz", "destination": "/ai-quiz.html" },
+    { "source": "/crm-blueprint", "destination": "/crm-blueprint.html" },
+    { "source": "/crm-build", "destination": "/crm-build.html" },
+    { "source": "/crm-lab", "destination": "/crm-lab.html" },
+    { "source": "/crm-welcome", "destination": "/crm-welcome.html" },
     { "source": "/claude-guide", "destination": "/claude-guide.html" },
     { "source": "/services", "destination": "/services.html" },
     { "source": "/resources", "destination": "/resources/index.html" },

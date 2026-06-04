@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<title>The CRM Build — clone my exact CRM | Vernon Tech &amp; Media</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<!-- TODO(analytics): paste Meta Pixel + GA4 base tags here. -->
+<style>
+  :root{
+    --orange:#ff9b26; --orange-dark:#ee4c27;
+    --bg:#111112; --surface:#1a1a1c; --surface-2:#222226;
+    --border:rgba(255,255,255,0.08); --text:#f0f0f0; --muted:#8a8a93; --green:#37d27a;
+    --soft:rgba(255,155,38,0.12);
+    --fd:'Plus Jakarta Sans',sans-serif; --fb:'DM Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--fb);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(255,155,38,0.10),transparent 70%);pointer-events:none;z-index:0;}
+  .wrap{position:relative;z-index:1;max-width:740px;margin:0 auto;padding:26px 22px 64px;text-align:center;}
+  .nav{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:22px;}
+  .nav .dot{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;box-shadow:0 0 24px rgba(255,155,38,0.4);}
+  .nav .brand{font-family:var(--fd);font-weight:800;font-size:18px;}
+  .eyebrow{display:inline-block;font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--orange);background:var(--soft);border:1px solid rgba(255,155,38,0.35);padding:6px 12px;border-radius:999px;margin-bottom:16px;}
+  h1{font-family:var(--fd);font-size:38px;line-height:1.07;font-weight:800;letter-spacing:-0.02em;margin-bottom:14px;}
+  h1 .hot{color:var(--orange);}
+  .sub{font-size:17.5px;color:var(--muted);max-width:560px;margin:0 auto 26px;}
+  .video{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:1px solid var(--border);background:#000;box-shadow:0 26px 60px rgba(0,0,0,0.55);margin:0 auto 28px;max-width:640px;}
+  .video video{width:100%;height:100%;object-fit:cover;display:block;background:#000;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:30px 26px;box-shadow:0 30px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(255,155,38,0.16);margin-bottom:20px;text-align:left;}
+  .card .label{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:800;color:var(--orange);margin-bottom:8px;text-align:center;}
+  .card h2{font-family:var(--fd);font-size:24px;font-weight:800;letter-spacing:-0.015em;text-align:center;margin-bottom:8px;}
+  .card .clead{font-size:15px;color:var(--muted);text-align:center;margin-bottom:22px;}
+  ul.bn{list-style:none;padding:0;margin:0 0 22px;display:flex;flex-direction:column;gap:11px;}
+  ul.bn li{display:flex;align-items:flex-start;gap:11px;font-size:15px;line-height:1.5;}
+  .tk{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;margin-top:1px;}
+  .bump{display:flex;gap:12px;align-items:flex-start;background:rgba(255,155,38,0.07);border:1px dashed rgba(255,155,38,0.5);border-radius:12px;padding:16px;margin-bottom:22px;cursor:pointer;}
+  .bump input{margin-top:3px;width:18px;height:18px;accent-color:var(--orange);flex-shrink:0;cursor:pointer;}
+  .bump .bt{font-family:var(--fd);font-weight:700;font-size:15px;}
+  .bump .bd{color:var(--muted);font-size:13.5px;margin-top:3px;}
+  .priceline{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 0 20px;}
+  .price-pill{display:inline-block;padding:6px 16px;border-radius:10px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:26px;letter-spacing:-0.02em;box-shadow:0 8px 20px rgba(255,155,38,0.3);}
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;max-width:480px;margin:0 auto;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:17px;padding:18px;border-radius:13px;border:none;cursor:pointer;box-shadow:0 12px 30px rgba(255,155,38,0.3);transition:transform .12s;}
+  .btn:hover{transform:translateY(-1px);}
+  .btn:disabled{opacity:.7;cursor:wait;transform:none;}
+  .btn.ghost{background:transparent;border:1.5px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-weight:600;font-size:14px;padding:13px 22px;box-shadow:none;margin-top:10px;}
+  .btn.ghost:hover{background:rgba(255,255,255,0.05);color:#fff;transform:none;}
+  .micro{margin-top:14px;font-size:12px;color:var(--muted);text-align:center;}
+  .err{display:none;background:rgba(238,76,39,0.1);border:1px solid rgba(238,76,39,0.4);color:#ffb4ab;border-radius:10px;padding:10px 14px;font-size:13px;margin:14px auto 0;max-width:480px;text-align:left;}
+  .err.show{display:block;}
+  /* decline modal */
+  .modal{position:fixed;inset:0;background:rgba(8,8,10,0.8);backdrop-filter:blur(4px);z-index:50;display:none;align-items:center;justify-content:center;padding:22px;}
+  .modal.open{display:flex;}
+  .modal .box{background:var(--surface-2);border:1px solid var(--border);border-radius:18px;padding:30px 26px;max-width:460px;text-align:center;box-shadow:0 40px 90px rgba(0,0,0,0.6);}
+  .modal h3{font-family:var(--fd);font-size:23px;font-weight:800;margin-bottom:12px;}
+  .modal p{color:var(--muted);font-size:15px;margin-bottom:14px;}
+  .modal ul{list-style:none;text-align:left;margin:0 0 18px;display:flex;flex-direction:column;gap:9px;}
+  .modal ul li{display:flex;gap:9px;font-size:14px;}
+  .xx{color:#ff7a6b;font-weight:800;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav"><span class="dot">V</span><span class="brand">Vernon Tech &amp; Media</span></div>
+
+  <span class="eyebrow">Step 2 · The shortcut</span>
+  <h1>Skip the build. <span class="hot">Clone my exact CRM.</span></h1>
+  <p class="sub">The blueprint shows you how. This hands you the finished thing. The full repo for the CRM I built from scratch with AI, yours to clone and own.</p>
+
+  <div class="video">
+    <!-- TODO: upload the CRM tripwire video to this path -->
+    <video src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-tripwire.mp4" controls playsinline preload="metadata"></video>
+  </div>
+
+  <div class="card">
+    <div class="label">The CRM Build · What you get</div>
+    <h2>The complete CRM repo</h2>
+    <p class="clead">The exact codebase from the build series. Contacts, deals, pipelines, the whole system. Done.</p>
+    <ul class="bn">
+      <li><span class="tk">✓</span> The full GitHub repo, yours to clone and keep forever</li>
+      <li><span class="tk">✓</span> Contacts, deals, and pipelines already built</li>
+      <li><span class="tk">✓</span> The same working CRM I actually use, not a demo</li>
+      <li><span class="tk">✓</span> Customize it however you want, on your own machine</li>
+    </ul>
+
+    <label class="bump" for="bump">
+      <input type="checkbox" id="bump" />
+      <span>
+        <span class="bt">Add: The Context File for Claude — just $9</span>
+        <span class="bd">The exact file I feed to Claude that knows how this CRM was built. Drop it into Claude and it walks you through every step to the same outcome. Like having me build it next to you.</span>
+      </span>
+    </label>
+
+    <div class="priceline"><span class="price-pill" id="pricePill">$17 once</span></div>
+
+    <button class="btn" id="buy">Get the CRM Build →</button>
+    <button class="btn ghost" id="decline">No thanks, I'll build it myself</button>
+
+    <p class="micro">Yours forever · Not a subscription · 30-day money-back guarantee</p>
+    <div class="err" id="err"></div>
+  </div>
+
+  <p class="micro" style="max-width:560px;margin:0 auto;">$17 for the difference between reading about a CRM and actually owning one. It's on me, not you. If this repo doesn't give you a real working CRM, email me inside 30 days and I'll refund every penny.</p>
+</div>
+
+<!-- Shame-decline modal -->
+<div class="modal" id="modal">
+  <div class="box">
+    <h3>Hold on. Are you sure?</h3>
+    <p>If you pass on this, here's what you're choosing to do the hard way:</p>
+    <ul>
+      <li><span class="xx">✕</span> Rebuild contacts, deals, and pipelines from scratch</li>
+      <li><span class="xx">✕</span> Burn a weekend wiring up what's already done for you</li>
+      <li><span class="xx">✕</span> Troubleshoot at midnight with no working reference</li>
+    </ul>
+    <button class="btn" id="stay">Actually, give me the CRM Build →</button>
+    <button class="btn ghost" id="confirmDecline">No thanks, send me the free blueprint</button>
+    <div class="err" id="merr"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var bump=document.getElementById('bump'),pill=document.getElementById('pricePill');
+  var buy=document.getElementById('buy'),decline=document.getElementById('decline');
+  var modal=document.getElementById('modal'),stay=document.getElementById('stay'),confirmDecline=document.getElementById('confirmDecline');
+  var err=document.getElementById('err'),merr=document.getElementById('merr');
+  var email='';try{email=(localStorage.getItem('funnel_email')||'').toLowerCase();}catch(_){}
+
+  function price(){return bump.checked?26:17;}
+  function showErr(el,m){el.textContent=m||'Something went wrong. Please try again.';el.classList.add('show');}
+  bump.addEventListener('change',function(){pill.textContent='$'+price()+' once';});
+
+  try{if(window.fbq)fbq('track','ViewContent',{content_name:'CRM Build',content_category:'tripwire',value:17,currency:'USD'});}catch(_){}
+  try{if(window.gtag)gtag('event','view_item',{currency:'USD',value:17,items:[{item_id:'crm-build',item_name:'The CRM Build'}]});}catch(_){}
+
+  buy.addEventListener('click',async function(){
+    buy.disabled=true;buy.textContent='Taking you to checkout…';err.classList.remove('show');
+    var val=price();
+    try{if(window.fbq)fbq('track','InitiateCheckout',{value:val,currency:'USD',num_items:bump.checked?2:1});}catch(_){}
+    try{if(window.gtag)gtag('event','begin_checkout',{currency:'USD',value:val});}catch(_){}
+    try{
+      var r=await fetch('/api/funnel/checkout',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({product:'tripwire',bump:bump.checked,email:email})});
+      var j=await r.json().catch(function(){return{};});
+      if(!r.ok||!j.url)throw new Error(j.error||'Could not start checkout.');
+      window.location.href=j.url;
+    }catch(e){buy.disabled=false;buy.textContent='Get the CRM Build →';showErr(err,e.message);}
+  });
+
+  decline.addEventListener('click',function(){modal.classList.add('open');});
+  stay.addEventListener('click',function(){modal.classList.remove('open');buy.click();});
+  modal.addEventListener('click',function(e){if(e.target===modal)modal.classList.remove('open');});
+
+  confirmDecline.addEventListener('click',async function(){
+    confirmDecline.disabled=true;confirmDecline.textContent='Sending your blueprint…';merr.classList.remove('show');
+    try{
+      var r=await fetch('/api/funnel/decline',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email:email,offer:'tripwire'})});
+      var j=await r.json().catch(function(){return{};});
+      window.location.href=(j&&j.redirect)||'/crm-welcome?product=blueprint';
+    }catch(e){confirmDecline.disabled=false;confirmDecline.textContent='No thanks, send me the free blueprint';showErr(merr,e.message);}
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<title>Wait — founding offer | CRM Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<!-- TODO(analytics): paste Meta Pixel + GA4 base tags here. -->
+<style>
+  :root{
+    --orange:#ff9b26; --orange-dark:#ee4c27;
+    --bg:#111112; --surface:#1a1a1c; --surface-2:#222226;
+    --border:rgba(255,255,255,0.08); --text:#f0f0f0; --muted:#8a8a93; --green:#37d27a;
+    --fd:'Plus Jakarta Sans',sans-serif; --fb:'DM Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--fb);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .glow{position:fixed;inset:0;background:radial-gradient(70% 50% at 50% 0%,rgba(255,155,38,0.22),transparent 60%);pointer-events:none;z-index:0;}
+  .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:30px 22px 64px;text-align:center;}
+  .nav{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:22px;}
+  .nav .dot{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;box-shadow:0 0 24px rgba(255,155,38,0.4);}
+  .nav .brand{font-family:var(--fd);font-weight:800;font-size:18px;}
+  .check{width:58px;height:58px;border-radius:50%;background:rgba(55,210,122,0.14);border:1px solid rgba(55,210,122,0.5);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;}
+  .paid{color:var(--muted);font-size:14px;margin-bottom:18px;}
+  .alert{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;box-shadow:0 10px 24px rgba(255,155,38,0.3);margin-bottom:16px;}
+  h1{font-family:var(--fd);font-size:36px;line-height:1.08;font-weight:800;letter-spacing:-0.02em;margin-bottom:14px;}
+  h1 .hot{color:var(--orange);}
+  .sub{font-size:17px;color:var(--muted);max-width:560px;margin:0 auto 26px;}
+  .video{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:1px solid var(--border);background:#000;box-shadow:0 22px 50px rgba(0,0,0,0.5);margin:0 auto 26px;max-width:640px;}
+  .video video{width:100%;height:100%;object-fit:cover;display:block;background:#000;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:30px 26px;box-shadow:0 30px 80px rgba(0,0,0,0.55),0 0 0 1px rgba(255,155,38,0.18);margin-bottom:20px;text-align:left;}
+  .card .label{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:800;color:var(--orange);margin-bottom:8px;text-align:center;}
+  .card h2{font-family:var(--fd);font-size:24px;font-weight:800;letter-spacing:-0.015em;text-align:center;margin-bottom:8px;}
+  .card .clead{font-size:15px;color:var(--muted);text-align:center;margin-bottom:22px;}
+  ul.bn{list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:11px;}
+  ul.bn li{display:flex;align-items:flex-start;gap:11px;font-size:15px;line-height:1.5;}
+  .tk{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;margin-top:1px;}
+  .anchor{background:rgba(255,155,38,0.07);border:1px solid rgba(255,155,38,0.3);border-radius:12px;padding:14px 16px;font-size:14px;color:var(--text);margin-bottom:20px;text-align:center;}
+  .anchor b{color:var(--orange);}
+  .priceline{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0 20px;}
+  .price-pill{display:inline-block;padding:6px 18px;border-radius:10px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:28px;letter-spacing:-0.02em;box-shadow:0 8px 20px rgba(255,155,38,0.3);}
+  .price-note{font-size:12.5px;color:var(--muted);}
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;max-width:480px;margin:0 auto;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:17px;padding:18px;border-radius:13px;border:none;cursor:pointer;box-shadow:0 12px 30px rgba(255,155,38,0.3);transition:transform .12s;}
+  .btn:hover{transform:translateY(-1px);}
+  .btn:disabled{opacity:.7;cursor:wait;transform:none;}
+  .btn.ghost{background:transparent;border:1.5px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-weight:600;font-size:14px;padding:13px 22px;box-shadow:none;margin-top:10px;}
+  .btn.ghost:hover{background:rgba(255,255,255,0.05);color:#fff;transform:none;}
+  .micro{margin-top:14px;font-size:12px;color:var(--muted);text-align:center;}
+  .err{display:none;background:rgba(238,76,39,0.1);border:1px solid rgba(238,76,39,0.4);color:#ffb4ab;border-radius:10px;padding:10px 14px;font-size:13px;margin:14px auto 0;max-width:480px;text-align:left;}
+  .err.show{display:block;}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="wrap">
+  <div class="nav"><span class="dot">V</span><span class="brand">Vernon Tech &amp; Media</span></div>
+
+  <div class="check">✓</div>
+  <p class="paid">Payment received. Your CRM Build is ready on the next page.</p>
+
+  <div class="alert">Founding offer · Only on this page</div>
+  <h1>Want me to <span class="hot">teach you to build the advanced version?</span></h1>
+  <p class="sub">The repo is the engine. CRM Lab is where I hand you the keys, and show you exactly how to wire in everything that makes it powerful.</p>
+
+  <div class="video">
+    <!-- TODO: upload the CRM Lab (welcome/OTO) video to this path -->
+    <video src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-lab.mp4" controls playsinline preload="metadata"></video>
+  </div>
+
+  <div class="card">
+    <div class="label">CRM Lab · Founding Annual</div>
+    <h2>A full year inside the Lab</h2>
+    <p class="clead">This is where I teach you to build the advanced version of what you just grabbed, step by step, with me there to answer your questions.</p>
+    <ul class="bn">
+      <li><span class="tk">✓</span> How to deploy the build and get it live</li>
+      <li><span class="tk">✓</span> Wire in Gmail so your email runs right inside it</li>
+      <li><span class="tk">✓</span> Plug in AI so it works for you</li>
+      <li><span class="tk">✓</span> Add voice calling and every other feature I built into my CRM</li>
+      <li><span class="tk">✓</span> Live group office hours + community, so you're never stuck alone</li>
+      <li><span class="tk">✓</span> A founding 1:1 onboarding call with me to get you started</li>
+    </ul>
+
+    <div class="anchor">GoHighLevel runs <b>$99 to $497 a month</b>, forever, and you own nothing. A full year in CRM Lab is <b>$297 once</b>, and you learn to build and own your own.</div>
+
+    <div class="priceline">
+      <span class="price-pill">$297 / year</span>
+      <span class="price-note">Founding rate locked · billed once for the full year</span>
+    </div>
+
+    <button class="btn" id="yes">Yes, lock in my founding year →</button>
+    <button class="btn ghost" id="no">No thanks, just my CRM Build</button>
+
+    <p class="micro">Charged to the same card, no re-entry · Founding spots are limited</p>
+    <div class="err" id="err"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var params=new URLSearchParams(location.search);
+  var sessionId=params.get('session')||'';
+  var yes=document.getElementById('yes'),no=document.getElementById('no'),err=document.getElementById('err');
+  function showErr(m){err.textContent=m||'Something went wrong. Please try again.';err.classList.add('show');}
+
+  try{if(window.fbq)fbq('track','ViewContent',{content_name:'CRM Lab Founding Annual',content_category:'oto',value:297,currency:'USD'});}catch(_){}
+  try{if(window.gtag)gtag('event','view_item',{currency:'USD',value:297,items:[{item_id:'crm-lab',item_name:'CRM Lab Founding Annual'}]});}catch(_){}
+
+  yes.addEventListener('click',async function(){
+    if(!sessionId){showErr('We could not find your order. Please go back and try again.');return;}
+    yes.disabled=true;yes.textContent='Locking it in…';err.classList.remove('show');
+    try{if(window.fbq)fbq('track','InitiateCheckout',{content_name:'CRM Lab Founding Annual',value:297,currency:'USD',num_items:1});}catch(_){}
+    try{if(window.gtag)gtag('event','begin_checkout',{currency:'USD',value:297});}catch(_){}
+    try{
+      var r=await fetch('/api/funnel/oto',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({session:sessionId})});
+      var j=await r.json().catch(function(){return{};});
+      if(!r.ok)throw new Error(j.error||'Charge failed.');
+      if(j.requires_checkout&&j.fallback_url){window.location.href=j.fallback_url;return;}
+      window.location.href=j.redirect||('/crm-welcome?product=crm-lab&upgraded=1&session='+encodeURIComponent(sessionId));
+    }catch(e){yes.disabled=false;yes.textContent='Yes, lock in my founding year →';showErr(e.message);}
+  });
+
+  no.addEventListener('click',function(){
+    window.location.href='/crm-welcome?product=crm-build&session='+encodeURIComponent(sessionId);
+  });
+})();
+</script>
+</body>
+</html>

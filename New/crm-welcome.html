@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<title>You're in | Vernon Tech &amp; Media</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<!-- TODO(analytics): paste Meta Pixel + GA4 base tags here. -->
+<style>
+  :root{
+    --orange:#ff9b26; --orange-dark:#ee4c27;
+    --bg:#111112; --surface:#1a1a1c; --surface-2:#222226;
+    --border:rgba(255,255,255,0.08); --text:#f0f0f0; --muted:#8a8a93; --green:#37d27a;
+    --fd:'Plus Jakarta Sans',sans-serif; --fb:'DM Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--fb);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .glow{position:fixed;inset:0;background:radial-gradient(70% 50% at 50% 0%,rgba(55,210,122,0.12),transparent 60%);pointer-events:none;z-index:0;}
+  .wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:34px 22px 64px;text-align:center;}
+  .nav{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:24px;}
+  .nav .dot{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;box-shadow:0 0 24px rgba(255,155,38,0.4);}
+  .nav .brand{font-family:var(--fd);font-weight:800;font-size:18px;}
+  .check{width:60px;height:60px;border-radius:50%;background:rgba(55,210,122,0.14);border:1px solid rgba(55,210,122,0.5);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;}
+  h1{font-family:var(--fd);font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px;}
+  .sub{font-size:16.5px;color:var(--muted);max-width:540px;margin:0 auto 30px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px 24px;margin-bottom:18px;text-align:left;}
+  .card.next{box-shadow:0 24px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(255,155,38,0.2);}
+  .card .label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:800;color:var(--orange);margin-bottom:8px;}
+  .card h2{font-family:var(--fd);font-size:22px;font-weight:800;letter-spacing:-0.015em;margin-bottom:8px;}
+  .card p{color:var(--muted);font-size:14.5px;margin-bottom:16px;}
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:16px;padding:16px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 12px 30px rgba(255,155,38,0.28);transition:transform .12s;text-decoration:none;}
+  .btn:hover{transform:translateY(-1px);}
+  .dl{display:flex;flex-direction:column;gap:10px;}
+  .dl a{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:14px 16px;font-size:14.5px;font-weight:600;color:var(--text);transition:border-color .15s;}
+  .dl a:hover{border-color:rgba(255,155,38,0.4);}
+  .dl a .arrow{color:var(--orange);font-weight:800;}
+  .muted{color:var(--muted);font-size:13px;margin-top:6px;}
+  footer{border-top:1px solid var(--border);padding:24px 0 0;color:var(--muted);font-size:13px;margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="wrap">
+  <div class="nav"><span class="dot">V</span><span class="brand">Vernon Tech &amp; Media</span></div>
+
+  <div class="check">✓</div>
+  <h1 id="headline">You're in.</h1>
+  <p class="sub" id="subhead">Everything's below. Grab your access and let's get you building.</p>
+
+  <!-- SECOND-CHANCE OFFER: shown only to buyers who haven't joined CRM Lab. Hidden for Lab members. -->
+  <div class="card next" id="nextOffer" style="display:none;">
+    <div class="label">One more thing</div>
+    <h2>Want me to teach you to build the advanced version?</h2>
+    <p>Inside CRM Lab I show you exactly how to deploy it and wire in Gmail, AI, voice calling, and every feature, with me there to answer your questions. Founding rate locked.</p>
+    <a class="btn" id="nextOfferCta" href="/crm-lab">Look at CRM Lab →</a>
+  </div>
+
+  <!-- DOWNLOADS -->
+  <div class="card">
+    <div class="label">Your access</div>
+    <div class="dl" id="downloads"></div>
+    <p class="muted">Bookmark this page. A copy of these links is also on its way to your inbox.</p>
+  </div>
+
+  <footer>By Ray Vernon · Vernon Tech &amp; Media · <a href="https://vernontm.com" style="color:var(--orange);">vernontm.com</a></footer>
+</div>
+
+<script>
+/* ============================================================
+   TODO(assets): fill these in with the real URLs before launch.
+   ============================================================ */
+var ASSETS = {
+  blueprint: 'https://vernontm.com/#TODO-blueprint-pdf',     // free Simple CRM Blueprint (PDF/guide)
+  repo:      'https://github.com/#TODO-crm-repo',            // the CRM Build repo (or repo-access page)
+  context:   'https://vernontm.com/#TODO-context-file',      // The Context File for Claude (the $9 bump)
+  lab:       'https://vernontm.com/#TODO-crm-lab-access',    // CRM Lab member area
+  bookCall:  '/book-call'                                    // founding 1:1 onboarding (Google Calendar redirect)
+};
+
+(function(){
+  var params=new URLSearchParams(location.search);
+  var product=params.get('product')||'crm-build';
+  var upgraded=params.get('upgraded')==='1';
+  var headline=document.getElementById('headline');
+  var subhead=document.getElementById('subhead');
+  var nextOffer=document.getElementById('nextOffer');
+  var dl=document.getElementById('downloads');
+
+  function link(label,href){return '<a href="'+href+'" target="_blank" rel="noopener"><span>'+label+'</span><span class="arrow">Open →</span></a>';}
+
+  var sid=params.get('session')||'';
+  var rows=[], purchaseValue=0;
+
+  if(product==='blueprint'){
+    // Decliner — deliver the free guide only. Second chance = the $17 build.
+    headline.textContent='Here’s your free blueprint.';
+    subhead.textContent='As promised, the Simple CRM Blueprint is yours. Dig in, and when you’re ready for the shortcut, the full build is one click away.';
+    rows.push(link('The Simple CRM Blueprint (free guide)',ASSETS.blueprint));
+    nextOffer.style.display='';
+    nextOffer.querySelector('.label').textContent='When you’re ready for the shortcut';
+    nextOffer.querySelector('h2').textContent='Skip the build — clone my exact CRM';
+    nextOffer.querySelector('p').textContent='The full working repo, yours to clone and own for $17.';
+    nextOffer.querySelector('a').setAttribute('href','/crm-build');
+    nextOffer.querySelector('a').textContent='Get the CRM Build →';
+  } else if(product==='crm-lab'){
+    headline.textContent='You’re a founding member.';
+    subhead.textContent='Your CRM Build, the blueprint, and a full year inside CRM Lab are all unlocked. Let’s get you set up.';
+    rows.push(link('CRM Lab — member area',ASSETS.lab));
+    rows.push(link('Book your founding 1:1 onboarding call',ASSETS.bookCall));
+    rows.push(link('The CRM Build (repo)',ASSETS.repo));
+    rows.push(link('The Simple CRM Blueprint',ASSETS.blueprint));
+    rows.push(link('The Context File for Claude',ASSETS.context));
+    purchaseValue=297;
+    // Lab member — already at the top of the ladder. No second-chance card.
+  } else {
+    // crm-build (and bump) buyer — second chance = join CRM Lab (one-click against saved card).
+    headline.textContent='Your CRM Build is ready.';
+    subhead.textContent='Clone the repo, follow the blueprint, and make it yours. Everything’s below.';
+    rows.push(link('The CRM Build (repo)',ASSETS.repo));
+    rows.push(link('The Simple CRM Blueprint',ASSETS.blueprint));
+    rows.push(link('The Context File for Claude',ASSETS.context));
+    purchaseValue=17;
+    if(sid){
+      nextOffer.style.display='';
+      nextOffer.querySelector('a').setAttribute('href','/crm-lab?session='+encodeURIComponent(sid));
+    }
+  }
+
+  dl.innerHTML=rows.join('');
+
+  // Fire Purchase once on load (deduped server-side via session id if you wire CAPI).
+  if(purchaseValue>0){
+    try{if(window.fbq)fbq('track','Purchase',{value:purchaseValue,currency:'USD'},sid?{eventID:sid}:undefined);}catch(_){}
+    try{if(window.gtag)gtag('event','purchase',{value:purchaseValue,currency:'USD',transaction_id:sid});}catch(_){}
+  }
+})();
+</script>
+</body>
+</html>

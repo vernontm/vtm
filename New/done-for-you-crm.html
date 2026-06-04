@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<title>Done-For-You CRM — we build it for you | Vernon Tech &amp; Media</title>
+<meta name="description" content="Don't have time to build it yourself? My team builds your custom CRM, gets it live, and hands it over on a call. One time, and you own it." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<!-- TODO(analytics): paste Meta Pixel + GA4 base tags here. -->
+<style>
+  :root{
+    --orange:#ff9b26; --orange-dark:#ee4c27;
+    --bg:#111112; --surface:#1a1a1c; --surface-2:#222226;
+    --border:rgba(255,255,255,0.08); --text:#f0f0f0; --muted:#8a8a93; --green:#37d27a;
+    --soft:rgba(255,155,38,0.12);
+    --fd:'Plus Jakarta Sans',sans-serif; --fb:'DM Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--fb);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;text-align:center;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(255,155,38,0.10),transparent 70%);pointer-events:none;z-index:0;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:0 22px;}
+  .nav{display:flex;align-items:center;justify-content:center;gap:11px;padding:24px 0;}
+  .nav .dot{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;box-shadow:0 0 24px rgba(255,155,38,0.4);}
+  .nav .brand{font-family:var(--fd);font-weight:800;font-size:18px;}
+  .hero{padding:10px 0 40px;}
+  .eyebrow{display:inline-block;font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--orange);background:var(--soft);border:1px solid rgba(255,155,38,0.35);padding:6px 12px;border-radius:999px;margin-bottom:16px;}
+  h1{font-family:var(--fd);font-size:40px;line-height:1.06;font-weight:800;letter-spacing:-0.02em;}
+  h1 .hot{color:var(--orange);}
+  .sub{margin:16px auto 26px;font-size:18px;color:var(--muted);max-width:34em;}
+  .video{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:1px solid var(--border);background:#000;box-shadow:0 26px 60px rgba(0,0,0,0.55);margin:0 auto 8px;max-width:640px;}
+  .video video{width:100%;height:100%;object-fit:cover;display:block;background:#000;}
+  section.block{padding:44px 0;border-top:1px solid var(--border);}
+  .klabel{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:800;color:var(--orange);margin-bottom:10px;}
+  h2{font-family:var(--fd);font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-0.015em;}
+  .lead{font-size:16.5px;color:var(--muted);max-width:38em;margin:14px auto 0;}
+  ul.bn{list-style:none;padding:0;margin:26px auto 0;max-width:520px;display:flex;flex-direction:column;gap:12px;text-align:left;}
+  ul.bn li{display:flex;align-items:flex-start;gap:11px;font-size:15.5px;}
+  .tk{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;margin-top:1px;}
+  .math{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px;max-width:560px;margin:26px auto 0;}
+  .math .big{font-family:var(--fd);font-size:30px;font-weight:800;color:var(--orange);letter-spacing:-0.02em;}
+  .math p{color:var(--muted);font-size:15px;margin-top:8px;}
+  .price-pill{display:inline-block;padding:8px 20px;border-radius:12px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:24px;letter-spacing:-0.02em;box-shadow:0 8px 20px rgba(255,155,38,0.3);margin-bottom:8px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;font-family:var(--fd);font-weight:800;font-size:17px;padding:17px 34px;border-radius:13px;border:none;cursor:pointer;box-shadow:0 12px 30px rgba(255,155,38,0.3);transition:transform .12s;}
+  .btn:hover{transform:translateY(-1px);}
+  .micro{margin-top:14px;font-size:13px;color:var(--muted);}
+  footer{border-top:1px solid var(--border);padding:28px 0 48px;color:var(--muted);font-size:13px;position:relative;z-index:1;}
+  @media(max-width:820px){h1{font-size:31px;}.video{max-width:none;}}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="nav"><span class="dot">V</span><span class="brand">Vernon Tech &amp; Media</span></div></div>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Done-For-You · Limited builds per month</span>
+    <h1>Don't have the time to build it? <span class="hot">Just make it my problem.</span></h1>
+    <p class="sub">Let my team build the whole thing for you, so you can stop renting software and start owning it. You hand it over, and a few days later you have a custom CRM built for how your business actually works.</p>
+    <div class="video">
+      <!-- TODO: upload the Done-For-You video to this path -->
+      <video src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/landing-media/crm-dfy.mp4" controls playsinline preload="metadata"></video>
+    </div>
+  </div>
+</header>
+
+<section class="block">
+  <div class="wrap">
+    <p class="klabel">Here's what we do for you</p>
+    <h2>You barely lift a finger</h2>
+    <ul class="bn">
+      <li><span class="tk">✓</span> We take the build and customize it to your business</li>
+      <li><span class="tk">✓</span> We set up your contacts, deals, and pipeline the way you run things</li>
+      <li><span class="tk">✓</span> We connect the pieces you need and get it deployed and live</li>
+      <li><span class="tk">✓</span> We hop on a call and hand over the whole system</li>
+      <li><span class="tk">✓</span> A full year of CRM Lab included, so it keeps growing with you</li>
+    </ul>
+    <p class="lead" style="margin-top:22px;">It's simple. You book, you answer a few questions about your business, we build it, and then you go live. This is a real hands-on build, not a template dump. If something isn't right when we hand it off, we fix it.</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <p class="klabel">The math</p>
+    <h2>It pays for itself in under a year</h2>
+    <div class="math">
+      <div class="big">$100/mo = $1,200 a year. Forever.</div>
+      <p>That's what you pay to rent a CRM you'll never own. The Done-For-You build is $997, one time. In under twelve months it has already paid for itself, and after that you own it outright. Year two, year three, that's money staying in your pocket.</p>
+    </div>
+    <p class="micro" style="max-width:520px;margin:18px auto 0;">Already a CRM Lab member? Your $297 credits toward this, so your build is $700. Just mention it on the call.</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <span class="price-pill">$997 one time</span>
+    <h2 style="margin-top:6px;">Want this done for you?</h2>
+    <p class="lead">We take a limited number of builds each month, because every one gets real attention. When the spots are gone, they're gone.</p>
+    <div style="margin-top:24px;">
+      <a class="btn" id="book" href="/book-call" target="_blank" rel="noopener">Book your Done-For-You build →</a>
+    </div>
+    <p class="micro">You'll pick a time to talk through your build. Claim your spot now.</p>
+  </div>
+</section>
+
+<footer><div class="wrap">By Ray Vernon · Vernon Tech &amp; Media · <a href="https://vernontm.com" style="color:var(--orange);">vernontm.com</a></div></footer>
+
+<script>
+  try{if(window.fbq)fbq('track','ViewContent',{content_name:'Done-For-You CRM',content_category:'high-ticket',value:997,currency:'USD'});}catch(_){}
+  try{if(window.gtag)gtag('event','view_item',{currency:'USD',value:997,items:[{item_id:'dfy-crm',item_name:'Done-For-You CRM'}]});}catch(_){}
+  var book=document.getElementById('book');
+  if(book)book.addEventListener('click',function(){
+    try{if(window.fbq)fbq('track','Lead',{content_name:'DFY book call',value:997,currency:'USD'});}catch(_){}
+    try{if(window.gtag)gtag('event','generate_lead',{currency:'USD',value:997});}catch(_){}
+  });
+</script>
+</body>
+</html>
