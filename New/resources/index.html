@@ -18,40 +18,144 @@
             --font-body: 'DM Sans', sans-serif;
         }
         html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,155,38,0.09) 0%, transparent 70%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(238,76,39,0.05) 0%, transparent 60%); pointer-events: none; z-index: 0; }
         .page { position: relative; z-index: 1; }
 
-        nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+        nav { padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; animation: fadeDown 0.6s ease both; position: relative; z-index: 101; }
         .logo img { height: 46px; width: auto; display: block; }
         .nav-links { display: flex; align-items: center; gap: 28px; }
         .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
         .nav-links a.nav-mode-btn { background: var(--surface-2); padding: 8px 18px; border-radius: 8px; color: var(--text); font-weight: 500; }
         .nav-links a:hover { color: var(--text); }
+        .hamburger { width: 40px; height: 40px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; transition: all 0.2s; }
+        .hamburger:hover { border-color: rgba(255,155,38,0.3); background: rgba(255,155,38,0.06); }
+        .hamburger span { display: block; width: 18px; height: 1.5px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+        .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4.5px, 4.5px); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4.5px, -4.5px); }
+        .menu-overlay { position: fixed; inset: 0; background: rgba(17,17,18,0.97); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .menu-overlay.open { opacity: 1; visibility: visible; }
+        .menu-overlay a { color: var(--text); text-decoration: none; font-family: var(--font-display); font-size: 28px; font-weight: 700; opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s, color 0.2s; }
+        .menu-overlay.open a { opacity: 1; transform: translateY(0); }
+        .menu-overlay.open a:nth-child(1) { transition-delay: 0.08s; }
+        .menu-overlay.open a:nth-child(2) { transition-delay: 0.14s; }
+        .menu-overlay.open a:nth-child(3) { transition-delay: 0.20s; }
+        .menu-overlay.open a:nth-child(4) { transition-delay: 0.26s; }
+        .menu-overlay.open a:nth-child(5) { transition-delay: 0.32s; }
+        .menu-overlay a:hover { color: var(--orange); }
 
-        .page-hero { text-align: center; padding: 60px 20px 40px; }
+        .page-hero { text-align: center; padding: 60px 20px 32px; animation: fadeUp 0.7s 0.1s ease both; }
         .page-hero .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,155,38,0.1); border: 1px solid rgba(255,155,38,0.2); color: var(--orange); padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px; }
         .page-hero h1 { font-family: var(--font-display); font-size: clamp(2.2rem, 5.5vw, 4rem); font-weight: 300; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 12px; }
         .page-hero h1 em { font-style: normal; font-weight: 800; color: var(--orange); }
-        .page-hero p { font-size: 1rem; color: var(--muted); max-width: 520px; margin: 0 auto; }
+        .page-hero p { font-size: 1rem; color: var(--muted); max-width: 540px; margin: 0 auto; }
 
-        .cats-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
-        .cats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .cat-card {
-            background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-            padding: 28px; text-decoration: none; color: var(--text); transition: all 0.25s;
-            display: flex; flex-direction: column; gap: 10px;
+        /* Gate */
+        #gateWrap { display: flex; align-items: center; justify-content: center; padding: 20px 20px 80px; animation: fadeUp 0.7s 0.2s ease both; }
+        .gate-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 44px 40px; max-width: 460px; width: 100%; text-align: center; }
+        .gate-card .lock-icon { width: 52px; height: 52px; background: rgba(255,155,38,0.1); border: 1px solid rgba(255,155,38,0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+        .gate-card .lock-icon svg { width: 24px; height: 24px; color: var(--orange); stroke: var(--orange); }
+        .gate-card h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+        .gate-card > p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+        .gate-form { display: flex; flex-direction: column; gap: 14px; }
+        .gate-form input { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; transition: border-color 0.2s; width: 100%; }
+        .gate-form input::placeholder { color: var(--muted); }
+        .gate-form input:focus { border-color: rgba(255,155,38,0.4); }
+        .gate-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #fff; border: none; border-radius: 10px; padding: 14px 28px; font-family: var(--font-display); font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(255,155,38,0.25); width: 100%; }
+        .gate-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,155,38,0.35); }
+        .gate-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+        .gate-error { font-size: 13px; color: #f87171; margin-top: 4px; min-height: 18px; }
+        .gate-legal { font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+
+        /* Content (hidden until unlocked) */
+        #contentWrap { display: none; }
+        .library-section { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; animation: fadeUp 0.7s ease both; }
+
+        .tag-filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 28px; }
+        .tag-pill {
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--muted); padding: 8px 16px; border-radius: 100px;
+            font-family: var(--font-body); font-size: 13px; cursor: pointer;
+            transition: all 0.18s; display: inline-flex; align-items: center; gap: 7px;
         }
-        .cat-card:hover { border-color: rgba(255,155,38,0.3); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,155,38,0.06); }
-        .cat-emoji { font-size: 2.5rem; }
-        .cat-name { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
-        .cat-sub { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
-        .cat-arrow { margin-top: auto; color: var(--orange); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .tag-pill:hover { color: var(--text); border-color: rgba(255,155,38,0.25); }
+        .tag-pill.active { background: rgba(255,155,38,0.12); border-color: rgba(255,155,38,0.45); color: var(--orange); font-weight: 600; }
+        .tag-pill .pill-emoji { font-size: 14px; line-height: 1; }
+        .tag-pill .count { font-size: 11px; color: var(--muted); background: var(--bg); padding: 1px 7px; border-radius: 100px; }
+        .tag-pill.active .count { color: var(--orange); background: rgba(255,155,38,0.08); }
 
-        @media (max-width: 900px) { .cats-grid { grid-template-columns: repeat(2, 1fr); } }
+        .prompts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .prompt-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: all 0.25s; cursor: pointer; }
+        .prompt-card:hover { border-color: rgba(255,155,38,0.25); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,155,38,0.06); }
+        .card-body { padding: 18px 20px 20px; }
+        .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .card-emoji { font-size: 1.3rem; line-height: 1; }
+        .card-tag {
+            display: inline-block; font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.06em; text-transform: uppercase; color: var(--orange);
+            background: rgba(255,155,38,0.1); border: 1px solid rgba(255,155,38,0.2);
+            padding: 3px 10px; border-radius: 100px;
+        }
+        .card-cat {
+            display: inline-block; font-size: 0.65rem; font-weight: 600;
+            letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+            background: var(--surface-2); border: 1px solid var(--border);
+            padding: 3px 9px; border-radius: 100px;
+        }
+        .card-body h3 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
+        .card-body p { font-size: 0.85rem; color: var(--muted); font-weight: 300; line-height: 1.55; }
+
+        /* Prompt modal */
+        .prompt-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 40px; backdrop-filter: blur(8px); opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .prompt-modal.open { opacity: 1; visibility: visible; }
+        .prompt-modal-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; z-index: 201; opacity: 0.7; transition: opacity 0.2s; line-height: 1; }
+        .prompt-modal-close:hover { opacity: 1; }
+        .prompt-modal-inner { max-width: 860px; width: 100%; max-height: 90vh; overflow: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+        .prompt-modal-header { padding: 24px 28px 0; }
+        .prompt-modal-header .card-tag { margin-bottom: 8px; }
+        .prompt-modal-header h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+        .prompt-modal-header p { font-size: 13px; color: var(--muted); line-height: 1.5; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .prompt-modal-body { padding: 20px 28px 28px; display: flex; flex-direction: column; gap: 20px; }
+        .prompt-modal-body iframe { border-radius: 10px; display: block; border: 0; }
+
+        .yt-wrap { position: relative; width: 100%; padding-bottom: 56.25%; border-radius: 10px; overflow: hidden; background: #000; }
+        .yt-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+        .code-parts { display: flex; flex-direction: column; gap: 14px; }
+        .code-part { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .code-part-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,155,38,0.06); border-bottom: 1px solid var(--border); }
+        .code-part-label { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--orange); display: flex; align-items: center; gap: 8px; }
+        .code-part-lang { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--bg); padding: 3px 8px; border-radius: 100px; }
+        .code-copy-btn { background: var(--bg); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-body); transition: all 0.15s; }
+        .code-copy-btn:hover { color: var(--orange); border-color: rgba(255,155,38,0.3); }
+        .code-copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); }
+        .code-part pre { margin: 0; padding: 14px 16px; overflow-x: auto; max-height: 420px; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.6; color: #d7d7d9; white-space: pre; }
+        .code-part pre::-webkit-scrollbar { height: 6px; width: 6px; }
+        .code-part pre::-webkit-scrollbar-thumb { background: #3a3a40; border-radius: 3px; }
+
+        .section-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+
+        .cta-section { text-align: center; padding: 20px 40px 80px; }
+        .cta-section h2 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 16px; }
+        .cta-section p { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
+        .cta-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--orange); color: #111; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; }
+        .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,155,38,0.3); }
+
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 900px) { .prompts-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 640px) {
             nav { padding: 20px 24px; }
             .nav-links a:not(.nav-mode-btn) { display: none; }
-            .cats-grid { grid-template-columns: 1fr; }
+            .page-hero { padding: 40px 16px 24px; }
+            #gateWrap { padding: 16px 20px 60px; }
+            .gate-card { padding: 32px 24px; }
+            .library-section { padding: 0 16px 60px; }
+            .prompts-grid { grid-template-columns: 1fr; }
+            .prompt-modal { padding: 16px; }
+            .prompt-modal-inner { border-radius: 16px; max-height: 95vh; }
+            .cta-section { padding: 20px 20px 60px; }
         }
     </style>
 </head>
@@ -63,51 +167,359 @@
                 <a href="/services">Services</a>
                 <a href="/contact">Contact Us</a>
                 <a href="/book-call">Book a Call</a>
+                <a href="/creators" class="nav-mode-btn">For Creators</a>
+                <button class="hamburger" id="menuToggle" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </nav>
 
-        <div class="page-hero">
-            <div class="badge">Free Resources</div>
-            <h1>Pick your <em>path</em></h1>
-            <p>Prompts, dashboards, code, and walkthroughs — organized by what you're building.</p>
+        <div class="menu-overlay" id="menuOverlay">
+            <a href="/services">Services</a>
+            <a href="/portfolio">Portfolio</a>
+            <a href="/about">About Us</a>
+            <a href="/contact">Contact</a>
+            <a href="/creators">For Creators</a>
         </div>
 
-        <section class="cats-section">
-            <div class="cats-grid" id="catsGrid">
-                <div style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">Loading…</div>
+        <div class="page-hero">
+            <div class="badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+                Free Resources
             </div>
-        </section>
+            <h1>Prompts, dashboards, <em>and walkthroughs</em></h1>
+            <p>Every resource we've made — filter by category to find what fits.</p>
+        </div>
+
+        <!-- Gate -->
+        <div id="gateWrap">
+            <div class="gate-card">
+                <div class="lock-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                </div>
+                <h2>Unlock Free Access</h2>
+                <p>Drop your name and email to unlock every prompt, dashboard, and walkthrough.</p>
+                <form class="gate-form" id="gateForm">
+                    <input type="text" id="gateName" placeholder="Your name" autocomplete="name" required />
+                    <input type="email" id="gateEmail" placeholder="Your email" autocomplete="email" required />
+                    <div class="gate-error" id="gateError"></div>
+                    <button type="submit" class="gate-btn" id="gateBtn">
+                        <span id="gateBtnText">Get Free Access</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                    <p class="gate-legal">No spam. Unsubscribe anytime.</p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div id="contentWrap">
+            <section class="library-section">
+                <div class="tag-filters" id="catFilters"></div>
+                <div class="prompts-grid" id="promptsGrid"></div>
+            </section>
+            <div class="cta-section">
+                <h2>Want us to build this for you?</h2>
+                <p>We automate systems for traders, creators, and businesses. Let's talk.</p>
+                <a href="/contact" class="cta-btn">Get in Touch &#8594;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="prompt-modal" id="promptModal">
+        <button class="prompt-modal-close" id="modalClose">&times;</button>
+        <div class="prompt-modal-inner">
+            <div class="prompt-modal-header">
+                <span class="card-tag" id="modalTag"></span>
+                <h2 id="modalTitle"></h2>
+                <p id="modalDesc"></p>
+            </div>
+            <div class="prompt-modal-body" id="modalBody"></div>
+        </div>
     </div>
 
     <script>
+        // ── Menu ──
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('open');
+            menuOverlay.classList.toggle('open');
+            document.body.style.overflow = menuOverlay.classList.contains('open') ? 'hidden' : '';
+        });
+        menuOverlay.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                menuToggle.classList.remove('open');
+                menuOverlay.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+        });
+
+        // ── State ──
+        let RESOURCES = [];
+        let CATEGORIES = [];
+        let CAT_BY_SLUG = {};
+        let ACTIVE_CAT = 'all';
+
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
         }
 
-        async function loadCats() {
+        function getYoutubeEmbed(url) {
+            if (!url) return null;
+            const vidMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            const listMatch = url.match(/[?&]list=([A-Za-z0-9_-]+)/);
+            if (vidMatch && listMatch) return `https://www.youtube.com/embed/${vidMatch[1]}?list=${listMatch[1]}`;
+            if (listMatch) return `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}`;
+            if (vidMatch) return `https://www.youtube.com/embed/${vidMatch[1]}`;
+            return null;
+        }
+
+        async function loadAll() {
             try {
-                const res = await fetch('/api/resources');
+                const res = await fetch('/api/resources?all=1');
                 const data = await res.json();
-                const cats = data.categories || [];
-                const grid = document.getElementById('catsGrid');
-                if (!cats.length) {
-                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">No categories yet. Check back soon!</div>`;
-                    return;
-                }
-                grid.innerHTML = cats.map(c => `
-                    <a class="cat-card" href="/resources/${escapeHtml(c.slug)}">
-                        <div class="cat-emoji">${escapeHtml(c.emoji || '📚')}</div>
-                        <div class="cat-name">${escapeHtml(c.name)}</div>
-                        <div class="cat-sub">${escapeHtml(c.hero_subtitle || '')}</div>
-                        <div class="cat-arrow">Explore &rarr;</div>
-                    </a>
-                `).join('');
+                CATEGORIES = data.categories || [];
+                CAT_BY_SLUG = CATEGORIES.reduce((acc, c) => { acc[c.slug] = c; return acc; }, {});
+                RESOURCES = (data.resources || []).map(r => ({
+                    id: r.id,
+                    category_slug: r.category_slug,
+                    emoji: r.emoji || '📊',
+                    tag: r.tag || 'Resource',
+                    title: r.title,
+                    desc: r.description || '',
+                    iframeSrc: r.iframe_src || '',
+                    youtubeUrl: r.youtube_url || '',
+                    codeBlocks: Array.isArray(r.code_blocks) ? r.code_blocks : [],
+                }));
             } catch (e) {
-                console.error(e);
-                document.getElementById('catsGrid').innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">Couldn't load resources right now.</div>`;
+                console.error('Failed to load resources', e);
             }
         }
-        loadCats();
+
+        // ── Filter pills (categories) ──
+        function renderFilters() {
+            const wrap = document.getElementById('catFilters');
+            if (!RESOURCES.length) { wrap.innerHTML = ''; return; }
+            const counts = RESOURCES.reduce((acc, r) => {
+                acc[r.category_slug] = (acc[r.category_slug] || 0) + 1;
+                return acc;
+            }, {});
+            const orderedSlugs = CATEGORIES
+                .map(c => c.slug)
+                .filter(s => counts[s]);
+            const pills = [
+                { key: 'all', label: 'All', emoji: '✨', count: RESOURCES.length },
+                ...orderedSlugs.map(s => ({
+                    key: s,
+                    label: CAT_BY_SLUG[s]?.name || s,
+                    emoji: CAT_BY_SLUG[s]?.emoji || '📚',
+                    count: counts[s],
+                })),
+            ];
+            wrap.innerHTML = pills.map(p => `
+                <button class="tag-pill ${p.key === ACTIVE_CAT ? 'active' : ''}" data-cat="${escapeHtml(p.key)}">
+                    <span class="pill-emoji">${escapeHtml(p.emoji)}</span>
+                    ${escapeHtml(p.label)}
+                    <span class="count">${p.count}</span>
+                </button>
+            `).join('');
+            wrap.querySelectorAll('.tag-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    ACTIVE_CAT = btn.dataset.cat;
+                    renderFilters();
+                    renderCards();
+                });
+            });
+        }
+
+        // ── Cards ──
+        function renderCards() {
+            const grid = document.getElementById('promptsGrid');
+            const visible = ACTIVE_CAT === 'all'
+                ? RESOURCES
+                : RESOURCES.filter(r => r.category_slug === ACTIVE_CAT);
+            if (!visible.length) {
+                grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">Nothing here yet. Check back soon!</p>`;
+                return;
+            }
+            grid.innerHTML = visible.map((p) => {
+                const idx = RESOURCES.indexOf(p);
+                const catName = CAT_BY_SLUG[p.category_slug]?.name || p.category_slug;
+                return `
+                <div class="prompt-card" data-index="${idx}">
+                    <div class="card-body">
+                        <div class="card-head">
+                            <span class="card-emoji">${escapeHtml(p.emoji)}</span>
+                            <span class="card-tag">${escapeHtml(p.tag)}</span>
+                            <span class="card-cat">${escapeHtml(catName)}</span>
+                        </div>
+                        <h3>${escapeHtml(p.title)}</h3>
+                        <p>${escapeHtml(p.desc)}</p>
+                    </div>
+                </div>`;
+            }).join('');
+            grid.querySelectorAll('.prompt-card').forEach(card => {
+                card.addEventListener('click', () => openPrompt(RESOURCES[+card.dataset.index]));
+            });
+        }
+
+        // ── Modal ──
+        const modal = document.getElementById('promptModal');
+        const modalClose = document.getElementById('modalClose');
+
+        function openPrompt(p) {
+            document.getElementById('modalTag').textContent = p.tag;
+            document.getElementById('modalTitle').textContent = p.title;
+            document.getElementById('modalDesc').textContent = p.desc;
+
+            const body = document.getElementById('modalBody');
+            body.innerHTML = '';
+
+            const ytEmbed = getYoutubeEmbed(p.youtubeUrl);
+            if (ytEmbed) {
+                const section = document.createElement('div');
+                section.innerHTML = `
+                    <div class="section-label">Walkthrough</div>
+                    <div class="yt-wrap"><iframe src="${ytEmbed}" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+                `;
+                body.appendChild(section);
+            }
+
+            if (p.codeBlocks && p.codeBlocks.length > 0) {
+                const wrap = document.createElement('div');
+                wrap.innerHTML = `<div class="section-label">Prompts &amp; Code</div>`;
+                const parts = document.createElement('div');
+                parts.className = 'code-parts';
+                p.codeBlocks.forEach((b, i) => {
+                    const label = b.label || `Part ${i + 1}`;
+                    const lang = b.language || 'text';
+                    const code = b.code || '';
+                    const el = document.createElement('div');
+                    el.className = 'code-part';
+                    el.innerHTML = `
+                        <div class="code-part-head">
+                            <div class="code-part-label">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                                ${escapeHtml(label)}
+                                <span class="code-part-lang">${escapeHtml(lang)}</span>
+                            </div>
+                            <button class="code-copy-btn" data-copy="${i}">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                Copy
+                            </button>
+                        </div>
+                        <pre>${escapeHtml(code)}</pre>
+                    `;
+                    parts.appendChild(el);
+                });
+                wrap.appendChild(parts);
+                body.appendChild(wrap);
+
+                parts.querySelectorAll('.code-copy-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const idx = +btn.dataset.copy;
+                        try {
+                            await navigator.clipboard.writeText(p.codeBlocks[idx].code || '');
+                            btn.classList.add('copied');
+                            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied`;
+                            setTimeout(() => {
+                                btn.classList.remove('copied');
+                                btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy`;
+                            }, 1800);
+                        } catch (_) {}
+                    });
+                });
+            }
+
+            if (p.iframeSrc) {
+                const section = document.createElement('div');
+                section.innerHTML = `
+                    <div class="section-label">Interactive Embed</div>
+                    <iframe src="${escapeHtml(p.iframeSrc)}" title="${escapeHtml(p.title)}" width="100%" height="580" allow="clipboard-write" allowfullscreen></iframe>
+                `;
+                body.appendChild(section);
+            }
+
+            if (!ytEmbed && (!p.codeBlocks || !p.codeBlocks.length) && !p.iframeSrc) {
+                body.innerHTML = `<p style="color:var(--muted);text-align:center;padding:40px 20px;">This resource has no content yet. Check back soon!</p>`;
+            }
+
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+            document.getElementById('modalBody').innerHTML = '';
+        }
+
+        modalClose.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (modal.classList.contains('open')) closeModal();
+                if (menuOverlay.classList.contains('open')) {
+                    menuToggle.classList.remove('open');
+                    menuOverlay.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+
+        // ── Gate ──
+        const STORAGE_KEY = 'vtm_resources_unlocked_all';
+        function showContent() {
+            document.getElementById('gateWrap').style.display = 'none';
+            document.getElementById('contentWrap').style.display = 'block';
+        }
+
+        (async () => {
+            await loadAll();
+            // Honor existing per-category unlock OR the unified unlock
+            const unifiedUnlocked = localStorage.getItem(STORAGE_KEY);
+            const anyCatUnlocked = CATEGORIES.some(c => localStorage.getItem(`vtm_resources_unlocked_${c.slug}`));
+            if (unifiedUnlocked || anyCatUnlocked) {
+                showContent();
+                renderFilters();
+                renderCards();
+            }
+        })();
+
+        document.getElementById('gateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('gateName').value.trim();
+            const email = document.getElementById('gateEmail').value.trim();
+            const btn = document.getElementById('gateBtn');
+            const btnText = document.getElementById('gateBtnText');
+            const errEl = document.getElementById('gateError');
+
+            if (!name || !email) { errEl.textContent = 'Please fill in both fields.'; return; }
+            btn.disabled = true; btnText.textContent = 'Unlocking...'; errEl.textContent = '';
+
+            try {
+                await fetch('/api/lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name, email,
+                        source: 'resources-library',
+                        tags: ['resources'],
+                        notes: 'Signed up via /resources library page',
+                    }),
+                });
+            } catch (_) {}
+
+            localStorage.setItem(STORAGE_KEY, '1');
+            showContent();
+            renderFilters();
+            renderCards();
+        });
     </script>
 </body>
 </html>

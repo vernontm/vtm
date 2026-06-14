@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { category } = req.query;
+  const { category, all } = req.query;
 
   try {
     if (category) {
@@ -34,6 +34,15 @@ export default async function handler(req, res) {
     }
 
     const categories = await sb('resource_categories?published=eq.true&order=sort_order.asc,created_at.asc');
+
+    if (all === '1' || all === 'true') {
+      const slugs = categories.map(c => c.slug).join(',');
+      const resources = slugs.length
+        ? await sb(`resources?category_slug=in.(${slugs})&published=eq.true&order=category_slug.asc,sort_order.asc,created_at.desc`)
+        : [];
+      return res.status(200).json({ categories, resources });
+    }
+
     return res.status(200).json({ categories });
   } catch (err) {
     console.error('Public resources error:', err);
