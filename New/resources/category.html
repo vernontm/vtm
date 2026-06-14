@@ -559,11 +559,13 @@
             // If gate disabled on this category, skip straight to content
             if (CATEGORY && CATEGORY.gate_enabled === false) {
                 showContent();
+                renderTagFilters();
                 renderPrompts();
                 return;
             }
             if (localStorage.getItem(STORAGE_KEY)) {
                 showContent();
+                renderTagFilters();
                 renderPrompts();
             }
         })();
