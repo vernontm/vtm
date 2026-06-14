@@ -72,6 +72,9 @@
         .library-section { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; animation: fadeUp 0.7s ease both; }
 
         .tag-filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 28px; }
+        .tag-filters-sub { margin-top: -14px; padding-top: 4px; border-top: 1px dashed var(--border); padding-top: 16px; }
+        .tag-filters-sub:empty { display: none; }
+        .tag-filters-sub .tag-pill { font-size: 12px; padding: 6px 12px; }
         .tag-pill {
             background: var(--surface); border: 1px solid var(--border);
             color: var(--muted); padding: 8px 16px; border-radius: 100px;
@@ -219,6 +222,7 @@
         <div id="contentWrap">
             <section class="library-section">
                 <div class="tag-filters" id="catFilters"></div>
+                <div class="tag-filters tag-filters-sub" id="subFilters"></div>
                 <div class="prompts-grid" id="promptsGrid"></div>
             </section>
             <div class="cta-section">
@@ -264,6 +268,7 @@
         let CATEGORIES = [];
         let CAT_BY_SLUG = {};
         let ACTIVE_CAT = 'all';
+        let ACTIVE_SUB = 'all';
 
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -331,7 +336,39 @@
             wrap.querySelectorAll('.tag-pill').forEach(btn => {
                 btn.addEventListener('click', () => {
                     ACTIVE_CAT = btn.dataset.cat;
+                    ACTIVE_SUB = 'all';
                     renderFilters();
+                    renderSubFilters();
+                    renderCards();
+                });
+            });
+        }
+
+        function renderSubFilters() {
+            const wrap = document.getElementById('subFilters');
+            if (ACTIVE_CAT === 'all') { wrap.innerHTML = ''; return; }
+            const inCat = RESOURCES.filter(r => r.category_slug === ACTIVE_CAT);
+            const counts = inCat.reduce((acc, r) => {
+                const t = r.tag || 'Other';
+                acc[t] = (acc[t] || 0) + 1;
+                return acc;
+            }, {});
+            const tags = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+            if (tags.length < 2) { wrap.innerHTML = ''; return; }
+            const pills = [
+                { key: 'all', label: 'All', count: inCat.length },
+                ...tags.map(t => ({ key: t, label: t, count: counts[t] })),
+            ];
+            wrap.innerHTML = pills.map(p => `
+                <button class="tag-pill ${p.key === ACTIVE_SUB ? 'active' : ''}" data-sub="${escapeHtml(p.key)}">
+                    ${escapeHtml(p.label)}
+                    <span class="count">${p.count}</span>
+                </button>
+            `).join('');
+            wrap.querySelectorAll('.tag-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    ACTIVE_SUB = btn.dataset.sub;
+                    renderSubFilters();
                     renderCards();
                 });
             });
@@ -340,9 +377,11 @@
         // ── Cards ──
         function renderCards() {
             const grid = document.getElementById('promptsGrid');
-            const visible = ACTIVE_CAT === 'all'
-                ? RESOURCES
-                : RESOURCES.filter(r => r.category_slug === ACTIVE_CAT);
+            const visible = RESOURCES.filter(r => {
+                if (ACTIVE_CAT !== 'all' && r.category_slug !== ACTIVE_CAT) return false;
+                if (ACTIVE_SUB !== 'all' && (r.tag || 'Other') !== ACTIVE_SUB) return false;
+                return true;
+            });
             if (!visible.length) {
                 grid.innerHTML = `<p style="grid-column: 1/-1; text-align:center; color:var(--muted); padding: 40px 20px;">Nothing here yet. Check back soon!</p>`;
                 return;
@@ -487,6 +526,7 @@
             if (unifiedUnlocked || anyCatUnlocked) {
                 showContent();
                 renderFilters();
+                renderSubFilters();
                 renderCards();
             }
         })();
