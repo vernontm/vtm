@@ -61,6 +61,7 @@ import Blog from './pages/Blog';
 import EmailPage from './pages/Email';
 import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
+import Subscribers from './pages/Subscribers';
 import GlobalAgent from './components/GlobalAgent';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
@@ -145,6 +146,7 @@ function AppLayout() {
               <Route path="/content-scheduler" element={<Gated slug="content-scheduler"><ContentScheduler /></Gated>} />
               <Route path="/avatars" element={<Gated slug="avatars"><Avatars /></Gated>} />
               <Route path="/email-marketing" element={<Gated slug="email-marketing"><EmailMarketing /></Gated>} />
+              <Route path="/subscribers" element={<Gated slug="subscribers"><Subscribers /></Gated>} />
               <Route path="/settings" element={<Settings />} />
               {/* Academy Admin (admin-only) */}
               <Route path="/academy" element={<Gated slug="academy" adminOnly><AcademyDashboard /></Gated>} />

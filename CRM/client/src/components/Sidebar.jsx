@@ -27,6 +27,7 @@ const nav = [
   { to: '/content-scheduler', icon: Film,            label: 'Content',          slug: 'content-scheduler' },
   { to: '/avatars',           icon: Sparkles,        label: 'Avatars',          slug: 'avatars' },
   { to: '/email-marketing',   icon: Mail,            label: 'Email Marketing',  slug: 'email-marketing' },
+  { to: '/subscribers',       icon: Users,           label: 'Subscribers',      slug: 'subscribers' },
 ];
 
 const navTools = [
