@@ -405,6 +405,7 @@
         <div class="tabs">
             <button class="tab active" data-tab="posts">Blog Posts</button>
             <button class="tab" data-tab="leads">Leads</button>
+            <button class="tab" data-tab="subscribers">Subscribers</button>
         </div>
 
         <!-- Posts Tab -->
@@ -517,6 +518,25 @@
                 <div class="empty-state">Loading leads...</div>
             </div>
         </div>
+
+        <!-- Subscribers Tab -->
+        <div class="tab-content" id="tab-subscribers">
+            <div class="action-bar">
+                <h2>Subscribers</h2>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <div class="sub-filter-pills" id="subFilterPills" style="display:flex; gap:6px;">
+                        <button class="tab active" data-sub-filter="all" style="padding:6px 14px; font-size:13px;">All</button>
+                        <button class="tab" data-sub-filter="resources" style="padding:6px 14px; font-size:13px;">Resources</button>
+                    </div>
+                    <input type="text" id="subSearch" placeholder="Search name or email…" style="background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 12px; font-size:13px; width:220px; outline:none;" />
+                    <button class="btn-primary" id="exportSubsBtn" style="font-size:13px;">Export CSV</button>
+                </div>
+            </div>
+            <div id="subsSummary" style="color:var(--muted); font-size:13px; margin: 0 0 12px;"></div>
+            <div id="subscribersContainer">
+                <div class="empty-state">Loading subscribers...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -571,12 +591,13 @@
         }
 
         // ── TABS ──
-        document.querySelectorAll('.tab').forEach(tab => {
+        document.querySelectorAll('.tabs > .tab').forEach(tab => {
             tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tabs > .tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+                if (tab.dataset.tab === 'subscribers' && !subsLoaded) loadSubscribers();
             });
         });
 
@@ -826,6 +847,129 @@
         function esc(str) {
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
+
+        // ── SUBSCRIBERS ──
+        let SUBS = [];
+        let subsLoaded = false;
+        let subFilter = 'all';
+        let subSearchQ = '';
+
+        const RESOURCE_TAGS = ['resources', 'prompts', 'traders', 'crm'];
+
+        async function loadSubscribers() {
+            const container = document.getElementById('subscribersContainer');
+            container.innerHTML = '<div class="empty-state">Loading subscribers...</div>';
+            try {
+                const res = await fetch(`${API}/admin-subscribers`, { headers: authHeaders() });
+                if (res.status === 401) { logoutBtn.click(); return; }
+                if (!res.ok) {
+                    container.innerHTML = `<div class="empty-state">Couldn't load subscribers (${res.status}).</div>`;
+                    return;
+                }
+                SUBS = await res.json();
+                subsLoaded = true;
+                renderSubscribers();
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div class="empty-state">Error loading subscribers.</div>';
+            }
+        }
+
+        function visibleSubs() {
+            const q = subSearchQ.trim().toLowerCase();
+            return SUBS.filter(s => {
+                if (subFilter === 'resources') {
+                    const tags = Array.isArray(s.tags) ? s.tags : [];
+                    if (!tags.some(t => RESOURCE_TAGS.includes(t))) return false;
+                }
+                if (q) {
+                    const hay = `${s.email || ''} ${s.name || ''}`.toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+        }
+
+        function fmtTags(tags) {
+            if (!Array.isArray(tags) || !tags.length) return '';
+            return tags.map(t => `<span style="display:inline-block; background:rgba(255,155,38,0.1); border:1px solid rgba(255,155,38,0.2); color:var(--orange); font-size:11px; padding:2px 8px; border-radius:100px; margin-right:4px; margin-bottom:2px;">${esc(t)}</span>`).join('');
+        }
+
+        function renderSubscribers() {
+            const container = document.getElementById('subscribersContainer');
+            const summary = document.getElementById('subsSummary');
+            const rows = visibleSubs();
+            summary.textContent = `${rows.length} of ${SUBS.length} subscribers`;
+            if (!rows.length) {
+                container.innerHTML = '<div class="empty-state">No subscribers match.</div>';
+                return;
+            }
+            container.innerHTML = `
+                <div style="overflow-x:auto">
+                <table class="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Tags</th>
+                            <th>Status</th>
+                            <th>Signed up</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(s => `
+                            <tr>
+                                <td>${esc(s.email || '')}</td>
+                                <td>${esc(s.name || '')}</td>
+                                <td>${fmtTags(s.tags)}</td>
+                                <td>${esc(s.status || '')}</td>
+                                <td>${(s.signed_up_at || s.created_at) ? new Date(s.signed_up_at || s.created_at).toLocaleDateString() : ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                </div>
+            `;
+        }
+
+        // filter pills
+        document.querySelectorAll('#subFilterPills .tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#subFilterPills .tab').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                subFilter = btn.dataset.subFilter;
+                renderSubscribers();
+            });
+        });
+
+        // search
+        document.getElementById('subSearch').addEventListener('input', (e) => {
+            subSearchQ = e.target.value;
+            renderSubscribers();
+        });
+
+        // export
+        document.getElementById('exportSubsBtn').addEventListener('click', () => {
+            const rows = visibleSubs();
+            if (!rows.length) return;
+            const header = ['email', 'name', 'tags', 'status', 'signed_up_at'];
+            const csv = [header.join(',')].concat(
+                rows.map(s => [
+                    s.email || '',
+                    s.name || '',
+                    (Array.isArray(s.tags) ? s.tags.join('|') : ''),
+                    s.status || '',
+                    s.signed_up_at || s.created_at || '',
+                ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+            ).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `vtm-subscribers-${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
     </script>
 </body>
 </html>
