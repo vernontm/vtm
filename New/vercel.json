@@ -82,6 +82,7 @@
     { "source": "/portfolio", "destination": "/portfolio.html" },
     { "source": "/free-gift", "destination": "/free-gift.html" },
     { "source": "/ai-quiz", "destination": "/ai-quiz.html" },
+    { "source": "/webinar", "destination": "/webinar.html" },
     { "source": "/crm-blueprint", "destination": "/crm-blueprint.html" },
     { "source": "/crm-build", "destination": "/crm-build.html" },
     { "source": "/crm-lab", "destination": "/crm-lab.html" },

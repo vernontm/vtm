@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Advanced AI Workshop — Vernon Tech & Media</title>
+    <meta name="description" content="A live Advanced AI Workshop with Rayvaughn Vernon & Nesha Danay. By registration only — answer a few quick questions to reserve your spot and unlock the link." />
+    <meta property="og:title" content="Advanced AI Workshop — Vernon Tech & Media" />
+    <meta property="og:description" content="Live with Rayvaughn Vernon & Nesha Danay. Mon, July 6 · 7PM CST. Registration only, and one business on the call gets strategized live." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cream: #F1ECE2;
+            --cream-panel: #FBF8F1;
+            --ink: #17130D;
+            --ink-soft: #241E15;
+            --ink-2: #2e271b;
+            --gold: #C6A25C;
+            --gold-bright: #EBD196;
+            --gold-deep: #9A7B33;
+            --text: #211d16;
+            --text-on-dark: #F3ECDD;
+            --muted: #8a7f6c;
+            --muted-dark: #b0a48c;
+            --border-gold: rgba(198,162,92,0.38);
+            --border-soft: rgba(23,19,13,0.10);
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        html, body {
+            min-height: 100%;
+            background: var(--cream);
+            color: var(--text);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* warm gold glow + faint circuit texture, like the flyer corners */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 70% 45% at 50% -8%, rgba(198,162,92,0.20) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 100% 100%, rgba(198,162,92,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 0% 90%, rgba(198,162,92,0.10) 0%, transparent 60%);
+            pointer-events: none; z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23C6A25C' stroke-width='1' opacity='0.5'%3E%3Cpath d='M20 40h40v40'/%3E%3Cpath d='M200 20v50h-40'/%3E%3Cpath d='M40 200h60v-40'/%3E%3Cpath d='M220 200h-40v-60'/%3E%3Ccircle cx='60' cy='40' r='3'/%3E%3Ccircle cx='160' cy='70' r='3'/%3E%3Ccircle cx='100' cy='160' r='3'/%3E%3Ccircle cx='180' cy='140' r='3'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 320px 320px;
+            opacity: 0.20;
+            pointer-events: none; z-index: 0;
+        }
+
+        .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* ── Presents bar ── */
+        .presents {
+            background: var(--ink);
+            text-align: center;
+            padding: 13px 20px;
+            position: relative; z-index: 2;
+        }
+        .presents span {
+            font-family: var(--font-display);
+            font-size: clamp(0.6rem, 2.4vw, 0.8rem);
+            font-weight: 700; letter-spacing: 0.34em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright), var(--gold-deep));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* ── Nav (minimal, on cream) ── */
+        nav {
+            padding: 18px 40px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        /* Brand logo renders white by default; force a dark silhouette so it reads on cream. */
+        .logo img { height: 38px; width: auto; display: block; filter: brightness(0) saturate(100%); opacity: 0.82; }
+        .nav-cta {
+            font-size: 0.82rem; font-weight: 700; color: var(--ink);
+            background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+            border: none; padding: 8px 18px; border-radius: 100px; cursor: pointer;
+            text-decoration: none; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 3px 12px rgba(154,123,51,0.25);
+        }
+        .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(154,123,51,0.35); }
+
+        /* ── Hero ── */
+        .hero { padding: 26px 24px 44px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .eyebrow {
+            font-family: var(--font-display); font-size: 0.72rem; font-weight: 700;
+            letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-deep);
+            margin-bottom: 10px;
+        }
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.1rem, 6vw, 3.6rem);
+            font-weight: 800; line-height: 1.05; letter-spacing: -0.02em;
+            color: var(--ink);
+            max-width: 760px; margin: 0 auto 16px;
+        }
+        h1 .grad {
+            background: linear-gradient(135deg, var(--gold-deep), var(--gold) 40%, var(--gold-bright));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .sub {
+            font-size: 1.02rem; color: #574f42; font-weight: 400;
+            max-width: 560px; margin: 0 auto 16px; line-height: 1.55;
+        }
+        .hosts { font-size: 0.9rem; color: #6a6152; margin: 0 auto 26px; }
+        .hosts strong { color: var(--gold-deep); font-weight: 700; }
+
+        .event-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 12px; margin: 0 auto 34px; }
+        .event-meta .chip {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--ink); border: 1px solid var(--border-gold);
+            color: var(--text-on-dark); font-size: 0.82rem; font-weight: 600;
+            padding: 8px 15px; border-radius: 100px;
+        }
+        .event-meta .chip svg { width: 15px; height: 15px; color: var(--gold-bright); flex-shrink: 0; }
+
+        /* ── Card (survey / gate / result) — dark panel like the flyer ── */
+        .quiz-card {
+            width: 100%; max-width: 600px;
+            background: linear-gradient(165deg, var(--ink-soft), var(--ink));
+            border: 1px solid var(--border-gold);
+            border-radius: 20px;
+            padding: 28px 26px 26px;
+            box-shadow: 0 26px 60px rgba(23,19,13,0.35), inset 0 0 0 1px rgba(235,209,150,0.08);
+            text-align: left; color: var(--text-on-dark);
+        }
+
+        .progress-wrap { margin-bottom: 22px; }
+        .progress-meta {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.72rem; color: var(--gold); margin-bottom: 8px;
+            letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+        }
+        .progress-track { height: 6px; border-radius: 100px; background: rgba(235,209,150,0.12); overflow: hidden; }
+        .progress-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+            border-radius: 100px; transition: width 0.4s ease;
+        }
+
+        .q-text {
+            font-family: var(--font-display);
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            font-weight: 700; line-height: 1.25; letter-spacing: -0.01em;
+            color: #fff; margin-bottom: 8px;
+        }
+        .q-help { font-size: 0.85rem; color: var(--muted-dark); line-height: 1.5; margin-bottom: 16px; }
+        .q-text + .options, .q-text + #options { margin-top: 12px; }
+
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option {
+            display: flex; align-items: center; gap: 14px;
+            width: 100%; text-align: left;
+            background: rgba(235,209,150,0.05);
+            border: 1px solid rgba(235,209,150,0.14);
+            color: var(--text-on-dark);
+            font-family: var(--font-body); font-size: 0.95rem; font-weight: 400;
+            padding: 15px 16px; border-radius: 12px; cursor: pointer;
+            transition: border 0.18s, background 0.18s, transform 0.12s;
+        }
+        .option:hover { border-color: var(--gold); background: rgba(235,209,150,0.10); transform: translateX(2px); }
+        .option .dot {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid rgba(235,209,150,0.4);
+            flex-shrink: 0; transition: all 0.18s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .option:hover .dot { border-color: var(--gold-bright); }
+        .option.selected { border-color: var(--gold-bright); background: rgba(235,209,150,0.14); }
+        .option.selected .dot { border-color: var(--gold-bright); background: var(--gold-bright); }
+        .option.selected .dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+
+        .quiz-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
+        .back-btn {
+            background: none; border: none; color: var(--muted-dark);
+            font-family: var(--font-body); font-size: 0.88rem; font-weight: 500;
+            cursor: pointer; padding: 8px 4px; transition: color 0.2s;
+        }
+        .back-btn:hover { color: var(--gold-bright); }
+        .back-btn:disabled { opacity: 0; pointer-events: none; }
+        .quiz-nav .hint { font-size: 0.76rem; color: var(--muted-dark); }
+
+        /* custom "type it" input inside a choice question */
+        .custom-wrap { margin-top: 10px; display: flex; gap: 8px; }
+        .custom-wrap input {
+            flex: 1; background: rgba(235,209,150,0.06); border: 1px solid var(--gold);
+            color: var(--text-on-dark); font-family: var(--font-body); font-size: 0.95rem;
+            padding: 13px 15px; border-radius: 12px; outline: none;
+        }
+        .custom-wrap input::placeholder { color: var(--muted-dark); }
+        .custom-wrap button {
+            background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+            color: var(--ink); font-weight: 700; border: none; border-radius: 12px;
+            padding: 0 18px; cursor: pointer; font-family: var(--font-body); font-size: 0.9rem;
+        }
+
+        /* text + gate forms */
+        .gate { text-align: center; }
+        .gate-icon {
+            width: 56px; height: 56px; border-radius: 15px; margin: 0 auto 16px;
+            background: rgba(235,209,150,0.12); border: 1px solid var(--gold);
+            display: flex; align-items: center; justify-content: center; color: var(--gold-bright);
+        }
+        .gate h3 { font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; letter-spacing: -0.01em; color: #fff; margin-bottom: 8px; }
+        .gate p { color: var(--muted-dark); font-size: 0.94rem; line-height: 1.6; margin-bottom: 22px; max-width: 440px; margin-left: auto; margin-right: auto; }
+        .gate-form { display: flex; flex-direction: column; gap: 12px; max-width: 440px; margin: 0 auto; }
+        .gate-form input, .textarea-input {
+            width: 100%; background: rgba(235,209,150,0.06); border: 1px solid rgba(235,209,150,0.2);
+            color: var(--text-on-dark); font-family: var(--font-body); font-size: 0.95rem; font-weight: 400;
+            padding: 14px 16px; border-radius: 12px; outline: none; transition: border 0.2s, background 0.2s;
+        }
+        .textarea-input { resize: vertical; min-height: 96px; }
+        .gate-form input::placeholder, .textarea-input::placeholder { color: var(--muted-dark); opacity: 0.9; }
+        .gate-form input:focus, .textarea-input:focus { border-color: var(--gold); background: rgba(235,209,150,0.1); }
+        .gate-form button, .primary-btn {
+            background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+            color: var(--ink); font-family: var(--font-body); font-size: 0.98rem; font-weight: 700;
+            border: none; border-radius: 12px; padding: 15px 18px; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s; box-shadow: 0 8px 22px rgba(154,123,51,0.3);
+        }
+        .gate-form button:hover:not(:disabled), .primary-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(154,123,51,0.4); }
+        .gate-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .gate-note { font-size: 0.77rem; color: var(--muted-dark); margin-top: 14px; line-height: 1.5; }
+        .gate-form button.skip-btn {
+            background: none; border: none; box-shadow: none; cursor: pointer;
+            color: var(--muted-dark); font-family: var(--font-body); font-size: 0.86rem; font-weight: 500;
+            text-decoration: underline; text-underline-offset: 3px; padding: 4px; margin-top: 2px;
+            transition: color 0.2s;
+        }
+        .gate-form button.skip-btn:hover { color: var(--gold-bright); transform: none; box-shadow: none; }
+        .field-error { color: #ffb59b; font-size: 0.82rem; min-height: 1em; text-align: left; }
+
+        /* result / unlock */
+        .result { text-align: center; }
+        .result-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(235,209,150,0.14); color: var(--gold-bright);
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+            padding: 6px 12px; border-radius: 100px; margin-bottom: 16px;
+        }
+        .result h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; color: #fff; margin-bottom: 12px; }
+        .result-lede { font-size: 0.97rem; color: var(--muted-dark); line-height: 1.6; margin-bottom: 24px; max-width: 460px; margin-left:auto; margin-right:auto; }
+        .join-box { padding: 22px; border-radius: 14px; background: linear-gradient(150deg, rgba(235,209,150,0.14), rgba(154,123,51,0.08)); border: 1px solid var(--gold); margin-bottom: 20px; }
+        .join-when { font-size: 0.84rem; color: var(--gold-bright); margin-bottom: 4px; font-weight: 600; }
+        .join-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 16px; }
+        .join-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+            background: linear-gradient(135deg, var(--gold-bright), var(--gold)); color: var(--ink);
+            text-decoration: none; font-weight: 700; font-size: 1rem; padding: 15px 24px; border-radius: 12px;
+            box-shadow: 0 8px 22px rgba(154,123,51,0.3); transition: transform 0.15s;
+        }
+        .join-btn:hover { transform: translateY(-1px); }
+        .join-link { display: block; margin-top: 12px; word-break: break-all; font-size: 0.82rem; color: var(--muted-dark); text-decoration: none; }
+        .join-link:hover { color: var(--gold-bright); }
+        .cal-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; color: var(--gold-bright); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+        .cal-link:hover { text-decoration: underline; }
+        .confirm-note { font-size: 0.86rem; color: var(--muted-dark); line-height: 1.55; background: rgba(235,209,150,0.05); border: 1px solid rgba(235,209,150,0.16); border-radius: 12px; padding: 14px 16px; text-align: left; }
+        .confirm-note strong { color: #fff; font-weight: 600; }
+
+        .fade-step { animation: fadeUp 0.4s ease both; }
+
+        /* bottom note */
+        .reg-note { text-align: center; padding: 4px 24px 40px; }
+        .reg-note span {
+            display: inline-block; background: var(--ink); color: var(--gold-bright);
+            font-family: var(--font-display); font-size: 0.72rem; font-weight: 700;
+            letter-spacing: 0.22em; text-transform: uppercase; padding: 10px 22px; border-radius: 100px;
+            border: 1px solid var(--border-gold);
+        }
+
+        footer { text-align: center; padding: 16px 20px 40px; margin-top: auto; }
+        .footer-socials { display: flex; align-items: center; justify-content: center; gap: 18px; }
+        .footer-socials a {
+            display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px;
+            background: var(--cream-panel); border: 1px solid var(--border-gold); color: var(--gold-deep);
+            text-decoration: none; transition: all 0.2s;
+        }
+        .footer-socials a:hover { color: var(--ink); border-color: var(--gold); transform: translateY(-2px); }
+        .footer-socials a svg { width: 18px; height: 18px; fill: currentColor; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 640px) {
+            nav { padding: 14px 20px; }
+            .hero { padding: 18px 18px 34px; }
+            .quiz-card { padding: 24px 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="presents"><span>Vernon Tech &amp; Media Presents</span></div>
+
+        <nav>
+            <a href="/" class="logo"><img src="/Logo /VTM_logo.svg" alt="Vernon Tech & Media" /></a>
+            <a href="/contact" class="nav-cta">Contact</a>
+        </nav>
+
+        <!-- Hero -->
+        <section class="hero">
+            <div class="eyebrow">You're Invited</div>
+            <h1>Join us for the <span class="grad">Advanced AI</span> Workshop</h1>
+            <p class="sub">
+                Be part of the first official AI workshop built specifically for the Katy &amp; Cypress,
+                Texas area. Whether you're a business owner, a social media influencer, or just interested
+                in learning how to use AI, this is the place to be.
+            </p>
+            <div class="hosts">Hosted by <strong>Rayvaughn Vernon</strong> &amp; <strong>Nesha Danay</strong></div>
+
+            <div class="event-meta">
+                <span class="chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Mon, July 6
+                </span>
+                <span class="chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                    7:00 PM CST
+                </span>
+                <span class="chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>
+                    Live Online
+                </span>
+            </div>
+
+            <div class="quiz-card" id="quizCard"></div>
+        </section>
+
+        <div class="reg-note"><span>Note: This is by registration only</span></div>
+
+        <footer></footer>
+    </div>
+
+    <script>
+        // ---------- Survey config ----------
+        // `key` maps the answer onto the payload sent to /api/webinar.
+        // `type: 'text' | 'textarea'` render inputs; otherwise tap-to-advance.
+        // An option with `custom: true` reveals a "type it in" field.
+        const QUESTIONS = [
+            {
+                key: 'business', type: 'text',
+                q: "First, what's your business called?",
+                help: "If you're pre-launch or a solo operator, just put your name or what you do.",
+                placeholder: "Your business or your name",
+                autocomplete: "organization",
+                skippable: true, skipLabel: "I don't have a business yet",
+            },
+            {
+                key: 'industry',
+                q: "What kind of business is it?",
+                help: "Pick the closest, or type your own.",
+                options: [
+                    { label: "Service business (agency, contractor, pro services)" },
+                    { label: "E-commerce or physical product" },
+                    { label: "Coaching, consulting, or creator" },
+                    { label: "Local or brick-and-mortar" },
+                    { label: "Real estate, finance, or other" },
+                    { label: "Something else — let me type it", custom: true, placeholder: "Tell us what you do" },
+                ],
+            },
+            {
+                key: 'ai_level',
+                q: "Where are you with AI right now?",
+                help: "Whatever you're using — ChatGPT, Claude, or nothing yet.",
+                options: [
+                    { label: "Just curious — haven't really started" },
+                    { label: "Beginner — I dabble here and there" },
+                    { label: "Intermediate — I use AI tools regularly" },
+                    { label: "Advanced — I build AI workflows daily" },
+                ],
+            },
+            {
+                key: 'ai_use',
+                q: "What do you mostly use AI for today?",
+                options: [
+                    { label: "Not much yet" },
+                    { label: "Content creation" },
+                    { label: "Sales & outreach" },
+                    { label: "Leads & marketing" },
+                    { label: "Admin & operations" },
+                    { label: "Something else — let me type it", custom: true, placeholder: "What do you use it for?" },
+                ],
+            },
+            {
+                key: 'tech_level',
+                q: "How comfortable are you connecting AI to your other tools?",
+                options: [
+                    { label: "Not familiar with any of that" },
+                    { label: "I've heard of it but haven't tried" },
+                    { label: "I've used no-code tools like Zapier before" },
+                    { label: "I'm comfortable wiring up APIs & automations" },
+                ],
+            },
+            {
+                key: 'ai_goal',
+                q: "If we set up ONE AI system for you, what should it do?",
+                help: "This is where we'd focus your build on the call.",
+                options: [
+                    { label: "Automate sales & follow-up" },
+                    { label: "Generate & qualify more leads" },
+                    { label: "Handle repetitive admin tasks" },
+                    { label: "Create content consistently" },
+                    { label: "Answer customer questions 24/7" },
+                ],
+            },
+            {
+                key: 'revenue', required: true,
+                q: "Where's your business at financially right now?",
+                help: "Required. This stays private and helps us tailor the room.",
+                options: [
+                    { label: "Just starting (pre-revenue)" },
+                    { label: "Under $5K / month" },
+                    { label: "$5K – $20K / month" },
+                    { label: "$20K – $50K / month" },
+                    { label: "$50K+ / month" },
+                ],
+            },
+            {
+                key: 'revenue_goal', required: true,
+                q: "Where do you want it in the next 12 months?",
+                help: "Required. Be honest about the number you're chasing.",
+                options: [
+                    { label: "$10K / month" },
+                    { label: "$25K / month" },
+                    { label: "$50K / month" },
+                    { label: "$100K / month" },
+                    { label: "$250K+ / month" },
+                ],
+            },
+            {
+                key: 'pain', type: 'textarea',
+                q: "Last one — what's the #1 thing you'd fix in your business?",
+                help: "The more real you get here, the better your odds of being the business we strategize live on the call.",
+                placeholder: "The bottleneck, headache, or goal that keeps coming up...",
+            },
+        ];
+
+        const state = { step: 0, answers: {}, name: '', email: '', phone: '', meet: null };
+        const card = document.getElementById('quizCard');
+        const TOTAL = QUESTIONS.length;
+
+        function esc(s) {
+            return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function progressHeader(labelLeft, pct) {
+            return `
+                <div class="progress-wrap">
+                    <div class="progress-meta"><span>${labelLeft}</span><span>${pct}%</span></div>
+                    <div class="progress-track"><div class="progress-bar" style="width:${pct}%"></div></div>
+                </div>`;
+        }
+
+        function renderTextQuestion(Q, qIdx, pct) {
+            const isArea = Q.type === 'textarea';
+            const current = state.answers[Q.key] || '';
+            card.innerHTML = `
+                <div class="fade-step">
+                    ${progressHeader(`Question ${qIdx + 1} of ${TOTAL}`, pct)}
+                    <div class="q-text">${Q.q}</div>
+                    ${Q.help ? `<div class="q-help">${Q.help}</div>` : ''}
+                    <form class="gate-form" id="textForm" novalidate style="max-width:none;">
+                        ${isArea
+                            ? `<textarea class="textarea-input" id="textInput" placeholder="${esc(Q.placeholder || '')}">${esc(current)}</textarea>`
+                            : `<input type="text" id="textInput" placeholder="${esc(Q.placeholder || '')}" autocomplete="${Q.autocomplete || 'off'}" value="${esc(current)}" />`}
+                        <div class="field-error" id="textErr"></div>
+                        <button type="submit">Continue →</button>
+                        ${Q.skippable ? `<button type="button" class="skip-btn" id="skipBtn">${esc(Q.skipLabel || 'Skip this')}</button>` : ''}
+                    </form>
+                    <div class="quiz-nav">
+                        <button class="back-btn" id="backBtn"${qIdx === 0 ? ' disabled' : ''}>← Back</button>
+                        <span class="hint">${isArea ? 'A sentence or two is plenty' : 'Press enter to continue'}</span>
+                    </div>
+                </div>`;
+            const input = document.getElementById('textInput');
+            input.focus();
+            document.getElementById('textForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const val = input.value.trim();
+                if (!val) { document.getElementById('textErr').textContent = 'Please fill this in to continue.'; return; }
+                state.answers[Q.key] = val;
+                advance();
+            });
+            const skipBtn = document.getElementById('skipBtn');
+            if (skipBtn) skipBtn.addEventListener('click', () => { state.answers[Q.key] = ''; advance(); });
+            document.getElementById('backBtn').addEventListener('click', goBack);
+        }
+
+        function renderChoiceQuestion(Q, qIdx, pct) {
+            const selected = state.answers[Q.key];
+            card.innerHTML = `
+                <div class="fade-step">
+                    ${progressHeader(`Question ${qIdx + 1} of ${TOTAL}`, pct)}
+                    <div class="q-text">${Q.q}</div>
+                    ${Q.help ? `<div class="q-help">${Q.help}</div>` : ''}
+                    <div class="options" id="options">
+                        ${Q.options.map((o, i) => `
+                            <button class="option${selected === o.label ? ' selected' : ''}" data-i="${i}" data-custom="${o.custom ? 1 : 0}">
+                                <span class="dot"></span>
+                                <span>${o.label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="quiz-nav">
+                        <button class="back-btn" id="backBtn"${qIdx === 0 ? ' disabled' : ''}>← Back</button>
+                        <span class="hint">Tap an answer to continue</span>
+                    </div>
+                </div>`;
+            card.querySelectorAll('.option').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const opt = Q.options[parseInt(btn.dataset.i, 10)];
+                    card.querySelectorAll('.option').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    if (opt.custom) { showCustomInput(Q, opt, btn); return; }
+                    state.answers[Q.key] = opt.label;
+                    setTimeout(advance, 200);
+                });
+            });
+            document.getElementById('backBtn').addEventListener('click', goBack);
+        }
+
+        function showCustomInput(Q, opt, btn) {
+            // Drop an inline "type it" field right under the chosen option.
+            const existing = card.querySelector('.custom-wrap');
+            if (existing) existing.remove();
+            const wrap = document.createElement('div');
+            wrap.className = 'custom-wrap';
+            wrap.innerHTML = `
+                <input type="text" id="customInput" placeholder="${esc(opt.placeholder || 'Type it in')}" value="${esc(state.answers[Q.key] && !Q.options.some(o=>o.label===state.answers[Q.key]) ? state.answers[Q.key] : '')}" />
+                <button type="button" id="customGo">Add →</button>`;
+            btn.insertAdjacentElement('afterend', wrap);
+            const ci = document.getElementById('customInput');
+            ci.focus();
+            const commit = () => {
+                const val = ci.value.trim();
+                if (!val) { ci.style.borderColor = '#ffb59b'; ci.focus(); return; }
+                state.answers[Q.key] = val;
+                advance();
+            };
+            document.getElementById('customGo').addEventListener('click', commit);
+            ci.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+        }
+
+        function renderQuestion() {
+            const qIdx = state.step;
+            const Q = QUESTIONS[qIdx];
+            const pct = Math.round((qIdx / TOTAL) * 100);
+            if (Q.type === 'text' || Q.type === 'textarea') renderTextQuestion(Q, qIdx, pct);
+            else renderChoiceQuestion(Q, qIdx, pct);
+        }
+        function advance() {
+            if (state.step < TOTAL - 1) { state.step++; renderQuestion(); }
+            else renderGate();
+        }
+        function goBack() { if (state.step > 0) { state.step--; renderQuestion(); } }
+
+        function renderGate() {
+            card.innerHTML = `
+                <div class="fade-step gate">
+                    ${progressHeader('Last step — reserve your spot', 100)}
+                    <div class="gate-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0110 0v4"></path>
+                        </svg>
+                    </div>
+                    <h3>Where should we send your workshop link?</h3>
+                    <p>Add your name, email, and phone and we'll unlock the link right here, plus send a confirmation to your inbox and a text reminder before we go live.</p>
+                    <form class="gate-form" id="gateForm" novalidate>
+                        <input type="text" id="nameInput" placeholder="First & last name" autocomplete="name" value="${esc(state.name)}" required />
+                        <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email" value="${esc(state.email)}" required />
+                        <input type="tel" id="phoneInput" placeholder="Phone (for the text reminder)" autocomplete="tel" value="${esc(state.phone)}" required />
+                        <div class="field-error" id="gateErr"></div>
+                        <button type="submit" id="gateBtn">Unlock my workshop link →</button>
+                    </form>
+                    <p class="gate-note">We only use this to send your link and reminders for this workshop. No spam, unsubscribe anytime.</p>
+                    <button class="back-btn" id="backBtn" style="margin-top:14px;opacity:0.8;">← Back</button>
+                </div>`;
+
+            document.getElementById('backBtn').addEventListener('click', () => { state.step = TOTAL - 1; renderQuestion(); });
+
+            const form = document.getElementById('gateForm');
+            const gateBtn = document.getElementById('gateBtn');
+            const errEl = document.getElementById('gateErr');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('nameInput').value.trim();
+                const email = document.getElementById('emailInput').value.trim();
+                const phone = document.getElementById('phoneInput').value.trim();
+                errEl.textContent = '';
+                if (!name) { errEl.textContent = 'Please enter your name.'; return; }
+                if (!email || !email.includes('@')) { errEl.textContent = 'Please enter a valid email.'; return; }
+                if (phone.replace(/\D/g, '').length < 7) { errEl.textContent = 'Please enter a valid phone number.'; return; }
+
+                state.name = name; state.email = email; state.phone = phone;
+                gateBtn.disabled = true; gateBtn.textContent = 'Unlocking…';
+
+                const params = new URLSearchParams(location.search);
+                const utm = {};
+                ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(k => { const v = params.get(k); if (v) utm[k] = v; });
+
+                let meet = { url: 'https://meet.google.com/ddv-bern-gye', title: 'Advanced AI Workshop', when: 'Monday, July 6 · 7:00 PM CST' };
+                try {
+                    const resp = await fetch('/api/webinar', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name, email, phone,
+                            business: state.answers.business || null,
+                            industry: state.answers.industry || null,
+                            ai_level: state.answers.ai_level || null,
+                            ai_use: state.answers.ai_use || null,
+                            tech_level: state.answers.tech_level || null,
+                            ai_goal: state.answers.ai_goal || null,
+                            revenue: state.answers.revenue || null,
+                            revenue_goal: state.answers.revenue_goal || null,
+                            pain: state.answers.pain || null,
+                            answers: state.answers,
+                            source: params.get('utm_source') || 'webinar-page',
+                            utm: Object.keys(utm).length ? utm : null,
+                        }),
+                    });
+                    const data = await resp.json().catch(() => ({}));
+                    if (!resp.ok) { errEl.textContent = data.error || 'Something went wrong. Please try again.'; gateBtn.disabled = false; gateBtn.textContent = 'Unlock my workshop link →'; return; }
+                    if (data.meet && data.meet.url) meet = data.meet;
+                } catch (err) {
+                    errEl.textContent = 'Network error. Please try again.'; gateBtn.disabled = false; gateBtn.textContent = 'Unlock my workshop link →'; return;
+                }
+
+                state.meet = meet;
+                if (window.dataLayer) window.dataLayer.push({ event: 'webinar_register', email });
+                renderResult();
+            });
+        }
+
+        // Google Calendar link — Mon July 6 2026, 7:00–8:30 PM CT (CDT = UTC-5).
+        function calendarUrl(meet) {
+            const start = '20260707T000000Z', end = '20260707T013000Z';
+            const text = encodeURIComponent(meet.title || 'Advanced AI Workshop');
+            const details = encodeURIComponent(`Live online: ${meet.url}\n\nHosted by Rayvaughn Vernon & Nesha Danay — Vernon Tech & Media.`);
+            const loc = encodeURIComponent(meet.url || '');
+            return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${loc}`;
+        }
+
+        function renderResult() {
+            const meet = state.meet || {};
+            const first = (state.name || '').split(' ')[0];
+            card.innerHTML = `
+                <div class="fade-step result">
+                    <span class="result-badge">You're registered ✓</span>
+                    <h2>${first ? esc(first) + ", you're in." : "You're in."}</h2>
+                    <p class="result-lede">Your spot for the Advanced AI Workshop is locked. Here's your private link — tap it a couple minutes before we start.</p>
+                    <div class="join-box">
+                        <div class="join-when">${esc(meet.when || 'Monday, July 6 · 7:00 PM CST')}</div>
+                        <div class="join-title">${esc(meet.title || 'Advanced AI Workshop')}</div>
+                        <a class="join-btn" href="${esc(meet.url)}" target="_blank" rel="noopener">Join the workshop →</a>
+                        <a class="join-link" href="${esc(meet.url)}" target="_blank" rel="noopener">${esc(meet.url)}</a>
+                        <a class="cal-link" href="${calendarUrl(meet)}" target="_blank" rel="noopener">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            Add to Google Calendar
+                        </a>
+                    </div>
+                    <div class="confirm-note">
+                        <strong>Check your phone and inbox.</strong> A confirmation is on its way to
+                        ${esc(state.email)}, and we'll text a reminder before we go live. On the call we
+                        pick <strong>one business</strong> to strategize in real time — the answers you just
+                        gave are how we choose. See you Monday.
+                    </div>
+                </div>`;
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        renderQuestion();
+    </script>
+</body>
+</html>
