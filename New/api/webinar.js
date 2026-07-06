@@ -1,29 +1,30 @@
 const { setCors, supaFetch } = require('./_lib/supabase.js');
-const { syncContactToMailerlite } = require('./_lib/mailerlite.js');
 
 // Public (no-auth) webinar registration endpoint for /webinar.
 //
 // Flow on the page: visitor answers the survey, then submits name + email +
 // phone. We:
 //   1. Store the full survey in `webinar_registrations` (source of truth for
-//      curating the sessions + the SMS send list Ray runs from Claude Code).
+//      curating the sessions, the SMS list, AND the confirmation email list).
 //   2. Upsert into `crm_email_contacts` (phone + tags) so they land in the CRM.
-//   3. Sync to MailerLite — adds them to the "AI Workshop Registrants" group so
-//      the confirmation + reminder automation fires. Also drops segment groups
-//      (revenue / AI level) so Ray can slice the list.
-//   4. Post the full record to the existing Zapier webhook so it can fan out to
+//   3. Post the full record to the existing Zapier webhook so it can fan out to
 //      a Google Sheet (the list the SMS session reads) and anything else.
+//
+// Confirmation + reminder emails are NOT sent here. They go out from
+// ray@vernontm.com via the outreach sender (campaign "webinar-confirm" in
+// ~/Desktop/Claude Operations Folder/vtm-outreach), which reads straight from
+// `webinar_registrations`. No MailerLite.
 //
 // The Google Meet link is returned by this endpoint ONLY on a successful
 // registration — it never appears in the page source, so it can't be shared
 // without going through the survey.
 
-// The VTM email-list client ("rayvaughnceo" in crm_content_clients — has the
-// MailerLite key + sends from ray@vernontm.com). Override via env if it moves.
+// The VTM email-list client ("rayvaughnceo" in crm_content_clients — sends from
+// ray@vernontm.com). Override via env if it moves.
 const VTM_EMAIL_CLIENT_ID = process.env.VTM_EMAIL_CLIENT_ID || '632a79e3-bdd1-4c80-9a64-583b64afcd2f';
 
-// Reusable durable group name — keep it stable across future workshops so the
-// same MailerLite automation keeps working.
+// Durable tag on every registrant's CRM contact. Kept stable across future
+// workshops so the list stays easy to segment.
 const WORKSHOP_GROUP = 'AI Workshop Registrants';
 
 // Meet link + details. Kept server-side so the link is gated behind the survey.
@@ -76,7 +77,7 @@ module.exports = async function handler(req, res) {
       utm: body.utm && typeof body.utm === 'object' ? body.utm : null,
     };
 
-    const results = { registration: null, contact: null, mailerlite: null, zapier: null };
+    const results = { registration: null, contact: null, zapier: null };
 
     // 1. Store the full survey ─────────────────────────────────────────────
     try {
@@ -91,7 +92,7 @@ module.exports = async function handler(req, res) {
       results.registration = 'error';
     }
 
-    // Segment tags → MailerLite groups (kept short so we don't spawn dozens).
+    // Segment tags on the CRM contact (for filtering later; not sent anywhere).
     const tags = [WORKSHOP_GROUP, 'workshop-2026-07-06'];
     if (reg.revenue) tags.push(`Revenue: ${reg.revenue}`);
     if (reg.ai_level) tags.push(`AI Level: ${reg.ai_level}`);
@@ -143,23 +144,7 @@ module.exports = async function handler(req, res) {
       results.contact = 'error';
     }
 
-    // 3. MailerLite sync (fires the confirmation/reminder automation) ───────
-    try {
-      const ml = await syncContactToMailerlite({
-        client_id: VTM_EMAIL_CLIENT_ID,
-        contact_id: contactId,
-        email,
-        name,
-        tags,
-        source: reg.source,
-      });
-      results.mailerlite = ml.ok ? 'synced' : `error: ${(ml.errors || []).join('; ')}`;
-    } catch (e) {
-      console.error('MailerLite sync failed:', e.message);
-      results.mailerlite = 'error';
-    }
-
-    // 4. Zapier fan-out (Google Sheet / SMS list) ──────────────────────────
+    // 3. Zapier fan-out (Google Sheet / SMS list) ──────────────────────────
     try {
       const summaryParts = [
         `${name}`,
