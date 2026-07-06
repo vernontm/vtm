@@ -449,7 +449,7 @@
             },
         ];
 
-        const state = { step: 0, answers: {}, name: '', email: '', phone: '', meet: null };
+        const state = { step: 0, answers: {}, name: '', email: '', phone: '', meet: null, registrationId: null };
         const card = document.getElementById('quizCard');
         const TOTAL = QUESTIONS.length;
 
@@ -563,37 +563,47 @@
         }
         function advance() {
             if (state.step < TOTAL - 1) { state.step++; renderQuestion(); }
-            else renderGate();
+            else submitFinal();
         }
-        function goBack() { if (state.step > 0) { state.step--; renderQuestion(); } }
+        function goBack() {
+            if (state.step > 0) { state.step--; renderQuestion(); }
+            else renderContact();
+        }
 
-        function renderGate() {
+        function utmFromUrl() {
+            const params = new URLSearchParams(location.search);
+            const utm = {};
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(k => { const v = params.get(k); if (v) utm[k] = v; });
+            return { source: params.get('utm_source') || 'webinar-page', utm: Object.keys(utm).length ? utm : null };
+        }
+
+        // FIRST slide: capture name + email + phone up front and save a partial
+        // registration, so an abandoned survey still leaves us the lead.
+        function renderContact() {
             card.innerHTML = `
                 <div class="fade-step gate">
-                    ${progressHeader('Last step — reserve your spot', 100)}
+                    ${progressHeader('Step 1 — your info', 0)}
                     <div class="gate-icon">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0110 0v4"></path>
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
                         </svg>
                     </div>
-                    <h3>Where should we send your workshop link?</h3>
-                    <p>Add your name, email, and phone and we'll unlock the link right here, plus send a confirmation to your inbox and a text reminder before we go live.</p>
-                    <form class="gate-form" id="gateForm" novalidate>
+                    <h3>Let's save your spot</h3>
+                    <p>Start with your name, email, and phone so we can hold your seat. Then answer a few quick questions and we'll unlock your workshop link.</p>
+                    <form class="gate-form" id="contactForm" novalidate>
                         <input type="text" id="nameInput" placeholder="First & last name" autocomplete="name" value="${esc(state.name)}" required />
                         <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email" value="${esc(state.email)}" required />
-                        <input type="tel" id="phoneInput" placeholder="Phone (for the text reminder)" autocomplete="tel" value="${esc(state.phone)}" required />
-                        <div class="field-error" id="gateErr"></div>
-                        <button type="submit" id="gateBtn">Unlock my workshop link →</button>
+                        <input type="tel" id="phoneInput" placeholder="Phone (for your text reminder)" autocomplete="tel" value="${esc(state.phone)}" required />
+                        <div class="field-error" id="contactErr"></div>
+                        <button type="submit" id="contactBtn">Continue →</button>
                     </form>
-                    <p class="gate-note">We only use this to send your link and reminders for this workshop. No spam, unsubscribe anytime.</p>
-                    <button class="back-btn" id="backBtn" style="margin-top:14px;opacity:0.8;">← Back</button>
+                    <p class="gate-note">We only use this to save your spot and send your link plus reminders. No spam, unsubscribe anytime.</p>
                 </div>`;
 
-            document.getElementById('backBtn').addEventListener('click', () => { state.step = TOTAL - 1; renderQuestion(); });
-
-            const form = document.getElementById('gateForm');
-            const gateBtn = document.getElementById('gateBtn');
-            const errEl = document.getElementById('gateErr');
+            const form = document.getElementById('contactForm');
+            const btn = document.getElementById('contactBtn');
+            const errEl = document.getElementById('contactErr');
+            document.getElementById('nameInput').focus();
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const name = document.getElementById('nameInput').value.trim();
@@ -605,18 +615,57 @@
                 if (phone.replace(/\D/g, '').length < 7) { errEl.textContent = 'Please enter a valid phone number.'; return; }
 
                 state.name = name; state.email = email; state.phone = phone;
-                gateBtn.disabled = true; gateBtn.textContent = 'Unlocking…';
+                btn.disabled = true; btn.textContent = 'Saving…';
 
-                const params = new URLSearchParams(location.search);
-                const utm = {};
-                ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(k => { const v = params.get(k); if (v) utm[k] = v; });
+                // Save the partial lead once. If we already have an id (they came
+                // back to this slide), skip the insert and just move on.
+                if (!state.registrationId) {
+                    const { source, utm } = utmFromUrl();
+                    try {
+                        const resp = await fetch('/api/webinar', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ stage: 'contact', name, email, phone, source, utm }),
+                        });
+                        const data = await resp.json().catch(() => ({}));
+                        if (!resp.ok) { errEl.textContent = data.error || 'Something went wrong. Please try again.'; btn.disabled = false; btn.textContent = 'Continue →'; return; }
+                        if (data.registration_id) state.registrationId = data.registration_id;
+                    } catch (err) {
+                        // Network hiccup: don't trap the user — continue the survey
+                        // and the final save will capture everything.
+                        console.error('partial save failed:', err);
+                    }
+                }
 
-                let meet = { url: 'https://meet.google.com/ddv-bern-gye', title: 'Advanced AI Workshop', when: 'Monday, July 6 · 7:00 PM CST' };
+                if (window.dataLayer) window.dataLayer.push({ event: 'webinar_contact', email });
+                state.step = 0;
+                renderQuestion();
+            });
+        }
+
+        // Final step: send the full survey + mark complete, then reveal the link.
+        function submitFinal() {
+            card.innerHTML = `
+                <div class="fade-step gate">
+                    ${progressHeader('Unlocking your link', 100)}
+                    <div class="gate-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0110 0v4"></path>
+                        </svg>
+                    </div>
+                    <h3>One moment…</h3>
+                    <p>Locking in your spot and unlocking your workshop link.</p>
+                </div>`;
+
+            const { source, utm } = utmFromUrl();
+            let meet = { url: 'https://meet.google.com/ddv-bern-gye', title: 'Advanced AI Workshop', when: 'Monday, July 6 · 7:00 PM CST' };
+            (async () => {
                 try {
                     const resp = await fetch('/api/webinar', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            name, email, phone,
+                            stage: 'complete',
+                            registration_id: state.registrationId || null,
+                            name: state.name, email: state.email, phone: state.phone,
                             business: state.answers.business || null,
                             industry: state.answers.industry || null,
                             ai_level: state.answers.ai_level || null,
@@ -627,21 +676,18 @@
                             revenue_goal: state.answers.revenue_goal || null,
                             pain: state.answers.pain || null,
                             answers: state.answers,
-                            source: params.get('utm_source') || 'webinar-page',
-                            utm: Object.keys(utm).length ? utm : null,
+                            source, utm,
                         }),
                     });
                     const data = await resp.json().catch(() => ({}));
-                    if (!resp.ok) { errEl.textContent = data.error || 'Something went wrong. Please try again.'; gateBtn.disabled = false; gateBtn.textContent = 'Unlock my workshop link →'; return; }
                     if (data.meet && data.meet.url) meet = data.meet;
                 } catch (err) {
-                    errEl.textContent = 'Network error. Please try again.'; gateBtn.disabled = false; gateBtn.textContent = 'Unlock my workshop link →'; return;
+                    console.error('final submit failed:', err);
                 }
-
                 state.meet = meet;
-                if (window.dataLayer) window.dataLayer.push({ event: 'webinar_register', email });
+                if (window.dataLayer) window.dataLayer.push({ event: 'webinar_register', email: state.email });
                 renderResult();
-            });
+            })();
         }
 
         // Google Calendar link — Mon July 6 2026, 7:00–8:30 PM CT (CDT = UTC-5).
@@ -681,7 +727,7 @@
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        renderQuestion();
+        renderContact();
     </script>
 </body>
 </html>
