@@ -64,7 +64,6 @@ import EmailPage from './pages/Email';
 import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
 import Subscribers from './pages/Subscribers';
-import GlobalAgent from './components/GlobalAgent';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 
@@ -179,7 +178,6 @@ function AppLayout() {
             </Suspense>
             </ErrorBoundary>
           </main>
-          <GlobalAgent />
         </div>
       </div>
     </MobileContext.Provider>
