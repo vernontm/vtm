@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import {
   RefreshCw, Star, Mail, Sparkles, FolderOpen, CheckSquare,
   Calendar, Clock, ArrowRight, AlertCircle, Send, Video,
-  TrendingUp, Users, FileText, DollarSign, CreditCard,
+  TrendingUp, Users, FileText, DollarSign, CreditCard, Bell, Check, X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   getDashboardStats, getUpcomingMeetings, getEmailQueue,
   getLeads, getProjects, getAcademyStats,
+  getClientAlerts, markAlertRead, markAllAlertsRead,
 } from '../api';
 
 function timeAgo(iso) {
@@ -84,6 +85,19 @@ export default function Dashboard() {
   const [recentLeads, setRecentLeads] = useState([]);
   const [projects, setProjects] = useState([]);
   const [academyStats, setAcademyStats] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+
+  async function loadAlerts() {
+    try { setAlerts(await getClientAlerts(true)); } catch { /* ignore */ }
+  }
+  async function dismissAlert(id) {
+    setAlerts(a => a.filter(x => x.id !== id));
+    try { await markAlertRead(id); } catch { /* ignore */ }
+  }
+  async function dismissAllAlerts() {
+    setAlerts([]);
+    try { await markAllAlertsRead(); } catch { /* ignore */ }
+  }
 
   async function load() {
     setLoading(true);
@@ -96,6 +110,7 @@ export default function Dashboard() {
         getProjects(),
         getAcademyStats(),
       ]);
+      loadAlerts();
       setStats(statsData.status === 'fulfilled' ? statsData.value : null);
       setMeetings(meetingsData.status === 'fulfilled' ? (meetingsData.value || []).slice(0, 5) : []);
       const allEmails = emailData.status === 'fulfilled' ? (emailData.value || []) : [];
@@ -145,6 +160,39 @@ export default function Dashboard() {
           Refresh
         </button>
       </div>
+
+      {/* ── Client Activity alerts ── */}
+      {alerts.length > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 14, padding: '16px 20px', marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bell size={15} color="#22c55e" />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Client Activity</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 999, padding: '1px 8px' }}>{alerts.length} new</span>
+            </div>
+            <button onClick={dismissAllAlerts} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              <Check size={13} /> Mark all read
+            </button>
+          </div>
+          {alerts.map(a => (
+            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckSquare size={14} color="#22c55e" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.message}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{a.client?.business_name || 'Client'} · {timeAgo(a.created_at)}</div>
+              </div>
+              <Link to="/clients" style={{ fontSize: 11, color: 'var(--orange)', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Open</Link>
+              <button onClick={() => dismissAlert(a.id)} title="Mark read" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}>
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>

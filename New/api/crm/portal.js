@@ -40,8 +40,9 @@ module.exports = async function handler(req, res) {
       if (!task_id) return res.status(400).json({ error: 'task_id required' });
       const status = (req.body && req.body.status) === 'done' ? 'done' : 'todo';
       // Verify the task belongs to this client before touching it.
-      const owned = await supaFetch(`crm_client_tasks?id=eq.${task_id}&client_id=eq.${client.id}&select=id`);
+      const owned = await supaFetch(`crm_client_tasks?id=eq.${task_id}&client_id=eq.${client.id}&select=id,title,status`);
       if (!owned || owned.length === 0) return res.status(403).json({ error: 'Not your task' });
+      const prev = owned[0];
       const rows = await supaFetch(`crm_client_tasks?id=eq.${task_id}`, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -50,6 +51,18 @@ module.exports = async function handler(req, res) {
           updated_at: new Date().toISOString(),
         }),
       });
+      // Alert Ray only on the todo -> done transition (not on re-checks/unchecks).
+      if (status === 'done' && prev.status !== 'done') {
+        await supaFetch('crm_client_alerts', {
+          method: 'POST',
+          body: JSON.stringify({
+            client_id: client.id,
+            task_id,
+            type: 'task_completed',
+            message: `${client.business_name} completed "${prev.title}"`,
+          }),
+        }).catch((e) => console.error('alert insert failed:', e)); // never block the client
+      }
       return res.json(rows[0]);
     }
 

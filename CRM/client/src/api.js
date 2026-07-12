@@ -306,6 +306,11 @@ export const createClientCredential = (data)      => request('/client-credential
 export const updateClientCredential = (id, data)  => request(`/client-credentials?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClientCredential = (id)        => request(`/client-credentials?id=${id}`, { method: 'DELETE' });
 
+// Client portal alerts (client completed a task, etc.)
+export const getClientAlerts   = (unread) => request(`/client-alerts${unread ? '?unread=1' : ''}`);
+export const markAlertRead     = (id)     => request(`/client-alerts?id=${id}`, { method: 'PATCH', body: JSON.stringify({ read: true }) });
+export const markAllAlertsRead = ()       => request('/client-alerts?action=read-all', { method: 'POST' });
+
 // Content Clients
 export const getContentClients = () => request('/content-clients');
 export const getContentClient = (id) => request(`/content-clients?id=${id}`);
