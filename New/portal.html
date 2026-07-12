@@ -7,161 +7,408 @@
   <title>Client Portal · Vernon Tech &amp; Media</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #111112; --surface: #1a1a1c; --surface-2: #222226; --border: #2c2c30;
-      --text: #f4f4f5; --muted: #9a9aa2;
-      --orange: #ff9b26; --orange-dark: #ee4c27;
-      --green: #22c55e; --blue: #3b82f6; --red: #ff5c5c;
-      --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
-      --font-body: 'DM Sans', system-ui, sans-serif;
+      --bg: #f2f3f5; --panel: #ffffff; --ink: #16191d; --body: #4b5563; --muted: #939aa6;
+      --line: #e3e5ea; --line-strong: #cfd3da;
+      --accent: #ee6a1f; --accent-tint: #fff4ec; --accent-line: #f6c9a6;
+      --ok: #1f9d63; --ok-tint: #e9f7ef;
+      --fdisp: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --fbody: 'Inter', system-ui, sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; line-height: 1.5; }
-    a { color: var(--orange); }
-    .wrap { max-width: 680px; margin: 0 auto; padding: 28px 20px 80px; }
+    html, body { height: 100%; }
+    body { background: var(--bg); color: var(--body); font-family: var(--fbody); -webkit-font-smoothing: antialiased; }
+    button { font-family: inherit; cursor: pointer; }
+    input, textarea { font-family: inherit; }
 
-    header.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-    .logo { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, var(--orange), var(--orange-dark));
-      display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-family: var(--font-display); flex-shrink: 0; }
-    .brand-name { font-family: var(--font-display); font-weight: 800; font-size: 15px; }
-    .brand-sub { color: var(--muted); font-size: 11px; }
+    /* top scrubber */
+    #topbar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); width: 0; z-index: 50; transition: width .45s cubic-bezier(.4,0,.2,1); }
 
-    .hero { margin-bottom: 22px; }
-    .hero h1 { font-family: var(--font-display); font-size: 26px; font-weight: 800; line-height: 1.2; margin-bottom: 8px; }
-    .hero p { color: var(--muted); font-size: 15px; }
+    header.nav { background: var(--panel); border-bottom: 1px solid var(--line); height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; }
+    .brand { display: flex; align-items: center; gap: 9px; font-family: var(--fdisp); font-weight: 800; font-size: 13px; letter-spacing: .14em; }
+    .brand .b1 { color: var(--accent); }
+    .brand .dot { color: var(--line-strong); }
+    .brand .b2 { color: var(--muted); letter-spacing: .16em; }
+    .nav-help { font-size: 13px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 9px; padding: 7px 14px; font-weight: 500; }
+    .nav-help:hover { color: var(--ink); border-color: var(--line-strong); }
 
-    .progress-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 26px; }
-    .progress-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .progress-label { font-family: var(--font-display); font-weight: 700; font-size: 13px; }
-    .progress-count { color: var(--muted); font-size: 13px; }
-    .bar { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
-    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--orange), var(--orange-dark)); width: 0%; transition: width .4s ease; }
+    .stage { max-width: 940px; margin: 0 auto; padding: 46px 24px 120px; }
 
-    .section-title { font-family: var(--font-display); font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 26px 0 12px; }
+    .progress-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .step-label { font-size: 12.5px; color: var(--muted); font-weight: 500; letter-spacing: .01em; }
+    .save-exit { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 8px 15px; font-size: 12.5px; font-weight: 600; color: var(--body); }
+    .save-exit:hover { border-color: var(--line-strong); color: var(--ink); }
+    .bar { height: 6px; background: #e6e8ec; border-radius: 999px; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; width: 0; transition: width .45s cubic-bezier(.4,0,.2,1); }
 
-    .task { display: flex; gap: 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
-    .task:hover { border-color: #3a3a40; }
-    .task.done { opacity: .6; }
-    .check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: all .15s; }
-    .task.done .check { background: var(--green); border-color: var(--green); }
-    .check svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3.5; fill: none; opacity: 0; transition: opacity .15s; }
+    .step-head { margin: 40px 0 30px; }
+    .step-head h1 { font-family: var(--fdisp); font-weight: 800; font-size: 30px; color: var(--ink); letter-spacing: -.01em; line-height: 1.15; }
+    .step-head p { font-size: 15.5px; color: var(--muted); margin-top: 9px; }
+
+    .group { margin-bottom: 24px; }
+    .group > label.legend { display: block; font-size: 13.5px; color: var(--body); font-weight: 500; margin-bottom: 11px; }
+    .field label { display: block; font-size: 13.5px; color: var(--body); font-weight: 500; margin-bottom: 8px; }
+    .row { display: grid; gap: 16px; margin-bottom: 20px; }
+    .row.two { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 620px) { .row.two { grid-template-columns: 1fr; } .step-head h1 { font-size: 25px; } }
+
+    input.inp, textarea.inp {
+      width: 100%; background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px;
+      padding: 14px 16px; font-size: 15.5px; color: var(--ink); transition: border-color .15s, box-shadow .15s;
+    }
+    textarea.inp { min-height: 96px; resize: vertical; line-height: 1.5; }
+    input.inp::placeholder, textarea.inp::placeholder { color: #b3b8c1; }
+    input.inp:focus, textarea.inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3.5px rgba(238,106,31,.13); }
+
+    .pills { display: flex; flex-wrap: wrap; gap: 11px; }
+    .pill {
+      background: var(--panel); border: 1.5px solid var(--line); border-radius: 999px;
+      padding: 10px 20px; font-size: 14.5px; font-weight: 600; color: var(--ink); transition: all .13s;
+    }
+    .pill:hover { border-color: var(--line-strong); }
+    .pill.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
+
+    .nav-btns { display: flex; align-items: center; justify-content: space-between; margin-top: 40px; }
+    .back { background: none; border: none; color: var(--muted); font-size: 14.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; padding: 8px 4px; }
+    .back:hover { color: var(--ink); }
+    .back[hidden] { visibility: hidden; }
+    .next { background: var(--ink); color: #fff; border: none; border-radius: 12px; padding: 13px 26px; font-size: 14.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: background .15s, opacity .15s; }
+    .next:hover { background: #000; }
+    .next:disabled { background: #cbd0d8; color: #f4f5f6; cursor: not-allowed; }
+
+    /* review */
+    .review-list { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--panel); }
+    .review-row { display: flex; gap: 16px; padding: 13px 18px; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .review-row:last-child { border-bottom: none; }
+    .review-row .k { color: var(--muted); width: 200px; flex-shrink: 0; }
+    .review-row .v { color: var(--ink); font-weight: 500; }
+
+    /* checklist / done view */
+    .done-hero { text-align: center; padding: 8px 0 26px; }
+    .done-badge { width: 60px; height: 60px; border-radius: 50%; background: var(--ok-tint); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .done-hero h1 { font-family: var(--fdisp); font-weight: 800; font-size: 28px; color: var(--ink); }
+    .done-hero p { color: var(--muted); font-size: 15px; margin-top: 8px; }
+    .sec-title { font-family: var(--fdisp); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 30px 0 12px; }
+    .task { display: flex; gap: 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 15px 17px; margin-bottom: 11px; cursor: pointer; transition: border-color .15s; }
+    .task:hover { border-color: var(--line-strong); }
+    .task.done { opacity: .62; }
+    .check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: all .15s; }
+    .task.done .check { background: var(--ok); border-color: var(--ok); }
+    .check svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3.4; fill: none; opacity: 0; }
     .task.done .check svg { opacity: 1; }
-    .task-body { flex: 1; min-width: 0; }
-    .task-title { font-weight: 600; font-size: 15px; }
+    .task-title { font-weight: 600; font-size: 15px; color: var(--ink); }
     .task.done .task-title { text-decoration: line-through; }
     .task-desc { color: var(--muted); font-size: 13px; margin-top: 3px; }
-    .tag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--orange); background: rgba(255,155,38,.12); border: 1px solid rgba(255,155,38,.3); border-radius: 999px; padding: 2px 8px; margin-top: 8px; }
-
-    .plat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+    .tag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); background: var(--accent-tint); border: 1px solid var(--accent-line); border-radius: 999px; padding: 2px 8px; margin-top: 8px; }
+    .plat { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 14px 17px; margin-bottom: 11px; }
     .plat-top { display: flex; align-items: center; gap: 10px; }
-    .plat-name { font-weight: 700; font-size: 14px; flex: 1; }
-    .badge { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px; }
-    .badge.needed { color: var(--red); background: rgba(255,92,92,.12); border: 1px solid rgba(255,92,92,.3); }
-    .badge.requested { color: var(--orange); background: rgba(255,155,38,.12); border: 1px solid rgba(255,155,38,.3); }
-    .badge.granted { color: var(--green); background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); }
-    .plat-process { margin-top: 10px; background: var(--surface-2); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: var(--muted); white-space: pre-wrap; }
+    .plat-name { font-weight: 700; font-size: 14px; color: var(--ink); flex: 1; }
+    .badge { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 10px; text-transform: capitalize; }
+    .badge.needed { color: #c23b3b; background: #fbecec; border: 1px solid #f3caca; }
+    .badge.requested { color: var(--accent); background: var(--accent-tint); border: 1px solid var(--accent-line); }
+    .badge.granted { color: var(--ok); background: var(--ok-tint); border: 1px solid #bfe6cf; }
+    .plat-process { margin-top: 10px; background: #f7f8fa; border-radius: 9px; padding: 10px 12px; font-size: 12.5px; color: var(--body); white-space: pre-wrap; line-height: 1.55; }
 
-    .state { text-align: center; padding: 80px 20px; color: var(--muted); }
-    .state h2 { font-family: var(--font-display); color: var(--text); font-size: 20px; margin-bottom: 8px; }
-    .done-banner { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: var(--green); border-radius: 12px; padding: 14px 16px; font-weight: 600; font-size: 14px; text-align: center; margin-bottom: 22px; }
-    .footer { margin-top: 40px; text-align: center; color: var(--muted); font-size: 12px; }
+    .state { text-align: center; padding: 90px 20px; color: var(--muted); }
+    .state h2 { font-family: var(--fdisp); color: var(--ink); font-size: 21px; margin-bottom: 8px; }
+
+    .help-fab { position: fixed; right: 22px; bottom: 22px; width: 50px; height: 50px; border-radius: 50%; background: var(--ink); border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,.18); text-decoration: none; }
+    .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 500; opacity: 0; pointer-events: none; transition: all .25s; z-index: 60; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
-  <div class="wrap" id="app">
-    <div class="state" id="loading">Loading your portal…</div>
-  </div>
+  <div id="topbar"></div>
+  <header class="nav">
+    <div class="brand"><span class="b1">VERNON TECH &amp; MEDIA</span><span class="dot">·</span><span class="b2">CLIENT PORTAL</span></div>
+    <a class="nav-help" href="mailto:ray@vernontm.com">Need help?</a>
+  </header>
+  <main class="stage" id="app"><div class="state">Loading your portal…</div></main>
+  <a class="help-fab" href="mailto:ray@vernontm.com" title="Message us">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </a>
+  <div class="toast" id="toast"></div>
 
   <script>
-    const CHECK_SVG = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+    const CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+    const ARROW = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+    const BACKARROW = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>';
+    const esc = s => (s == null ? '' : String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])));
     const params = new URLSearchParams(location.search);
     const token = params.get('token');
     const app = document.getElementById('app');
-    let data = null;
+    const topbar = document.getElementById('topbar');
 
-    const esc = (s) => (s == null ? '' : String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])));
+    const STEPS = [
+      { key:'about', title:'About your business', subtitle:'So we can set up your file and reach you.',
+        rows:[
+          [{ name:'business_name', label:'Business name', type:'text', required:true, ph:'Acme Co.' }],
+          [{ name:'owner_name', label:'Your name', type:'text', ph:'Jane Doe' }, { name:'contact_email', label:'Email', type:'email', required:true, ph:'you@business.com' }],
+          [{ name:'contact_phone', label:'Phone', type:'tel', ph:'(000) 000-0000' }],
+        ] },
+      { key:'what', title:'What you do', subtitle:'Tell us about your business.',
+        select:{ name:'business_type', legend:'Business type', required:true, options:['Local business','E-commerce','Creator / personal brand','SaaS / tech','Service provider','Other'] },
+        rows:[
+          [{ name:'website_url', label:'Website (optional)', type:'text', ph:'https://…' }],
+          [{ name:'industry', label:'Industry (optional)', type:'text', ph:'e.g. Coffee & retail' }],
+        ] },
+      { key:'need', title:'What you need from us', subtitle:'Pick everything you are interested in.',
+        multi:{ name:'services', legend:'We can help with', required:true, options:['Website','Mobile app','CRM / automation','Content creation','Social media growth','Email marketing','Paid ads','AI chatbot','Branding'] } },
+      { key:'goals', title:'Your goals', subtitle:'Help us understand what success looks like.',
+        rows:[
+          [{ name:'campaign_goals', label:'What are you trying to achieve?', type:'textarea', ph:'e.g. Launch an online store and grow to 500 orders a month' }],
+          [{ name:'target_audience', label:'Who are your customers?', type:'textarea', ph:'e.g. Local coffee lovers and remote workers, ages 22-45' }],
+        ] },
+      { key:'brand', title:'Your brand', subtitle:'So everything we make sounds and looks like you.',
+        select:{ name:'outreach_tone', legend:'Brand vibe (optional)', options:['Bold','Elegant','Playful','Minimal','Luxury','Friendly'] },
+        rows:[
+          [{ name:'instagram', label:'Instagram (optional)', type:'text', ph:'@handle' }, { name:'tiktok', label:'TikTok (optional)', type:'text', ph:'@handle' }],
+          [{ name:'unique_selling_points', label:'What makes you different? (optional)', type:'textarea', ph:'What should we highlight about you?' }],
+        ] },
+      { key:'tools', title:'Tools you use', subtitle:'Which platforms should we get access to? We will send steps for each.',
+        platforms:{ legend:'Select all that apply', options:['Shopify','WordPress','Squarespace','Wix','Notion','Google Workspace','Instagram','Facebook','TikTok','YouTube','Stripe','Mailchimp','HubSpot','Other'] } },
+      { key:'review', title:'Review & submit', subtitle:'Make sure everything looks right, then send it over.', review:true },
+    ];
 
-    function stateHtml(title, msg) {
-      return '<div class="state"><h2>' + esc(title) + '</h2><p>' + esc(msg) + '</p></div>';
+    let data = null;         // { client, tasks, platforms }
+    const answers = {};      // field name -> value
+    let services = [];       // multi-select
+    let platforms = [];      // selected tool names
+    let step = 0;
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
     }
 
     async function load() {
-      if (!token) { app.innerHTML = stateHtml('No access link', 'This portal link is missing its token. Please use the link we sent you.'); return; }
+      if (!token) { app.innerHTML = '<div class="state"><h2>No access link</h2><p>This portal link is missing its token. Please use the link we sent you.</p></div>'; return; }
       try {
         const res = await fetch('/api/crm/portal?token=' + encodeURIComponent(token));
-        if (res.status === 404) { app.innerHTML = stateHtml('Portal not found', 'This link is not valid. Please check with your Vernon Tech & Media contact.'); return; }
-        if (!res.ok) throw new Error('load failed');
+        if (res.status === 404) { app.innerHTML = '<div class="state"><h2>Portal not found</h2><p>This link is not valid. Please check with your Vernon Tech &amp; Media contact.</p></div>'; return; }
+        if (!res.ok) throw new Error('load');
         data = await res.json();
-        render();
+        prefill();
+        if (data.client.onboarding_completed_at) renderDone();
+        else renderStep();
       } catch (e) {
-        app.innerHTML = stateHtml('Something went wrong', 'We could not load your portal. Please refresh or try again shortly.');
+        app.innerHTML = '<div class="state"><h2>Something went wrong</h2><p>We could not load your portal. Please refresh or try again shortly.</p></div>';
       }
     }
 
-    async function toggle(taskId, el) {
-      const task = data.tasks.find(t => t.id === taskId);
-      if (!task) return;
-      const next = task.status === 'done' ? 'todo' : 'done';
-      task.status = next; // optimistic
-      render();
-      try {
-        await fetch('/api/crm/portal?token=' + encodeURIComponent(token) + '&task_id=' + taskId, {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }),
-        });
-      } catch (e) { task.status = next === 'done' ? 'todo' : 'done'; render(); }
+    function prefill() {
+      const c = data.client || {};
+      ['business_name','owner_name','contact_email','contact_phone','business_type','website_url','industry','campaign_goals','target_audience','instagram','tiktok','unique_selling_points','outreach_tone'].forEach(k => { if (c[k]) answers[k] = c[k]; });
+      if (c.services) services = c.services.split(',').map(s => s.trim()).filter(Boolean);
+      platforms = (data.platforms || []).map(p => p.platform_name);
     }
 
-    function render() {
-      const c = data.client;
+    function setTop(pct) { topbar.style.width = pct + '%'; }
+
+    // ── Wizard ────────────────────────────────────────────────────────────
+    function stepValid() {
+      const s = STEPS[step];
+      if (s.review) return true;
+      if (s.select && s.select.required && !answers[s.select.name]) return false;
+      if (s.multi && s.multi.required && services.length === 0) return false;
+      if (s.rows) {
+        for (const row of s.rows) for (const f of row) {
+          if (f.required && !(answers[f.name] && String(answers[f.name]).trim())) return false;
+        }
+      }
+      return true;
+    }
+
+    function renderStep() {
+      const s = STEPS[step];
+      const total = STEPS.length;
+      const pct = Math.round(((step) / total) * 100);
+      const shownPct = Math.round(((step + 1) / total) * 100);
+      setTop(Math.round(((step + 1) / total) * 100));
+
+      let body = '';
+      // single-select group
+      if (s.select) {
+        body += '<div class="group"><label class="legend">' + esc(s.select.legend) + '</label><div class="pills" data-single="' + s.select.name + '">'
+          + s.select.options.map(o => '<button type="button" class="pill' + (answers[s.select.name] === o ? ' on' : '') + '" data-val="' + esc(o) + '">' + esc(o) + '</button>').join('')
+          + '</div></div>';
+      }
+      // multi-select (services)
+      if (s.multi) {
+        body += '<div class="group"><label class="legend">' + esc(s.multi.legend) + '</label><div class="pills" data-multi="services">'
+          + s.multi.options.map(o => '<button type="button" class="pill' + (services.includes(o) ? ' on' : '') + '" data-val="' + esc(o) + '">' + esc(o) + '</button>').join('')
+          + '</div></div>';
+      }
+      // platforms multi-select
+      if (s.platforms) {
+        body += '<div class="group"><label class="legend">' + esc(s.platforms.legend) + '</label><div class="pills" data-plat="1">'
+          + s.platforms.options.map(o => '<button type="button" class="pill' + (platforms.includes(o) ? ' on' : '') + '" data-val="' + esc(o) + '">' + esc(o) + '</button>').join('')
+          + '</div></div>';
+      }
+      // field rows
+      if (s.rows) {
+        s.rows.forEach(row => {
+          body += '<div class="row' + (row.length > 1 ? ' two' : '') + '">';
+          row.forEach(f => {
+            const val = esc(answers[f.name] || '');
+            body += '<div class="field"><label>' + esc(f.label) + '</label>'
+              + (f.type === 'textarea'
+                  ? '<textarea class="inp" data-name="' + f.name + '" placeholder="' + esc(f.ph || '') + '">' + val + '</textarea>'
+                  : '<input class="inp" data-name="' + f.name + '" type="' + (f.type || 'text') + '" placeholder="' + esc(f.ph || '') + '" value="' + val + '" />')
+              + '</div>';
+          });
+          body += '</div>';
+        });
+      }
+      // review
+      if (s.review) body += renderReview();
+
+      app.innerHTML =
+        '<div class="progress-row"><span class="step-label">Step ' + (step + 1) + ' of ' + total + ' · ' + shownPct + '%</span>'
+        + '<button class="save-exit" id="saveExit">Save &amp; exit</button></div>'
+        + '<div class="bar"><span style="width:' + shownPct + '%"></span></div>'
+        + '<div class="step-head"><h1>' + esc(s.title) + '</h1><p>' + esc(s.subtitle) + '</p></div>'
+        + body
+        + '<div class="nav-btns">'
+        + '<button class="back" id="backBtn"' + (step === 0 ? ' hidden' : '') + '>' + BACKARROW + ' Back</button>'
+        + '<button class="next" id="nextBtn">' + (s.review ? 'Submit' : 'Next') + ' ' + ARROW + '</button>'
+        + '</div>';
+
+      wire();
+    }
+
+    function renderReview() {
+      const map = [
+        ['Business', answers.business_name], ['Your name', answers.owner_name],
+        ['Email', answers.contact_email], ['Phone', answers.contact_phone],
+        ['Business type', answers.business_type], ['Website', answers.website_url],
+        ['Industry', answers.industry], ['You need', services.join(', ')],
+        ['Goals', answers.campaign_goals], ['Audience', answers.target_audience],
+        ['Brand vibe', answers.outreach_tone], ['Instagram', answers.instagram],
+        ['TikTok', answers.tiktok], ['What makes you different', answers.unique_selling_points],
+        ['Tools', platforms.join(', ')],
+      ].filter(r => r[1] && String(r[1]).trim());
+      return '<div class="review-list">' + map.map(r =>
+        '<div class="review-row"><div class="k">' + esc(r[0]) + '</div><div class="v">' + esc(r[1]) + '</div></div>').join('') + '</div>';
+    }
+
+    function wire() {
+      app.querySelectorAll('.inp').forEach(el => {
+        el.addEventListener('input', () => { answers[el.dataset.name] = el.value; syncNext(); });
+      });
+      app.querySelectorAll('[data-single] .pill').forEach(el => {
+        el.addEventListener('click', () => {
+          const name = el.parentElement.dataset.single;
+          answers[name] = el.dataset.val;
+          el.parentElement.querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
+          el.classList.add('on'); syncNext();
+        });
+      });
+      app.querySelectorAll('[data-multi] .pill').forEach(el => {
+        el.addEventListener('click', () => {
+          const v = el.dataset.val;
+          if (services.includes(v)) services = services.filter(x => x !== v); else services.push(v);
+          el.classList.toggle('on'); syncNext();
+        });
+      });
+      app.querySelectorAll('[data-plat] .pill').forEach(el => {
+        el.addEventListener('click', () => {
+          const v = el.dataset.val;
+          if (platforms.includes(v)) platforms = platforms.filter(x => x !== v); else platforms.push(v);
+          el.classList.toggle('on'); syncNext();
+        });
+      });
+      document.getElementById('backBtn').addEventListener('click', () => { if (step > 0) { step--; renderStep(); window.scrollTo(0,0); } });
+      document.getElementById('nextBtn').addEventListener('click', onNext);
+      document.getElementById('saveExit').addEventListener('click', async () => { await save(false); toast('Progress saved'); });
+      syncNext();
+    }
+
+    function syncNext() {
+      const btn = document.getElementById('nextBtn');
+      if (btn) btn.disabled = !stepValid();
+    }
+
+    function buildPayload(complete) {
+      const fields = {};
+      ['business_name','owner_name','contact_email','contact_phone','business_type','website_url','industry','campaign_goals','target_audience','instagram','tiktok','unique_selling_points','outreach_tone'].forEach(k => { fields[k] = answers[k] || ''; });
+      fields.services = services.join(', ');
+      return { fields, platforms, complete: !!complete };
+    }
+
+    async function save(complete) {
+      try {
+        await fetch('/api/crm/portal?token=' + encodeURIComponent(token) + '&action=save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildPayload(complete)),
+        });
+        return true;
+      } catch (e) { return false; }
+    }
+
+    async function onNext() {
+      if (!stepValid()) return;
+      const s = STEPS[step];
+      const btn = document.getElementById('nextBtn');
+      btn.disabled = true;
+      if (s.review) {
+        const ok = await save(true);
+        if (!ok) { btn.disabled = false; toast('Could not submit. Try again.'); return; }
+        data.client.onboarding_completed_at = new Date().toISOString();
+        // refresh tasks/platforms the survey may have created
+        try { data = await (await fetch('/api/crm/portal?token=' + encodeURIComponent(token))).json(); } catch (e) {}
+        setTop(100); renderDone(); window.scrollTo(0,0); return;
+      }
+      await save(false);          // autosave progress
+      step++; renderStep(); window.scrollTo(0, 0);
+    }
+
+    // ── Done / checklist view ─────────────────────────────────────────────
+    function renderDone() {
       const tasks = data.tasks || [];
-      const platforms = data.platforms || [];
+      const plats = data.platforms || [];
       const done = tasks.filter(t => t.status === 'done').length;
-      const pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
-      const allDone = tasks.length > 0 && done === tasks.length;
-      const name = c.owner_name ? c.owner_name.split(' ')[0] : 'there';
+      const name = (data.client.owner_name || '').split(' ')[0] || 'there';
+      setTop(100);
 
-      let html = '';
-      html += '<header class="brand"><div class="logo">V</div><div><div class="brand-name">Vernon Tech &amp; Media</div><div class="brand-sub">Client Portal</div></div></header>';
-      html += '<div class="hero"><h1>Welcome, ' + esc(name) + '</h1><p>A few quick things from you so we can get <strong>' + esc(c.business_name) + '</strong> moving. Check each item off as you finish it.</p></div>';
-
-      if (allDone) html += '<div class="done-banner">All set. Thank you! We have everything we need and will take it from here.</div>';
+      let html = '<div class="done-hero"><div class="done-badge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1f9d63" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>'
+        + '<h1>Thanks, ' + esc(name) + '</h1><p>Your details are in. Here is what we need next to get started.</p></div>';
 
       if (tasks.length) {
-        html += '<div class="progress-card"><div class="progress-top"><span class="progress-label">Your checklist</span><span class="progress-count">' + done + ' of ' + tasks.length + ' done</span></div><div class="bar"><span style="width:' + pct + '%"></span></div></div>';
-        html += '<div class="section-title">To do</div>';
+        html += '<div class="sec-title">Your checklist · ' + done + ' of ' + tasks.length + ' done</div>';
         tasks.forEach(t => {
-          html += '<div class="task ' + (t.status === 'done' ? 'done' : '') + '" data-id="' + t.id + '">'
-            + '<div class="check">' + CHECK_SVG + '</div>'
-            + '<div class="task-body"><div class="task-title">' + esc(t.title) + '</div>'
+          html += '<div class="task ' + (t.status === 'done' ? 'done' : '') + '" data-id="' + t.id + '"><div class="check">' + CHECK + '</div>'
+            + '<div><div class="task-title">' + esc(t.title) + '</div>'
             + (t.description ? '<div class="task-desc">' + esc(t.description) + '</div>' : '')
-            + (t.category ? '<span class="tag">' + esc(t.category) + '</span>' : '')
-            + '</div></div>';
+            + (t.category ? '<span class="tag">' + esc(t.category) + '</span>' : '') + '</div></div>';
         });
       }
-
-      if (platforms.length) {
-        html += '<div class="section-title">Access status</div>';
-        platforms.forEach(p => {
+      if (plats.length) {
+        html += '<div class="sec-title">Access status</div>';
+        plats.forEach(p => {
           const st = ['needed','requested','granted'].includes(p.access_status) ? p.access_status : 'needed';
-          html += '<div class="plat"><div class="plat-top"><span class="plat-name">' + esc(p.platform_name) + '</span>'
-            + '<span class="badge ' + st + '">' + st + '</span></div>'
-            + (p.access_process ? '<div class="plat-process">' + esc(p.access_process) + '</div>' : '')
-            + '</div>';
+          html += '<div class="plat"><div class="plat-top"><span class="plat-name">' + esc(p.platform_name) + '</span><span class="badge ' + st + '">' + st + '</span></div>'
+            + (p.access_process ? '<div class="plat-process">' + esc(p.access_process) + '</div>' : '') + '</div>';
         });
       }
-
-      if (!tasks.length && !platforms.length) {
-        html += stateHtml('Nothing needed right now', 'You are all caught up. We will reach out if we need anything.');
+      if (!tasks.length && !plats.length) {
+        html += '<div class="state"><h2>You are all set</h2><p>We have everything we need for now and will be in touch shortly.</p></div>';
       }
-
-      html += '<div class="footer">Questions? Reply to our last email or text and we will help.</div>';
       app.innerHTML = html;
+      app.querySelectorAll('.task').forEach(el => el.addEventListener('click', () => toggleTask(el.dataset.id)));
+    }
 
-      app.querySelectorAll('.task').forEach(el => {
-        el.addEventListener('click', () => toggle(el.getAttribute('data-id'), el));
-      });
+    async function toggleTask(id) {
+      const t = data.tasks.find(x => x.id === id); if (!t) return;
+      const next = t.status === 'done' ? 'todo' : 'done';
+      t.status = next; renderDone();
+      try {
+        await fetch('/api/crm/portal?token=' + encodeURIComponent(token) + '&task_id=' + id, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }),
+        });
+      } catch (e) { t.status = next === 'done' ? 'todo' : 'done'; renderDone(); }
     }
 
     load();
