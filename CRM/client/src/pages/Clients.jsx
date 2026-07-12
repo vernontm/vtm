@@ -308,6 +308,21 @@ function OverviewTab({ client, saveField }) {
         </div>
       </div>
 
+      {client.portal_token && (() => {
+        const link = `${window.location.origin}/portal?token=${client.portal_token}`;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Client portal link</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input readOnly value={link} onFocus={e => e.target.select()} className="form-input" style={{ flex: 1, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
+              <button className="btn-ghost" style={{ padding: '7px 9px' }} title="Copy link" onClick={() => copyToClipboard(link, 'Portal link')}><Copy size={15} /></button>
+              <a className="btn-ghost" style={{ padding: '7px 9px' }} href={link} target="_blank" rel="noreferrer" title="Open portal"><ExternalLink size={15} /></a>
+            </div>
+            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Private link the client opens to see their checklist and access steps. No login needed.</span>
+          </div>
+        );
+      })()}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>What we're doing / notes</span>
         <textarea className="form-input" rows={5} defaultValue={client.notes || ''} onBlur={e => saveField('notes', e.target.value)} placeholder="Scope, goals, what VTM is delivering for this client…" style={{ resize: 'vertical' }} />
