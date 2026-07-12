@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Users, Briefcase, Star, LayoutDashboard, RefreshCw,
-  Mail, Calendar, Settings, Receipt, StickyNote, LogOut,
-  Eye, EyeOff, FileText, CreditCard, FolderOpen, Film,
-  GraduationCap, BookOpen, FileCheck, MessageSquare, Link2, Settings2,
-  Video, X, Package, Bell, FileCode, Sparkles,
+  Users, Briefcase, LayoutDashboard, RefreshCw,
+  Mail, Calendar, Settings, Receipt, LogOut,
+  Eye, EyeOff, CreditCard, Building2, UserCog, X,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -17,38 +15,18 @@ import { getGmailInbox } from '../api';
 
 // ── Nav definitions ───────────────────────────────────────────────────────────
 const nav = [
-  { to: '/dashboard',         icon: LayoutDashboard, label: 'Dashboard',       slug: 'dashboard' },
-  { to: '/leads',             icon: Star,            label: 'Leads',            slug: 'leads' },
-  { to: '/contacts',          icon: Users,           label: 'Contacts',         slug: 'contacts' },
-  { to: '/projects',          icon: Briefcase,       label: 'Projects',         slug: 'projects' },
-  { to: '/blog',              icon: FileText,        label: 'Blog',             slug: 'blog' },
-  { to: '/portfolio',         icon: FolderOpen,      label: 'Portfolio',        slug: 'portfolio' },
-  { to: '/resources',         icon: FileCode,        label: 'Resources',        slug: 'resources' },
-  { to: '/content-scheduler', icon: Film,            label: 'Content',          slug: 'content-scheduler' },
-  { to: '/avatars',           icon: Sparkles,        label: 'Avatars',          slug: 'avatars' },
-  { to: '/email-marketing',   icon: Mail,            label: 'Email Marketing',  slug: 'email-marketing' },
-  { to: '/subscribers',       icon: Users,           label: 'Subscribers',      slug: 'subscribers' },
+  { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard',    slug: 'dashboard' },
+  { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
+  { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
+  { to: '/appointments', icon: Calendar,        label: 'Appointments', slug: 'appointments' },
+  { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees' },
 ];
 
 const navTools = [
-  { to: '/email',         icon: Mail,       label: 'Email',         slug: 'email' },
-  { to: '/meetings',      icon: Calendar,   label: 'Meetings',      slug: 'meetings' },
   { to: '/invoices',      icon: Receipt,    label: 'Invoices',      slug: 'invoices' },
   { to: '/subscriptions', icon: CreditCard, label: 'Subscriptions', slug: 'subscriptions' },
-  { to: '/quick-notes',   icon: StickyNote, label: 'Quick Notes',   slug: 'quick-notes' },
-  { to: '/notifications', icon: Bell,       label: 'Notifications', slug: 'notifications' },
+  { to: '/email',         icon: Mail,       label: 'Email',         slug: 'email' },
   { to: '/settings',      icon: Settings,   label: 'Settings',      slug: 'settings' },
-];
-
-const navAcademy = [
-  { to: '/academy',                 icon: GraduationCap, label: 'Academy',          slug: 'academy' },
-  { to: '/academy/courses',         icon: BookOpen,      label: 'Courses',          slug: 'academy-courses' },
-  { to: '/academy/students',        icon: Users,         label: 'Students',         slug: 'academy-students' },
-  { to: '/academy/homework',        icon: FileCheck,     label: 'Homework',         slug: 'academy-homework' },
-  { to: '/academy/messages',        icon: MessageSquare, label: 'Messages',         slug: 'academy-messages' },
-  { to: '/academy/community',       icon: Users,         label: 'Community',        slug: 'academy-community' },
-  { to: '/academy/recommendations', icon: Link2,         label: 'Recommendations',  slug: 'academy-recommendations' },
-  { to: '/academy/settings',        icon: Settings2,     label: 'Academy Settings', slug: 'academy-settings' },
 ];
 
 const NAV_LABEL_STYLE = {
@@ -113,8 +91,6 @@ export default function Sidebar() {
 
   const visibleNav        = nav.filter(item => canSee(item.slug));
   const visibleNavTools   = navTools.filter(item => canSee(item.slug));
-  // Academy section is admin-only for now per product decision
-  const visibleNavAcademy = isAdmin ? navAcademy.filter(item => hasPermission(item.slug)) : [];
 
   return (
     <>
@@ -206,51 +182,6 @@ export default function Sidebar() {
             </>
           )}
 
-          {visibleNavAcademy.length > 0 && (
-            <>
-              <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Academy</div>
-              {visibleNavAcademy.map(({ to, icon: Icon, label }) => (
-                <NavLink key={to} to={to} end={to === '/academy'} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                  <Icon size={15} />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-            </>
-          )}
-
-          {(canSee('training') || canSee('scripts') || canSee('products')) && (
-            <>
-              <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Training</div>
-              {canSee('training') && (
-                <NavLink to="/training" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                  <Video size={15} />
-                  <span>Training Videos</span>
-                </NavLink>
-              )}
-              {canSee('scripts') && (
-                <NavLink to="/scripts" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                  <FileText size={15} />
-                  <span>Call Scripts</span>
-                </NavLink>
-              )}
-              {canSee('products') && (
-                <NavLink to="/products" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                  <Package size={15} />
-                  <span>Products &amp; Services</span>
-                </NavLink>
-              )}
-            </>
-          )}
-
-          {isAdmin && !viewingAs && canAccess('admin-users') && (
-            <>
-              <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Admin</div>
-              <NavLink to="/admin-users" className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-                <Users size={15} />
-                <span>Users &amp; Access</span>
-              </NavLink>
-            </>
-          )}
         </nav>
 
         {/* Footer */}

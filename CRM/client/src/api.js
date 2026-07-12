@@ -288,6 +288,24 @@ export const createClient = (data) => request('/clients', { method: 'POST', body
 export const updateClient = (id, data) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClient = (id) => request(`/clients?id=${id}`, { method: 'DELETE' });
 
+// Client platforms / access tracking (which tools a client uses + access status)
+export const getClientPlatforms   = (client_id) => request(`/client-platforms?client_id=${client_id}`);
+export const createClientPlatform = (data)      => request('/client-platforms', { method: 'POST', body: JSON.stringify(data) });
+export const updateClientPlatform = (id, data)  => request(`/client-platforms?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteClientPlatform = (id)        => request(`/client-platforms?id=${id}`, { method: 'DELETE' });
+
+// Client onboarding / access checklist (portal to-dos the client checks off)
+export const getClientTasks   = (client_id) => request(`/client-tasks?client_id=${client_id}`);
+export const createClientTask = (data)      => request('/client-tasks', { method: 'POST', body: JSON.stringify(data) });
+export const updateClientTask = (id, data)  => request(`/client-tasks?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteClientTask = (id)        => request(`/client-tasks?id=${id}`, { method: 'DELETE' });
+
+// Client credential vault (secrets encrypted at rest; decrypted server-side)
+export const getClientCredentials   = (client_id) => request(`/client-credentials?client_id=${client_id}`);
+export const createClientCredential = (data)      => request('/client-credentials', { method: 'POST', body: JSON.stringify(data) });
+export const updateClientCredential = (id, data)  => request(`/client-credentials?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteClientCredential = (id)        => request(`/client-credentials?id=${id}`, { method: 'DELETE' });
+
 // Content Clients
 export const getContentClients = () => request('/content-clients');
 export const getContentClient = (id) => request(`/content-clients?id=${id}`);

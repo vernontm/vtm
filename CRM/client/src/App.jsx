@@ -50,6 +50,8 @@ import Login from './pages/Login';
 import Leads from './pages/Leads';
 import Contacts from './pages/Contacts';
 import Deals from './pages/Deals';
+import Clients from './pages/Clients';
+import Projects from './pages/Projects';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
@@ -131,9 +133,16 @@ function AppLayout() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/no-access" element={<NoAccess />} />
               <Route path="/dashboard" element={<Gated slug="dashboard"><Dashboard /></Gated>} />
+              {/* ── New lean CRM (Phase 1) ── */}
+              <Route path="/clients" element={<Gated slug="clients"><Clients /></Gated>} />
+              <Route path="/projects" element={<Gated slug="projects"><Projects /></Gated>} />
+              <Route path="/appointments" element={<Gated slug="appointments"><Meetings /></Gated>} />
+              <Route path="/appointments/:eventId" element={<Gated slug="appointments"><MeetingDetail /></Gated>} />
+              <Route path="/employees" element={<Gated slug="employees" adminOnly><AdminUsers /></Gated>} />
+              {/* ── Legacy routes (hidden from nav, kept reachable) ── */}
               <Route path="/leads" element={<Gated slug="leads"><Leads /></Gated>} />
               <Route path="/contacts" element={<Gated slug="contacts"><Contacts /></Gated>} />
-              <Route path="/projects" element={<Gated slug="projects"><Deals /></Gated>} />
+              <Route path="/deals" element={<Gated slug="projects"><Deals /></Gated>} />
               <Route path="/meetings/:eventId" element={<Gated slug="meetings"><MeetingDetail /></Gated>} />
               <Route path="/meetings" element={<Gated slug="meetings"><Meetings /></Gated>} />
               <Route path="/notifications" element={<Notifications />} />

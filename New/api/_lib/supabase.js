@@ -90,9 +90,12 @@ async function requireCrmUser(req) {
 
 // Canonical list of page slugs. Keep in sync with AdminUsers.jsx PAGE_GROUPS.
 const ALL_PAGES = [
-  'dashboard','leads','contacts','projects','blog','portfolio','resources',
-  'content-scheduler','avatars','email-marketing','email','meetings','invoices',
-  'subscriptions','quick-notes','notifications','settings','deals','scripts',
+  // New lean CRM (Phase 1)
+  'dashboard','clients','projects','appointments','employees','invoices','subscriptions','email','settings',
+  // Legacy (hidden from nav, kept reachable / grantable)
+  'leads','contacts','blog','portfolio','resources',
+  'content-scheduler','avatars','email-marketing','meetings',
+  'quick-notes','notifications','deals','scripts',
   'training','team','products','accounts','admin-users',
 ];
 
