@@ -131,7 +131,7 @@
         +   '<h2>Your signature</h2><div class="sub">Type your name or draw it. It drops onto the '+ (step==='nda'?'NDA':'agreement') +' above.</div>'
         +   '<div class="moderow"><button class="mode'+(mode==='type'?' on':'')+'" data-m="type">Type</button><button class="mode'+(mode==='draw'?' on':'')+'" data-m="draw">Draw</button></div>'
         +   (mode==='draw' ? '<canvas id="pad"></canvas><button class="clearbtn" id="clr">Clear</button>'
-                           : '<input class="typed" id="typed" placeholder="Your full name" value="'+esc(sigs[step]?.value || data.owner_name||'')+'" />')
+                           : '<input class="typed" id="typed" placeholder="Your full name" value="'+esc((sigs[step]&&sigs[step].method==='type'&&sigs[step].value)||data.owner_name||'')+'" />')
         +   '<label class="agree"><input type="checkbox" id="ack" '+(sigs[step]?'checked':'')+' /> <span>I agree that signing electronically is legally binding, and I authorize the payment terms in this agreement. I will contact Vernon Tech &amp; Media directly to resolve any billing question before disputing a charge.</span></label>'
         +   '<button class="submit" id="go">'+nextLabel+'</button>'
         +   '<div class="meta">Signed electronically. Your name, IP address, and a timestamp are recorded for verification.</div>'
