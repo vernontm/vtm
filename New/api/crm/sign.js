@@ -105,6 +105,8 @@ module.exports = async function handler(req, res) {
           if (session && session.payment_status === 'paid') {
             const pid = session.metadata && session.metadata.crm_payment_id;
             if (pid) await supaFetch(`crm_payments?id=eq.${pid}`, { method: 'PATCH', body: JSON.stringify({ status: 'paid', paid_at: new Date().toISOString(), stripe_invoice_id: session.payment_intent || session.id }) }).catch(() => {});
+            // Deposit paid → this lead is now an active client.
+            await supaFetch(`crm_clients?id=eq.${client.id}`, { method: 'PATCH', body: JSON.stringify({ payment_received: true, initial_payment_at: new Date().toISOString(), stage: 'in_build' }) }).catch(() => {});
             await supaFetch('crm_client_alerts', { method: 'POST', body: JSON.stringify({ client_id: client.id, type: 'payment_received', message: `${client.business_name} paid their deposit` }) }).catch(() => {});
           }
         }
