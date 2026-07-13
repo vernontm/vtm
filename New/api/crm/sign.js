@@ -125,6 +125,9 @@ module.exports = async function handler(req, res) {
           ndaSignatureMethod: nSig && nSig.method,
           ndaSignatureValue: nSig && nSig.value,
           signedDateLabel: new Date(nowIso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+          signedTimeLabel: new Date(nowIso).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }),
+          signerIp: ip,
+          documentId: ag.id,
         });
         const up = await uploadSignedPdf(client.id, ag.id, pdfBytes);
         if (up) fileUrl = up;

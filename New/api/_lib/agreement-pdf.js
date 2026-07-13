@@ -126,14 +126,14 @@ async function buildAgreementPdf(opts) {
     }
   }
 
-  async function drawSignatureBlock(clientMethod, clientValue) {
+  async function drawSignatureBlock(clientMethod, clientValue, audit) {
     y -= 26;
-    ensure(96);
+    ensure(120);
     const colW = (PAGE_W - 2 * M - 40) / 2;
     const leftX = M, rightX = M + colW + 40;
     const lineY = y - 40;
 
-    async function party(x, sigMethod, sigVal, nameLabel, roleLabel) {
+    async function party(x, sigMethod, sigVal, nameLabel, roleLabel, aud) {
       // signature above the line
       if (sigMethod === 'draw' && typeof sigVal === 'string' && sigVal.startsWith('data:image')) {
         try {
@@ -149,24 +149,54 @@ async function buildAgreementPdf(opts) {
       }
       page.drawLine({ start: { x, y: lineY }, end: { x: x + colW, y: lineY }, thickness: 0.8, color: rgb(0.2, 0.2, 0.2) });
       page.drawText(clean(nameLabel + '  -  ' + roleLabel), { x, y: lineY - 14, size: 9, font, color: GREY });
-      page.drawText(clean('Date: ' + signedDateLabel), { x, y: lineY - 27, size: 9, font, color: GREY });
+      page.drawText(clean('Date: ' + signedDateLabel), { x, y: lineY - 26, size: 9, font, color: GREY });
+      if (aud) {
+        page.drawText(clean('IP address: ' + (aud.ip || 'n/a')), { x, y: lineY - 38, size: 8, font, color: GREY });
+        if (aud.time) page.drawText(clean('Signed: ' + aud.time), { x, y: lineY - 49, size: 8, font, color: GREY });
+      }
     }
 
-    await party(leftX, 'type', 'Rayvaughn Vernon', 'Rayvaughn Vernon', 'Vernon Tech & Media');
-    await party(rightX, clientMethod, clientValue, ownerName || 'Client', 'Client');
-    y = lineY - 40;
+    await party(leftX, 'type', 'Rayvaughn Vernon', 'Rayvaughn Vernon', 'Vernon Tech & Media', null);
+    await party(rightX, clientMethod, clientValue, ownerName || 'Client', 'Client', audit);
+    y = lineY - 62;
   }
+
+  function drawCertificate(audit, name) {
+    ensure(78);
+    y -= 6;
+    page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.82) });
+    y -= 15;
+    page.drawText('SIGNATURE CERTIFICATE', { x: M, y: y - 9, size: 9, font: bold, color: GREY });
+    y -= 16;
+    const lines = [
+      'Signed by: ' + name,
+      'Signed at: ' + (audit.time || signedDateLabel),
+      'IP address: ' + (audit.ip || 'n/a'),
+      'Signature method: ' + audit.method,
+      'Document ID: ' + audit.docId,
+    ];
+    for (const l of lines) { page.drawText(clean(l), { x: M, y: y - 8, size: 8, font, color: GREY }); y -= 11.5; }
+  }
+
+  const audit = {
+    ip: opts.signerIp,
+    time: opts.signedTimeLabel || signedDateLabel,
+    method: signatureMethod === 'draw' ? 'Drawn signature' : 'Typed signature',
+    docId: opts.documentId || 'n/a',
+  };
 
   // ── Agreement ──
   await drawDoc(agreementMarkdown);
-  await drawSignatureBlock(signatureMethod, signatureValue);
+  await drawSignatureBlock(signatureMethod, signatureValue, audit);
 
   // ── NDA (own page) ──
   if (ndaMarkdown) {
     newPage();
     await drawDoc(ndaMarkdown);
-    await drawSignatureBlock(ndaSignatureMethod || signatureMethod, ndaSignatureValue || signatureValue);
+    await drawSignatureBlock(ndaSignatureMethod || signatureMethod, ndaSignatureValue || signatureValue, audit);
   }
+
+  drawCertificate(audit, signerName || ownerName || 'Client');
 
   return await doc.save();
 }
