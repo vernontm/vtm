@@ -11,11 +11,10 @@ import { toast } from '../components/Toast';
 
 const PROJECT_STATUSES = ['Active', 'In Progress', 'Working on it', 'Not Started', 'Completed', 'On Hold', 'Cancelled', 'Stuck'];
 const ITEM_STATUSES  = ['Not Started', 'Working on it', 'Done', 'Stuck', 'On Hold'];
-const STATUS_GROUPS  = [
-  { label: 'Active Projects', statuses: ['Active', 'In Progress', 'Working on it', 'Not Started', 'Stuck'] },
-  { label: 'Completed',       statuses: ['Completed'] },
-  { label: 'On Hold / Cancelled', statuses: ['On Hold', 'Cancelled'] },
-];
+
+// Completed projects sink to the bottom of the single list; everything else
+// keeps its natural (most-recent-first) order.
+const COMPLETED_STATUSES = ['Completed', 'Cancelled'];
 
 const EMPTY_PROJECT = { name: '', client: '', status: 'Active', value: '', start_date: '', end_date: '', notes: '' };
 const EMPTY_ITEM    = { name: '', owner: '', status: 'Not Started', date: '', text: '', link: '' };
@@ -71,7 +70,6 @@ export default function Projects() {
   const [projects, setProjects]     = useState([]);
   const [allItems, setAllItems]     = useState({}); // { project_id: [items] }
   const [expanded, setExpanded]     = useState({}); // which projects are expanded
-  const [collapsed, setCollapsed]   = useState({}); // which groups are collapsed
   const [search, setSearch]         = useState(() => searchParams.get('search') || '');
   const [modal, setModal]           = useState(null);
   const [form, setForm]             = useState(EMPTY_PROJECT);
@@ -92,9 +90,12 @@ export default function Projects() {
     [projects, search]
   );
 
-  const groups = useMemo(() => STATUS_GROUPS.map(g => ({
-    ...g, items: filtered.filter(p => g.statuses.includes(p.status)),
-  })), [filtered]);
+  // One flat list. Completed/cancelled projects sink to the bottom; the sort is
+  // stable so everything else keeps its existing order.
+  const sorted = useMemo(() => {
+    const rank = (p) => (COMPLETED_STATUSES.includes(p.status) ? 1 : 0);
+    return [...filtered].sort((a, b) => rank(a) - rank(b));
+  }, [filtered]);
 
   // Selection helpers
   const toggleSelect = (id) => setSelectedIds(prev => {
@@ -242,65 +243,56 @@ export default function Projects() {
       <div className="mobile-cards">
         {loading ? (
           <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</div>
-        ) : groups.map(({ label, items }) => (
-          <React.Fragment key={label}>
-            {items.length > 0 && (
-              <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))} style={{ margin: '4px 0' }}>
-                {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                <span style={{ color: label === 'Completed' ? '#22c55e' : 'var(--orange)' }}>{label}</span>
-                <span style={{ background: 'var(--border-light)', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: 'var(--muted)' }}>{items.length}</span>
+        ) : sorted.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No projects yet.</div>
+        ) : sorted.map(project => {
+          const pct = progressPercent(project);
+          return (
+            <div key={project.id} className="mobile-card" onClick={() => toggleExpand(project.id)}>
+              <div className="mobile-card-row primary">
+                <span className="private-value">{project.name || '—'}</span>
               </div>
-            )}
-            {!collapsed[label] && items.map(project => {
-              const pct = progressPercent(project);
-              return (
-                <div key={project.id} className="mobile-card" onClick={() => toggleExpand(project.id)}>
-                  <div className="mobile-card-row primary">
-                    <span className="private-value">{project.name || '—'}</span>
-                  </div>
-                  {project.client && (
-                    <div className="mobile-card-row">
-                      <span className="mobile-card-label">Client</span>
-                      <span className="private-value">{project.client}</span>
-                    </div>
-                  )}
-                  <div className="mobile-card-row">
-                    <span className="mobile-card-label">Status</span>
-                    <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
-                  </div>
-                  {(project.start_date || project.end_date) && (
-                    <div className="mobile-card-row">
-                      <span className="mobile-card-label">Timeline</span>
-                      <Calendar size={11} style={{ color: 'var(--muted)' }} />
-                      <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
-                    </div>
-                  )}
-                  {project.value > 0 && (
-                    <div className="mobile-card-row">
-                      <span className="mobile-card-label">Value</span>
-                      <DollarSign size={12} style={{ color: 'var(--orange)' }} />
-                      <span className="private-value" style={{ fontWeight: 600 }}>{Number(project.value).toLocaleString()}</span>
-                    </div>
-                  )}
-                  {pct > 0 && (
-                    <div className="mobile-card-row">
-                      <span className="mobile-card-label">Progress</span>
-                      <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--orange)', borderRadius: 3 }} />
-                      </div>
-                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>{pct}%</span>
-                    </div>
-                  )}
-                  {project.notes && (
-                    <div className="mobile-card-row" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                      {project.notes.length > 60 ? project.notes.slice(0, 60) + '…' : project.notes}
-                    </div>
-                  )}
+              {project.client && (
+                <div className="mobile-card-row">
+                  <span className="mobile-card-label">Client</span>
+                  <span className="private-value">{project.client}</span>
                 </div>
-              );
-            })}
-          </React.Fragment>
-        ))}
+              )}
+              <div className="mobile-card-row">
+                <span className="mobile-card-label">Status</span>
+                <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
+              </div>
+              {(project.start_date || project.end_date) && (
+                <div className="mobile-card-row">
+                  <span className="mobile-card-label">Timeline</span>
+                  <Calendar size={11} style={{ color: 'var(--muted)' }} />
+                  <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
+                </div>
+              )}
+              {project.value > 0 && (
+                <div className="mobile-card-row">
+                  <span className="mobile-card-label">Value</span>
+                  <DollarSign size={12} style={{ color: 'var(--orange)' }} />
+                  <span className="private-value" style={{ fontWeight: 600 }}>{Number(project.value).toLocaleString()}</span>
+                </div>
+              )}
+              {pct > 0 && (
+                <div className="mobile-card-row">
+                  <span className="mobile-card-label">Progress</span>
+                  <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: 'var(--orange)', borderRadius: 3 }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>{pct}%</span>
+                </div>
+              )}
+              {project.notes && (
+                <div className="mobile-card-row" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                  {project.notes.length > 60 ? project.notes.slice(0, 60) + '…' : project.notes}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Desktop table view ── */}
@@ -324,20 +316,11 @@ export default function Projects() {
           <tbody>
             {loading ? (
               <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
-            ) : groups.map(({ label, items }) => (
-              <React.Fragment key={label}>
-                {/* Group header */}
-                <tr>
-                  <td colSpan={10} style={{ padding: 0, background: 'var(--surface)' }}>
-                    <div className="group-header" onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))}>
-                      {collapsed[label] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                      <span style={{ color: label === 'Completed' ? '#22c55e' : 'var(--orange)' }}>{label}</span>
-                      <span style={{ background: 'var(--border-light)', borderRadius: 12, padding: '1px 8px', fontSize: 12, color: 'var(--muted)' }}>{items.length}</span>
-                    </div>
-                  </td>
-                </tr>
-
-                {!collapsed[label] && items.map(project => {
+            ) : sorted.length === 0 ? (
+              <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No projects yet.</td></tr>
+            ) : (
+              <>
+                {sorted.map(project => {
                   const pct   = progressPercent(project);
                   const isExp = expanded[project.id];
                   const items_ = allItems[project.id] || [];
@@ -456,30 +439,29 @@ export default function Projects() {
                   );
                 })}
 
-                {/* Group totals */}
-                {!collapsed[label] && items.length > 0 && (
+                {/* Grand total */}
+                {sorted.length > 0 && (
                   <tr className="sum-row">
                     <td colSpan={4}></td>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>Total</td>
                     <td>
                       <div className="private-value flex items-center gap-1">
                         <DollarSign size={13} style={{ color: 'var(--orange)' }} />
-                        <span>{formatMoney(items.reduce((s, p) => s + (p.value || 0), 0))}</span>
+                        <span>{formatMoney(sorted.reduce((s, p) => s + (p.value || 0), 0))}</span>
                       </div>
                     </td>
                     <td colSpan={4}></td>
                   </tr>
                 )}
 
-                {!collapsed[label] && (
-                  <tr>
-                    <td colSpan={10} style={{ padding: 0 }}>
-                      <div className="add-row" onClick={openAdd}><Plus size={14} /> Add Project</div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
+                {/* Add project */}
+                <tr>
+                  <td colSpan={10} style={{ padding: 0 }}>
+                    <div className="add-row" onClick={openAdd}><Plus size={14} /> Add Project</div>
+                  </td>
+                </tr>
+              </>
+            )}
           </tbody>
         </table>
       </div>
