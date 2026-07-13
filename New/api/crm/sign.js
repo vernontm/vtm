@@ -186,7 +186,7 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({ client_id: client.id, type: 'agreement_signed', message: `${client.business_name} signed the agreement` }),
       }).catch(() => {});
 
-      return res.json({ ok: true, account: !!link, pdf: !!pdfLink });
+      return res.json({ ok: true, account: !!link, pdf: !!pdfLink, portalUrl: link || null });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

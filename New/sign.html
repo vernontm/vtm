@@ -34,6 +34,16 @@
     .sigline img{height:46px}
     .sigline.empty{color:#c9ced6;font-size:13px;font-family:var(--fbody);font-style:italic}
     .sublabel{font-size:12px;color:#444;margin-top:5px}
+    /* mobile: give the document room so it reads like a page, not a column */
+    @media (max-width:640px){
+      .wrap{padding:16px 10px 150px}
+      .paper{padding:26px 20px;font-size:14.5px;line-height:1.6}
+      .paper .doctitle{font-size:19px}
+      .paper h2{font-size:15px}
+      .lead h1{font-size:22px}
+      .sigblock{gap:24px}
+      .party{min-width:0}
+    }
 
     .startbtn{display:block;width:100%;margin-top:18px;background:var(--ink);color:#fff;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700}
     .startbtn.pulse{box-shadow:0 0 0 0 rgba(238,106,31,.5);animation:pulse 2s infinite}
@@ -203,15 +213,26 @@
           signature_value:(sigs.agreement&&sigs.agreement.value)||''
         })});
         if(!r.ok) throw new Error();
-        renderDone(false);
+        const res=await r.json().catch(()=>({}));
+        renderDone(false, res.portalUrl);
       }catch(e){ alert('Could not finish signing. Please try again.'); formOpen=true; render(); }
     }
 
-    function renderDone(already){
+    function renderDone(already, portalUrl){
       pill.textContent='';
-      app.innerHTML='<div class="state"><div class="badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1f9d63" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>'
-        +'<h2>'+(already?'Already signed':'All signed — thank you!')+'</h2>'
-        +'<p>'+(already?'This agreement has already been signed.':'A copy of your signed agreement is on its way to your email. Check your inbox and text for a link to set your password and log into your client portal.')+'</p></div>';
+      const badge='<div class="badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1f9d63" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      let body;
+      if(already){
+        body='<h2>Already signed</h2><p>This agreement has already been signed.</p>';
+      }else if(portalUrl){
+        body='<h2>All signed — thank you!</h2><p>Taking you to your client portal to set your password…</p>'
+          +'<a class="cta" style="display:inline-block;width:auto;max-width:320px;margin-top:18px;text-decoration:none" href="'+portalUrl+'">Go to my portal &rarr;</a>'
+          +'<p style="margin-top:14px;font-size:12.5px">We also emailed you this link and a copy of your signed agreement.</p>';
+      }else{
+        body='<h2>All signed — thank you!</h2><p>A copy of your signed agreement is on its way to your email, along with a link to set your password and log into your portal.</p>';
+      }
+      app.innerHTML='<div class="state">'+badge+body+'</div>';
+      if(!already && portalUrl){ setTimeout(function(){ location.href=portalUrl; }, 2400); }
     }
 
     async function load(){
