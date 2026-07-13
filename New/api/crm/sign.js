@@ -23,9 +23,22 @@ async function agreementForToken(token) {
   return rows && rows[0] ? rows[0] : null;
 }
 
-async function provisionAccount(client) {
+// Mint a one-time set-password/login link. Each call is a fresh OTP.
+async function recoveryLink(email, redirectTo) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+    method: 'POST', headers: adminHeaders,
+    body: JSON.stringify({ type: 'recovery', email, options: { redirect_to: redirectTo } }),
+  });
+  const d = await res.json().catch(() => ({}));
+  return { link: d.action_link || (d.properties && d.properties.action_link) || null, userId: d.user_id || d.id || (d.user && d.user.id) || null };
+}
+
+// Ensure the client has an auth account and is linked to it. Returns a FRESH
+// link intended for the in-browser redirect only (never emailed, so an email
+// security scanner can't pre-consume its one-time token).
+async function ensureAccount(client, redirectTo) {
   const email = client.contact_email;
-  if (!email) return { link: null };
+  if (!email) return { userId: null, redirectLink: null };
   let userId = client.portal_user_id;
   if (!userId) {
     const cRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
@@ -34,18 +47,12 @@ async function provisionAccount(client) {
     });
     if (cRes.ok) { const u = await cRes.json(); userId = u.id; }
   }
-  const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
-    method: 'POST', headers: adminHeaders,
-    body: JSON.stringify({ type: 'recovery', email, options: { redirect_to: CLIENT_HOME } }),
-  });
-  const data = await linkRes.json().catch(() => ({}));
-  // generate_link also returns the user — use it when the account already existed.
-  if (!userId) userId = data.user_id || data.id || (data.user && data.user.id) || null;
-  // Always link this client to the account (idempotent; fixes the existing-email case).
+  const r = await recoveryLink(email, redirectTo); // resolves userId for existing accounts too
+  if (!userId) userId = r.userId;
   if (userId && userId !== client.portal_user_id) {
     await supaFetch(`crm_clients?id=eq.${client.id}`, { method: 'PATCH', body: JSON.stringify({ portal_user_id: userId }) }).catch(() => {});
   }
-  return { userId, link: data.action_link || data?.properties?.action_link || null };
+  return { userId, redirectLink: r.link };
 }
 
 async function uploadSignedPdf(clientId, agreementId, bytes) {
@@ -151,15 +158,21 @@ module.exports = async function handler(req, res) {
       let pdfLink = null;
       if (fileUrl) pdfLink = await signedUrlFor(fileUrl).catch(() => null);
 
-      // Provision the account + set-password link.
-      const { link } = await provisionAccount(client);
+      // Provision the account. Build redirect_to from the domain the client
+      // actually signed on (handles www vs non-www).
+      const origin = (req.headers.origin || ('https://' + (req.headers.host || 'vernontm.com'))).replace(/\/+$/, '');
+      const redirectTo = origin + '/client';
+      const { redirectLink } = await ensureAccount(client, redirectTo);
+      // Separate link for the email backup — a scanner consuming this one won't
+      // break the in-browser redirect above.
+      const emailLink = client.contact_email ? (await recoveryLink(client.contact_email, redirectTo)).link : null;
       const first = (signerName || 'there').split(' ')[0];
 
       // Email the client: their copy + password setup.
       if (client.contact_email) {
         const parts = [`Hi ${first},`, '', 'Thanks for signing your agreement with Vernon Tech & Media.'];
         if (pdfLink) parts.push('', `Your signed copy (PDF): ${pdfLink}`);
-        if (link) parts.push('', `Set your password and log into your client portal here: ${link}`);
+        if (emailLink) parts.push('', `Set your password and log into your client portal here: ${emailLink}`);
         parts.push('', 'Talk soon,', 'Ray', 'Vernon Tech & Media');
         try { await sendEmail({ to: client.contact_email, subject: 'Your signed Vernon Tech & Media agreement', body: parts.join('\n') }); }
         catch (e) { console.error('client email failed:', e.message); }
@@ -175,10 +188,10 @@ module.exports = async function handler(req, res) {
       } catch (e) { console.error('ray email failed:', e.message); }
 
       // Queue the client's text.
-      if (link && client.contact_phone) {
+      if (emailLink && client.contact_phone) {
         await supaFetch('crm_sms_queue', {
           method: 'POST',
-          body: JSON.stringify({ client_id: client.id, phone: client.contact_phone, kind: 'portal_invite', body: `Hi ${first}, thanks for signing with Vernon Tech & Media! Set your password and log into your portal: ${link}` }),
+          body: JSON.stringify({ client_id: client.id, phone: client.contact_phone, kind: 'portal_invite', body: `Hi ${first}, thanks for signing with Vernon Tech & Media! Set your password and log into your portal: ${emailLink}` }),
         }).catch(() => {});
       }
 
@@ -188,7 +201,7 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({ client_id: client.id, type: 'agreement_signed', message: `${client.business_name} signed the agreement` }),
       }).catch(() => {});
 
-      return res.json({ ok: true, account: !!link, pdf: !!pdfLink, portalUrl: link || null });
+      return res.json({ ok: true, account: !!redirectLink, pdf: !!pdfLink, portalUrl: redirectLink || null });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
