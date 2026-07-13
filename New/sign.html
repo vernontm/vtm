@@ -55,6 +55,10 @@
     .submit:disabled{background:#cbd0d8;cursor:not-allowed}
     .meta{font-size:11.5px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.6}
 
+    .actionbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 20px;display:flex;justify-content:center;z-index:40;box-shadow:0 -6px 24px rgba(0,0,0,.06)}
+    .cta{width:100%;max-width:800px;background:var(--ink);color:#fff;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700}
+    .cta:disabled{background:#cbd0d8;cursor:not-allowed}
+    .cta.pulse{animation:pulse 2s infinite}
     .state{text-align:center;padding:80px 20px;color:var(--muted)}
     .state h2{font-family:var(--fdisp);color:var(--ink);font-size:22px;margin-bottom:8px}
     .badge{width:64px;height:64px;border-radius:50%;background:var(--ok-tint);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px}
@@ -67,7 +71,6 @@
     <span class="step-pill" id="steppill"></span>
   </header>
   <main class="wrap" id="app"><div class="state">Loading your agreement…</div></main>
-  <div class="offscreen" id="pdfroot"></div>
 
   <script>
     const token = new URLSearchParams(location.search).get('token');
@@ -78,6 +81,7 @@
 
     let data=null;
     let step='agreement';                 // agreement -> nda
+    let formOpen=false;                   // has the signer opened the pad for this step
     let mode='type', drawn=false, ctx=null, last=null;
     const sigs = { agreement:null, nda:null };  // {method, value, name}
 
@@ -123,43 +127,49 @@
       const title = step==='nda' ? 'Non-Disclosure Agreement' : 'Service Agreement';
       const nextLabel = step==='agreement' && hasNda ? 'Next: NDA →' : 'Finish &amp; Send';
 
+      const started = formOpen || !!sigs[step];
+      const ctaLabel = started ? nextLabel : 'Start signing ↓';
+
       app.innerHTML =
         '<div class="lead"><h1>'+title+'</h1><p>Read it through, then sign on the signature line below.</p></div>'
         + '<div id="paper">'+paperHtml(step)+'</div>'
-        + '<button class="startbtn pulse" id="start">Start signing ↓</button>'
-        + '<div class="signcard" id="signcard" style="display:none">'
+        + '<div class="signcard" id="signcard" style="display:'+(started?'block':'none')+'">'
         +   '<h2>Your signature</h2><div class="sub">Type your name or draw it. It drops onto the '+ (step==='nda'?'NDA':'agreement') +' above.</div>'
         +   '<div class="moderow"><button class="mode'+(mode==='type'?' on':'')+'" data-m="type">Type</button><button class="mode'+(mode==='draw'?' on':'')+'" data-m="draw">Draw</button></div>'
         +   (mode==='draw' ? '<canvas id="pad"></canvas><button class="clearbtn" id="clr">Clear</button>'
                            : '<input class="typed" id="typed" placeholder="Your full name" value="'+esc((sigs[step]&&sigs[step].method==='type'&&sigs[step].value)||data.owner_name||'')+'" />')
         +   '<label class="agree"><input type="checkbox" id="ack" '+(sigs[step]?'checked':'')+' /> <span>I agree that signing electronically is legally binding, and I authorize the payment terms in this agreement. I will contact Vernon Tech &amp; Media directly to resolve any billing question before disputing a charge.</span></label>'
-        +   '<button class="submit" id="go">'+nextLabel+'</button>'
         +   '<div class="meta">Signed electronically. Your name, IP address, and a timestamp are recorded for verification.</div>'
-        + '</div>';
+        + '</div>'
+        + '<div class="actionbar"><button class="cta'+(started?'':' pulse')+'" id="cta">'+ctaLabel+'</button></div>';
 
-      document.getElementById('start').onclick=()=>{ document.getElementById('signcard').style.display='block'; document.getElementById('start').style.display='none'; document.getElementById('signcard').scrollIntoView({behavior:'smooth'}); wireForm(); };
-      // if this doc already has a signature (came back), open the form
-      if(sigs[step]){ document.getElementById('signcard').style.display='block'; document.getElementById('start').style.display='none'; wireForm(); }
+      const cta=document.getElementById('cta');
+      if(!started){
+        cta.onclick=()=>{ formOpen=true; render(); const sc=document.getElementById('signcard'); if(sc) sc.scrollIntoView({behavior:'smooth',block:'center'}); };
+      } else {
+        wireForm();
+      }
     }
 
     function updatePaper(){ document.getElementById('paper').innerHTML=paperHtml(step); }
 
     function wireForm(){
-      app.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{ mode=b.dataset.m; drawn=false; render(); document.getElementById('signcard').style.display='block'; document.getElementById('start').style.display='none'; wireForm(); });
-      const ack=document.getElementById('ack'), go=document.getElementById('go');
+      const cta=document.getElementById('cta');
+      app.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{ mode=b.dataset.m; drawn=false; formOpen=true; render(); });
+      const ack=document.getElementById('ack');
       const currentSig=()=>{
         if(mode==='draw') return drawn ? {method:'draw', value:document.getElementById('pad').toDataURL('image/png'), name:data.owner_name||''} : null;
         const n=(document.getElementById('typed').value||'').trim();
         return n.length>1 ? {method:'type', value:n, name:n} : null;
       };
-      const preview=()=>{ sigs[step]=currentSig(); updatePaper(); go.disabled = !(ack.checked && sigs[step]); };
+      const preview=()=>{ sigs[step]=currentSig(); updatePaper(); cta.disabled = !(ack.checked && sigs[step]); };
       ack.onchange=preview;
-      if(mode==='type'){ const t=document.getElementById('typed'); t.addEventListener('input',preview); }
-      if(mode==='draw'){ initPad(preview); document.getElementById('clr').onclick=()=>{ctx.clearRect(0,0,9999,9999);drawn=false;preview();}; }
+      const t=document.getElementById('typed'); if(t) t.addEventListener('input',preview);
+      if(mode==='draw'){ initPad(preview); const clr=document.getElementById('clr'); if(clr) clr.onclick=()=>{ctx&&ctx.clearRect(0,0,99999,99999);drawn=false;preview();}; }
       preview();
-      go.onclick=()=>{
+      cta.onclick=()=>{
         sigs[step]=currentSig(); if(!sigs[step]||!ack.checked) return;
-        if(step==='agreement' && data.nda_markdown){ step='nda'; window.scrollTo(0,0); render(); }
+        if(step==='agreement' && data.nda_markdown){ step='nda'; formOpen=false; window.scrollTo(0,0); render(); }
         else finish();
       };
     }
@@ -178,13 +188,17 @@
     function blobToBase64(blob){ return new Promise(res=>{ const r=new FileReader(); r.onloadend=()=>res(String(r.result).split(',')[1]); r.readAsDataURL(blob); }); }
 
     async function finish(){
-      const go=document.getElementById('go'); go.disabled=true; go.textContent='Finishing…';
-      // Build the signed PDF from both papers (best-effort).
+      // Render both signed papers VISIBLY (html2canvas renders blank from
+      // off-screen/fixed nodes), wait for fonts, then capture.
+      pill.textContent='';
+      app.innerHTML='<div class="lead"><h1>Finalizing…</h1><p>Preparing your signed copy — one moment.</p></div>'
+        + '<div id="pdfcap">'+paperHtml('agreement')+(data.nda_markdown?'<div style="page-break-before:always;height:0"></div>'+paperHtml('nda'):'')+'</div>';
       let pdf_base64=null;
       try{
-        const root=document.getElementById('pdfroot');
-        root.innerHTML = paperHtml('agreement') + (data.nda_markdown?'<div style="page-break-before:always;height:0"></div>'+paperHtml('nda'):'');
-        const blob = await html2pdf().set({margin:[10,10,14,10],image:{type:'jpeg',quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(root).outputPdf('blob');
+        if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+        await new Promise(r=>setTimeout(r,80));
+        const el=document.getElementById('pdfcap');
+        const blob = await html2pdf().set({margin:[12,10,14,10],image:{type:'jpeg',quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(el).outputPdf('blob');
         pdf_base64 = await blobToBase64(blob);
       }catch(e){ console.error('pdf gen failed',e); }
 
@@ -200,7 +214,7 @@
         })});
         if(!r.ok) throw new Error();
         renderDone(false);
-      }catch(e){ go.disabled=false; go.textContent='Finish & Send'; alert('Could not finish signing. Please try again.'); }
+      }catch(e){ alert('Could not finish signing. Please try again.'); formOpen=true; render(); }
     }
 
     function renderDone(already){
