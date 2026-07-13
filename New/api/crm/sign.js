@@ -1,6 +1,7 @@
 const { setCors, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { sendEmail } = require('../_lib/gmail.js');
 const { buildAgreementPdf } = require('../_lib/agreement-pdf.js');
+const stripe = require('../_lib/stripe.js');
 
 // Frictionless, token-based e-signature. No login required to sign (protects
 // conversion). On finish we record both signatures + IP + timestamp, store the
@@ -91,6 +92,31 @@ module.exports = async function handler(req, res) {
     const client = ag.client || {};
     const terms = ag.terms || {};
 
+    // GET action=paid — Stripe success return: mark the deposit paid, then
+    // hand off to the portal with a FRESH single-use link (minted here, used
+    // immediately, never emailed → no scanner/expiry issues).
+    if (req.method === 'GET' && req.query.action === 'paid') {
+      const origin = (req.headers.origin || ('https://' + (req.headers.host || 'vernontm.com'))).replace(/\/+$/, '');
+      let dest = origin + '/client';
+      try {
+        const sid = req.query.session_id;
+        if (sid) {
+          const session = await stripe.retrieveSession(sid);
+          if (session && session.payment_status === 'paid') {
+            const pid = session.metadata && session.metadata.crm_payment_id;
+            if (pid) await supaFetch(`crm_payments?id=eq.${pid}`, { method: 'PATCH', body: JSON.stringify({ status: 'paid', paid_at: new Date().toISOString(), stripe_invoice_id: session.payment_intent || session.id }) }).catch(() => {});
+            await supaFetch('crm_client_alerts', { method: 'POST', body: JSON.stringify({ client_id: client.id, type: 'payment_received', message: `${client.business_name} paid their deposit` }) }).catch(() => {});
+          }
+        }
+        if (client.contact_email) {
+          const r = await recoveryLink(client.contact_email, origin + '/client');
+          if (r.link) dest = r.link;
+        }
+      } catch (e) { console.error('paid handler:', e.message); }
+      res.setHeader('Location', dest);
+      return res.status(302).end();
+    }
+
     // GET — load the documents for signing
     if (req.method === 'GET') {
       return res.json({
@@ -162,17 +188,36 @@ module.exports = async function handler(req, res) {
       // actually signed on (handles www vs non-www).
       const origin = (req.headers.origin || ('https://' + (req.headers.host || 'vernontm.com'))).replace(/\/+$/, '');
       const redirectTo = origin + '/client';
-      const { redirectLink } = await ensureAccount(client, redirectTo);
-      // Separate link for the email backup — a scanner consuming this one won't
-      // break the in-browser redirect above.
-      const emailLink = client.contact_email ? (await recoveryLink(client.contact_email, redirectTo)).link : null;
+      const { redirectLink } = await ensureAccount(client, redirectTo); // single recovery link (portal fallback)
       const first = (signerName || 'there').split(' ')[0];
 
-      // Email the client: their copy + password setup.
+      // First pending payment → Stripe Checkout for the deposit.
+      let checkoutUrl = null;
+      try {
+        if (process.env.STRIPE_SECRET_KEY) {
+          const pays = await supaFetch(`crm_payments?agreement_id=eq.${ag.id}&status=eq.pending&order=created_at.asc&limit=1`);
+          const dep = pays && pays[0];
+          if (dep && Number(dep.amount) > 0) {
+            const session = await stripe.createCheckoutSession({
+              mode: 'payment',
+              customer_email: client.contact_email || undefined,
+              line_items: [{ price_data: { currency: 'usd', product_data: { name: `${dep.label} — ${client.business_name}` }, unit_amount: Math.round(Number(dep.amount) * 100) }, quantity: 1 }],
+              success_url: `${origin}/api/crm/sign?action=paid&token=${token}&session_id={CHECKOUT_SESSION_ID}`,
+              cancel_url: `${origin}/client`,
+              metadata: { crm_payment_id: dep.id, client_id: client.id, agreement_id: ag.id },
+              payment_intent_data: { metadata: { crm_payment_id: dep.id, client_id: client.id } },
+            });
+            checkoutUrl = session.url;
+          }
+        }
+      } catch (e) { console.error('checkout create failed:', e.message); }
+
+      // Email the client their signed copy + portal pointer (NO one-time link —
+      // email scanners pre-consume them; portal setup happens in-browser).
       if (client.contact_email) {
         const parts = [`Hi ${first},`, '', 'Thanks for signing your agreement with Vernon Tech & Media.'];
         if (pdfLink) parts.push('', `Your signed copy (PDF): ${pdfLink}`);
-        if (emailLink) parts.push('', `Set your password and log into your client portal here: ${emailLink}`);
+        parts.push('', `Your client portal: ${origin}/client`);
         parts.push('', 'Talk soon,', 'Ray', 'Vernon Tech & Media');
         try { await sendEmail({ to: client.contact_email, subject: 'Your signed Vernon Tech & Media agreement', body: parts.join('\n') }); }
         catch (e) { console.error('client email failed:', e.message); }
@@ -187,21 +232,13 @@ module.exports = async function handler(req, res) {
         });
       } catch (e) { console.error('ray email failed:', e.message); }
 
-      // Queue the client's text.
-      if (emailLink && client.contact_phone) {
-        await supaFetch('crm_sms_queue', {
-          method: 'POST',
-          body: JSON.stringify({ client_id: client.id, phone: client.contact_phone, kind: 'portal_invite', body: `Hi ${first}, thanks for signing with Vernon Tech & Media! Set your password and log into your portal: ${emailLink}` }),
-        }).catch(() => {});
-      }
-
       // Alert Ray in the CRM.
       await supaFetch('crm_client_alerts', {
         method: 'POST',
         body: JSON.stringify({ client_id: client.id, type: 'agreement_signed', message: `${client.business_name} signed the agreement` }),
       }).catch(() => {});
 
-      return res.json({ ok: true, account: !!redirectLink, pdf: !!pdfLink, portalUrl: redirectLink || null });
+      return res.json({ ok: true, checkoutUrl, portalUrl: redirectLink || null, pdf: !!pdfLink });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

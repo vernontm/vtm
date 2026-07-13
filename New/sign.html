@@ -214,25 +214,26 @@
         })});
         if(!r.ok) throw new Error();
         const res=await r.json().catch(()=>({}));
-        renderDone(false, res.portalUrl);
+        renderDone(false, res.checkoutUrl||res.portalUrl, !!res.checkoutUrl);
       }catch(e){ alert('Could not finish signing. Please try again.'); formOpen=true; render(); }
     }
 
-    function renderDone(already, portalUrl){
+    function renderDone(already, dest, isPayment){
       pill.textContent='';
       const badge='<div class="badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1f9d63" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
       let body;
       if(already){
         body='<h2>Already signed</h2><p>This agreement has already been signed.</p>';
-      }else if(portalUrl){
-        body='<h2>All signed — thank you!</h2><p>Taking you to your client portal to set your password…</p>'
-          +'<a class="cta" style="display:inline-block;width:auto;max-width:320px;margin-top:18px;text-decoration:none" href="'+portalUrl+'">Go to my portal &rarr;</a>'
-          +'<p style="margin-top:14px;font-size:12.5px">We also emailed you this link and a copy of your signed agreement.</p>';
+      }else if(dest){
+        const msg=isPayment?'Taking you to secure checkout to complete your deposit…':'Taking you to your client portal…';
+        const label=isPayment?'Continue to payment &rarr;':'Go to my portal &rarr;';
+        body='<h2>All signed — thank you!</h2><p>'+msg+'</p>'
+          +'<a class="cta" style="display:inline-block;width:auto;max-width:320px;margin-top:18px;text-decoration:none" href="'+dest+'">'+label+'</a>';
       }else{
-        body='<h2>All signed — thank you!</h2><p>A copy of your signed agreement is on its way to your email, along with a link to set your password and log into your portal.</p>';
+        body='<h2>All signed — thank you!</h2><p>A copy of your signed agreement is on its way to your email.</p>';
       }
       app.innerHTML='<div class="state">'+badge+body+'</div>';
-      if(!already && portalUrl){ setTimeout(function(){ location.href=portalUrl; }, 2400); }
+      if(!already && dest){ setTimeout(function(){ location.href=dest; }, isPayment?1400:2000); }
     }
 
     async function load(){
