@@ -22,7 +22,7 @@ const EMPTY_ITEM    = { name: '', owner: '', status: 'Not Started', date: '', te
 // ── Subitem row ─────────────────────────────────────────────────────────────
 function SubitemRow({ item, onFieldSave, onDelete }) {
   return (
-    <tr style={{ background: '#161830' }}>
+    <tr style={{ background: 'var(--surface-2)' }}>
       <td style={{ width: 70 }}></td>
       <td style={{ paddingLeft: 36 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -404,7 +404,7 @@ export default function Projects() {
                       {isExp && (
                         <>
                           {/* Subitem header row */}
-                          <tr style={{ background: '#13152b' }}>
+                          <tr style={{ background: 'var(--surface-3)' }}>
                             <td></td>
                             <td style={{ paddingLeft: 36, fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 6, paddingBottom: 6 }}>Subitem</td>
                             <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner</td>
@@ -426,7 +426,7 @@ export default function Projects() {
                           ))}
 
                           {/* Add subitem row */}
-                          <tr style={{ background: '#161830' }}>
+                          <tr style={{ background: 'var(--surface-2)' }}>
                             <td colSpan={10} style={{ padding: 0, paddingLeft: 36 }}>
                               <div className="add-row" style={{ paddingLeft: 20 }} onClick={() => addSubitem(project.id)}>
                                 <Plus size={13} /> Add subitem

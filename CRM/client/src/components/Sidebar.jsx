@@ -33,7 +33,7 @@ const NAV_LABEL_STYLE = {
   padding: '4px 16px 6px',
   fontSize: 10,
   fontWeight: 700,
-  color: 'var(--muted)',
+  color: 'var(--side-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.12em',
   fontFamily: 'var(--font-display)',
@@ -43,9 +43,9 @@ const NAV_LABEL_STYLE = {
 const FOOTER_BTN = (active = false) => ({
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
   width: '100%', padding: '8px 0', borderRadius: 10, cursor: 'pointer',
-  background: active ? 'rgba(255,155,38,0.1)' : 'var(--surface-2)',
-  border: active ? '1px solid rgba(255,155,38,0.3)' : '1px solid var(--border)',
-  color: active ? 'var(--orange)' : 'var(--muted)',
+  background: active ? 'rgba(255,155,38,0.16)' : 'var(--side-hover)',
+  border: active ? '1px solid rgba(255,155,38,0.35)' : '1px solid var(--side-border)',
+  color: active ? '#ffb055' : 'var(--side-muted)',
   fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
   fontFamily: 'var(--font-display)',
 });
@@ -97,8 +97,8 @@ export default function Sidebar() {
       <aside
         style={{
           width: 230, minWidth: 230,
-          background: 'var(--bg)',
-          borderRight: '1px solid var(--border)',
+          background: 'var(--side-bg)',
+          borderRight: '1px solid var(--side-border)',
           display: 'flex', flexDirection: 'column',
         }}
         className={`app-sidebar${sidebarOpen ? ' sidebar-open' : ''}`}
@@ -127,7 +127,7 @@ export default function Sidebar() {
         )}
 
         {/* Brand */}
-        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid var(--side-border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 32, height: 32, borderRadius: 9, flexShrink: 0,
@@ -144,8 +144,8 @@ export default function Sidebar() {
               />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', lineHeight: 1.2, fontFamily: 'var(--font-display)' }}>Vernon Tech</div>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>&amp; Media CRM</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', lineHeight: 1.2, fontFamily: 'var(--font-display)' }}>Vernon Tech</div>
+              <div style={{ fontSize: 10, color: 'var(--side-muted)', fontFamily: 'var(--font-display)' }}>&amp; Media CRM</div>
             </div>
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function Sidebar() {
                   <Icon size={15} />
                   <span style={{ flex: 1 }}>{label}</span>
                   {to === '/email' && emailCount > 0 && (
-                    <span style={{ background: 'var(--orange)', color: 'var(--text)', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
+                    <span style={{ background: 'var(--orange)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
                       {emailCount}
                     </span>
                   )}
@@ -185,7 +185,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--side-border)', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
           {!viewingAs && (
             <button onClick={togglePrivacy} style={FOOTER_BTN(privacyMode)}>
               {privacyMode ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -202,7 +202,7 @@ export default function Sidebar() {
               Sign Out
             </button>
           )}
-          <div style={{ fontSize: 10, color: 'var(--muted)', textAlign: 'center', fontFamily: 'var(--font-display)', opacity: 0.5, paddingTop: 2 }}>
+          <div style={{ fontSize: 10, color: 'var(--side-muted)', textAlign: 'center', fontFamily: 'var(--font-display)', opacity: 0.5, paddingTop: 2 }}>
             Vernon Tech &amp; Media
           </div>
         </div>
