@@ -1,779 +1,250 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, Plus, Video, Edit2, Trash2, Check, Sparkles, Link as LinkIcon,
-  Search, X, Loader, ChevronDown, ChevronRight, RefreshCw, AlertCircle,
-  ExternalLink,
+  Calendar as CalIcon, Plus, Video, Trash2, RefreshCw, List as ListIcon,
+  ChevronLeft, ChevronRight, Clock, Users, MapPin, ExternalLink,
 } from 'lucide-react';
-import {
-  getUpcomingMeetings, getPastMeetings, deleteMeeting,
-  getMeetingLeadLinks, createMeetingLeadLink, deleteMeetingLeadLink,
-  getLeads, syncMeetings,
-} from '../api';
+import { getUpcomingMeetings, getPastMeetings, deleteMeeting, syncMeetings } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['var(--orange)', 'var(--orange)', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
+const AVATAR_COLORS = ['#ee6a1f', '#784bd1', '#0ea5e9', '#16a34a', '#e11d48', '#d97706'];
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function formatDateTime(iso) {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: 'numeric', minute: '2-digit', hour12: true,
-    }).format(new Date(iso));
-  } catch { return iso; }
-}
+// ── helpers ──────────────────────────────────────────────────────────────────
+const fmtTime = (iso) => { try { return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso)); } catch { return ''; } };
+const fmtDayLong = (d) => new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(d);
+const fmtDur = (min) => { if (!min) return ''; const h = Math.floor(min / 60), m = min % 60; return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`; };
+const stripHtml = (s) => (s ? String(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '');
+const dayKey = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+// All-day blocks / OOO clutter the list — treat 12h+ or OOO-titled events as "blocks".
+const isBlock = (m) => (m.duration_minutes && m.duration_minutes >= 720) || /out of office|ooo|busy/i.test(m.title || '');
 
-function formatDate(iso) {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(iso));
-  } catch { return iso; }
-}
-
-function formatDuration(min) {
-  if (!min) return '—';
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
-}
-
-// ── Lead status colour helper ──────────────────────────────────────────────────
-const LEAD_STATUS_COLORS = {
-  'New':            { bg: 'rgba(255,155,38,0.13)', fg: 'var(--orange)' },
-  'Contacted':      { bg: '#fdab3d22', fg: '#fdab3d' },
-  'Call Scheduled': { bg: '#784bd122', fg: '#784bd1' },
-  'Called':         { bg: 'rgba(45,212,191,0.12)',   fg: '#0F766E' },
-  'Won':            { bg: '#00d1d122', fg: '#00a8a8' },
-  'Not Interested': { bg: '#ff5c5c22', fg: '#ff5c5c' },
-  'Follow Up':      { bg: '#fdab3d22', fg: '#d97706' },
-};
-
-// ── Participant Avatars with hover card ────────────────────────────────────────
-function ParticipantAvatars({ participants = [], max = 4, allLeads = [] }) {
-  const [hoveredIdx, setHoveredIdx] = useState(null);
+function Avatars({ participants = [], max = 4 }) {
   const shown = participants.slice(0, max);
   const extra = participants.length - max;
-
-  function findLead(p) {
-    if (!p.email) return null;
-    return allLeads.find(l => l.email?.toLowerCase() === p.email.toLowerCase()) || null;
-  }
-
+  if (!participants.length) return <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>;
   return (
-    <div style={{ display: 'flex' }}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
       {shown.map((p, i) => {
-        const initial     = (p.name || p.email || '?')[0].toUpperCase();
-        const color       = AVATAR_COLORS[i % AVATAR_COLORS.length];
-        const matchedLead = findLead(p);
-        const statusStyle = matchedLead?.status ? (LEAD_STATUS_COLORS[matchedLead.status] || { bg: '#e5e7ef', fg: '#8e8ea0' }) : null;
+        const ch = (p.name || p.email || '?')[0].toUpperCase();
+        const c = AVATAR_COLORS[i % AVATAR_COLORS.length];
         return (
-          <div
-            key={i}
-            style={{ position: 'relative', marginLeft: i > 0 ? -6 : 0, zIndex: hoveredIdx === i ? 50 : shown.length - i }}
-            onMouseEnter={() => setHoveredIdx(i)}
-            onMouseLeave={() => setHoveredIdx(null)}
-          >
-            <div style={{
-              width: 26, height: 26, borderRadius: '50%',
-              background: color + '25', border: `2px solid ${color}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 700, color, cursor: 'default',
-            }}>
-              {initial}
-            </div>
-
-            {/* Hover card — appears below to avoid clipping */}
-            {hoveredIdx === i && (
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
-                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 13px',
-                minWidth: 190, zIndex: 9999, boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
-                pointerEvents: 'none', whiteSpace: 'nowrap',
-              }}>
-                {/* Arrow */}
-                <div style={{
-                  position: 'absolute', top: -5, left: '50%',
-                  width: 8, height: 8, background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderBottom: 'none', borderRight: 'none',
-                  transform: 'translateX(-50%) rotate(45deg)',
-                }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <div style={{
-                    width: 30, height: 30, borderRadius: '50%',
-                    background: color + '25', border: `2px solid ${color}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700, color, flexShrink: 0,
-                  }}>
-                    {initial}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
-                      {p.name && p.name !== p.email ? p.name : (p.email || '?')}
-                    </div>
-                    {p.name && p.name !== p.email && p.email && (
-                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.email}</div>
-                    )}
-                  </div>
-                </div>
-                {matchedLead && (
-                  <div style={{ borderTop: '1px solid #f0f0f5', paddingTop: 7, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {matchedLead.phone && (
-                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>📞 {matchedLead.phone}</div>
-                    )}
-                    {matchedLead.company && (
-                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>🏢 {matchedLead.company}</div>
-                    )}
-                    {matchedLead.status && (
-                      <div style={{ marginTop: 2 }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8,
-                          background: statusStyle.bg, color: statusStyle.fg,
-                        }}>
-                          {matchedLead.status}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <div key={i} title={p.email || p.name} style={{ width: 26, height: 26, borderRadius: '50%', marginLeft: i ? -7 : 0, background: c + '22', border: `2px solid ${c}`, color: c, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>{ch}</div>
         );
       })}
-      {extra > 0 && (
-        <div style={{
-          width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 10, color: 'var(--muted)', marginLeft: -6, position: 'relative',
-        }}>
-          +{extra}
-        </div>
-      )}
+      {extra > 0 && <div style={{ marginLeft: -7, width: 26, height: 26, borderRadius: '50%', background: 'var(--surface-3)', border: '2px solid var(--surface)', color: 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>+{extra}</div>}
     </div>
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
-// ── Status badge for past meetings ────────────────────────────────────────────
-function MeetingStatusBadge({ status }) {
-  const map = {
-    summarized:   { color: 'var(--orange)', label: 'Summarized' },
-    processing:   { color: '#fdab3d', label: 'Processing…' },
-    recorded:     { color: 'var(--orange)', label: 'Recording Found' },
-    no_recording: { color: 'var(--muted)', label: 'No Recording' },
-  };
-  const s = map[status];
-  if (!s) return <span style={{ fontSize: 12, color: 'var(--muted)' }}>— No recording</span>;
+// ── Segmented control ────────────────────────────────────────────────────────
+function Segmented({ value, onChange, options }) {
   return (
-    <span style={{
-      fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-      background: s.color + '22', color: s.color, border: `1px solid ${s.color}44`,
-    }}>
-      {s.label}
-    </span>
+    <div style={{ display: 'inline-flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, gap: 2 }}>
+      {options.map(o => {
+        const on = value === o.key;
+        return (
+          <button key={o.key} onClick={() => onChange(o.key)} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 8, border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)',
+            background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--text)' : 'var(--muted)',
+            boxShadow: on ? 'var(--shadow-sm)' : 'none',
+          }}>{o.icon}{o.label}{o.count != null && <span style={{ fontSize: 11, color: on ? 'var(--orange)' : 'var(--muted)' }}>{o.count}</span>}</button>
+        );
+      })}
+    </div>
   );
 }
 
 export default function Meetings() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab]         = useState('upcoming');
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [pastEvents, setPastEvents]       = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState('');
-  const [syncing, setSyncing]             = useState(false);
+  const [view, setView] = useState('list');      // list | calendar
+  const [tab, setTab] = useState('upcoming');     // upcoming | past
+  const [upcoming, setUpcoming] = useState([]);
+  const [past, setPast] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [showBlocks, setShowBlocks] = useState(false);
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
-  const [showScheduleModal, setShowScheduleModal]   = useState(false);
-  const [editingEvent, setEditingEvent]             = useState(null);
-  const [expandedPastId, setExpandedPastId]         = useState(null);
-
-  // Link to Lead
-  const [showLinkModal, setShowLinkModal]   = useState(false);
-  const [linkingEvent, setLinkingEvent]     = useState(null);
-  const [leads, setLeads]                   = useState([]);
-  const [leadLinks, setLeadLinks]           = useState([]);
-  const [leadSearch, setLeadSearch]         = useState('');
-  const [linkingLeadId, setLinkingLeadId]   = useState('');
-
-  const [toast, setToast]   = useState('');
-
-  // ── Load data ─────────────────────────────────────────────────────────────
-  const loadUpcoming = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
-      const data = await getUpcomingMeetings();
-      setUpcomingEvents(data);
-      setError('');
-    } catch (e) {
-      setError(e.message);
-    }
+      const [u, p] = await Promise.all([getUpcomingMeetings(), getPastMeetings()]);
+      setUpcoming(u || []); setPast(p || []);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const loadPast = useCallback(async () => {
-    try {
-      const data = await getPastMeetings();
-      setPastEvents(data);
-    } catch (e) {
-      // Only set error if not already set by loadUpcoming (same issue)
-      if (!error) setError(e.message);
-    }
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([loadUpcoming(), loadPast()]).finally(() => setLoading(false));
-    getLeads().then(setLeads).catch(() => {});
-    getMeetingLeadLinks().then(setLeadLinks).catch(() => {});
-  }, []);
-
-  // ── Toast ─────────────────────────────────────────────────────────────────
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3500);
-  }
-
-  // ── Sync ─────────────────────────────────────────────────────────────────
-  async function handleSync() {
+  const handleSync = async () => {
     setSyncing(true);
-    try {
-      const result = await syncMeetings();
-      await Promise.all([loadUpcoming(), loadPast()]);
-      showToast(`✓ Synced ${result.total} meetings`);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSyncing(false);
-    }
-  }
+    try { await syncMeetings(); await load(); } catch (e) { console.error(e); } finally { setSyncing(false); }
+  };
+  const handleDelete = async (m) => {
+    if (!window.confirm(`Delete "${m.title}"?`)) return;
+    try { await deleteMeeting(m.id); await load(); } catch (e) { console.error(e); }
+  };
 
-  // ── Delete meeting ────────────────────────────────────────────────────────
-  async function handleDelete(event) {
-    if (!window.confirm(`Cancel "${event.title}"? This will remove it from Google Calendar and notify attendees.`)) return;
-    try {
-      await deleteMeeting(event.google_event_id);
-      setUpcomingEvents(prev => prev.filter(e => e.google_event_id !== event.google_event_id));
-      showToast('Meeting cancelled');
-    } catch (e) {
-      showToast('Error: ' + e.message);
-    }
-  }
+  const all = useMemo(() => {
+    const map = new Map();
+    [...upcoming, ...past].forEach(m => map.set(m.id, m));
+    return [...map.values()];
+  }, [upcoming, past]);
 
-  // ── Link to Lead ──────────────────────────────────────────────────────────
-  function openLinkModal(event) {
-    setLinkingEvent(event);
-    setLeadSearch('');
-    setLinkingLeadId('');
-    setShowLinkModal(true);
-  }
+  const listItems = useMemo(() => {
+    const src = tab === 'upcoming' ? upcoming : past;
+    return (src || []).filter(m => showBlocks || !isBlock(m));
+  }, [tab, upcoming, past, showBlocks]);
 
-  async function handleLinkLead(lead) {
-    if (!linkingEvent) return;
-    setLinkingLeadId(lead.id);
-    try {
-      const link = await createMeetingLeadLink({
-        meeting_id:      linkingEvent.google_event_id,
-        google_event_id: linkingEvent.google_event_id,
-        lead_id:         lead.id,
-      });
-      setLeadLinks(prev => [...prev, link]);
-      setShowLinkModal(false);
-      showToast(`Linked to ${lead.name || lead.email}`);
-    } catch (e) {
-      showToast('Error: ' + e.message);
-    } finally {
-      setLinkingLeadId('');
-    }
-  }
+  // group list by day
+  const grouped = useMemo(() => {
+    const g = [];
+    let cur = null;
+    listItems.forEach(m => {
+      const k = dayKey(m.start_time);
+      if (!cur || cur.key !== k) { cur = { key: k, date: new Date(m.start_time), items: [] }; g.push(cur); }
+      cur.items.push(m);
+    });
+    return g;
+  }, [listItems]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const isApiDisabled    = error === 'CALENDAR_API_DISABLED';
-  const isReconnectError = error === 'CALENDAR_RECONNECT_NEEDED';
-
-  const filteredLeads = leads.filter(l => {
-    const q = leadSearch.toLowerCase();
-    return (l.name || '').toLowerCase().includes(q) || (l.email || '').toLowerCase().includes(q);
-  });
-
-  function getLinkedLeads(googleEventId) {
-    const links = leadLinks.filter(l => l.google_event_id === googleEventId);
-    return links.map(link => leads.find(l => l.id === link.lead_id)).filter(Boolean);
-  }
-
-  // ── Tab style helper ───────────────────────────────────────────────────────
-  function tabStyle(tab) {
-    const active = activeTab === tab;
-    return {
-      padding: '10px 18px', cursor: 'pointer', fontSize: 14, fontWeight: active ? 700 : 500,
-      color: active ? '#fff' : '#8e8ea0', background: 'none', border: 'none',
-      borderBottom: `2px solid ${active ? 'var(--orange)' : 'transparent'}`,
-      transition: 'color 0.15s, border-color 0.15s',
-    };
-  }
-
-  // ── TABLE STYLES ──────────────────────────────────────────────────────────
-  const thStyle = { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap', background: 'var(--surface)', borderBottom: '1px solid var(--border)' };
-  const tdStyle = { padding: '12px 14px', borderBottom: '1px solid #ffffff', fontSize: 13, color: 'var(--muted)', verticalAlign: 'middle' };
-
-  // ── RENDER ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: 24, minHeight: '100%', background: 'var(--bg)' }}>
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Calendar size={22} color="var(--orange)" />
-          <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Meetings</span>
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
+      {/* Page header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto' }}>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,155,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalIcon size={18} style={{ color: 'var(--orange)' }} /></div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Meetings</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="btn-ghost"
-            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '7px 12px' }}
-          >
-            <RefreshCw size={13} style={{ animation: syncing ? 'spin 0.7s linear infinite' : 'none' }} />
-            {syncing ? 'Syncing…' : 'Sync'}
-          </button>
-          <button
-            onClick={() => setShowScheduleModal(true)}
-            className="btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '8px 16px' }}
-          >
-            <Plus size={14} /> Schedule Meeting
-          </button>
-        </div>
+        <Segmented value={view} onChange={setView} options={[
+          { key: 'list', label: 'List', icon: <ListIcon size={14} /> },
+          { key: 'calendar', label: 'Calendar', icon: <CalIcon size={14} /> },
+        ]} />
+        <button className="btn-ghost" onClick={handleSync} disabled={syncing}>
+          <RefreshCw size={14} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} /> {syncing ? 'Syncing…' : 'Sync'}
+        </button>
+        <button className="btn-primary" onClick={() => setScheduleOpen(true)}><Plus size={15} /> Schedule Meeting</button>
       </div>
 
-      {/* Calendar API not enabled in Google Cloud */}
-      {isApiDisabled && (
-        <div style={{ background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <AlertCircle size={15} color="#ff5c5c" style={{ flexShrink: 0, marginTop: 1 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#ff5c5c', marginBottom: 4 }}>
-              Google Calendar API is not enabled
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-              You need to enable the Calendar API in your Google Cloud Console, then reconnect your account.
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-              <a
-                href="https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=582263175613"
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontSize: 12, color: 'var(--text)', background: '#ff5c5c', padding: '4px 12px', borderRadius: 5, textDecoration: 'none', fontWeight: 600 }}
-              >
-                Enable Calendar API →
-              </a>
-              <Link to="/settings" style={{ fontSize: 12, color: 'var(--orange)', fontWeight: 600, textDecoration: 'none', padding: '4px 0' }}>
-                Then Reconnect in Settings →
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* OAuth reconnect needed */}
-      {isReconnectError && (
-        <div style={{ background: '#fdab3d15', border: '1px solid #fdab3d40', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <AlertCircle size={15} color="#fdab3d" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: '#fdab3d', flex: 1 }}>
-            Google Calendar needs additional permissions.
-          </span>
-          <Link to="/settings" style={{ fontSize: 12, color: 'var(--orange)', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
-            Reconnect in Settings →
-          </Link>
-        </div>
-      )}
-
-      {/* Generic error */}
-      {error && !isApiDisabled && !isReconnectError && (
-        <div style={{ background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#ff5c5c' }}>
-          {error}
-        </div>
-      )}
-
-      {/* Tab bar */}
-      <div style={{ borderBottom: '1px solid var(--border)', marginBottom: 0, display: 'flex' }}>
-        <button style={tabStyle('upcoming')} onClick={() => setActiveTab('upcoming')}>
-          Upcoming
-          {upcomingEvents.length > 0 && (
-            <span style={{ marginLeft: 6, fontSize: 11, background: 'var(--orange)25', color: 'var(--orange)', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
-              {upcomingEvents.length}
-            </span>
-          )}
-        </button>
-        <button style={tabStyle('past')} onClick={() => setActiveTab('past')}>
-          Past Meetings
-          {pastEvents.length > 0 && (
-            <span style={{ marginLeft: 6, fontSize: 11, background: 'var(--surface-3)', color: 'var(--muted)', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
-              {pastEvents.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Content panel */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 12px 12px' }}>
-
+      <div style={{ padding: '0 24px 40px' }}>
         {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, color: 'var(--muted)', gap: 10 }}>
-            <Loader size={18} style={{ animation: 'spin 0.7s linear infinite' }} />
-            Loading meetings…
-          </div>
-        ) : activeTab === 'upcoming' ? (
-
-          /* ── UPCOMING TAB ── */
-          upcomingEvents.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)' }}>
-              <Calendar size={42} style={{ opacity: 0.25, marginBottom: 14 }} />
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>No upcoming meetings</div>
-              <div style={{ fontSize: 13 }}>Click "Schedule Meeting" to create one.</div>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Title</th>
-                    <th style={thStyle}>Participants</th>
-                    <th style={thStyle}>Date & Time</th>
-                    <th style={thStyle}>Duration</th>
-                    <th style={thStyle}>Meet Link</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {upcomingEvents.map(event => {
-                    const linkedLeads = getLinkedLeads(event.google_event_id);
-                    return (
-                    <tr
-                      key={event.google_event_id}
-                      onClick={() => navigate(`/meetings/${event.google_event_id}`)}
-                      style={{ transition: 'background 0.1s', cursor: 'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--text)', maxWidth: 240 }}>
-                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {event.title}
-                        </div>
-                        {event.description && (
-                          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {event.description}
-                          </div>
-                        )}
-                        {/* Linked leads */}
-                        {linkedLeads.length > 0 && (
-                          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                            {linkedLeads.map(lead => {
-                              const sc = LEAD_STATUS_COLORS[lead.status] || { bg: '#e5e7ef', fg: '#8e8ea0' };
-                              return (
-                                <span
-                                  key={lead.id}
-                                  onClick={e => { e.stopPropagation(); navigate(`/leads?highlight=${lead.id}`); }}
-                                  title={lead.email || ''}
-                                  style={{
-                                    fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 8,
-                                    background: sc.bg, color: sc.fg, cursor: 'pointer',
-                                    border: `1px solid ${sc.fg}33`,
-                                  }}
-                                >
-                                  {lead.name || lead.email || 'Lead'}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
-                        <ParticipantAvatars participants={event.participants || []} allLeads={leads} />
-                      </td>
-                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDateTime(event.start_time)}</td>
-                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDuration(event.duration_minutes)}</td>
-                      <td style={tdStyle} onClick={e => e.stopPropagation()}>
-                        {event.meet_link ? (
-                          <button
-                            onClick={() => window.open(event.meet_link, '_blank')}
-                            className="btn-green"
-                            style={{ fontSize: 11, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5 }}
-                          >
-                            <Video size={11} /> Join
-                          </button>
-                        ) : (
-                          <span style={{ color: 'var(--border-light)', fontSize: 16 }}>—</span>
-                        )}
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                          <button
-                            onClick={() => { setEditingEvent(event); setShowScheduleModal(true); }}
-                            className="btn-ghost"
-                            title="Edit"
-                            style={{ padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(event)}
-                            className="btn-ghost"
-                            title="Cancel meeting"
-                            style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', color: '#ff5c5c' }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )
-
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60 }}>Loading…</div>
+        ) : view === 'calendar' ? (
+          <CalendarView month={calMonth} setMonth={setCalMonth} meetings={all} onOpen={m => navigate(`/appointments/${m.id}`)} />
         ) : (
-
-          /* ── PAST TAB ── */
-          pastEvents.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)' }}>
-              <Calendar size={42} style={{ opacity: 0.25, marginBottom: 14 }} />
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>No past meetings found</div>
-              <div style={{ fontSize: 13 }}>Meetings from the last 30 days will appear here.</div>
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <Segmented value={tab} onChange={setTab} options={[
+                { key: 'upcoming', label: 'Upcoming', count: upcoming.filter(m => !isBlock(m)).length },
+                { key: 'past', label: 'Past', count: past.filter(m => !isBlock(m)).length },
+              ]} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', marginLeft: 'auto' }}>
+                <input type="checkbox" checked={showBlocks} onChange={e => setShowBlocks(e.target.checked)} /> Show blocked time / OOO
+              </label>
             </div>
-          ) : (
-            <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ ...thStyle, width: 28 }}></th>
-                    <th style={thStyle}>Title</th>
-                    <th style={thStyle}>Participants</th>
-                    <th style={thStyle}>Date</th>
-                    <th style={thStyle}>Duration</th>
-                    <th style={thStyle}>Recording</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pastEvents.map(event => {
-                    const isExpanded = expandedPastId === event.google_event_id;
-                    const linkedLeads = getLinkedLeads(event.google_event_id);
-                    return (
-                      <React.Fragment key={event.google_event_id}>
-                        <tr
-                          onClick={() => setExpandedPastId(isExpanded ? null : event.google_event_id)}
-                          style={{ cursor: 'pointer', transition: 'background 0.1s', background: isExpanded ? '#ffffff' : 'transparent' }}
-                          onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = '#ffffff'; }}
-                          onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <td style={{ ...tdStyle, color: 'var(--muted)', width: 28 }}>
-                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          </td>
-                          <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--text)', maxWidth: 200 }}>
-                            {/* Title — click navigates to detail page, stops row expand */}
-                            <div
-                              onClick={e => { e.stopPropagation(); navigate(`/meetings/${event.google_event_id}`); }}
-                              title="View meeting details"
-                              style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                              onMouseEnter={e => e.currentTarget.style.color = 'var(--orange)'}
-                              onMouseLeave={e => e.currentTarget.style.color = '#fff'}
-                            >
-                              {event.title}
-                            </div>
-                          </td>
-                          <td style={tdStyle}>
-                            <ParticipantAvatars participants={event.participants || []} allLeads={leads} />
-                          </td>
-                          <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDate(event.start_time)}</td>
-                          <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{formatDuration(event.duration_minutes)}</td>
-                          <td style={tdStyle}>
-                            <MeetingStatusBadge status={event.status} />
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
-                              <button
-                                onClick={() => openLinkModal(event)}
-                                className="btn-ghost"
-                                title="Link to Lead"
-                                style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
-                              >
-                                <LinkIcon size={12} />
-                                {linkedLeads.length > 0 ? `${linkedLeads.length} linked` : 'Link Lead'}
-                              </button>
-                              <button
-                                onClick={() => navigate(`/meetings/${event.google_event_id}`)}
-                                className="btn-ghost"
-                                title="View details"
-                                style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
-                              >
-                                <ExternalLink size={12} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
 
-                        {/* Expanded detail row */}
-                        {isExpanded && (
-                          <tr style={{ background: '#1a1d2e' }}>
-                            <td colSpan={7} style={{ padding: '14px 20px 18px', borderBottom: '1px solid var(--border)' }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-
-                                {/* Meeting info */}
-                                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Meeting Info</div>
-                                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{event.title}</div>
-                                  {event.description && (
-                                    <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, lineHeight: 1.5 }}>{event.description}</div>
-                                  )}
-                                  <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                    <div><span style={{ color: 'var(--muted)' }}>Start:</span> {formatDateTime(event.start_time)}</div>
-                                    <div><span style={{ color: 'var(--muted)' }}>Duration:</span> {formatDuration(event.duration_minutes)}</div>
-                                  </div>
-                                  {event.participants?.length > 0 && (
-                                    <div style={{ marginTop: 10 }}>
-                                      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 5 }}>Participants</div>
-                                      {event.participants.map((p, i) => (
-                                        <div key={i} style={{ fontSize: 11, color: 'var(--muted)', padding: '2px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                          <div style={{ width: 18, height: 18, borderRadius: '50%', background: AVATAR_COLORS[i % AVATAR_COLORS.length] + '30', border: `1px solid ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: AVATAR_COLORS[i % AVATAR_COLORS.length], flexShrink: 0 }}>
-                                            {(p.name || p.email)[0].toUpperCase()}
-                                          </div>
-                                          <span className="private-value">{p.name !== p.email && p.name ? `${p.name} (${p.email})` : p.email}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                  {linkedLeads.length > 0 && (
-                                    <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-                                      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 5 }}>Linked Leads</div>
-                                      {linkedLeads.map(lead => (
-                                        <div key={lead.id} className="private-value" style={{ fontSize: 11, color: 'var(--orange)', padding: '1px 0' }}>
-                                          {lead.name || lead.email}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* View Full Details card */}
-                                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, textAlign: 'center' }}>
-                                  <div style={{ display: 'flex', gap: 16, marginBottom: 4 }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: event.status === 'summarized' ? 1 : 0.4 }}>
-                                      <Sparkles size={18} color="#784bd1" />
-                                      <span style={{ fontSize: 10, color: '#784bd1', fontWeight: 600 }}>AI Summary</span>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: event.status === 'recorded' || event.status === 'summarized' ? 1 : 0.4 }}>
-                                      <Video size={18} color="var(--orange)" />
-                                      <span style={{ fontSize: 10, color: 'var(--orange)', fontWeight: 600 }}>Recording</span>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                      <span style={{ fontSize: 10, color: 'var(--orange)', fontWeight: 600 }}>Sidekick</span>
-                                    </div>
-                                  </div>
-                                  <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-                                    Generate AI summaries, find recordings, and chat with the Meeting Sidekick on the full details page.
-                                  </div>
-                                  <button
-                                    onClick={() => navigate(`/meetings/${event.google_event_id}`)}
-                                    className="btn-primary"
-                                    style={{ fontSize: 12, padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 6 }}
-                                  >
-                                    <ExternalLink size={12} /> View Full Details
-                                  </button>
-                                </div>
-
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )
+            {grouped.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14 }}>
+                <CalIcon size={28} style={{ opacity: 0.4, marginBottom: 8 }} /><div>No {tab} meetings.</div>
+              </div>
+            ) : grouped.map(group => (
+              <div key={group.key} style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: sameDay(group.date, new Date()) ? 'var(--orange)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
+                  {sameDay(group.date, new Date()) ? 'Today · ' : ''}{fmtDayLong(group.date)}
+                </div>
+                {group.items.map(m => (
+                  <div key={m.id} onClick={() => navigate(`/appointments/${m.id}`)} style={{
+                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', marginBottom: 8,
+                    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, cursor: 'pointer', boxShadow: 'var(--shadow-sm)',
+                  }}>
+                    <div style={{ textAlign: 'center', minWidth: 62 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{fmtTime(m.start_time)}</div>
+                      {m.duration_minutes ? <div style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtDur(m.duration_minutes)}</div> : null}
+                    </div>
+                    <div style={{ width: 3, alignSelf: 'stretch', background: 'var(--orange)', borderRadius: 3 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</div>
+                      {stripHtml(m.description) && <div style={{ fontSize: 12.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{stripHtml(m.description)}</div>}
+                    </div>
+                    <Avatars participants={m.participants} />
+                    {m.meet_link && (
+                      <a href={m.meet_link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="btn-green" style={{ padding: '7px 14px', fontSize: 12 }}><Video size={13} /> Join</a>
+                    )}
+                    <button className="btn-ghost" style={{ padding: '6px 8px', color: 'var(--red)' }} onClick={e => { e.stopPropagation(); handleDelete(m); }} title="Delete"><Trash2 size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </>
         )}
       </div>
 
-      {/* ── Link to Lead Modal ────────────────────────────────────────────────── */}
-      {showLinkModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowLinkModal(false); }}
-        >
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, width: 440, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <LinkIcon size={15} color="var(--orange)" />
-                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Link to Lead</span>
+      {scheduleOpen && (
+        <ScheduleMeetingModal onClose={() => setScheduleOpen(false)} onComplete={() => { setScheduleOpen(false); handleSync(); }} />
+      )}
+    </div>
+  );
+}
+
+// ── Calendar (month) view ────────────────────────────────────────────────────
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function CalendarView({ month, setMonth, meetings, onOpen }) {
+  const weeks = useMemo(() => {
+    const y = month.getFullYear(), m = month.getMonth();
+    const start = new Date(y, m, 1);
+    start.setDate(1 - start.getDay());
+    const out = [];
+    const d = new Date(start);
+    for (let w = 0; w < 6; w++) { const row = []; for (let i = 0; i < 7; i++) { row.push(new Date(d)); d.setDate(d.getDate() + 1); } out.push(row); }
+    return out;
+  }, [month]);
+
+  const byDay = useMemo(() => {
+    const map = {};
+    (meetings || []).forEach(m => { const k = dayKey(m.start_time); (map[k] = map[k] || []).push(m); });
+    Object.values(map).forEach(arr => arr.sort((a, b) => new Date(a.start_time) - new Date(b.start_time)));
+    return map;
+  }, [meetings]);
+
+  const today = new Date();
+  const title = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(month);
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginRight: 'auto' }}>{title}</div>
+        <button className="btn-ghost" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={{ padding: '6px 8px' }}><ChevronLeft size={16} /></button>
+        <button className="btn-ghost" onClick={() => setMonth(new Date(today.getFullYear(), today.getMonth(), 1))}>Today</button>
+        <button className="btn-ghost" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={{ padding: '6px 8px' }}><ChevronRight size={16} /></button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+        {WEEKDAYS.map(w => <div key={w} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-display)' }}>{w}</div>)}
+        {weeks.flat().map((d, i) => {
+          const inMonth = d.getMonth() === month.getMonth();
+          const isToday = sameDay(d, today);
+          const items = byDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] || [];
+          const timed = items.filter(m => !isBlock(m));
+          const blocks = items.filter(isBlock);
+          return (
+            <div key={i} style={{ minHeight: 108, borderRight: (i % 7 !== 6) ? '1px solid var(--border)' : 'none', borderBottom: '1px solid var(--border)', padding: 6, background: inMonth ? 'var(--surface)' : 'var(--surface-2)', opacity: inMonth ? 1 : 0.6 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: isToday ? '#fff' : 'var(--text)', background: isToday ? 'var(--orange)' : 'transparent' }}>{d.getDate()}</div>
               </div>
-              <button onClick={() => setShowLinkModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={17} /></button>
-            </div>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-              <div style={{ position: 'relative' }}>
-                <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-                <input
-                  style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 6, fontSize: 13, color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }}
-                  placeholder="Search leads by name or email…"
-                  value={leadSearch}
-                  onChange={e => setLeadSearch(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div style={{ overflowY: 'auto', flex: 1 }}>
-              {filteredLeads.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: 13 }}>No leads found</div>
-              ) : filteredLeads.map(lead => (
-                <div
-                  key={lead.id}
-                  onClick={() => handleLinkLead(lead)}
-                  style={{ padding: '11px 16px', borderBottom: '1px solid #ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'background 0.1s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#ffffff'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{lead.name || '(no name)'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lead.email || ''}</div>
-                  </div>
-                  {linkingLeadId === lead.id ? (
-                    <Loader size={13} color="var(--orange)" style={{ animation: 'spin 0.7s linear infinite' }} />
-                  ) : (
-                    <div style={{ fontSize: 11, color: 'var(--orange)' }}>Link →</div>
-                  )}
+              {blocks.length > 0 && <div style={{ height: 4, borderRadius: 3, background: 'var(--surface-3)', marginBottom: 3 }} title={`${blocks.length} blocked`} />}
+              {timed.slice(0, 3).map(m => (
+                <div key={m.id} onClick={() => onOpen(m)} title={`${fmtTime(m.start_time)} · ${m.title}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', marginBottom: 3, borderRadius: 6, cursor: 'pointer',
+                  background: 'rgba(255,155,38,0.12)', borderLeft: '2px solid var(--orange)', overflow: 'hidden',
+                }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>{fmtTime(m.start_time).replace(':00', '')}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
                 </div>
               ))}
+              {timed.length > 3 && <div style={{ fontSize: 10.5, color: 'var(--muted)', paddingLeft: 4 }}>+{timed.length - 3} more</div>}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Schedule / Edit Modal ─────────────────────────────────────────────── */}
-      {showScheduleModal && (
-        <ScheduleMeetingModal
-          onClose={() => { setShowScheduleModal(false); setEditingEvent(null); }}
-          onComplete={() => {
-            loadUpcoming();
-            showToast('Meeting scheduled successfully');
-          }}
-        />
-      )}
-
-      {/* ── Toast ─────────────────────────────────────────────────────────────── */}
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9000,
-          background: 'var(--surface)', border: '1px solid var(--orange)',
-          color: 'var(--muted)', padding: '10px 20px', borderRadius: 8,
-          fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          <Check size={14} color="var(--orange)" /> {toast}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
