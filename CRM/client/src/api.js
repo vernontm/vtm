@@ -314,6 +314,7 @@ export const markAllAlertsRead = ()       => request('/client-alerts?action=read
 // Agreements + payment schedule
 export const getAgreements       = (client_id) => request(`/agreements?client_id=${client_id}`);
 export const getAgreementFileUrl = (id)        => request(`/agreements?id=${id}&action=file`, { method: 'POST' });
+export const sendAgreementForSignature = (id)  => request(`/agreements?id=${id}&action=send`, { method: 'POST' });
 export const updatePayment       = (id, status) => request(`/agreements?id=${id}&action=payment`, { method: 'PATCH', body: JSON.stringify({ status }) });
 // AI agreement builder
 export const analyzeDeal      = (client_id)        => request('/agreement-ai?action=analyze', { method: 'POST', body: JSON.stringify({ client_id }) });

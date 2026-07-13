@@ -12,7 +12,7 @@ import {
   getClientTasks, createClientTask, updateClientTask, deleteClientTask,
   getClientCredentials, createClientCredential, updateClientCredential, deleteClientCredential,
   getProjects,
-  getAgreements, getAgreementFileUrl, updatePayment,
+  getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
   analyzeDeal, generateAgreement, approveAgreement,
 } from '../api';
 import Modal from '../components/Modal';
@@ -755,10 +755,27 @@ function AgreementTab({ client }) {
           <FileSignature size={18} style={{ color: 'var(--orange)' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, color: 'var(--text)' }}>{ag.title}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{money(ag.total_amount)} · {ag.status}{ag.signed_date ? ` · signed ${new Date(ag.signed_date).toLocaleDateString()}` : ''}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+              {money(ag.total_amount)} · <span style={{ textTransform: 'capitalize' }}>{ag.status}</span>
+              {ag.signed_at ? ` · signed ${new Date(ag.signed_at).toLocaleDateString()} by ${ag.signer_name || 'client'}` : (ag.sent_at ? ` · sent ${new Date(ag.sent_at).toLocaleDateString()}` : '')}
+            </div>
           </div>
+          {ag.status !== 'signed' && (ag.terms?.agreement_markdown) && (
+            <button className="btn-primary" disabled={busy === 'send'} onClick={async () => {
+              setBusy('send');
+              try { await sendAgreementForSignature(ag.id); toast('success', ag.sent_at ? 'Re-sent to client' : 'Sent to client to sign'); load(); }
+              catch (e) { toast('error', e.message); } finally { setBusy(''); }
+            }}>
+              <FileSignature size={14} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend' : 'Send to sign'}
+            </button>
+          )}
           {ag.file_url && <button className="btn-ghost" onClick={() => viewPdf(ag)}><Download size={14} /> PDF</button>}
         </div>
+        {ag.status === 'signed' && ag.signer_ip && (
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: -8 }}>
+            Signed electronically · {ag.signature_method === 'draw' ? 'drawn signature' : 'typed signature'} · IP {ag.signer_ip} · {ag.signed_at ? new Date(ag.signed_at).toLocaleString() : ''}
+          </div>
+        )}
 
         {payments.length > 0 && (
           <div>

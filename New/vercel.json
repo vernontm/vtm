@@ -87,6 +87,8 @@
     { "source": "/meetup", "destination": "/meetup.html" },
     { "source": "/in-person", "destination": "/meetup.html" },
     { "source": "/portal", "destination": "/portal.html" },
+    { "source": "/sign", "destination": "/sign.html" },
+    { "source": "/client", "destination": "/client.html" },
     { "source": "/crm-blueprint", "destination": "/crm-blueprint.html" },
     { "source": "/crm-build", "destination": "/crm-build.html" },
     { "source": "/crm-lab", "destination": "/crm-lab.html" },

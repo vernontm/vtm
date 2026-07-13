@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Client Portal · Vernon Tech &amp; Media</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#f2f3f5;--panel:#fff;--ink:#16191d;--body:#4b5563;--muted:#939aa6;--line:#e3e5ea;--line2:#cfd3da;--accent:#ee6a1f;--accent-tint:#fff4ec;--ok:#1f9d63;--ok-tint:#e9f7ef;--red:#c23b3b;--fdisp:'Plus Jakarta Sans',system-ui,sans-serif;--fbody:'Inter',system-ui,sans-serif}
+    *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--body);font-family:var(--fbody);-webkit-font-smoothing:antialiased}
+    button{font-family:inherit;cursor:pointer}
+    header.nav{background:var(--panel);border-bottom:1px solid var(--line);height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+    .brand{font-family:var(--fdisp);font-weight:800;font-size:13px;letter-spacing:.14em}.brand .b1{color:var(--accent)}.brand .b2{color:var(--muted);letter-spacing:.16em}
+    .signout{font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:7px 14px;font-weight:500;background:#fff}
+    .wrap{max-width:640px;margin:0 auto;padding:44px 22px 100px}
+    h1{font-family:var(--fdisp);font-weight:800;font-size:27px;color:var(--ink)} .sub{color:var(--muted);font-size:15px;margin-top:8px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+    label.fl{display:block;font-size:13px;color:var(--body);font-weight:500;margin:14px 0 7px}
+    input.inp{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:13px 15px;font-size:15px;color:var(--ink)}
+    input.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(238,106,31,.13)}
+    .btn{width:100%;background:var(--ink);color:#fff;border:none;border-radius:11px;padding:14px;font-size:15px;font-weight:700;margin-top:18px}
+    .btn:disabled{background:#cbd0d8}
+    .err{color:var(--red);font-size:13px;margin-top:12px}
+    .sec{font-family:var(--fdisp);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:26px 0 12px}
+    .task{display:flex;gap:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;margin-bottom:10px;cursor:pointer}
+    .task.done{opacity:.6}.task.done .ttl{text-decoration:line-through}
+    .chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
+    .task.done .chk{background:var(--ok);border-color:var(--ok)} .chk svg{width:12px;height:12px;stroke:#fff;stroke-width:3.4;fill:none;opacity:0}.task.done .chk svg{opacity:1}
+    .ttl{font-weight:600;font-size:15px;color:var(--ink)} .tdesc{color:var(--muted);font-size:13px;margin-top:3px}
+    .plat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+    .prow{display:flex;align-items:center;gap:10px}.pname{font-weight:700;font-size:14px;color:var(--ink);flex:1}
+    .badge{font-size:11px;font-weight:700;border-radius:999px;padding:2px 10px;text-transform:capitalize}
+    .badge.needed{color:var(--red);background:#fbecec;border:1px solid #f3caca}.badge.requested{color:var(--accent);background:var(--accent-tint);border:1px solid #f6c9a6}.badge.granted{color:var(--ok);background:var(--ok-tint);border:1px solid #bfe6cf}
+    .pproc{margin-top:9px;background:#f7f8fa;border-radius:8px;padding:9px 11px;font-size:12.5px;color:var(--body);white-space:pre-wrap;line-height:1.55}
+    .state{text-align:center;padding:70px 20px;color:var(--muted)}.state h2{font-family:var(--fdisp);color:var(--ink);font-size:20px;margin-bottom:8px}
+  </style>
+</head>
+<body>
+  <header class="nav"><div class="brand"><span class="b1">VERNON TECH &amp; MEDIA</span> <span class="b2">· CLIENT PORTAL</span></div><button class="signout" id="so" style="display:none">Sign out</button></header>
+  <main class="wrap" id="app"><div class="state">Loading…</div></main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    const SB_URL='https://ssllepovajmohdhvhzsa.supabase.co';
+    const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzbGxlcG92YWptb2hkaHZoenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTYwMTcsImV4cCI6MjA5MTA3MjAxN30.qFTsGzZsN5XVX_xgxpdclWmeEtCs1ZfmmLzOsmcN_0k';
+    const sb=window.supabase.createClient(SB_URL,SB_ANON);
+    const app=document.getElementById('app'), so=document.getElementById('so');
+    const esc=s=>(s==null?'':String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+    const CHK='<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+    let recovering=false, data=null;
+
+    sb.auth.onAuthStateChange((event)=>{ if(event==='PASSWORD_RECOVERY'){recovering=true;renderSetPassword();} });
+    so.onclick=async()=>{await sb.auth.signOut();location.href='/client';};
+
+    async function boot(){
+      const {data:{session}}=await sb.auth.getSession();
+      if(recovering){renderSetPassword();return;}
+      if(session){loadPortal();} else {renderLogin();}
+    }
+
+    function renderLogin(){
+      so.style.display='none';
+      app.innerHTML='<h1>Client login</h1><div class="sub">Sign in to your Vernon Tech &amp; Media portal.</div>'
+        +'<div class="card" style="margin-top:22px"><label class="fl">Email</label><input class="inp" id="em" type="email" placeholder="you@business.com" />'
+        +'<label class="fl">Password</label><input class="inp" id="pw" type="password" placeholder="Your password" />'
+        +'<button class="btn" id="go">Log in</button><div class="err" id="er"></div></div>';
+      document.getElementById('go').onclick=async()=>{
+        const er=document.getElementById('er');er.textContent='';
+        const {error}=await sb.auth.signInWithPassword({email:document.getElementById('em').value.trim(),password:document.getElementById('pw').value});
+        if(error){er.textContent=error.message;return;} loadPortal();
+      };
+    }
+
+    function renderSetPassword(){
+      so.style.display='none';
+      app.innerHTML='<h1>Set your password</h1><div class="sub">Create a password to access your portal.</div>'
+        +'<div class="card" style="margin-top:22px"><label class="fl">New password</label><input class="inp" id="pw" type="password" placeholder="At least 8 characters" />'
+        +'<button class="btn" id="go">Save password</button><div class="err" id="er"></div></div>';
+      document.getElementById('go').onclick=async()=>{
+        const er=document.getElementById('er');er.textContent='';
+        const pw=document.getElementById('pw').value; if(pw.length<8){er.textContent='Use at least 8 characters.';return;}
+        const {error}=await sb.auth.updateUser({password:pw});
+        if(error){er.textContent=error.message;return;} recovering=false; loadPortal();
+      };
+    }
+
+    async function api(path,opts={}){
+      const {data:{session}}=await sb.auth.getSession();
+      const r=await fetch('/api/crm'+path,{...opts,headers:{'Content-Type':'application/json',Authorization:'Bearer '+(session?.access_token||''),...(opts.headers||{})}});
+      if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'error');
+      return r.json();
+    }
+
+    async function loadPortal(){
+      so.style.display='';
+      app.innerHTML='<div class="state">Loading your portal…</div>';
+      try{ data=await api('/portal-auth'); renderPortal(); }
+      catch(e){ app.innerHTML='<div class="state"><h2>No workspace yet</h2><p>'+esc(e.message)+'</p></div>'; }
+    }
+
+    function renderPortal(){
+      const c=data.client, tasks=data.tasks||[], plats=data.platforms||[];
+      const done=tasks.filter(t=>t.status==='done').length;
+      const name=(c.owner_name||'').split(' ')[0]||'there';
+      let h='<h1>Welcome, '+esc(name)+'</h1><div class="sub">Here\'s where '+esc(c.business_name)+' stands with us.</div>';
+      if(data.agreement){h+='<div class="sec">Agreement</div><div class="plat"><div class="prow"><span class="pname">'+esc(data.agreement.title||'Service Agreement')+'</span><span class="badge granted">'+esc(data.agreement.status||'signed')+'</span></div></div>';}
+      if(tasks.length){
+        h+='<div class="sec">Your checklist · '+done+' of '+tasks.length+' done</div>';
+        tasks.forEach(t=>{h+='<div class="task '+(t.status==='done'?'done':'')+'" data-id="'+t.id+'"><div class="chk">'+CHK+'</div><div><div class="ttl">'+esc(t.title)+'</div>'+(t.description?'<div class="tdesc">'+esc(t.description)+'</div>':'')+'</div></div>';});
+      }
+      if(plats.length){
+        h+='<div class="sec">Access status</div>';
+        plats.forEach(p=>{const st=['needed','requested','granted'].includes(p.access_status)?p.access_status:'needed';h+='<div class="plat"><div class="prow"><span class="pname">'+esc(p.platform_name)+'</span><span class="badge '+st+'">'+st+'</span></div>'+(p.access_process?'<div class="pproc">'+esc(p.access_process)+'</div>':'')+'</div>';});
+      }
+      if(!tasks.length&&!plats.length){h+='<div class="state"><h2>You\'re all caught up</h2><p>We\'ll reach out if we need anything.</p></div>';}
+      app.innerHTML=h;
+      app.querySelectorAll('.task').forEach(el=>el.onclick=()=>toggle(el.dataset.id));
+    }
+
+    async function toggle(id){
+      const t=data.tasks.find(x=>x.id===id);if(!t)return;
+      const next=t.status==='done'?'todo':'done'; t.status=next; renderPortal();
+      try{ await api('/portal-auth?task_id='+id,{method:'PATCH',body:JSON.stringify({status:next})}); }
+      catch(e){ t.status=next==='done'?'todo':'done'; renderPortal(); }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
