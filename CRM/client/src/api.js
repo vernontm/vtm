@@ -311,6 +311,15 @@ export const getClientAlerts   = (unread) => request(`/client-alerts${unread ? '
 export const markAlertRead     = (id)     => request(`/client-alerts?id=${id}`, { method: 'PATCH', body: JSON.stringify({ read: true }) });
 export const markAllAlertsRead = ()       => request('/client-alerts?action=read-all', { method: 'POST' });
 
+// Agreements + payment schedule
+export const getAgreements       = (client_id) => request(`/agreements?client_id=${client_id}`);
+export const getAgreementFileUrl = (id)        => request(`/agreements?id=${id}&action=file`, { method: 'POST' });
+export const updatePayment       = (id, status) => request(`/agreements?id=${id}&action=payment`, { method: 'PATCH', body: JSON.stringify({ status }) });
+// AI agreement builder
+export const analyzeDeal      = (client_id)        => request('/agreement-ai?action=analyze', { method: 'POST', body: JSON.stringify({ client_id }) });
+export const generateAgreement = (client_id, terms) => request('/agreement-ai?action=generate', { method: 'POST', body: JSON.stringify({ client_id, terms }) });
+export const approveAgreement  = (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) });
+
 // Content Clients
 export const getContentClients = () => request('/content-clients');
 export const getContentClient = (id) => request(`/content-clients?id=${id}`);

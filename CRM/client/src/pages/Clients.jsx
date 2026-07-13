@@ -3,6 +3,7 @@ import {
   Plus, Search, Trash2, ArrowLeft, Building2,
   KeyRound, CheckCircle2, Circle, Clock, ShieldCheck, ListChecks,
   Briefcase, Lock, Eye, EyeOff, Copy, Pencil, ExternalLink,
+  FileSignature, Sparkles, DollarSign, Download,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import {
@@ -11,6 +12,8 @@ import {
   getClientTasks, createClientTask, updateClientTask, deleteClientTask,
   getClientCredentials, createClientCredential, updateClientCredential, deleteClientCredential,
   getProjects,
+  getAgreements, getAgreementFileUrl, updatePayment,
+  analyzeDeal, generateAgreement, approveAgreement,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -213,6 +216,7 @@ export default function Clients() {
 // ── Client detail ──────────────────────────────────────────────────────────────
 const TABS = [
   { key: 'overview',  label: 'Overview',   icon: Building2 },
+  { key: 'agreement', label: 'Agreement',  icon: FileSignature },
   { key: 'vault',     label: 'Vault',      icon: Lock },
   { key: 'access',    label: 'Platforms & Access', icon: KeyRound },
   { key: 'tasks',     label: 'Onboarding Tasks',   icon: ListChecks },
@@ -238,7 +242,12 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{client.business_name}</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>{client.owner_name || 'No owner set'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{client.owner_name || 'No owner set'}</span>
+            {(client.client_type || []).map(t => (
+              <span key={t} style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(255,155,38,0.12)', border: '1px solid rgba(255,155,38,0.3)', borderRadius: 999, padding: '1px 8px' }}>{t}</span>
+            ))}
+          </div>
         </div>
         <select className="form-input" style={{ width: 'auto', padding: '6px 10px', fontSize: 12 }} value={client.stage || 'lead'} onChange={e => saveField('stage', e.target.value)}>
           {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
@@ -261,6 +270,7 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
 
       <div style={{ padding: 24, maxWidth: 900 }}>
         {tab === 'overview'  && <OverviewTab client={client} saveField={saveField} />}
+        {tab === 'agreement' && <AgreementTab client={client} />}
         {tab === 'vault'     && <VaultTab clientId={client.id} />}
         {tab === 'access'    && <AccessTab clientId={client.id} />}
         {tab === 'tasks'     && <TasksTab clientId={client.id} />}
@@ -650,6 +660,186 @@ function VaultField({ label, value, onCopy, onToggle, revealed, mono }) {
         )}
         <button className="btn-ghost" style={{ padding: '3px 5px' }} onClick={onCopy} title="Copy"><Copy size={13} /></button>
       </div>
+    </div>
+  );
+}
+
+// ── Agreement tab (AI builder: analyze -> answer -> draft -> review -> approve) ──
+const money = (n) => `$${Number(n || 0).toLocaleString()}`;
+const PAY_BADGE = { paid: { label: 'Paid', color: '#22c55e' }, pending: { label: 'Pending', color: '#f5a623' } };
+
+function PaymentRows({ payments, onToggle }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {payments.map(p => {
+        const b = PAY_BADGE[p.status] || PAY_BADGE.pending;
+        return (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9 }}>
+            <DollarSign size={14} style={{ color: 'var(--orange)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{money(p.amount)} · {p.label}</div>
+              {p.due_condition && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{p.due_condition}</div>}
+            </div>
+            {p.stripe_invoice_url && <a href={p.stripe_invoice_url} target="_blank" rel="noreferrer" className="btn-ghost" style={{ padding: '4px 6px' }} title="Stripe invoice"><ExternalLink size={13} /></a>}
+            <button onClick={() => onToggle && onToggle(p)} style={{ fontSize: 11, fontWeight: 700, color: b.color, background: `${b.color}18`, border: `1px solid ${b.color}40`, borderRadius: 999, padding: '2px 10px', cursor: onToggle ? 'pointer' : 'default' }}>{b.label}</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AgreementTab({ client }) {
+  const [loading, setLoading] = useState(true);
+  const [agreements, setAgreements] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [busy, setBusy] = useState('');
+  const [analysis, setAnalysis] = useState(null);
+  const [terms, setTerms] = useState('');
+  const [draft, setDraft] = useState(null);
+  const [showText, setShowText] = useState('agreement');
+
+  const load = async () => {
+    try { const d = await getAgreements(client.id); setAgreements(d.agreements || []); setPayments(d.payments || []); }
+    catch (e) { toast('error', e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [client.id]);
+
+  const togglePay = async (p) => {
+    const status = p.status === 'paid' ? 'pending' : 'paid';
+    setPayments(ps => ps.map(x => x.id === p.id ? { ...x, status } : x));
+    try { await updatePayment(p.id, status); } catch (e) { toast('error', e.message); }
+  };
+
+  const runAnalyze = async () => {
+    setBusy('analyze');
+    try {
+      const a = await analyzeDeal(client.id);
+      setAnalysis(a);
+      const seed = (a.suggested_installments || []).map(i => `- ${money(i.amount)} ${i.trigger ? '(' + i.trigger + ')' : ''}`).join('\n');
+      const monthly = (a.suggested_monthly || []).map(m => `- ${money(m.amount)}/mo ${m.item}`).join('\n');
+      setTerms(`${a.suggested_structure || ''}\n\nInstallments:\n${seed}${monthly ? '\n\nMonthly:\n' + monthly : ''}`.trim());
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  const runGenerate = async () => {
+    setBusy('generate');
+    try { setDraft(await generateAgreement(client.id, terms)); }
+    catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  const runApprove = async () => {
+    setBusy('approve');
+    try { await approveAgreement(client.id, draft); setDraft(null); setAnalysis(null); setTerms(''); setLoading(true); load(); toast('success', 'Agreement saved'); }
+    catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  const viewPdf = async (ag) => {
+    try { const { url } = await getAgreementFileUrl(ag.id); window.open(url, '_blank'); }
+    catch (e) { toast('error', e.message); }
+  };
+
+  if (loading) return <div style={{ color: 'var(--muted)' }}>Loading…</div>;
+
+  // ── Existing agreement view ──
+  if (agreements.length > 0) {
+    const ag = agreements[0];
+    const md = ag.terms || {};
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12 }}>
+          <FileSignature size={18} style={{ color: 'var(--orange)' }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, color: 'var(--text)' }}>{ag.title}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{money(ag.total_amount)} · {ag.status}{ag.signed_date ? ` · signed ${new Date(ag.signed_date).toLocaleDateString()}` : ''}</div>
+          </div>
+          {ag.file_url && <button className="btn-ghost" onClick={() => viewPdf(ag)}><Download size={14} /> PDF</button>}
+        </div>
+
+        {payments.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Payment schedule</div>
+            <PaymentRows payments={payments} onToggle={togglePay} />
+          </div>
+        )}
+
+        {(md.agreement_markdown || md.nda_markdown) && (
+          <div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              {md.agreement_markdown && <button className="btn-ghost" style={{ fontWeight: showText === 'agreement' ? 700 : 400 }} onClick={() => setShowText('agreement')}>Agreement</button>}
+              {md.nda_markdown && <button className="btn-ghost" style={{ fontWeight: showText === 'nda' ? 700 : 400 }} onClick={() => setShowText('nda')}>NDA</button>}
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.6, color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', maxHeight: 460, overflow: 'auto' }}>
+              {showText === 'nda' ? md.nda_markdown : md.agreement_markdown}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Builder ──
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ color: 'var(--muted)', fontSize: 13 }}>Build a service agreement from this client's projects and discovery notes. AI proposes the billing, flags what you might be leaving out, then drafts it for your review.</div>
+
+      {!analysis && (
+        <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'analyze'} onClick={runAnalyze}>
+          <Sparkles size={15} /> {busy === 'analyze' ? 'Analyzing…' : 'Analyze deal with AI'}
+        </button>
+      )}
+
+      {analysis && (
+        <>
+          {(analysis.flags || []).length > 0 && (
+            <div style={{ padding: '14px 16px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#f5a623', marginBottom: 8 }}>Worth a look before you price it</div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text)', fontSize: 13, lineHeight: 1.7 }}>
+                {analysis.flags.map((f, i) => <li key={i}>{f}</li>)}
+              </ul>
+            </div>
+          )}
+          {(analysis.questions || []).length > 0 && (
+            <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7 }}>
+              <strong style={{ color: 'var(--text)' }}>AI wants to know:</strong>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>{analysis.questions.map((q, i) => <li key={i}>{q}</li>)}</ul>
+            </div>
+          )}
+          <div className="form-group">
+            <label className="form-label">Your billing terms (edit freely)</label>
+            <textarea className="form-input" rows={7} value={terms} onChange={e => setTerms(e.target.value)} placeholder="e.g. $2,500 upfront to start, then $1,000 on completion of each of the other two projects. $29/mo hosting after launch." style={{ resize: 'vertical' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-primary" disabled={busy === 'generate'} onClick={runGenerate}><FileSignature size={15} /> {busy === 'generate' ? 'Drafting…' : draft ? 'Regenerate draft' : 'Generate agreement'}</button>
+            <button className="btn-ghost" onClick={() => { setAnalysis(null); setDraft(null); setTerms(''); }}>Reset</button>
+          </div>
+        </>
+      )}
+
+      {draft && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
+          <div style={{ height: 1, background: 'var(--border)' }} />
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Draft for review · total {money(draft.total)}</div>
+          {Array.isArray(draft.installments) && draft.installments.length > 0 && (
+            <PaymentRows payments={draft.installments.map((i, idx) => ({ id: 'd' + idx, ...i, due_condition: i.trigger }))} />
+          )}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn-ghost" style={{ fontWeight: showText === 'agreement' ? 700 : 400 }} onClick={() => setShowText('agreement')}>Agreement</button>
+            <button className="btn-ghost" style={{ fontWeight: showText === 'nda' ? 700 : 400 }} onClick={() => setShowText('nda')}>NDA</button>
+          </div>
+          <div style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.6, color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', maxHeight: 460, overflow: 'auto' }}>
+            {showText === 'nda' ? draft.nda_markdown : draft.agreement_markdown}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-primary" disabled={busy === 'approve'} onClick={runApprove}><CheckCircle2 size={15} /> {busy === 'approve' ? 'Saving…' : 'Approve & save'}</button>
+            <span style={{ fontSize: 12, color: 'var(--muted)', alignSelf: 'center' }}>Saves the agreement + payment schedule. (Send-to-sign comes next.)</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
