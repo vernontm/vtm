@@ -302,36 +302,8 @@ function OverviewTab({ client, saveField }) {
         <Field label="Business Type" value={client.business_type} onSave={v => saveField('business_type', v)} placeholder="e.g. Local, SaaS" />
         <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
         <Field label="Instagram" value={client.instagram} onSave={v => saveField('instagram', v)} placeholder="@handle" />
-        <Field label="Budget Range" value={client.budget_range} onSave={v => saveField('budget_range', v)} placeholder="Honda / Benz / Ferrari" />
         <Field label="Retainer Status" value={client.retainer_status} onSave={v => saveField('retainer_status', v)} placeholder="active / paused" />
       </div>
-
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center', padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
-          <input type="checkbox" checked={!!client.payment_received} onChange={e => saveField('payment_received', e.target.checked)} />
-          Initial payment received
-        </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Onboarding Date</span>
-          <input type="date" className="form-input" style={{ width: 'auto', padding: '5px 8px', fontSize: 13 }}
-            value={client.onboarding_date || ''} onChange={e => saveField('onboarding_date', e.target.value || null)} />
-        </div>
-      </div>
-
-      {client.portal_token && (() => {
-        const link = `${window.location.origin}/portal?token=${client.portal_token}`;
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Client portal link</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input readOnly value={link} onFocus={e => e.target.select()} className="form-input" style={{ flex: 1, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
-              <button className="btn-ghost" style={{ padding: '7px 9px' }} title="Copy link" onClick={() => copyToClipboard(link, 'Portal link')}><Copy size={15} /></button>
-              <a className="btn-ghost" style={{ padding: '7px 9px' }} href={link} target="_blank" rel="noreferrer" title="Open portal"><ExternalLink size={15} /></a>
-            </div>
-            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Private link the client opens to see their checklist and access steps. No login needed.</span>
-          </div>
-        );
-      })()}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>What we're doing / notes</span>
