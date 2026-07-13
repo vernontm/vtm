@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
   <style>
     :root{--bg:#eef0f3;--panel:#fff;--ink:#16191d;--body:#4b5563;--muted:#939aa6;--line:#e3e5ea;--line2:#cfd3da;--accent:#ee6a1f;--accent-tint:#fff4ec;--ok:#1f9d63;--ok-tint:#e9f7ef;--fdisp:'Plus Jakarta Sans',system-ui,sans-serif;--fbody:'Inter',system-ui,sans-serif;}
     *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--body);font-family:var(--fbody);-webkit-font-smoothing:antialiased}
@@ -192,21 +191,8 @@
     function blobToBase64(blob){ return new Promise(res=>{ const r=new FileReader(); r.onloadend=()=>res(String(r.result).split(',')[1]); r.readAsDataURL(blob); }); }
 
     async function finish(){
-      // Render both signed papers VISIBLY (html2canvas renders blank from
-      // off-screen/fixed nodes), wait for fonts, then capture.
       pill.textContent='';
-      app.innerHTML='<div class="lead"><h1>Finalizing…</h1><p>Preparing your signed copy — one moment.</p></div>'
-        + '<div id="pdfcap">'+paperHtml('agreement')+(data.nda_markdown?'<div class="ndabreak"></div>'+paperHtml('nda'):'')+'</div>';
-      window.scrollTo(0,0);
-      let pdf_base64=null;
-      try{
-        if(document.fonts&&document.fonts.ready) await document.fonts.ready;
-        await new Promise(r=>setTimeout(r,150));
-        const el=document.getElementById('pdfcap');
-        const blob = await html2pdf().set({margin:[14,12,16,12],image:{type:'jpeg',quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:820},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'},pagebreak:{mode:['css','legacy'],before:'.ndabreak'}}).from(el).outputPdf('blob');
-        pdf_base64 = await blobToBase64(blob);
-      }catch(e){ console.error('pdf gen failed',e); }
-
+      app.innerHTML='<div class="state"><h2>Finalizing…</h2><p>Saving your signed copy — one moment.</p></div>';
       try{
         const r=await fetch('/api/crm/sign?token='+encodeURIComponent(token),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
           consent:true,
@@ -214,8 +200,7 @@
           nda_signature:sigs.nda,
           typed_name:(sigs.agreement&&sigs.agreement.name)||data.owner_name||'',
           signature_method:(sigs.agreement&&sigs.agreement.method)||'type',
-          signature_value:(sigs.agreement&&sigs.agreement.value)||'',
-          pdf_base64
+          signature_value:(sigs.agreement&&sigs.agreement.value)||''
         })});
         if(!r.ok) throw new Error();
         renderDone(false);

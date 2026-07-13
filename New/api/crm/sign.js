@@ -1,5 +1,6 @@
 const { setCors, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { sendEmail } = require('../_lib/gmail.js');
+const { buildAgreementPdf } = require('../_lib/agreement-pdf.js');
 
 // Frictionless, token-based e-signature. No login required to sign (protects
 // conversion). On finish we record both signatures + IP + timestamp, store the
@@ -45,9 +46,9 @@ async function provisionAccount(client) {
   return { userId, link: data.action_link || data?.properties?.action_link || null };
 }
 
-async function uploadSignedPdf(clientId, agreementId, base64) {
+async function uploadSignedPdf(clientId, agreementId, bytes) {
   try {
-    const buf = Buffer.from(base64, 'base64');
+    const buf = Buffer.from(bytes);
     const path = `${clientId}/signed-agreement-${agreementId}.pdf`;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
       method: 'POST',
@@ -111,12 +112,23 @@ module.exports = async function handler(req, res) {
 
       const newTerms = { ...terms, signatures: { agreement: aSig ? { ...aSig, at: nowIso } : null, nda: nSig ? { ...nSig, at: nowIso } : null, ip, user_agent: ua } };
 
-      // Store the signed PDF (if the browser generated one) and set file_url.
+      // Generate the signed PDF server-side (deterministic) and store it.
       let fileUrl = ag.file_url || null;
-      if (body.pdf_base64) {
-        const up = await uploadSignedPdf(client.id, ag.id, body.pdf_base64);
+      try {
+        const pdfBytes = await buildAgreementPdf({
+          agreementMarkdown: terms.agreement_markdown,
+          ndaMarkdown: terms.nda_markdown,
+          ownerName: client.owner_name,
+          signerName,
+          signatureMethod: aSig && aSig.method,
+          signatureValue: aSig && aSig.value,
+          ndaSignatureMethod: nSig && nSig.method,
+          ndaSignatureValue: nSig && nSig.value,
+          signedDateLabel: new Date(nowIso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        });
+        const up = await uploadSignedPdf(client.id, ag.id, pdfBytes);
         if (up) fileUrl = up;
-      }
+      } catch (e) { console.error('pdf build failed:', e.message); }
 
       await supaFetch(`crm_agreements?id=eq.${ag.id}`, {
         method: 'PATCH',
