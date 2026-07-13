@@ -32,17 +32,19 @@ async function provisionAccount(client) {
       method: 'POST', headers: adminHeaders,
       body: JSON.stringify({ email, email_confirm: true, user_metadata: { is_client: true, client_id: client.id, business_name: client.business_name } }),
     });
-    if (cRes.ok) {
-      const u = await cRes.json();
-      userId = u.id;
-      await supaFetch(`crm_clients?id=eq.${client.id}`, { method: 'PATCH', body: JSON.stringify({ portal_user_id: userId }) });
-    }
+    if (cRes.ok) { const u = await cRes.json(); userId = u.id; }
   }
   const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
     method: 'POST', headers: adminHeaders,
     body: JSON.stringify({ type: 'recovery', email, options: { redirect_to: CLIENT_HOME } }),
   });
   const data = await linkRes.json().catch(() => ({}));
+  // generate_link also returns the user — use it when the account already existed.
+  if (!userId) userId = data.user_id || data.id || (data.user && data.user.id) || null;
+  // Always link this client to the account (idempotent; fixes the existing-email case).
+  if (userId && userId !== client.portal_user_id) {
+    await supaFetch(`crm_clients?id=eq.${client.id}`, { method: 'PATCH', body: JSON.stringify({ portal_user_id: userId }) }).catch(() => {});
+  }
   return { userId, link: data.action_link || data?.properties?.action_link || null };
 }
 
