@@ -1,5 +1,51 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
-import { getGmailAuth } from '../_lib/gmail.js';
+import { getGmailAuth, getSetting, setSetting } from '../_lib/gmail.js';
+
+// Pull events from Google Calendar (primary) into crm_meetings. Uses the stored
+// Gmail/Calendar OAuth token. Upserts on the Google event id so re-syncs update
+// in place. Returns the number of events synced.
+async function syncCalendar() {
+  const { accessToken } = await getGmailAuth();
+  const timeMin = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
+  const timeMax = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+  const params = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '150' });
+  const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!r.ok) throw new Error(`Calendar fetch failed: ${await r.text()}`);
+  const data = await r.json();
+  const rows = (data.items || [])
+    .filter(e => e.status !== 'cancelled' && (e.start?.dateTime || e.start?.date))
+    .map(e => {
+      const start = e.start.dateTime || e.start.date;
+      const end = e.end?.dateTime || e.end?.date || start;
+      const durMin = (e.start.dateTime && e.end?.dateTime) ? Math.round((new Date(end) - new Date(start)) / 60000) : null;
+      const meet = (e.conferenceData?.entryPoints || []).find(p => p.entryPointType === 'video')?.uri || e.hangoutLink || null;
+      return {
+        id: e.id,
+        summary: e.summary || '(no title)',
+        start_time: new Date(start).toISOString(),
+        end_time: new Date(end).toISOString(),
+        duration_minutes: durMin,
+        location: e.location || null,
+        description: e.description || null,
+        meet_link: meet,
+        attendees: e.attendees || [],
+        html_link: e.htmlLink || null,
+        status: e.status || 'confirmed',
+        synced_at: new Date().toISOString(),
+      };
+    });
+  if (rows.length) {
+    await supaFetch('crm_meetings?on_conflict=id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows),
+    });
+  }
+  await setSetting('meetings_last_sync', String(Date.now())).catch(() => {});
+  return rows.length;
+}
 
 // Normalize a crm_meetings row to the shape the frontend expects
 function normalize(m) {
@@ -28,6 +74,12 @@ export default async function handler(req, res) {
     // GET meetings
     if (req.method === 'GET') {
       if (action === 'upcoming') {
+        // Auto-sync from Google Calendar if the last sync is stale (throttled to
+        // avoid hitting Google on every load).
+        try {
+          const last = parseInt((await getSetting('meetings_last_sync')) || '0', 10);
+          if (Date.now() - last > 120000) await syncCalendar();
+        } catch (e) { console.error('auto-sync failed:', e.message); }
         const now = new Date().toISOString();
         const rows = await supaFetch(`crm_meetings?start_time=gte.${now}&order=start_time.asc`);
         return res.json((rows || []).map(normalize));
@@ -64,8 +116,12 @@ export default async function handler(req, res) {
     // POST actions
     if (req.method === 'POST') {
       if (action === 'sync') {
-        // Calendar sync placeholder - Phase 4
-        return res.json({ message: 'Calendar sync will be available after Google OAuth setup', synced: 0 });
+        try {
+          const synced = await syncCalendar();
+          return res.json({ synced, message: `Synced ${synced} event${synced === 1 ? '' : 's'} from Google Calendar` });
+        } catch (e) {
+          return res.status(500).json({ error: e.message || 'Calendar sync failed' });
+        }
       }
       if (action === 'create') {
         const { summary, start, end, attendees = [], description = '', addMeetLink = true, reminderMinutes = 10 } = req.body;
