@@ -2,10 +2,13 @@ const { setCors, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supab
 const { sendEmail } = require('../_lib/gmail.js');
 
 // Frictionless, token-based e-signature. No login required to sign (protects
-// conversion). AFTER signing we auto-provision a real client account and email
-// a set-password link so ongoing portal access moves to a proper login.
+// conversion). On finish we record both signatures + IP + timestamp, store the
+// signed PDF on the client's file, email a copy to the client and Ray, then
+// auto-provision a real client account and email a set-password link.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLIENT_HOME = 'https://vernontm.com/client';
+const RAY_EMAIL = 'ray@vernontm.com';
+const BUCKET = 'client-agreements';
 
 const adminHeaders = {
   'apikey': SERVICE_KEY,
@@ -21,25 +24,19 @@ async function agreementForToken(token) {
 
 async function provisionAccount(client) {
   const email = client.contact_email;
-  if (!email) return { link: null, note: 'no email on file' };
+  if (!email) return { link: null };
   let userId = client.portal_user_id;
-
   if (!userId) {
     const cRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
       method: 'POST', headers: adminHeaders,
-      body: JSON.stringify({
-        email, email_confirm: true,
-        user_metadata: { is_client: true, client_id: client.id, business_name: client.business_name },
-      }),
+      body: JSON.stringify({ email, email_confirm: true, user_metadata: { is_client: true, client_id: client.id, business_name: client.business_name } }),
     });
     if (cRes.ok) {
       const u = await cRes.json();
       userId = u.id;
       await supaFetch(`crm_clients?id=eq.${client.id}`, { method: 'PATCH', body: JSON.stringify({ portal_user_id: userId }) });
     }
-    // If create failed (user already exists), the recovery link below still works by email.
   }
-
   const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
     method: 'POST', headers: adminHeaders,
     body: JSON.stringify({ type: 'recovery', email, options: { redirect_to: CLIENT_HOME } }),
@@ -48,19 +45,43 @@ async function provisionAccount(client) {
   return { userId, link: data.action_link || data?.properties?.action_link || null };
 }
 
+async function uploadSignedPdf(clientId, agreementId, base64) {
+  try {
+    const buf = Buffer.from(base64, 'base64');
+    const path = `${clientId}/signed-agreement-${agreementId}.pdf`;
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
+      method: 'POST',
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
+      body: buf,
+    });
+    if (!res.ok) { console.error('pdf upload failed:', await res.text()); return null; }
+    return `${BUCKET}/${path}`;
+  } catch (e) { console.error('pdf upload error:', e.message); return null; }
+}
+
+async function signedUrlFor(fileUrl, expiresIn = 604800) {
+  const i = fileUrl.indexOf('/');
+  const bucket = fileUrl.slice(0, i), path = fileUrl.slice(i + 1);
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path}`, {
+    method: 'POST', headers: adminHeaders, body: JSON.stringify({ expiresIn }),
+  });
+  if (!res.ok) return null;
+  const { signedURL } = await res.json();
+  return `${SUPABASE_URL}/storage/v1${signedURL}`;
+}
+
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { token } = req.query;
-
   try {
     const ag = await agreementForToken(token);
     if (!ag) return res.status(404).json({ error: 'Agreement not found' });
     const client = ag.client || {};
     const terms = ag.terms || {};
 
-    // GET — load the document for signing
+    // GET — load the documents for signing
     if (req.method === 'GET') {
       return res.json({
         status: ag.signed_at ? 'signed' : 'sent',
@@ -75,59 +96,82 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // POST — capture signature, then provision the client's account
+    // POST — capture signatures, store PDF, email copies, provision account
     if (req.method === 'POST') {
       if (ag.signed_at) return res.json({ ok: true, already: true });
       const body = req.body || {};
+      if (!body.consent) return res.status(400).json({ error: 'Consent required' });
+
       const ip = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '').toString().split(',')[0].trim();
       const ua = (req.headers['user-agent'] || '').toString().slice(0, 400);
-      const signerName = (body.typed_name || client.owner_name || '').toString().slice(0, 200);
-      const method = body.signature_method === 'draw' ? 'draw' : 'type';
+      const nowIso = new Date().toISOString();
+      const aSig = body.agreement_signature || { method: body.signature_method, value: body.signature_value, name: body.typed_name };
+      const nSig = body.nda_signature || null;
+      const signerName = (aSig && aSig.name) || body.typed_name || client.owner_name || '';
+
+      const newTerms = { ...terms, signatures: { agreement: aSig ? { ...aSig, at: nowIso } : null, nda: nSig ? { ...nSig, at: nowIso } : null, ip, user_agent: ua } };
+
+      // Store the signed PDF (if the browser generated one) and set file_url.
+      let fileUrl = ag.file_url || null;
+      if (body.pdf_base64) {
+        const up = await uploadSignedPdf(client.id, ag.id, body.pdf_base64);
+        if (up) fileUrl = up;
+      }
 
       await supaFetch(`crm_agreements?id=eq.${ag.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          status: 'signed', signed_at: new Date().toISOString(),
+          status: 'signed', signed_at: nowIso, signed_date: nowIso.slice(0, 10),
           signer_name: signerName, signer_ip: ip, signer_user_agent: ua,
-          signature_method: method, signature_value: (body.signature_value || '').toString().slice(0, 200000),
-          signed_date: new Date().toISOString().slice(0, 10),
+          signature_method: (aSig && aSig.method) || 'type',
+          signature_value: (aSig && aSig.value) ? String(aSig.value).slice(0, 300000) : '',
+          terms: newTerms,
+          file_url: fileUrl,
         }),
       });
 
-      // Provision the real account + set-password link
-      const { link } = await provisionAccount(client);
+      // Copy of the signed agreement (link) for client + Ray.
+      let pdfLink = null;
+      if (fileUrl) pdfLink = await signedUrlFor(fileUrl).catch(() => null);
 
-      // Email the login link (via connected Gmail)
-      if (link && client.contact_email) {
-        const first = (client.owner_name || 'there').split(' ')[0];
-        try {
-          await sendEmail({
-            to: client.contact_email,
-            subject: 'Your Vernon Tech & Media client portal',
-            body: `Hi ${first},\n\nThanks for signing — you're officially set up with Vernon Tech & Media.\n\nSet your password and log in to your client portal here:\n${link}\n\nInside you'll see everything we need from you and the status of your projects.\n\nTalk soon,\nRay\nVernon Tech & Media`,
-          });
-        } catch (e) { console.error('account email failed:', e.message); }
+      // Provision the account + set-password link.
+      const { link } = await provisionAccount(client);
+      const first = (signerName || 'there').split(' ')[0];
+
+      // Email the client: their copy + password setup.
+      if (client.contact_email) {
+        const parts = [`Hi ${first},`, '', 'Thanks for signing your agreement with Vernon Tech & Media.'];
+        if (pdfLink) parts.push('', `Your signed copy (PDF): ${pdfLink}`);
+        if (link) parts.push('', `Set your password and log into your client portal here: ${link}`);
+        parts.push('', 'Talk soon,', 'Ray', 'Vernon Tech & Media');
+        try { await sendEmail({ to: client.contact_email, subject: 'Your signed Vernon Tech & Media agreement', body: parts.join('\n') }); }
+        catch (e) { console.error('client email failed:', e.message); }
       }
 
-      // Queue the text (iMessage path delivers it)
+      // Email Ray his copy.
+      try {
+        await sendEmail({
+          to: RAY_EMAIL,
+          subject: `Signed: ${client.business_name} — service agreement`,
+          body: `${client.business_name} (${signerName}) just signed the service agreement.\n\nIP: ${ip}\nTime: ${nowIso}\n${pdfLink ? 'Signed copy: ' + pdfLink : '(PDF not generated)'}`,
+        });
+      } catch (e) { console.error('ray email failed:', e.message); }
+
+      // Queue the client's text.
       if (link && client.contact_phone) {
-        const first = (client.owner_name || 'there').split(' ')[0];
         await supaFetch('crm_sms_queue', {
           method: 'POST',
-          body: JSON.stringify({
-            client_id: client.id, phone: client.contact_phone, kind: 'portal_invite',
-            body: `Hi ${first}, thanks for signing with Vernon Tech & Media! Set your password and log into your portal here: ${link}`,
-          }),
+          body: JSON.stringify({ client_id: client.id, phone: client.contact_phone, kind: 'portal_invite', body: `Hi ${first}, thanks for signing with Vernon Tech & Media! Set your password and log into your portal: ${link}` }),
         }).catch(() => {});
       }
 
-      // Alert Ray
+      // Alert Ray in the CRM.
       await supaFetch('crm_client_alerts', {
         method: 'POST',
         body: JSON.stringify({ client_id: client.id, type: 'agreement_signed', message: `${client.business_name} signed the agreement` }),
       }).catch(() => {});
 
-      return res.json({ ok: true, account: !!link });
+      return res.json({ ok: true, account: !!link, pdf: !!pdfLink });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
