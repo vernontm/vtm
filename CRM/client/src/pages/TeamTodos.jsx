@@ -148,7 +148,7 @@ export default function TeamTodos() {
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        {[{ k: 'open', label: `Open (${openCount})` }, { k: 'mine', label: 'Mine' }, { k: 'all', label: 'All' }, { k: 'done', label: 'Done' }].map(f => (
+        {[{ k: 'open', label: `Open (${openCount})` }, { k: 'mine', label: 'Mine' }, { k: 'all', label: 'All' }, { k: 'done', label: 'Completed' }].map(f => (
           <button key={f.k} onClick={() => setFilter(f.k)} style={{
             padding: '6px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-display)',
             background: filter === f.k ? 'var(--btn-black)' : 'var(--surface)', color: filter === f.k ? '#fff' : 'var(--muted)',

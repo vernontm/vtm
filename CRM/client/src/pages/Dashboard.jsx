@@ -144,6 +144,7 @@ function WeekMeetings({ meetings, onMeetingClick }) {
 function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
   const [title, setTitle] = useState('');
   const [urgent, setUrgent] = useState(false);
+  const [tab, setTab] = useState('active'); // active | completed
 
   function submit(e) {
     e.preventDefault();
@@ -151,10 +152,12 @@ function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
     if (!t) return;
     onAdd({ title: t, urgent });
     setTitle(''); setUrgent(false);
+    setTab('active');
   }
 
   const open = todos.filter(t => !t.done);
   const done = todos.filter(t => t.done);
+  const list = tab === 'active' ? open : done;
 
   return (
     <div>
@@ -191,11 +194,24 @@ function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
         </button>
       </form>
 
-      {open.length === 0 && done.length === 0 ? (
-        <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Nothing to do. Add a task above.</div>
+      {/* Active / Completed tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        {[{ k: 'active', label: `Active (${open.length})` }, { k: 'completed', label: `Completed (${done.length})` }].map(t => (
+          <button key={t.k} onClick={() => setTab(t.k)} style={{
+            padding: '4px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-display)',
+            background: tab === t.k ? 'var(--btn-black)' : 'var(--surface-2)', color: tab === t.k ? '#fff' : 'var(--muted)',
+            border: `1px solid ${tab === t.k ? 'transparent' : 'var(--border)'}`,
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+          {tab === 'active' ? 'Nothing to do. Add a task above.' : 'No completed items yet.'}
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 420, overflowY: 'auto' }}>
-          {[...open, ...done].map(t => (
+          {list.map(t => (
             <div key={t.id} className="todo-row" style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)',
             }}>
