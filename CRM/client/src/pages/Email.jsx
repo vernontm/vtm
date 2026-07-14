@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Mail, Send, FileText, Inbox, Search, RefreshCw, Trash2,
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
-  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap, Loader,
+  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap, Loader, Menu,
 } from 'lucide-react';
 import { toast } from '../components/Toast';
 import {
@@ -417,6 +417,7 @@ export default function EmailPage() {
   const [draftMessages, setDraftMessages]   = useState([]);
   const [loading, setLoading]               = useState(true);
   const [selected, setSelected]             = useState(null);
+  const [foldersOpen, setFoldersOpen]       = useState(false); // mobile folders drawer
   const [threadMessages, setThreadMessages] = useState([]);
   const [threadLoading, setThreadLoading]   = useState(false);
   const [search, setSearch]                 = useState('');
@@ -690,8 +691,11 @@ export default function EmailPage() {
   return (
     <div className="email-page-wrap" style={{ height:'100%', display:'flex', background:'var(--bg)', fontFamily:'var(--font-display)' }}>
 
+      {/* Mobile drawer overlay */}
+      <div className={`email-sidebar-overlay${foldersOpen ? ' open' : ''}`} onClick={() => setFoldersOpen(false)} />
+
       {/* ── Left Sidebar ── */}
-      <div className="email-sidebar" style={{ width:200, background:'var(--surface)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', flexShrink:0 }}>
+      <div className={`email-sidebar${foldersOpen ? ' open' : ''}`} style={{ width:200, background:'var(--surface)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', flexShrink:0 }}>
         <div className="email-sidebar-compose" style={{ padding:'16px 14px 12px' }}>
           <button onClick={openCompose} style={{ width:'100%', padding:'10px 0', borderRadius:10, cursor:'pointer', background:'var(--btn-black)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
             <Edit3 size={14} /> Compose
@@ -711,7 +715,7 @@ export default function EmailPage() {
             if (t.key==='drafts') count = autoDraftCount;
             if (t.key==='inbox') count = inboxCount;
             return (
-              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); setSelectedIds(new Set()); }}
+              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); setSelectedIds(new Set()); setFoldersOpen(false); }}
                 style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 18px', border:'none', cursor:'pointer', fontSize:13, fontWeight:isActive?700:500,
                   background:isActive?'var(--surface-2)':'transparent', color:isActive?'var(--text)':'var(--muted)', borderLeft:isActive?'3px solid var(--link)':'3px solid transparent' }}>
                 <t.icon size={16} /> {t.label}
@@ -957,6 +961,10 @@ export default function EmailPage() {
               </div>
             ) : (
               <div className="email-list-header" style={{ padding:'14px 24px', background:'var(--surface)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10 }}>
+                <button className="email-folders-btn" onClick={() => setFoldersOpen(true)} aria-label="Folders"
+                  style={{ alignItems:'center', justifyContent:'center', width:34, height:34, borderRadius:8, flexShrink:0, background:'var(--surface-2)', border:'1px solid var(--border)', color:'var(--text)', cursor:'pointer' }}>
+                  <Menu size={18} />
+                </button>
                 <span style={{ fontSize:16, fontWeight:700, color:'var(--text)', flex:1 }}>
                   {TABS.find(t=>t.key===tab)?.label||'Email'}
                 </span>

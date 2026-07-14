@@ -527,6 +527,26 @@ textarea:focus, select:focus {
   .app-header .page-title { font-size: 16px !important; }
 }
 
+/* ── Email page: full-width list on mobile; sidebar folders become a drawer ─── */
+.email-folders-btn { display: none; }
+.email-sidebar-overlay { display: none; }
+@media (max-width: 768px) {
+  .email-sidebar {
+    position: fixed !important; top: 0; left: 0; bottom: 0;
+    width: 274px !important; max-width: 82vw;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+    z-index: 130; box-shadow: 0 0 40px rgba(0,0,0,0.45); overflow-y: auto;
+  }
+  .email-sidebar.open { transform: translateX(0); }
+  .email-sidebar-overlay.open {
+    display: block; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 129;
+  }
+  .email-folders-btn { display: inline-flex; }
+  .email-detail-content { padding: 16px !important; }
+  .email-detail-header, .email-list-header { padding: 11px 14px !important; }
+}
+
 @media (max-width: 560px) {
   /* Modal: full-width at the smallest sizes. */
   .modal-content { width: calc(100vw - 24px) !important; max-width: none !important; }
