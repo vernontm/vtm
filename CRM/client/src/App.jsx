@@ -15,6 +15,22 @@ function Gated({ slug, adminOnly = false, children }) {
   return children;
 }
 
+// Where "/" lands: the first page the user can actually open, in nav order.
+// (Dashboard now respects the grant, so someone without it lands on Leads,
+// Appointments, etc. instead of bouncing to a no-access screen.)
+const LANDING_ORDER = [
+  ['dashboard', '/dashboard'], ['leads', '/leads'], ['clients', '/clients'],
+  ['projects', '/projects'], ['appointments', '/appointments'], ['todos', '/todos'],
+  ['routines', '/routines'], ['email', '/email'], ['time', '/time'],
+  ['employee-resources', '/employee-resources'], ['contacts', '/contacts'], ['settings', '/settings'],
+];
+function Landing() {
+  const { loading, canAccess } = useClient();
+  if (loading) return null;
+  const target = LANDING_ORDER.find(([slug]) => canAccess(slug));
+  return <Navigate to={target ? target[1] : '/settings'} replace />;
+}
+
 function NoAccess() {
   const params = new URLSearchParams(window.location.search);
   const page = params.get('page') || 'this page';
@@ -26,14 +42,14 @@ function NoAccess() {
         <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 16 }}>
           {reason === 'admin'
             ? <>The <strong>{page}</strong> page is admin-only.</>
-            : <>You don't have access to <strong>{page}</strong> for the current client.</>}
+            : <>You don't have access to <strong>{page}</strong>.</>}
           <br />Ask your admin to enable it for your account.
         </div>
         <button
-          onClick={() => { window.location.href = '/admin/dashboard'; }}
+          onClick={() => { window.location.href = '/admin/'; }}
           style={{ padding: '10px 20px', borderRadius: 10, background: 'var(--orange)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}
         >
-          Back to dashboard
+          Go to my pages
         </button>
       </div>
     </div>
@@ -130,7 +146,7 @@ function AppLayout() {
             <ErrorBoundary>
             <Suspense fallback={<RouteFallback />}>
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Landing />} />
               <Route path="/no-access" element={<NoAccess />} />
               <Route path="/dashboard" element={<Gated slug="dashboard"><Dashboard /></Gated>} />
               {/* ── New lean CRM (Phase 1) ── */}

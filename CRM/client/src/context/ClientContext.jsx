@@ -171,7 +171,9 @@ export function ClientProvider({ children }) {
   // Full admins (no global restriction) bypass. Restricted admins and
   // regular users go through the allow-list. Some pages are always available
   // (login-adjacent + global user-level pages).
-  const ALWAYS_ALLOWED = ['dashboard', 'notifications', 'settings'];
+  // Login-adjacent / personal pages everyone can reach. Dashboard is NOT here
+  // — it now respects the per-employee page grant like every other page.
+  const ALWAYS_ALLOWED = ['notifications', 'settings'];
   const canAccess = useCallback((slug) => {
     if (!slug) return true;
     if (ALWAYS_ALLOWED.includes(slug)) return true;
