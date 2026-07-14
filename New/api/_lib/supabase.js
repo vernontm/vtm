@@ -92,7 +92,7 @@ async function requireCrmUser(req) {
 // Only the pages the CRM actually has now (legacy pages purged) + admin-users.
 const ALL_PAGES = [
   'dashboard','leads','clients','projects','appointments','employees',
-  'email','settings','admin-users',
+  'contacts','email','settings','admin-users',
 ];
 
 // Load { is_admin, clients: [{ id, name, role, allowed_pages, ... }] } for a user.

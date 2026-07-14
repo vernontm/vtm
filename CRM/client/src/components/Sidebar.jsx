@@ -22,6 +22,10 @@ const nav = [
   { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees' },
 ];
 
+const navMarketing = [
+  { to: '/contacts',      icon: Users,      label: 'Contacts',      slug: 'contacts' },
+];
+
 const navTools = [
   { to: '/email',         icon: Mail,       label: 'Email',         slug: 'email' },
   { to: '/settings',      icon: Settings,   label: 'Settings',      slug: 'settings' },
@@ -79,8 +83,9 @@ export default function Sidebar() {
   const { signOut } = useAuth();
   const { sidebarOpen } = useMobile();
 
-  const visibleNav        = nav.filter(item => canSee(item.slug));
-  const visibleNavTools   = navTools.filter(item => canSee(item.slug));
+  const visibleNav          = nav.filter(item => canSee(item.slug));
+  const visibleNavMarketing = navMarketing.filter(item => canSee(item.slug));
+  const visibleNavTools     = navTools.filter(item => canSee(item.slug));
 
   return (
     <>
@@ -147,6 +152,18 @@ export default function Sidebar() {
             <>
               <div style={{ ...NAV_LABEL_STYLE, marginTop: 4 }}>Workspace</div>
               {visibleNav.map(({ to, icon: Icon, label }) => (
+                <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <Icon size={15} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </>
+          )}
+
+          {visibleNavMarketing.length > 0 && (
+            <>
+              <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Marketing</div>
+              {visibleNavMarketing.map(({ to, icon: Icon, label }) => (
                 <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
                   <Icon size={15} />
                   <span>{label}</span>
