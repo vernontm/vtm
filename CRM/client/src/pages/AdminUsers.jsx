@@ -118,7 +118,7 @@ export default function AdminUsers() {
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Users &amp; Access</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            Create CRM accounts and control which clients + pages each user can see.
+            Create logins for your team and choose which pages each person can access.
           </div>
         </div>
         <button style={btnPrimary} onClick={() => setShowCreate(true)}>
@@ -198,10 +198,12 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
             {user.is_admin
               ? (isRestricted
-                  ? `Cross-client admin · limited to ${user.allowed_pages_global.length} page${user.allowed_pages_global.length === 1 ? '' : 's'}`
-                  : 'Full admin · all clients, all pages')
-              : (user.grants.length === 0 ? 'No client grants' :
-                  `${user.grants.length} client${user.grants.length === 1 ? '' : 's'}: ${user.grants.map(g => g.client_name).filter(Boolean).join(', ')}`)}
+                  ? `Admin · limited to ${user.allowed_pages_global.length} page${user.allowed_pages_global.length === 1 ? '' : 's'}`
+                  : 'Full admin · every page')
+              : (() => {
+                  const n = (user.grants[0]?.allowed_pages || []).length;
+                  return n === 0 ? 'Employee · no page access yet' : `Employee · ${n} page${n === 1 ? '' : 's'}`;
+                })()}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -227,7 +229,7 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
       {expanded && (
         user.is_admin
           ? <GlobalPagesEditor user={user} onChanged={onChanged} />
-          : <GrantsEditor user={user} clients={clients} onChanged={onChanged} />
+          : <PageAccessEditor user={user} workspace={clients[0]} onChanged={onChanged} />
       )}
     </div>
   );
@@ -277,8 +279,8 @@ function GlobalPagesEditor({ user, onChanged }) {
       </label>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.5 }}>
         {restrict
-          ? 'Admin sees every client, but only the pages you select below. Leave unchecked for full access like yours.'
-          : 'Full access: every client, every page. Check the box above to turn this admin into a VA with limited page access.'}
+          ? 'This admin can only open the pages you select below. Leave unchecked for full access like yours.'
+          : 'Full access: every page. Check the box above to limit this admin to specific pages (e.g. a VA).'}
       </div>
 
       {restrict && (
@@ -319,67 +321,21 @@ function GlobalPagesEditor({ user, onChanged }) {
   );
 }
 
-function GrantsEditor({ user, clients, onChanged }) {
+// Per-employee page access. Single-account CRM, so there's no "client" to
+// pick — this just edits which pages the employee can open. Under the hood it
+// writes one grant on the single workspace.
+function PageAccessEditor({ user, workspace, onChanged }) {
   const toast = useToast();
-  // Clients the user doesn't yet have a grant for → candidates for the
-  // "add grant" dropdown.
-  const granted = new Set(user.grants.map(g => g.client_id));
-  const available = clients.filter(c => !granted.has(c.id));
-  const [addingClient, setAddingClient] = useState(available[0]?.id || '');
+  const grant = user.grants[0] || null;                 // the one workspace grant
+  const clientId = workspace?.id || grant?.client_id;
+  const [pages, setPages] = useState(grant?.allowed_pages || []);
   const [saving, setSaving] = useState(false);
 
-  async function addGrant() {
-    if (!addingClient) return;
-    setSaving(true);
-    try {
-      await upsertUserGrant(user.id, {
-        client_id: addingClient,
-        allowed_pages: DEFAULT_PAGES,
-        role: 'viewer',
-      });
-      toast.success('Grant added');
-      onChanged();
-    } catch (e) { toast.error(e.message); }
-    finally { setSaving(false); }
-  }
-
-  return (
-    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-      {user.grants.length === 0 && (
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>No client grants yet.</div>
-      )}
-      {user.grants.map(g => (
-        <GrantRow key={g.client_id} user={user} grant={g} onChanged={onChanged} />
-      ))}
-
-      {available.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10 }}>
-          <select
-            value={addingClient}
-            onChange={e => setAddingClient(e.target.value)}
-            style={{ ...inputStyle, width: 'auto', minWidth: 220 }}
-          >
-            {available.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <button style={btnPrimary} onClick={addGrant} disabled={saving}>
-            <Plus size={13} /> {saving ? 'Adding…' : 'Add grant'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function GrantRow({ user, grant, onChanged }) {
-  const toast = useToast();
-  const [pages, setPages] = useState(grant.allowed_pages || []);
-  const [saving, setSaving] = useState(false);
-  const [removing, setRemoving] = useState(false);
   const dirty = useMemo(() => {
-    const a = [...(grant.allowed_pages || [])].sort().join(',');
+    const a = [...(grant?.allowed_pages || [])].sort().join(',');
     const b = [...pages].sort().join(',');
     return a !== b;
-  }, [pages, grant.allowed_pages]);
+  }, [pages, grant]);
 
   const currentRole = roleForPages(pages);
 
@@ -392,48 +348,30 @@ function GrantRow({ user, grant, onChanged }) {
   }
 
   async function save() {
+    if (!clientId) { toast.error('No workspace found'); return; }
     setSaving(true);
     try {
-      await upsertUserGrant(user.id, { client_id: grant.client_id, allowed_pages: pages, role: currentRole });
+      await upsertUserGrant(user.id, { client_id: clientId, allowed_pages: pages, role: currentRole });
       toast.success('Access updated');
       onChanged();
     } catch (e) { toast.error(e.message); }
     finally { setSaving(false); }
   }
 
-  async function revoke() {
-    if (!confirm(`Revoke ${user.email}'s access to ${grant.client_name}?`)) return;
-    setRemoving(true);
-    try {
-      await revokeUserGrant(user.id, grant.client_id);
-      toast.success('Access revoked');
-      onChanged();
-    } catch (e) { toast.error(e.message); setRemoving(false); }
-  }
-
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, marginBottom: 10, background: 'var(--surface-2)' }}>
-      <div className="grant-row-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{grant.client_name || grant.client_id}</div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {dirty && (
-            <button style={btnPrimary} onClick={save} disabled={saving}>
-              <Check size={13} /> {saving ? 'Saving…' : 'Save'}
-            </button>
-          )}
-          <button style={{ ...btnGhost, color: '#ef4444' }} onClick={revoke} disabled={removing}>
-            <X size={13} /> Revoke
-          </button>
-        </div>
-      </div>
-
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
       {/* Role preset — one-click bundle; still fully overridable below */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Role</span>
         <select value={currentRole} onChange={e => applyRole(e.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: 170, padding: '6px 10px' }}>
           {ROLES.map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
         </select>
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>or tick individual pages below</span>
+        {dirty && (
+          <button style={{ ...btnPrimary, marginLeft: 'auto' }} onClick={save} disabled={saving}>
+            <Check size={13} /> {saving ? 'Saving…' : 'Save access'}
+          </button>
+        )}
       </div>
 
       {PAGE_GROUPS.map(group => (
@@ -458,6 +396,7 @@ function GrantRow({ user, grant, onChanged }) {
           </div>
         </div>
       ))}
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Untick everything to remove this employee's access.</div>
     </div>
   );
 }
@@ -468,7 +407,7 @@ function CreateUserModal({ clients, onClose, onCreated }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [restrictAdmin, setRestrictAdmin] = useState(false);
   const [adminPages, setAdminPages] = useState(['admin-users', ...DEFAULT_PAGES]);
-  const [clientId, setClientId] = useState(clients[0]?.id || '');
+  const workspace = clients[0] || null;                  // single-account: one workspace
   const [role, setRole] = useState('sales_assistant');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
@@ -482,8 +421,8 @@ function CreateUserModal({ clients, onClose, onCreated }) {
     setSaving(true); setErr(null);
     try {
       const rolePages = ROLES.find(r => r.key === role)?.pages || DEFAULT_PAGES;
-      const grants = (!isAdmin && clientId)
-        ? [{ client_id: clientId, allowed_pages: rolePages, role }]
+      const grants = (!isAdmin && workspace)
+        ? [{ client_id: workspace.id, allowed_pages: rolePages, role }]
         : [];
       const payload = { email, password, is_admin: isAdmin, grants };
       if (isAdmin && restrictAdmin && adminPages.length) {
@@ -513,7 +452,7 @@ function CreateUserModal({ clients, onClose, onCreated }) {
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
           <input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} />
-          Make admin (access every client)
+          Make admin (full access to everything)
         </label>
 
         {isAdmin && (
@@ -556,13 +495,8 @@ function CreateUserModal({ clients, onClose, onCreated }) {
             <select value={role} onChange={e => setRole(e.target.value)} style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }}>
               {ROLES.filter(r => r.key !== 'custom').map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
             </select>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Starting client</label>
-            <select value={clientId} onChange={e => setClientId(e.target.value)} style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }}>
-              <option value="">— None (assign later) —</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>
-              This role grants: {(ROLES.find(r => r.key === role)?.pages || []).join(', ')}. You can fine-tune the checkboxes after creating the user.
+              This role grants: {(ROLES.find(r => r.key === role)?.pages || []).join(', ')}. You can fine-tune the pages after creating the user.
             </div>
           </>
         )}
