@@ -70,6 +70,7 @@ export default function Clients() {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY_CLIENT);
   const [selected, setSelected] = useState(null); // client being viewed
+  const [deleteTarget, setDeleteTarget] = useState(null); // client pending delete confirmation
 
   const load = async () => {
     setLoadError('');
@@ -100,29 +101,37 @@ export default function Clients() {
     } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
-    try { await deleteClient(selected.id); setModal(null); setSelected(null); await load(); }
-    catch (e) { toast('error', e.message); }
+    if (!deleteTarget) return;
+    try {
+      await deleteClient(deleteTarget.id);
+      if (selected?.id === deleteTarget.id) setSelected(null);
+      setDeleteTarget(null);
+      await load();
+    } catch (e) { toast('error', e.message); }
   };
 
   usePageActions(() => selected ? null : (
     <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New Client</button>
   ), [selected]);
 
+  const deleteModal = deleteTarget && (
+    <Modal title="Delete Client" onClose={() => setDeleteTarget(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
+      <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{deleteTarget.business_name}</strong> and all its platforms, tasks, and links? This cannot be undone.</p>
+    </Modal>
+  );
+
   // ── Detail view ──────────────────────────────────────────────────────────
   if (selected) {
     return (
-      <ClientDetail
-        client={selected}
-        onBack={() => { setSelected(null); load(); }}
-        onDelete={() => setModal('delete')}
-        onPatch={(patch) => setSelected(s => ({ ...s, ...patch }))}
-      >
-        {modal === 'delete' && (
-          <Modal title="Delete Client" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-            <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected.business_name}</strong> and all its platforms, tasks, and links? This cannot be undone.</p>
-          </Modal>
-        )}
-      </ClientDetail>
+      <>
+        <ClientDetail
+          client={selected}
+          onBack={() => { setSelected(null); load(); }}
+          onDelete={() => setDeleteTarget(selected)}
+          onPatch={(patch) => setSelected(s => ({ ...s, ...patch }))}
+        />
+        {deleteModal}
+      </>
     );
   }
 
@@ -153,13 +162,14 @@ export default function Clients() {
               <th style={{ minWidth: 130 }}>Source</th>
               <th style={{ minWidth: 150 }}>Type</th>
               <th style={{ minWidth: 120 }}>Added</th>
+              <th style={{ width: 40 }} />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No clients yet.</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No clients yet.</td></tr>
             ) : filtered.map(c => (
               <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(c)}>
                 <td>
@@ -175,6 +185,9 @@ export default function Clients() {
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.source || '—'}</td>
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(c.client_type || []).join(', ') || '—'}</td>
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                <td onClick={e => e.stopPropagation()}>
+                  <button className="btn-ghost" style={{ padding: '5px 7px', color: '#ff5c5c' }} onClick={() => setDeleteTarget(c)} title="Delete client"><Trash2 size={14} /></button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -184,16 +197,24 @@ export default function Clients() {
       {/* Mobile cards */}
       <div className="mobile-cards">
         {!loading && filtered.map(c => (
-          <div key={c.id} className="mobile-card" onClick={() => setSelected(c)} style={{ cursor: 'pointer' }}>
+          <div key={c.id} className="mobile-card" onClick={() => setSelected(c)} style={{ cursor: 'pointer', position: 'relative' }}>
             <div className="mobile-card-row primary">
               <Building2 size={14} style={{ color: 'var(--orange)' }} />
               <span>{c.business_name || '—'}</span>
             </div>
             <div className="mobile-card-row"><StageBadge stage={c.stage} /></div>
             {c.owner_name && <div className="mobile-card-row">{c.owner_name}</div>}
+            <button
+              className="btn-ghost"
+              style={{ position: 'absolute', top: 10, right: 10, padding: '5px 7px', color: '#ff5c5c' }}
+              onClick={e => { e.stopPropagation(); setDeleteTarget(c); }}
+              title="Delete client"
+            ><Trash2 size={14} /></button>
           </div>
         ))}
       </div>
+
+      {deleteModal}
 
       {modal === 'add' && (
         <Modal title="New Lead / Client" onClose={() => setModal(null)} onSubmit={handleCreate} submitLabel="Create">
