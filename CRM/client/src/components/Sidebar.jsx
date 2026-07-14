@@ -19,6 +19,7 @@ const nav = [
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
   { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
   { to: '/appointments', icon: Calendar,        label: 'Appointments', slug: 'appointments' },
+  { to: '/email',        icon: Mail,            label: 'Email',        slug: 'email' },
 ];
 
 const navTeam = [
@@ -32,7 +33,6 @@ const navMarketing = [
 ];
 
 const navTools = [
-  { to: '/email',         icon: Mail,       label: 'Email',         slug: 'email' },
   { to: '/settings',      icon: Settings,   label: 'Settings',      slug: 'settings' },
 ];
 
@@ -160,7 +160,12 @@ export default function Sidebar() {
               {visibleNav.map(({ to, icon: Icon, label }) => (
                 <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
                   <Icon size={15} />
-                  <span>{label}</span>
+                  <span style={{ flex: 1 }}>{label}</span>
+                  {to === '/email' && emailCount > 0 && (
+                    <span style={{ background: 'var(--orange)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
+                      {emailCount}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </>
@@ -196,12 +201,7 @@ export default function Sidebar() {
               {visibleNavTools.map(({ to, icon: Icon, label }) => (
                 <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
                   <Icon size={15} />
-                  <span style={{ flex: 1 }}>{label}</span>
-                  {to === '/email' && emailCount > 0 && (
-                    <span style={{ background: 'var(--orange)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
-                      {emailCount}
-                    </span>
-                  )}
+                  <span>{label}</span>
                 </NavLink>
               ))}
             </>
