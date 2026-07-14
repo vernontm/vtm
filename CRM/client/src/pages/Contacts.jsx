@@ -30,25 +30,43 @@ const rail = (active) => ({
 });
 
 // ── Email blast composer (MailerLite regular campaign) ──────────────────────
+const DRAFT_KEY = 'vtm.crm.blastDraft';
+const loadDraft = () => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch { return {}; } };
+const fmtWhen = (d) => { if (!d) return ''; try { return new Date(d.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return ''; } };
+
 function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
+  const draft = loadDraft();
   const [step, setStep]         = useState('compose');   // compose | confirm | sending
-  const [groupId, setGroupId]   = useState(initialGroupId || groups[0]?.id || '');
-  const [subject, setSubject]   = useState('');
-  const [fromName, setFromName] = useState('');
-  const [fromEmail, setFromEmail] = useState('');
-  const [body, setBody]         = useState('');
-  const [testEmail, setTestEmail] = useState('');
+  const [groupId, setGroupId]   = useState(draft.groupId || initialGroupId || groups[0]?.id || '');
+  const [subject, setSubject]   = useState(draft.subject || '');
+  const [fromName, setFromName] = useState(draft.fromName || '');
+  const [fromEmail, setFromEmail] = useState(draft.fromEmail || '');
+  const [body, setBody]         = useState(draft.body || '');
+  const [testEmail, setTestEmail] = useState(draft.fromEmail || '');
   const [testing, setTesting]   = useState(false);
+  const [recent, setRecent]     = useState([]);
+  const [savedNote, setSavedNote] = useState(false);
 
   useEffect(() => {
     getCampaignDefaults(clientId)
       .then(d => {
-        setFromName(d.from_name || '');
-        setFromEmail(d.from_email || '');
-        setTestEmail(d.from_email || '');
+        // Only fall back to config defaults when the draft didn't already have them.
+        if (!draft.fromName)  setFromName(d.from_name || '');
+        if (!draft.fromEmail) { setFromEmail(d.from_email || ''); setTestEmail(d.from_email || ''); }
+        setRecent(d.recent || []);
       })
       .catch(() => {});
   }, [clientId]);
+
+  // Persist the draft as they type so closing the composer never loses work.
+  useEffect(() => {
+    const empty = !subject.trim() && !body.trim();
+    if (empty) { localStorage.removeItem(DRAFT_KEY); return; }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ groupId, subject, fromName, fromEmail, body }));
+    setSavedNote(true);
+    const t = setTimeout(() => setSavedNote(false), 1200);
+    return () => clearTimeout(t);
+  }, [groupId, subject, fromName, fromEmail, body]);
 
   const canCompose = subject.trim() && fromEmail.trim() && body.trim();
 
@@ -82,6 +100,7 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
         subject: subject.trim(), from_name: fromName.trim(), from_email: fromEmail.trim(), body,
       });
       toast('success', `Blast sent to ${group?.name || 'the group'} (${count.toLocaleString()} contacts).`);
+      localStorage.removeItem(DRAFT_KEY);
       onClose();
     } catch (e) {
       toast('error', e.message || 'Failed to send');
@@ -100,7 +119,10 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
             <Send size={16} style={{ color: 'var(--orange)' }} />
             <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Email blast</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {savedNote && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Draft saved</span>}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+          </div>
         </div>
 
         {step === 'confirm' ? (
@@ -137,8 +159,28 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
               <div>
                 <label style={label}>Message</label>
                 <textarea value={body} onChange={e => setBody(e.target.value)} rows={9} style={{ ...field, resize: 'vertical', lineHeight: 1.5 }} placeholder={'Hello, everyone.\n\nWrite your message here…'} />
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>Plain text is fine — an unsubscribe link is added automatically.</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>Plain text is fine — an unsubscribe link is added automatically. Your draft is saved as you type.</div>
               </div>
+
+              {recent.length > 0 && (
+                <div>
+                  <div style={label}>Recent blasts</div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                    {recent.map((r, i) => (
+                      <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.subject}</div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtWhen(r.date)}</div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0, fontSize: 11, color: 'var(--muted)' }}>
+                          <div><b style={{ color: 'var(--text)' }}>{(r.recipients || 0).toLocaleString()}</b> sent</div>
+                          <div>{(r.opens || 0).toLocaleString()} opens</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {/* Test-first row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface-2)' }}>

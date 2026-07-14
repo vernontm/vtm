@@ -30,9 +30,27 @@ module.exports = async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      // Recent real blasts (exclude drafts + our [TEST] sends) for the history panel.
+      let recent = [];
+      try {
+        const camps = (await (await ml('GET', 'campaigns?limit=25')).json())?.data || [];
+        recent = camps
+          .filter(c => c.status === 'sent' && !/^TEST:/i.test(c.name || ''))
+          .map(c => ({
+            id: String(c.id),
+            subject: c.emails?.[0]?.subject || c.name || '(no subject)',
+            recipients: c.emails?.[0]?.stats?.sent ?? 0,
+            opens: c.emails?.[0]?.stats?.opens_count ?? 0,
+            date: c.finished_at || c.scheduled_for || c.created_at || null,
+          }))
+          .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+          .slice(0, 6);
+      } catch { /* history is best-effort */ }
+
       return res.json({
         from_name: cfg.from_name || 'Vernon Tech & Media',
         from_email: cfg.from_email || user.email || '',
+        recent,
       });
     }
 
