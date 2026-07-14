@@ -4,9 +4,16 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Orange accent */
+  /* Orange accent — kept for small status accents (dots, thin bars, chips),
+     but primary buttons and prominent links now use near-black (see below). */
   --orange:      #ff9b26;
   --orange-dark: #ee4c27;
+
+  /* Near-black used for primary buttons + former-orange interactive text/links.
+     Ray asked to drop the bright-orange buttons/text in favor of black. */
+  --btn-black:       linear-gradient(135deg, #23262d, #111318);
+  --btn-black-hover: linear-gradient(135deg, #2c2f37, #16181d);
+  --link:            #14171c;
 
   /* Backgrounds (light theme) */
   --bg:        #f3f4f6;
@@ -83,11 +90,11 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 18px; border-radius: 10px; border: none; cursor: pointer;
   font-size: 13px; font-weight: 700; font-family: var(--font-display); color: #fff;
-  background: linear-gradient(135deg, var(--orange), var(--orange-dark));
-  box-shadow: 0 4px 18px rgba(255,155,38,0.3);
-  transition: opacity 0.15s, transform 0.15s;
+  background: var(--btn-black);
+  box-shadow: 0 4px 14px rgba(17,20,26,0.22);
+  transition: opacity 0.15s, transform 0.15s, background 0.15s;
 }
-.btn-primary:hover  { opacity: 0.9; transform: translateY(-1px); }
+.btn-primary:hover  { background: var(--btn-black-hover); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
 
 .btn-secondary {

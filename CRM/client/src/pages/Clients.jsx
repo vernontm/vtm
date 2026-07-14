@@ -29,7 +29,7 @@ const STAGES = [
   { key: 'awaiting_access', label: 'Awaiting Access', color: '#ff9b26' },
   { key: 'scoping',         label: 'Scoping',         color: '#784bd1' },
   { key: 'plan_review',     label: 'Plan Review',     color: '#3b82f6' },
-  { key: 'in_build',        label: 'In Build',        color: '#22c55e' },
+  { key: 'in_build',        label: 'In Progress',     color: '#22c55e' },
   { key: 'live',            label: 'Live',            color: '#16a34a' },
   { key: 'paused',          label: 'Paused',          color: '#ff5c5c' },
 ];

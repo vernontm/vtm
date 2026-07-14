@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar as CalIcon, Plus, Video, Trash2, RefreshCw, List as ListIcon,
-  ChevronLeft, ChevronRight, Clock, Users, MapPin, ExternalLink,
+  ChevronLeft, ChevronRight, Clock, Users, MapPin, ExternalLink, Check, CheckCircle2,
 } from 'lucide-react';
-import { getUpcomingMeetings, getPastMeetings, deleteMeeting, syncMeetings } from '../api';
+import { getUpcomingMeetings, getPastMeetings, deleteMeeting, syncMeetings, updateMeeting } from '../api';
 import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
 
-const AVATAR_COLORS = ['#ee6a1f', '#784bd1', '#0ea5e9', '#16a34a', '#e11d48', '#d97706'];
+const AVATAR_COLORS = ['#334155', '#784bd1', '#0ea5e9', '#16a34a', '#e11d48', '#d97706'];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const fmtTime = (iso) => { try { return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso)); } catch { return ''; } };
@@ -18,6 +18,21 @@ const dayKey = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${
 const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 // All-day blocks / OOO clutter the list — treat 12h+ or OOO-titled events as "blocks".
 const isBlock = (m) => (m.duration_minutes && m.duration_minutes >= 720) || /out of office|ooo|busy/i.test(m.title || '');
+
+// Meeting status → color. A meeting is:
+//   done     (green)  → explicitly marked completed
+//   missed   (red)    → its end time has passed but it was never marked done
+//   upcoming (slate)  → still in the future
+const meetingEnd = (m) => m.end_time ? new Date(m.end_time) : new Date(new Date(m.start_time).getTime() + (m.duration_minutes || 30) * 60000);
+const meetingStatus = (m) => {
+  if (m.completed) return 'done';
+  return meetingEnd(m) < new Date() ? 'missed' : 'upcoming';
+};
+const STATUS = {
+  done:     { color: '#16a34a', label: 'Done' },
+  missed:   { color: '#dc2626', label: 'Missed' },
+  upcoming: { color: '#334155', label: 'Upcoming' },
+};
 
 function Avatars({ participants = [], max = 4 }) {
   const shown = participants.slice(0, max);
@@ -49,7 +64,7 @@ function Segmented({ value, onChange, options }) {
             fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)',
             background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--text)' : 'var(--muted)',
             boxShadow: on ? 'var(--shadow-sm)' : 'none',
-          }}>{o.icon}{o.label}{o.count != null && <span style={{ fontSize: 11, color: on ? 'var(--orange)' : 'var(--muted)' }}>{o.count}</span>}</button>
+          }}>{o.icon}{o.label}{o.count != null && <span style={{ fontSize: 11, color: on ? 'var(--link)' : 'var(--muted)' }}>{o.count}</span>}</button>
         );
       })}
     </div>
@@ -58,7 +73,7 @@ function Segmented({ value, onChange, options }) {
 
 export default function Meetings() {
   const navigate = useNavigate();
-  const [view, setView] = useState('list');      // list | calendar
+  const [view, setView] = useState('calendar');   // list | calendar (calendar is the default)
   const [tab, setTab] = useState('upcoming');     // upcoming | past
   const [upcoming, setUpcoming] = useState([]);
   const [past, setPast] = useState([]);
@@ -83,6 +98,13 @@ export default function Meetings() {
   const handleDelete = async (m) => {
     if (!window.confirm(`Delete "${m.title}"?`)) return;
     try { await deleteMeeting(m.id); await load(); } catch (e) { console.error(e); }
+  };
+  // Mark a meeting done / not done (drives the green vs red coloring).
+  const toggleDone = async (m) => {
+    const next = !m.completed;
+    const patch = (arr) => arr.map(x => x.id === m.id ? { ...x, completed: next } : x);
+    setUpcoming(patch); setPast(patch);
+    try { await updateMeeting(m.id, { completed: next }); } catch (e) { console.error(e); load(); }
   };
 
   const all = useMemo(() => {
@@ -113,7 +135,7 @@ export default function Meetings() {
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,155,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalIcon size={18} style={{ color: 'var(--orange)' }} /></div>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CalIcon size={18} style={{ color: 'var(--link)' }} /></div>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Meetings</div>
         </div>
         <Segmented value={view} onChange={setView} options={[
@@ -149,10 +171,12 @@ export default function Meetings() {
               </div>
             ) : grouped.map(group => (
               <div key={group.key} style={{ marginBottom: 22 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: sameDay(group.date, new Date()) ? 'var(--orange)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: sameDay(group.date, new Date()) ? 'var(--link)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
                   {sameDay(group.date, new Date()) ? 'Today · ' : ''}{fmtDayLong(group.date)}
                 </div>
-                {group.items.map(m => (
+                {group.items.map(m => {
+                  const st = STATUS[meetingStatus(m)];
+                  return (
                   <div key={m.id} onClick={() => navigate(`/appointments/${m.id}`)} style={{
                     display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', marginBottom: 8,
                     background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, cursor: 'pointer', boxShadow: 'var(--shadow-sm)',
@@ -161,18 +185,30 @@ export default function Meetings() {
                       <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{fmtTime(m.start_time)}</div>
                       {m.duration_minutes ? <div style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtDur(m.duration_minutes)}</div> : null}
                     </div>
-                    <div style={{ width: 3, alignSelf: 'stretch', background: 'var(--orange)', borderRadius: 3 }} />
+                    <div style={{ width: 4, alignSelf: 'stretch', background: st.color, borderRadius: 3 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                        <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, color: st.color, background: st.color + '1a', border: `1px solid ${st.color}40`, borderRadius: 999, padding: '1px 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{st.label}</span>
+                      </div>
                       {stripHtml(m.description) && <div style={{ fontSize: 12.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{stripHtml(m.description)}</div>}
                     </div>
                     <Avatars participants={m.participants} />
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleDone(m); }}
+                      title={m.completed ? 'Mark as not done' : 'Mark as done'}
+                      className="btn-ghost"
+                      style={{ padding: '7px 12px', fontSize: 12, color: m.completed ? '#16a34a' : 'var(--muted)', borderColor: m.completed ? '#16a34a55' : 'var(--border)' }}
+                    >
+                      <CheckCircle2 size={14} /> {m.completed ? 'Done' : 'Mark done'}
+                    </button>
                     {m.meet_link && (
                       <a href={m.meet_link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="btn-green" style={{ padding: '7px 14px', fontSize: 12 }}><Video size={13} /> Join</a>
                     )}
                     <button className="btn-ghost" style={{ padding: '6px 8px', color: 'var(--red)' }} onClick={e => { e.stopPropagation(); handleDelete(m); }} title="Delete"><Trash2 size={14} /></button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
           </>
@@ -211,8 +247,15 @@ function CalendarView({ month, setMonth, meetings, onOpen }) {
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginRight: 'auto' }}>{title}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{title}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginRight: 'auto', marginLeft: 6 }}>
+          {['upcoming', 'done', 'missed'].map(k => (
+            <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: STATUS[k].color }} />{STATUS[k].label}
+            </span>
+          ))}
+        </div>
         <button className="btn-ghost" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={{ padding: '6px 8px' }}><ChevronLeft size={16} /></button>
         <button className="btn-ghost" onClick={() => setMonth(new Date(today.getFullYear(), today.getMonth(), 1))}>Today</button>
         <button className="btn-ghost" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={{ padding: '6px 8px' }}><ChevronRight size={16} /></button>
@@ -228,19 +271,22 @@ function CalendarView({ month, setMonth, meetings, onOpen }) {
           return (
             <div key={i} style={{ minHeight: 108, borderRight: (i % 7 !== 6) ? '1px solid var(--border)' : 'none', borderBottom: '1px solid var(--border)', padding: 6, background: inMonth ? 'var(--surface)' : 'var(--surface-2)', opacity: inMonth ? 1 : 0.6 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: isToday ? '#fff' : 'var(--text)', background: isToday ? 'var(--orange)' : 'transparent' }}>{d.getDate()}</div>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 800, color: isToday ? '#fff' : 'var(--text)', background: isToday ? 'var(--link)' : 'transparent' }}>{d.getDate()}</div>
               </div>
               {blocks.length > 0 && <div style={{ height: 4, borderRadius: 3, background: 'var(--surface-3)', marginBottom: 3 }} title={`${blocks.length} blocked`} />}
-              {timed.slice(0, 3).map(m => (
+              {timed.slice(0, 3).map(m => {
+                const c = STATUS[meetingStatus(m)].color;
+                return (
                 <div key={m.id} onClick={() => onOpen(m)} title={`${fmtTime(m.start_time)} · ${m.title}`} style={{
-                  display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', marginBottom: 3, borderRadius: 6, cursor: 'pointer',
-                  background: 'rgba(255,155,38,0.12)', borderLeft: '2px solid var(--orange)', overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', gap: 5, padding: '4px 7px', marginBottom: 3, borderRadius: 6, cursor: 'pointer',
+                  background: c + '1a', borderLeft: `3px solid ${c}`, overflow: 'hidden',
                 }}>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>{fmtTime(m.start_time).replace(':00', '')}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: c, flexShrink: 0 }}>{fmtTime(m.start_time).replace(':00', '')}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
                 </div>
-              ))}
-              {timed.length > 3 && <div style={{ fontSize: 10.5, color: 'var(--muted)', paddingLeft: 4 }}>+{timed.length - 3} more</div>}
+                );
+              })}
+              {timed.length > 3 && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', paddingLeft: 4 }}>+{timed.length - 3} more</div>}
             </div>
           );
         })}

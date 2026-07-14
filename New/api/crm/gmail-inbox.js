@@ -26,6 +26,18 @@ function parseFrom(fromStr) {
   return { name: fromStr, email: fromStr };
 }
 
+// Older cached rows stored label_ids as JSON.stringify(...) into a jsonb column,
+// which double-encodes it as a JSON *string*. Normalize to a real array so the
+// client can safely call .some()/.filter()/.includes() on labelIds.
+function toLabelArray(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; }
+    catch { return []; }
+  }
+  return [];
+}
+
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -69,7 +81,7 @@ export default async function handler(req, res) {
             subject: c.subject || '(no subject)',
             snippet: c.snippet || '',
             date: c.raw_date || (c.date ? new Date(c.date).toISOString() : ''),
-            labelIds: c.label_ids || [],
+            labelIds: toLabelArray(c.label_ids),
             isReply: c.is_reply || false,
             crmLabels: labelMap[c.gmail_id] || [],
             _cached: true,
@@ -168,7 +180,7 @@ export default async function handler(req, res) {
           subject: m.subject,
           snippet: m.snippet,
           date: m.parsedDate,
-          label_ids: JSON.stringify(m.labelIds),
+          label_ids: m.labelIds || [],
           is_reply: m.isReply,
           raw_date: m.date,
           cached_at: new Date().toISOString(),

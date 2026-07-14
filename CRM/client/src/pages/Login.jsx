@@ -93,11 +93,11 @@ export default function Login() {
             disabled={loading}
             style={{
               width: '100%', padding: '11px 0', borderRadius: 10, cursor: loading ? 'wait' : 'pointer',
-              background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', border: 'none',
+              background: 'var(--btn-black)', border: 'none',
               color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-display)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               opacity: loading ? 0.7 : 1,
-              boxShadow: '0 4px 18px rgba(255,155,38,0.35)',
+              boxShadow: '0 4px 14px rgba(17,20,26,0.22)',
             }}
           >
             <LogIn size={16} />

@@ -61,7 +61,7 @@ function CardHeader({ icon: Icon, title, color = 'var(--orange)', linkTo, linkLa
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{title}</span>
       </div>
       {right || (linkTo && (
-        <Link to={linkTo} style={{ fontSize: 12, color: 'var(--orange)', textDecoration: 'none', fontWeight: 600 }}>
+        <Link to={linkTo} style={{ fontSize: 12, color: 'var(--link)', textDecoration: 'none', fontWeight: 700 }}>
           {linkLabel || 'View All'} →
         </Link>
       ))}
@@ -145,12 +145,12 @@ function MeetingsCalendar({ meetings, onMeetingClick }) {
               onMouseLeave={() => setHoverKey(k => k === key ? null : k)}
               style={{
                 position: 'relative', minHeight: 44, borderRadius: 8, padding: '4px 6px',
-                border: isToday ? '1.5px solid var(--orange)' : '1px solid var(--border)',
+                border: isToday ? '1.5px solid var(--link)' : '1px solid var(--border)',
                 background: isHovered ? 'var(--surface-2)' : 'var(--bg)',
                 cursor: dayMeetings.length ? 'pointer' : 'default',
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 600, color: isToday ? 'var(--orange)' : 'var(--text)' }}>{date.getDate()}</div>
+              <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 600, color: isToday ? 'var(--link)' : 'var(--text)' }}>{date.getDate()}</div>
               {dayMeetings.length > 0 && (
                 <div style={{ display: 'flex', gap: 2, marginTop: 3, flexWrap: 'wrap' }}>
                   {dayMeetings.slice(0, 3).map((m, mi) => (
@@ -310,7 +310,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.message}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{a.client?.business_name || 'Client'} · {timeAgo(a.created_at)}</div>
               </div>
-              <Link to="/clients" style={{ fontSize: 11, color: 'var(--orange)', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Open</Link>
+              <Link to="/clients" style={{ fontSize: 11, color: 'var(--link)', textDecoration: 'none', fontWeight: 700, flexShrink: 0 }}>Open</Link>
               <button onClick={() => dismissAlert(a.id)} title="Mark read" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}>
                 <X size={14} />
               </button>

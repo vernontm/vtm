@@ -133,6 +133,14 @@ function EmailBody({ msg, fallbackText }) {
 
 /* ── tiny helpers ─────────────────────────────────────────────────────────── */
 
+// Coerce a possibly-non-array (e.g. a double-encoded jsonb string from cache)
+// into a real array so label rendering can never crash the page.
+function asArray(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') { try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; } }
+  return [];
+}
+
 function timeAgo(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -396,6 +404,11 @@ export default function EmailPage() {
   const [newLabelName, setNewLabelName]     = useState('');
   const [newLabelColor, setNewLabelColor]   = useState('var(--orange)');
 
+  // Row selection (checkboxes) for bulk-labeling
+  const [selectedIds, setSelectedIds]       = useState(new Set());
+  const [labelMenuOpen, setLabelMenuOpen]   = useState(false);
+  const toggleSelectId = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
   // AI Follow-ups
   const [followups, setFollowups]           = useState([]);
   const [showFollowups, setShowFollowups]   = useState(false);
@@ -499,18 +512,33 @@ export default function EmailPage() {
   // Apply/remove a real Gmail label on a specific message (updates local
   // state immediately; the message's `labelIds` array is the source of truth).
   const toggleGmailLabel = async (msg, label) => {
-    const has = (msg.labelIds || []).includes(label.id);
+    const has = asArray(msg.labelIds).includes(label.id);
     try {
       if (has) await removeGmailLabel(msg.id, label.id);
       else await applyGmailLabel(msg.id, label.id);
       const update = prev => prev.map(m => {
         if (m.id !== msg.id) return m;
-        return { ...m, labelIds: has ? (m.labelIds||[]).filter(l => l !== label.id) : [...(m.labelIds||[]), label.id] };
+        return { ...m, labelIds: has ? asArray(m.labelIds).filter(l => l !== label.id) : [...asArray(m.labelIds), label.id] };
       });
       setInboxMessages(update); setSentMessages(update); setDraftMessages(update);
       if (selected?.id === msg.id) {
-        setSelected(s => ({ ...s, labelIds: has ? (s.labelIds||[]).filter(l => l !== label.id) : [...(s.labelIds||[]), label.id] }));
+        setSelected(s => ({ ...s, labelIds: has ? asArray(s.labelIds).filter(l => l !== label.id) : [...asArray(s.labelIds), label.id] }));
       }
+    } catch (e) { toast('error', 'Label failed: ' + e.message); }
+  };
+
+  // Apply a label to every currently-selected email (bulk action from the toolbar).
+  const applyLabelToSelected = async (label) => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    const msgs = filtered.filter(e => selectedIds.has(e.id) && e._type !== 'queue');
+    try {
+      await Promise.all(msgs.map(m => asArray(m.labelIds).includes(label.id) ? null : applyGmailLabel(m.id, label.id)).filter(Boolean));
+      const update = prev => prev.map(m => selectedIds.has(m.id) && !asArray(m.labelIds).includes(label.id)
+        ? { ...m, labelIds: [...asArray(m.labelIds), label.id] } : m);
+      setInboxMessages(update); setSentMessages(update); setDraftMessages(update);
+      setSelectedIds(new Set());
+      toast('success', `Labeled ${msgs.length} email${msgs.length === 1 ? '' : 's'} “${label.name}”`);
     } catch (e) { toast('error', 'Label failed: ' + e.message); }
   };
 
@@ -639,7 +667,7 @@ export default function EmailPage() {
       {/* ── Left Sidebar ── */}
       <div className="email-sidebar" style={{ width:200, background:'var(--surface)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', flexShrink:0 }}>
         <div className="email-sidebar-compose" style={{ padding:'16px 14px 12px' }}>
-          <button onClick={openCompose} style={{ width:'100%', padding:'10px 0', borderRadius:10, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+          <button onClick={openCompose} style={{ width:'100%', padding:'10px 0', borderRadius:10, cursor:'pointer', background:'var(--btn-black)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
             <Edit3 size={14} /> Compose
           </button>
         </div>
@@ -657,9 +685,9 @@ export default function EmailPage() {
             if (t.key==='drafts') count = autoDraftCount;
             if (t.key==='inbox') count = inboxCount;
             return (
-              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); }}
-                style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 18px', border:'none', cursor:'pointer', fontSize:13, fontWeight:500,
-                  background:isActive?'rgba(255,155,38,0.08)':'transparent', color:isActive?'var(--orange)':'var(--muted)', borderLeft:isActive?'3px solid var(--orange)':'3px solid transparent' }}>
+              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); setSelectedIds(new Set()); }}
+                style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 18px', border:'none', cursor:'pointer', fontSize:13, fontWeight:isActive?700:500,
+                  background:isActive?'var(--surface-2)':'transparent', color:isActive?'var(--text)':'var(--muted)', borderLeft:isActive?'3px solid var(--link)':'3px solid transparent' }}>
                 <t.icon size={16} /> {t.label}
                 {count > 0 && <span style={{ marginLeft:'auto', background:t.key==='drafts'?'var(--red)':'var(--orange)', color:'#fff', borderRadius:10, padding:'1px 7px', fontSize:10, fontWeight:700 }}>{count}</span>}
               </button>
@@ -686,17 +714,21 @@ export default function EmailPage() {
                 onKeyDown={e => e.key==='Enter' && handleCreateLabel()}
                 style={{ flex:1, fontSize:11, padding:'4px 8px', border:'1px solid var(--border)', borderRadius:6, outline:'none', color:'var(--text)', background:'var(--surface-2)' }}
               />
-              <button onClick={handleCreateLabel} style={{ background:'var(--orange)', border:'none', borderRadius:6, color:'#fff', fontSize:10, padding:'4px 8px', cursor:'pointer', fontWeight:600 }}>Add</button>
+              <button onClick={handleCreateLabel} style={{ background:'var(--btn-black)', border:'none', borderRadius:6, color:'#fff', fontSize:10, padding:'4px 8px', cursor:'pointer', fontWeight:600 }}>Add</button>
             </div>
           )}
           <div style={{ display:'flex', flexDirection:'column', gap:2, maxHeight:120, overflow:'auto' }}>
             {customLabels.map(l => {
-              const applied = selected && (selected.labelIds||[]).includes(l.id);
+              const hasSelection = selectedIds.size > 0;
+              const applied = !hasSelection && selected && asArray(selected.labelIds).includes(l.id);
+              const clickable = hasSelection || !!selected;
+              const onLabelClick = () => { if (hasSelection) applyLabelToSelected(l); else if (selected) toggleGmailLabel(selected, l); };
+              const hint = hasSelection ? `Apply "${l.name}" to ${selectedIds.size} selected` : (selected ? (applied ? `Remove "${l.name}" from this email` : `Apply "${l.name}" to this email`) : l.name);
               return (
                 <div key={l.id}
-                  onClick={() => selected && toggleGmailLabel(selected, l)}
-                  title={selected ? (applied ? `Remove "${l.name}" from this email` : `Apply "${l.name}" to this email`) : l.name}
-                  style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 8px', borderRadius:6, cursor:selected?'pointer':'default', fontSize:12, color: applied ? 'var(--text)' : 'var(--muted)', background: applied ? 'var(--surface-2)' : 'transparent' }}
+                  onClick={onLabelClick}
+                  title={hint}
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 8px', borderRadius:6, cursor:clickable?'pointer':'default', fontSize:12, color: applied ? 'var(--text)' : 'var(--muted)', background: applied ? 'var(--surface-2)' : 'transparent' }}
                   onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background=applied?'var(--surface-2)':'transparent'}>
                   <div style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />
                   <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</span>
@@ -765,11 +797,11 @@ export default function EmailPage() {
                 )}
 
                 {/* Real Gmail labels — click a label in the sidebar to toggle it here */}
-                {(selected.labelIds||[]).some(id => customLabels.some(l => l.id===id)) && (
+                {customLabels.some(l => asArray(selected.labelIds).includes(l.id)) && (
                   <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
-                    {customLabels.filter(l => (selected.labelIds||[]).includes(l.id)).map(l => (
-                      <span key={l.id} style={{ fontSize:10, padding:'4px 10px', borderRadius:6, background:(l.color||'var(--orange)')+'15', color:l.color||'var(--orange)', fontWeight:600, display:'flex', alignItems:'center', gap:5 }}>
-                        <Tag size={10} /> {l.name}
+                    {customLabels.filter(l => asArray(selected.labelIds).includes(l.id)).map(l => (
+                      <span key={l.id} style={{ fontSize:11.5, padding:'4px 11px', borderRadius:999, background:(l.color||'var(--orange)')+'1f', color:l.color||'var(--orange)', fontWeight:700, display:'flex', alignItems:'center', gap:5 }}>
+                        <Tag size={11} /> {l.name}
                       </span>
                     ))}
                   </div>
@@ -872,12 +904,38 @@ export default function EmailPage() {
         ) : (
           /* ── Email List (full width) ── */
           <>
-            <div className="email-list-header" style={{ padding:'14px 24px', background:'var(--surface)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ fontSize:16, fontWeight:700, color:'var(--text)', flex:1 }}>
-                {TABS.find(t=>t.key===tab)?.label||'Email'}
-              </span>
-              <span style={{ fontSize:12, color:'var(--muted)' }}>{filtered.length} {filtered.length===1?'message':'messages'}</span>
-            </div>
+            {selectedIds.size > 0 ? (
+              <div className="email-list-header" style={{ padding:'10px 24px', background:'rgba(255,155,38,0.08)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12 }}>
+                <span style={{ fontSize:13, fontWeight:700, color:'var(--text)' }}>{selectedIds.size} selected</span>
+                <div style={{ position:'relative' }}>
+                  <button onClick={() => setLabelMenuOpen(o => !o)} onBlur={() => setTimeout(() => setLabelMenuOpen(false), 150)}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8, border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+                    <Tag size={13} /> Add label <ChevronDown size={12} />
+                  </button>
+                  {labelMenuOpen && (
+                    <div onMouseDown={e => e.preventDefault()} style={{ position:'absolute', top:'calc(100% + 4px)', left:0, zIndex:40, background:'var(--surface)', border:'1px solid var(--border-light)', borderRadius:10, boxShadow:'var(--shadow-lg)', minWidth:180, padding:5, maxHeight:260, overflow:'auto' }}>
+                      {customLabels.length === 0 ? (
+                        <div style={{ fontSize:12, color:'var(--muted)', padding:'8px 10px' }}>No labels yet — create one in the sidebar.</div>
+                      ) : customLabels.map(l => (
+                        <button key={l.id} onClick={() => { setLabelMenuOpen(false); applyLabelToSelected(l); }}
+                          style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'8px 10px', borderRadius:6, border:'none', background:'transparent', color:'var(--text)', cursor:'pointer', fontSize:12.5, textAlign:'left' }}
+                          onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                          <span style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />{l.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setSelectedIds(new Set())} style={{ marginLeft:'auto', background:'none', border:'none', color:'var(--muted)', fontSize:12.5, fontWeight:600, cursor:'pointer' }}>Clear</button>
+              </div>
+            ) : (
+              <div className="email-list-header" style={{ padding:'14px 24px', background:'var(--surface)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:16, fontWeight:700, color:'var(--text)', flex:1 }}>
+                  {TABS.find(t=>t.key===tab)?.label||'Email'}
+                </span>
+                <span style={{ fontSize:12, color:'var(--muted)' }}>{filtered.length} {filtered.length===1?'message':'messages'}</span>
+              </div>
+            )}
 
             {tab==='drafts' && autoDraftCount > 0 && (
               <div className="email-draft-banner" style={{ padding:'8px 24px', background:'var(--surface-2)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
@@ -902,16 +960,38 @@ export default function EmailPage() {
                   const isFav = crmLabels.includes('favorite');
                   const crmContact = isGmail ? contactMap[email.from?.email] : null;
                   const isSentType = email._type==='gmail-sent'||email._type==='queue';
+                  const isChecked = selectedIds.has(email.id);
+                  // Label pills shown at the FRONT of the row: real Gmail labels
+                  // first, then CRM labels (follow-up / important).
+                  const gmailPills = customLabels.filter(l => asArray(email.labelIds).includes(l.id));
+                  const crmPills = crmLabels.filter(l => l!=='spam' && l!=='favorite').map(l => LABEL_CONFIG[l]).filter(Boolean);
 
                   return (
                     <div key={email.id} onClick={() => selectEmail(email)}
                       className="email-list-item"
                       style={{
-                        display:'flex', alignItems:'center', gap:14, padding:'12px 24px', cursor:'pointer',
+                        display:'flex', alignItems:'center', gap:12, padding:'12px 24px', cursor:'pointer',
                         borderBottom:'1px solid var(--border)', transition:'background 0.1s',
+                        background: isChecked ? 'rgba(255,155,38,0.06)' : undefined,
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'}
-                      onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+                      onMouseEnter={e => e.currentTarget.style.background = isChecked ? 'rgba(255,155,38,0.10)' : 'var(--surface-2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = isChecked ? 'rgba(255,155,38,0.06)' : 'var(--surface)'}>
+                      {/* Select checkbox */}
+                      <input type="checkbox" checked={isChecked} onClick={e => e.stopPropagation()} onChange={() => toggleSelectId(email.id)}
+                        style={{ flexShrink:0, width:15, height:15, cursor:'pointer', accentColor:'var(--orange)' }} />
+                      {/* Label pills — FRONT of the row */}
+                      {(gmailPills.length > 0 || crmPills.length > 0) && (
+                        <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0, maxWidth:220, overflow:'hidden' }}>
+                          {gmailPills.map(l => (
+                            <span key={l.id} style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, padding:'3px 9px', borderRadius:999, background:(l.color||'var(--orange)')+'22', color:l.color||'var(--orange)', fontWeight:700, whiteSpace:'nowrap' }}>
+                              <span style={{ width:6, height:6, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />{l.name}
+                            </span>
+                          ))}
+                          {crmPills.map(cfg => (
+                            <span key={cfg.label} style={{ fontSize:11, padding:'3px 9px', borderRadius:999, background:cfg.color+'22', color:cfg.color, fontWeight:700, whiteSpace:'nowrap' }}>{cfg.label}</span>
+                          ))}
+                        </div>
+                      )}
                       <Avatar name={name} size={38} />
                       <div className="email-item-name" style={{ width:200, minWidth:0, flexShrink:1 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
@@ -932,10 +1012,6 @@ export default function EmailPage() {
                       </div>
                       <div className="email-item-labels" style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                         {isGmail && <LabelButton labelKey="favorite" active={isFav} onClick={e => { e.stopPropagation(); toggleLabel(email,'favorite'); }} size={13} />}
-                        {crmLabels.filter(l=>l!=='spam'&&l!=='favorite').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:cfg.color+'15',color:cfg.color,fontWeight:600}}>{cfg.label}</span> : null; })}
-                        {customLabels.filter(l => (email.labelIds||[]).includes(l.id)).map(l => (
-                          <span key={l.id} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:(l.color||'var(--orange)')+'15',color:l.color||'var(--orange)',fontWeight:600}}>{l.name}</span>
-                        ))}
                         {email.auto_generated && <span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(255,155,38,0.08)',color:'var(--orange)',fontWeight:600,display:'flex',alignItems:'center',gap:2}}><Sparkles size={8} /> Auto</span>}
                       </div>
                       <span className="email-item-time" style={{ fontSize:11, color:'var(--muted)', flexShrink:0, width:70, textAlign:'right' }}>
