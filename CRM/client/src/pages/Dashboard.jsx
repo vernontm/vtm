@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   RefreshCw, Star, FolderOpen, CheckSquare,
-  Calendar, ChevronLeft, ChevronRight,
+  Calendar,
   TrendingUp, DollarSign, CreditCard, Bell, Check, X,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -90,109 +90,68 @@ function StatMini({ icon: Icon, label, value, color = 'var(--orange)' }) {
 // Hover a day with meetings to see details; click a meeting to open the
 // matching client's profile (matched by attendee email), or the meeting
 // detail page if no client matches.
-function MeetingsCalendar({ meetings, onMeetingClick }) {
-  const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
-  const [hoverKey, setHoverKey] = useState(null);
+function WeekMeetings({ meetings, onMeetingClick }) {
+  const today = new Date();
+  const start = new Date(today); start.setHours(0, 0, 0, 0); start.setDate(today.getDate() - today.getDay());
+  const weekEndMs = start.getTime() + 7 * 24 * 60 * 60 * 1000;
 
   const byDay = {};
   meetings.forEach(m => {
     if (!m.start_time) return;
+    const t = new Date(m.start_time).getTime();
+    if (t < start.getTime() || t >= weekEndMs) return;
     const key = new Date(m.start_time).toDateString();
     (byDay[key] = byDay[key] || []).push(m);
   });
+  Object.values(byDay).forEach(a => a.sort((x, y) => new Date(x.start_time) - new Date(y.start_time)));
 
-  const year = month.getFullYear(), mo = month.getMonth();
-  const firstDow = new Date(year, mo, 1).getDay();
-  const daysInMonth = new Date(year, mo + 1, 0).getDate();
-  const today = new Date();
-  const cells = [];
-  for (let i = 0; i < firstDow; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, mo, d));
+  const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
+  const daysWithMeetings = days.filter(d => (byDay[d.toDateString()] || []).length > 0);
+  const weekLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-          {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 4 }}>
-            <ChevronLeft size={14} />
-          </button>
-          <button onClick={() => { const d = new Date(); d.setDate(1); setMonth(d); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--muted)', fontSize: 11, fontWeight: 600, padding: '4px 8px' }}>
-            Today
-          </button>
-          <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 4 }}>
-            <ChevronRight size={14} />
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', padding: '2px 0' }}>{d}</div>
-        ))}
-        {cells.map((date, i) => {
-          if (!date) return <div key={i} />;
-          const key = date.toDateString();
-          const dayMeetings = byDay[key] || [];
-          const isToday = date.toDateString() === today.toDateString();
-          const isHovered = hoverKey === key;
-          return (
-            <div
-              key={i}
-              onMouseEnter={() => dayMeetings.length && setHoverKey(key)}
-              onMouseLeave={() => setHoverKey(k => k === key ? null : k)}
-              style={{
-                position: 'relative', minHeight: 44, borderRadius: 8, padding: '4px 6px',
-                border: isToday ? '1.5px solid var(--link)' : '1px solid var(--border)',
-                background: isHovered ? 'var(--surface-2)' : 'var(--bg)',
-                cursor: dayMeetings.length ? 'pointer' : 'default',
-              }}
-            >
-              <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 600, color: isToday ? 'var(--link)' : 'var(--text)' }}>{date.getDate()}</div>
-              {dayMeetings.length > 0 && (
-                <div style={{ display: 'flex', gap: 2, marginTop: 3, flexWrap: 'wrap' }}>
-                  {dayMeetings.slice(0, 3).map((m, mi) => (
-                    <div key={mi} style={{ width: 5, height: 5, borderRadius: '50%', background: '#784bd1' }} />
-                  ))}
-                  {dayMeetings.length > 3 && <span style={{ fontSize: 8, color: 'var(--muted)' }}>+{dayMeetings.length - 3}</span>}
+    <div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 12 }}>{weekLabel}</div>
+      {daysWithMeetings.length === 0 ? (
+        <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>No meetings this week</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 460, overflowY: 'auto' }}>
+          {daysWithMeetings.map(d => {
+            const list = byDay[d.toDateString()];
+            const isToday = d.toDateString() === today.toDateString();
+            return (
+              <div key={d.toDateString()}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
+                    color: isToday ? '#fff' : 'var(--muted)',
+                    background: isToday ? 'var(--link)' : 'transparent',
+                    borderRadius: 999, padding: isToday ? '2px 9px' : '0',
+                  }}>{WD[d.getDay()]} {d.getDate()}</span>
                 </div>
-              )}
-
-              {isHovered && (
-                <div
-                  onMouseEnter={() => setHoverKey(key)}
-                  onMouseLeave={() => setHoverKey(null)}
-                  style={{
-                    position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 30,
-                    background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 10,
-                    boxShadow: 'var(--shadow-lg)', padding: 8, minWidth: 220, maxWidth: 280,
-                  }}
-                >
-                  {dayMeetings.map(m => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {list.map(m => (
                     <div
                       key={m.google_event_id || m.id}
                       onClick={() => onMeetingClick(m)}
-                      style={{ padding: '7px 8px', borderRadius: 6, cursor: 'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      title={m.title || m.summary || ''}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 9, background: 'var(--surface-2)', border: '1px solid var(--border)', cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-2)'}
                     >
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{m.title || m.summary || '(no title)'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{fmtTime(m.start_time)}</div>
-                      {(m.participants || []).length > 0 && (
-                        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {m.participants.map(p => p.email).filter(Boolean).slice(0, 3).join(', ')}
-                        </div>
-                      )}
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#784bd1', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: 700 }}>{fmtTime(m.start_time)}</span> {m.title || m.summary || '(no title)'}
+                      </span>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -405,8 +364,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Main Grid */}
-      <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+      {/* Three-column widgets: this-week meetings (left) · recent leads · active projects */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20, alignItems: 'start' }}>
+
+        {/* Upcoming Meetings — this week */}
+        <Card>
+          <CardHeader icon={Calendar} title="Upcoming Meetings" color="#784bd1" linkTo="/appointments" />
+          <WeekMeetings meetings={meetings} onMeetingClick={handleMeetingClick} />
+        </Card>
 
         {/* Recent Leads */}
         <Card>
@@ -477,12 +442,6 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
-
-      {/* ── Upcoming Meetings (interactive calendar) ── */}
-      <Card style={{ marginBottom: 20 }}>
-        <CardHeader icon={Calendar} title="Upcoming Meetings" color="#784bd1" linkTo="/appointments" />
-        <MeetingsCalendar meetings={meetings} onMeetingClick={handleMeetingClick} />
-      </Card>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
