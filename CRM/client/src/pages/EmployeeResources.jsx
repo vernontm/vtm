@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, ExternalLink, Pencil, Trash2, BookOpen, Search, ChevronDown, ChevronLeft, ChevronRight, Link as LinkIcon, Copy, Folder } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, BookOpen, Search, ChevronDown, ChevronLeft, ChevronRight, Link as LinkIcon, Copy, Folder, ListChecks } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { usePageActions } from '../context/UiContext';
 import { getEmployeeResources, createEmployeeResource, updateEmployeeResource, deleteEmployeeResource } from '../api';
 import Modal from '../components/Modal';
 import { toast } from '../components/Toast';
+import Walkthroughs from './Walkthroughs';
 
 const EMPTY = { title: '', description: '', url: '', category: 'General' };
 
@@ -24,7 +25,8 @@ export default function EmployeeResources() {
   };
   useEffect(() => { load(); }, []);
 
-  usePageActions(() => isAdmin ? (
+  // Walkthroughs (SOPs) render their own "New" button, so suppress the header one there.
+  usePageActions(() => (isAdmin && activeCat !== 'SOPs') ? (
     <button className="btn-primary" onClick={() => { setForm({ ...EMPTY, category: activeCat || 'General' }); setModal('add'); }}>
       <Plus size={15} /> {activeCat === 'Links' ? 'New Link' : 'New Resource'}
     </button>
@@ -155,11 +157,8 @@ export default function EmployeeResources() {
       <div style={{ padding: 24 }}>
         {loading ? (
           <div style={{ color: 'var(--muted)' }}>Loading…</div>
-        ) : grouped.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14 }}>
-            <BookOpen size={28} style={{ opacity: 0.4, marginBottom: 8 }} />
-            <div>No resources yet.{isAdmin ? ' Add SOPs, guides, tool logins, and links for the team.' : ''}</div>
-          </div>
+        ) : activeCat === 'SOPs' ? (
+          <Walkthroughs isAdmin={isAdmin} onExit={() => setActiveCat(null)} />
         ) : search ? (
           /* Search overrides the drill-down: flat results across categories */
           grouped.map(([category, items]) => (
@@ -223,6 +222,20 @@ export default function EmployeeResources() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Links</div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{allLinks.length} link{allLinks.length !== 1 ? 's' : ''} to copy</div>
+              </div>
+              <ChevronRight size={18} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+            </button>
+            {/* Always-present SOPs / walkthroughs tile */}
+            <button onClick={() => setActiveCat('SOPs')}
+              style={{ textAlign: 'left', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, boxShadow: 'var(--shadow-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'var(--font-display)' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(37,99,235,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(37,99,235,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ListChecks size={18} style={{ color: 'var(--orange)' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>SOPs</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Step-by-step walkthroughs</div>
               </div>
               <ChevronRight size={18} style={{ color: 'var(--muted)', flexShrink: 0 }} />
             </button>

@@ -329,6 +329,30 @@ export const deleteClientTask = (id)        => request(`/client-tasks?id=${id}`,
 export const getCampaignDefaults = (client_id) => request(`/mailerlite-campaign?client_id=${client_id}`);
 export const sendMailerliteCampaign = (data)   => request('/mailerlite-campaign', { method: 'POST', body: JSON.stringify(data) });
 
+// Walkthroughs / SOPs (multi-step guides with links + media)
+export const getWalkthroughs  = ()        => request('/walkthroughs');
+export const getWalkthrough   = (id)      => request(`/walkthroughs?id=${id}`);
+export const createWalkthrough = (data)   => request('/walkthroughs', { method: 'POST', body: JSON.stringify(data) });
+export const updateWalkthrough = (id, d)  => request(`/walkthroughs?id=${id}`, { method: 'PUT', body: JSON.stringify(d) });
+export const deleteWalkthrough = (id)     => request(`/walkthroughs?id=${id}`, { method: 'DELETE' });
+
+// Upload a raw file (image / video / pdf / doc) to storage; returns { url }.
+export async function uploadFile(file) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const res = await fetch(`${BASE}/upload`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Content-Type': file.type || 'application/octet-stream',
+      'x-file-name': file.name || 'file',
+    },
+    body: file,
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Upload failed');
+  return res.json();
+}
+
 // Personal dashboard to-do list (per-user; urgent items float to top)
 export const getTodos   = ()        => request('/todos');
 export const createTodo = (data)    => request('/todos', { method: 'POST', body: JSON.stringify(data) });
