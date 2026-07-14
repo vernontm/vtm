@@ -356,6 +356,7 @@ export async function uploadFile(file) {
 // Shared team to-do list (everyone sees + adds; open vs. locked-to-a-user)
 export const getTodos       = ()        => request('/team-todos');
 export const getTodoMembers = ()        => request('/team-todos?members=1');
+export const setTodoSharing = (user_id, shared) => request('/team-todos?action=share', { method: 'POST', body: JSON.stringify({ user_id, shared }) });
 export const createTodo     = (data)    => request('/team-todos', { method: 'POST', body: JSON.stringify(data) });
 export const updateTodo     = (id, data)=> request(`/team-todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTodo     = (id)      => request(`/team-todos?id=${id}`, { method: 'DELETE' });

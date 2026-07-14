@@ -17,22 +17,53 @@ module.exports = async function handler(req, res) {
   const user = await requireCrmUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { id, members } = req.query;
+  const { id, members, action } = req.query;
   const nameOf = (u) => u?.user_metadata?.name || u?.user_metadata?.full_name || u?.email || 'Someone';
 
+  // Sharing settings: user_id -> shared. Missing row defaults to shared (true).
+  const loadSharing = async () => {
+    const rows = await supaFetch('crm_todo_settings?select=user_id,shared');
+    const map = {};
+    (rows || []).forEach(r => { map[r.user_id] = r.shared; });
+    return map;
+  };
+  const isShared = (map, uid) => map[uid] !== false;
+
   try {
+    // Admin toggles whether a user shares the team list.
+    if (action === 'share') {
+      if (!user.is_admin) return res.status(403).json({ error: 'Admin only' });
+      const { user_id, shared } = req.body || {};
+      if (!user_id) return res.status(400).json({ error: 'user_id required' });
+      await supaFetch('crm_todo_settings', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ user_id, shared: !!shared, updated_at: new Date().toISOString() }),
+      });
+      return res.json({ ok: true });
+    }
+
     if (req.method === 'GET') {
-      // Roster for the assignee picker — any signed-in user can read it.
+      const sharing = await loadSharing();
+      // Roster for the assignee picker + the sharing toggles — any signed-in
+      // user can read names (needed to assign); `shared` drives the admin UI.
       if (members) {
         const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, {
           headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
         });
         const j = await r.json().catch(() => ({}));
-        const list = (Array.isArray(j?.users) ? j.users : []).map(u => ({ id: u.id, name: nameOf(u) }));
+        const list = (Array.isArray(j?.users) ? j.users : []).map(u => ({ id: u.id, name: nameOf(u), shared: isShared(sharing, u.id) }));
         return res.json(list);
       }
       const rows = await supaFetch('crm_team_todos?select=*&order=done.asc,urgent.desc,created_at.desc');
-      return res.json(rows || []);
+      // Visibility: admins see all. Shared users see the shared pool (anything
+      // created by a shared user) plus their own + items assigned to them.
+      // Private users see only their own + items assigned to them.
+      const viewerShared = isShared(sharing, user.id);
+      const visible = user.is_admin ? (rows || []) : (rows || []).filter(t =>
+        t.created_by === user.id || t.assigned_to === user.id || (viewerShared && isShared(sharing, t.created_by))
+      );
+      return res.json(visible);
     }
 
     if (req.method === 'POST') {

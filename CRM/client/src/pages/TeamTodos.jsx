@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Trash2, Check, AlertTriangle, Lock, User, Building2, Briefcase, Tag, X,
+  Plus, Trash2, Check, AlertTriangle, Lock, Building2, Briefcase, Tag, X, Users2,
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { toast } from '../components/Toast';
 import {
-  getTodos, getTodoMembers, createTodo, updateTodo, deleteTodo, getClients, getProjects,
+  getTodos, getTodoMembers, setTodoSharing, createTodo, updateTodo, deleteTodo, getClients, getProjects,
 } from '../api';
 
 // Stable per-author color so each person's items are easy to spot.
@@ -31,6 +31,7 @@ export default function TeamTodos() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('open'); // open | mine | all | done
+  const [shareOpen, setShareOpen] = useState(false);
 
   // new-todo form
   const [title, setTitle] = useState('');
@@ -44,12 +45,19 @@ export default function TeamTodos() {
     try { setTodos(await getTodos()); } catch (e) { toast('error', e.message); }
     finally { setLoading(false); }
   }, []);
+  const loadMembers = useCallback(() => { getTodoMembers().then(m => setMembers(m || [])).catch(() => {}); }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    getTodoMembers().then(m => setMembers(m || [])).catch(() => {});
+    loadMembers();
     getClients().then(c => setClients((c || []).filter(x => x.business_name))).catch(() => {});
     getProjects().then(p => setProjects(p || [])).catch(() => {});
-  }, []);
+  }, [loadMembers]);
+
+  const toggleShare = async (m) => {
+    setMembers(prev => prev.map(x => x.id === m.id ? { ...x, shared: !x.shared } : x));
+    try { await setTodoSharing(m.id, !m.shared); load(); loadMembers(); }
+    catch (e) { toast('error', e.message); loadMembers(); }
+  };
 
   const resetForm = () => { setTitle(''); setUrgent(false); setAssignTo(''); setLinkType(''); setLinkId(''); setOtherLabel(''); };
 
@@ -139,7 +147,7 @@ export default function TeamTodos() {
       </form>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         {[{ k: 'open', label: `Open (${openCount})` }, { k: 'mine', label: 'Mine' }, { k: 'all', label: 'All' }, { k: 'done', label: 'Done' }].map(f => (
           <button key={f.k} onClick={() => setFilter(f.k)} style={{
             padding: '6px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-display)',
@@ -147,7 +155,49 @@ export default function TeamTodos() {
             border: `1px solid ${filter === f.k ? 'transparent' : 'var(--border)'}`,
           }}>{f.label}</button>
         ))}
+        {isAdmin && (
+          <button className="btn-ghost" onClick={() => setShareOpen(true)} style={{ marginLeft: 'auto' }}>
+            <Users2 size={14} /> Sharing
+          </button>
+        )}
       </div>
+
+      {/* Sharing settings (admin) */}
+      {shareOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShareOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, width: 460, maxWidth: '92vw', maxHeight: '88vh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-display)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Users2 size={16} style={{ color: 'var(--orange)' }} />
+                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>To-Do sharing</span>
+              </div>
+              <button onClick={() => setShareOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: '14px 20px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, borderBottom: '1px solid var(--border)' }}>
+              People who <b style={{ color: 'var(--text)' }}>share</b> see one team list together. People turned <b style={{ color: 'var(--text)' }}>off</b> only see their own to-dos and anything assigned to them. (Admins always see everything.)
+            </div>
+            <div style={{ overflowY: 'auto', padding: 12 }}>
+              {members.length === 0 ? (
+                <div style={{ color: 'var(--muted)', fontSize: 13, padding: 12 }}>No team members found.</div>
+              ) : members.map(m => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: colorFor(m.id), color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initials(m.name)}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
+                  <button onClick={() => toggleShare(m)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-display)',
+                      background: m.shared ? 'rgba(22,163,74,0.12)' : 'var(--surface-2)',
+                      border: `1px solid ${m.shared ? 'rgba(22,163,74,0.4)' : 'var(--border)'}`,
+                      color: m.shared ? '#16a34a' : 'var(--muted)',
+                    }}>
+                    {m.shared ? 'Shares with team' : 'Private'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* List */}
       {loading ? (
