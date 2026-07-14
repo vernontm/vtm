@@ -19,6 +19,9 @@ const nav = [
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
   { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
   { to: '/appointments', icon: Calendar,        label: 'Appointments', slug: 'appointments' },
+];
+
+const navTeam = [
   { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees' },
   { to: '/time',         icon: Clock,           label: 'Time',         slug: 'time' },
   { to: '/employee-resources', icon: BookOpen,  label: 'Resources',    slug: 'employee-resources' },
@@ -86,6 +89,7 @@ export default function Sidebar() {
   const { sidebarOpen } = useMobile();
 
   const visibleNav          = nav.filter(item => canSee(item.slug));
+  const visibleNavTeam      = navTeam.filter(item => canSee(item.slug));
   const visibleNavMarketing = navMarketing.filter(item => canSee(item.slug));
   const visibleNavTools     = navTools.filter(item => canSee(item.slug));
 
@@ -154,6 +158,18 @@ export default function Sidebar() {
             <>
               <div style={{ ...NAV_LABEL_STYLE, marginTop: 4 }}>Workspace</div>
               {visibleNav.map(({ to, icon: Icon, label }) => (
+                <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <Icon size={15} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </>
+          )}
+
+          {visibleNavTeam.length > 0 && (
+            <>
+              <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Team</div>
+              {visibleNavTeam.map(({ to, icon: Icon, label }) => (
                 <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
                   <Icon size={15} />
                   <span>{label}</span>
