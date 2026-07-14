@@ -158,6 +158,13 @@ button:focus, input:focus, select:focus, textarea:focus {
 }
 .card:hover { border-color: rgba(37,99,235,0.3); }
 
+/* Kanban lead card — delete only shows on hover, keeps the card clean. */
+.lead-card { transition: box-shadow 0.12s, border-color 0.12s; }
+.lead-card:hover { border-color: var(--border-light); box-shadow: var(--shadow-md); }
+.lead-card-del { opacity: 0; transition: opacity 0.12s, color 0.12s; }
+.lead-card:hover .lead-card-del { opacity: 1; }
+.lead-card-del:hover { color: #ff5c5c !important; }
+
 /* Stat tile — icon-in-tinted-square + big tabular number, for dashboard-style
    summary cards. Tint the icon square with the accent's own color at low
    opacity rather than a flat gray, per the reference design's convention. */

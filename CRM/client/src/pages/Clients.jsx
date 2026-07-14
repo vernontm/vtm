@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Plus, Search, Trash2, ArrowLeft, Building2,
+  Plus, Search, Trash2, ArrowLeft, Building2, Calendar,
   KeyRound, CheckCircle2, Circle, Clock, ShieldCheck, ListChecks,
   Briefcase, Lock, Eye, EyeOff, Copy, Pencil, ExternalLink,
   FileSignature, Sparkles, DollarSign, Download,
@@ -50,16 +50,17 @@ const TASK_PRIORITY = { low: '#8a8a8a', medium: '#3b82f6', high: '#f5a623', urge
 
 // Lead pipeline temperature + ranking (leads only). Temperature is the pipeline
 // stage in the funnel; rank is how strong/priority the lead is.
+// Darker colors so white pill text is easy to read.
 const TEMPERATURES = [
-  { key: 'hot',  label: 'Hot',  color: '#dc2626' },
-  { key: 'warm', label: 'Warm', color: '#f5a623' },
-  { key: 'cold', label: 'Cold', color: '#2563eb' },
+  { key: 'hot',  label: 'Hot',  color: '#b91c1c' },
+  { key: 'warm', label: 'Warm', color: '#b45309' },
+  { key: 'cold', label: 'Cold', color: '#1d4ed8' },
 ];
 const tempOf = (k) => TEMPERATURES.find(t => t.key === k) || TEMPERATURES[1];
 const RANKS = [
-  { key: 'high',   label: 'High',   color: '#16a34a' },
-  { key: 'medium', label: 'Medium', color: '#f5a623' },
-  { key: 'low',    label: 'Low',    color: '#8a8a8a' },
+  { key: 'high',   label: 'High',   color: '#15803d' },
+  { key: 'medium', label: 'Medium', color: '#b45309' },
+  { key: 'low',    label: 'Low',    color: '#475569' },
 ];
 const rankOf = (k) => RANKS.find(r => r.key === k) || RANKS[1];
 
@@ -78,8 +79,9 @@ function StageBadge({ stage }) {
   );
 }
 
-// A colored pill that opens a small dropdown to change value (temperature/rank).
-function PillSelect({ value, options, onChange, minWidth = 74 }) {
+// A small solid-color pill that opens a dropdown to change value (temperature/rank).
+// Solid dark fill + white text for legibility.
+function PillSelect({ value, options, onChange, minWidth = 54 }) {
   const cur = options.find(o => o.key === value) || options[0];
   return (
     <select
@@ -88,12 +90,101 @@ function PillSelect({ value, options, onChange, minWidth = 74 }) {
       onChange={e => { e.stopPropagation(); onChange(e.target.value); }}
       style={{
         appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', minWidth,
-        padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-display)',
-        color: cur.color, background: `${cur.color}18`, border: `1px solid ${cur.color}40`, textAlign: 'center',
+        padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-display)',
+        color: '#fff', background: cur.color, border: `1px solid ${cur.color}`, textAlign: 'center',
       }}
     >
       {options.map(o => <option key={o.key} value={o.key} style={{ color: 'var(--text)', background: 'var(--surface)' }}>{o.label}</option>)}
     </select>
+  );
+}
+
+// Kanban board for leads — one column per temperature (Hot / Warm / Cold).
+// Drag a card between columns to change its temperature.
+function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
+  const [dragId, setDragId] = useState(null);
+  const [overCol, setOverCol] = useState(null);
+  return (
+    <div style={{ overflowX: 'auto', padding: '16px 24px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TEMPERATURES.length}, minmax(240px, 1fr))`, gap: 14, alignItems: 'start' }}>
+      {TEMPERATURES.map(col => {
+        const colLeads = leads.filter(l => (l.lead_temperature || 'warm') === col.key);
+        const isOver = overCol === col.key;
+        return (
+          <div
+            key={col.key}
+            onDragOver={e => { e.preventDefault(); if (overCol !== col.key) setOverCol(col.key); }}
+            onDragLeave={() => setOverCol(o => o === col.key ? null : o)}
+            onDrop={e => { e.preventDefault(); if (dragId) onTempChange(dragId, col.key); setDragId(null); setOverCol(null); }}
+            style={{
+              background: isOver ? `${col.color}0f` : 'var(--surface-2)',
+              border: `1px solid ${isOver ? col.color : 'var(--border)'}`, borderRadius: 14, minHeight: 200,
+              transition: 'background 0.12s, border-color 0.12s',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: col.color }} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{col.label}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: col.color, borderRadius: 999, padding: '0 8px', marginLeft: 'auto' }}>{colLeads.length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, minHeight: 60 }}>
+              {colLeads.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '16px 0' }}>Drop a lead here</div>}
+              {colLeads.map(l => {
+                const rk = rankOf(l.lead_rank || 'medium');
+                const desc = (l.notes || l.industry || (l.client_type || []).join(', ') || '').trim();
+                const cycleRank = () => {
+                  const idx = RANKS.findIndex(r => r.key === (l.lead_rank || 'medium'));
+                  onRankChange(l.id, RANKS[(idx + 1) % RANKS.length].key);
+                };
+                const initial = (l.owner_name || l.business_name || '?')[0].toUpperCase();
+                return (
+                  <div
+                    key={l.id}
+                    draggable
+                    onDragStart={() => setDragId(l.id)}
+                    onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                    onClick={() => onOpen(l)}
+                    className="lead-card"
+                    style={{
+                      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px',
+                      boxShadow: 'var(--shadow-sm)', cursor: 'pointer', opacity: dragId === l.id ? 0.5 : 1,
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                    }}
+                  >
+                    {/* Title + small rank dot */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <span className="private-value" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.business_name || '—'}</span>
+                      <button className="lead-card-del" onClick={e => { e.stopPropagation(); onDelete(l); }} title="Delete lead"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 1, flexShrink: 0 }}><Trash2 size={13} /></button>
+                      <span
+                        onClick={e => { e.stopPropagation(); cycleRank(); }}
+                        title={`Rank: ${rk.label} — click to change`}
+                        style={{ width: 11, height: 11, borderRadius: '50%', background: rk.color, flexShrink: 0, marginTop: 3, cursor: 'pointer', boxShadow: `0 0 0 3px ${rk.color}22` }}
+                      />
+                    </div>
+                    {/* Description snippet */}
+                    {desc && (
+                      <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{desc}</div>
+                    )}
+                    {/* Footer: owner + date */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--surface-3)', color: 'var(--muted)', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial}</span>
+                      <span className="private-value" style={{ fontSize: 11.5, color: 'var(--text)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.owner_name || l.source || '—'}</span>
+                      {l.created_at && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
+                          <Calendar size={11} /> {new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    </div>
   );
 }
 
@@ -115,6 +206,7 @@ export default function Clients({ kind = 'client' }) {
   const [deleteTarget, setDeleteTarget] = useState(null); // client pending delete confirmation
   const [selectedIds, setSelectedIds] = useState(new Set()); // row checkboxes
   const [tempFilter, setTempFilter] = useState('all'); // leads pipeline filter
+  const [view, setView] = useState('board'); // leads: 'board' (default) | 'list'
   const [searchParams, setSearchParams] = useSearchParams();
 
   const toggleSelectId = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -128,7 +220,7 @@ export default function Clients({ kind = 'client' }) {
   };
   useEffect(() => { load(); }, []);
   // Reset the open detail view + selection when switching between /leads and /clients.
-  useEffect(() => { setSelected(null); clearSelection(); setTempFilter('all'); }, [kind]);
+  useEffect(() => { setSelected(null); clearSelection(); setTempFilter('all'); setView('board'); }, [kind]);
 
   // Deep-link support: /clients?open=<id> (used by Dashboard links) opens a
   // specific record directly, regardless of whether it's a lead or client.
@@ -232,8 +324,9 @@ export default function Clients({ kind = 'client' }) {
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
           <input className="search-input" placeholder={`Search ${isLeadView ? 'leads' : 'clients'}…`} value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
-        {/* Leads pipeline filter (cold / warm / hot) */}
-        {isLeadView && (
+        {/* Leads pipeline filter (cold / warm / hot) — list view only; the
+            board's columns already are the pipeline. */}
+        {isLeadView && view === 'list' && (
           <div style={{ display: 'inline-flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, gap: 2 }}>
             {[{ key: 'all', label: 'All', color: 'var(--text)' }, ...TEMPERATURES].map(t => {
               const count = t.key === 'all' ? scoped.length : scoped.filter(c => (c.lead_temperature || 'warm') === t.key).length;
@@ -251,6 +344,22 @@ export default function Clients({ kind = 'client' }) {
             })}
           </div>
         )}
+        {/* Board / List toggle (leads only) */}
+        {isLeadView && (
+          <div style={{ display: 'inline-flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, gap: 2, marginLeft: 'auto' }}>
+            {[{ key: 'board', label: 'Board' }, { key: 'list', label: 'List' }].map(v => {
+              const on = view === v.key;
+              return (
+                <button key={v.key} onClick={() => setView(v.key)} style={{
+                  padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)',
+                  background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--text)' : 'var(--muted)',
+                  boxShadow: on ? 'var(--shadow-sm)' : 'none',
+                }}>{v.label}</button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {loadError && (
@@ -260,6 +369,20 @@ export default function Clients({ kind = 'client' }) {
         </div>
       )}
 
+      {isLeadView && view === 'board' ? (
+        loading ? (
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60 }}>Loading…</div>
+        ) : (
+          <LeadsBoard
+            leads={filtered}
+            onOpen={setSelected}
+            onTempChange={(id, t) => patchLead(id, { lead_temperature: t })}
+            onRankChange={(id, r) => patchLead(id, { lead_rank: r })}
+            onDelete={setDeleteTarget}
+          />
+        )
+      ) : (
+      <>
       {/* Bulk selection bar */}
       {selectedIds.size > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 24px', background: 'rgba(37,99,235,0.08)', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
@@ -367,6 +490,8 @@ export default function Clients({ kind = 'client' }) {
           </div>
         ))}
       </div>
+      </>
+      )}
 
       {deleteModal}
 
