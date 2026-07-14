@@ -115,15 +115,16 @@ export default function Contacts() {
                   <tr>
                     <th style={{ minWidth: 150 }}>Name</th>
                     <th style={{ minWidth: 200 }}>Email</th>
+                    <th style={{ minWidth: 140 }}>Groups</th>
                     <th style={{ minWidth: 96 }}>Status</th>
                     <th style={{ minWidth: 100 }}>Subscribed</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts{search ? ' match your search' : ''}.</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts{search ? ' match your search' : ''}.</td></tr>
                   ) : filtered.map(s => {
                     const st = STATUS[s.status] || { label: s.status || '—', color: '#8a8a8a' };
                     return (
@@ -134,6 +135,25 @@ export default function Contacts() {
                             <Mail size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />
                             <span className="private-value" style={{ color: 'var(--muted)' }}>{s.email}</span>
                           </div>
+                        </td>
+                        <td>
+                          {(s.groups || []).length === 0 ? (
+                            <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>
+                          ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {s.groups.map(g => {
+                                const isGeneral = /general/i.test(g);
+                                return (
+                                  <span key={g} style={{
+                                    fontSize: 10.5, fontWeight: 600, borderRadius: 999, padding: '1px 8px', whiteSpace: 'nowrap',
+                                    color: isGeneral ? 'var(--muted)' : 'var(--orange)',
+                                    background: isGeneral ? 'var(--surface-2)' : 'rgba(37,99,235,0.10)',
+                                    border: `1px solid ${isGeneral ? 'var(--border)' : 'rgba(37,99,235,0.30)'}`,
+                                  }}>{g}</span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </td>
                         <td>
                           <span style={{ fontSize: 10.5, fontWeight: 700, color: st.color, background: `${st.color}18`, border: `1px solid ${st.color}40`, borderRadius: 999, padding: '1px 8px' }}>{st.label}</span>
