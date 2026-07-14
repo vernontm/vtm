@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Users, Search, RefreshCw, Mail, AlertCircle } from 'lucide-react';
+import { Users, Search, RefreshCw, Mail, AlertCircle, Send, X, AlertTriangle } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
-import { getMailerliteGroups, getMailerliteSubscribers } from '../api';
+import { toast } from '../components/Toast';
+import {
+  getMailerliteGroups, getMailerliteSubscribers,
+  getCampaignDefaults, sendMailerliteCampaign,
+} from '../api';
 
 // Marketing > Contacts = the live MailerLite audience for the current workspace
 // (groups on the left, subscribers on the right). This is the marketing list,
@@ -25,9 +29,112 @@ const rail = (active) => ({
   borderLeft: `3px solid ${active ? 'var(--orange)' : 'transparent'}`,
 });
 
+// ── Email blast composer (MailerLite regular campaign) ──────────────────────
+function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
+  const [step, setStep]         = useState('compose');   // compose | confirm | sending
+  const [groupId, setGroupId]   = useState(initialGroupId || groups[0]?.id || '');
+  const [subject, setSubject]   = useState('');
+  const [fromName, setFromName] = useState('');
+  const [fromEmail, setFromEmail] = useState('');
+  const [body, setBody]         = useState('');
+
+  useEffect(() => {
+    getCampaignDefaults(clientId)
+      .then(d => { setFromName(d.from_name || ''); setFromEmail(d.from_email || ''); })
+      .catch(() => {});
+  }, [clientId]);
+
+  const group = groups.find(g => String(g.id) === String(groupId));
+  const count = group ? (group.total || group.active || 0) : 0;
+
+  const canProceed = groupId && subject.trim() && fromEmail.trim() && body.trim();
+
+  async function send() {
+    setStep('sending');
+    try {
+      await sendMailerliteCampaign({
+        client_id: clientId, group_id: groupId,
+        subject: subject.trim(), from_name: fromName.trim(), from_email: fromEmail.trim(), body,
+      });
+      toast('success', `Blast sent to ${group?.name || 'the group'} (${count.toLocaleString()} contacts).`);
+      onClose();
+    } catch (e) {
+      toast('error', e.message || 'Failed to send');
+      setStep('compose');
+    }
+  }
+
+  const field = { width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 11px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--font-display)' };
+  const label = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5, display: 'block' };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, width: 560, maxWidth: '94vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-display)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Send size={16} style={{ color: 'var(--orange)' }} />
+            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Email blast</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+        </div>
+
+        {step === 'confirm' ? (
+          <div style={{ padding: 24 }}>
+            <div style={{ display: 'flex', gap: 12, background: 'rgba(245,166,35,0.10)', border: '1px solid rgba(245,166,35,0.35)', borderRadius: 10, padding: 16 }}>
+              <AlertTriangle size={20} style={{ color: '#f5a623', flexShrink: 0 }} />
+              <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.5 }}>
+                This will email <b>{count.toLocaleString()}</b> contact{count !== 1 ? 's' : ''} in <b>{group?.name}</b> right now, from <b>{fromEmail}</b>.
+                <div style={{ marginTop: 8, color: 'var(--muted)' }}>Subject: “{subject}”</div>
+                <div style={{ marginTop: 6, color: 'var(--muted)' }}>Sending a blast can’t be undone. Continue?</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              <button className="btn-ghost" onClick={() => setStep('compose')}>Back</button>
+              <button className="btn-primary" onClick={send} style={{ background: '#dc2626', borderColor: '#dc2626' }}>
+                <Send size={13} /> Send to {count.toLocaleString()}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={label}>Send to group</label>
+                <select value={groupId} onChange={e => setGroupId(e.target.value)} style={field}>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name} ({(g.total || g.active || 0).toLocaleString()})</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><label style={label}>From name</label><input value={fromName} onChange={e => setFromName(e.target.value)} style={field} placeholder="Vernon Tech & Media" /></div>
+                <div><label style={label}>From email</label><input value={fromEmail} onChange={e => setFromEmail(e.target.value)} style={field} placeholder="you@domain.com" /></div>
+              </div>
+              <div><label style={label}>Subject</label><input value={subject} onChange={e => setSubject(e.target.value)} style={field} placeholder="Subject line" /></div>
+              <div>
+                <label style={label}>Message</label>
+                <textarea value={body} onChange={e => setBody(e.target.value)} rows={9} style={{ ...field, resize: 'vertical', lineHeight: 1.5 }} placeholder={'Hello, everyone.\n\nWrite your message here…'} />
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>Plain text is fine — an unsubscribe link is added automatically.</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{group ? `${count.toLocaleString()} recipient${count !== 1 ? 's' : ''}` : ''}</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn-ghost" onClick={onClose}>Cancel</button>
+                <button className="btn-primary" disabled={!canProceed || step === 'sending'} onClick={() => setStep('confirm')}>
+                  <Send size={13} /> Review &amp; send
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Contacts() {
-  const { selectedClient } = useClient();
+  const { selectedClient, isAdmin } = useClient();
   const clientId = selectedClient?.id;
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const [groups, setGroups]         = useState([]);
   const [activeGroup, setActiveGroup] = useState(null); // null = all contacts
@@ -78,10 +185,26 @@ export default function Contacts() {
         <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
           {activeGroup ? `${filtered.length} in group` : `${total.toLocaleString()} contacts`}
         </span>
-        <button className="btn-ghost" onClick={refresh} disabled={refreshing} style={{ marginLeft: 'auto' }}>
-          <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="btn-ghost" onClick={refresh} disabled={refreshing}>
+            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
+          </button>
+          {isAdmin && groups.length > 0 && (
+            <button className="btn-primary" onClick={() => setComposeOpen(true)}>
+              <Send size={13} /> Send Email
+            </button>
+          )}
+        </div>
       </div>
+
+      {composeOpen && (
+        <ComposeBlast
+          clientId={clientId}
+          groups={groups}
+          initialGroupId={activeGroup}
+          onClose={() => setComposeOpen(false)}
+        />
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, padding: 20, alignItems: 'start' }}>
         {/* Groups rail */}

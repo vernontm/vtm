@@ -325,6 +325,10 @@ export const createClientTask = (data)      => request('/client-tasks', { method
 export const updateClientTask = (id, data)  => request(`/client-tasks?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClientTask = (id)        => request(`/client-tasks?id=${id}`, { method: 'DELETE' });
 
+// MailerLite email blast (regular campaign) to a group
+export const getCampaignDefaults = (client_id) => request(`/mailerlite-campaign?client_id=${client_id}`);
+export const sendMailerliteCampaign = (data)   => request('/mailerlite-campaign', { method: 'POST', body: JSON.stringify(data) });
+
 // Personal dashboard to-do list (per-user; urgent items float to top)
 export const getTodos   = ()        => request('/todos');
 export const createTodo = (data)    => request('/todos', { method: 'POST', body: JSON.stringify(data) });
