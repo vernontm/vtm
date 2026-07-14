@@ -1015,33 +1015,35 @@ export default function EmailPage() {
                       <input type="checkbox" checked={isChecked} onClick={e => e.stopPropagation()} onChange={() => toggleSelectId(email.id)}
                         style={{ flexShrink:0, width:15, height:15, cursor:'pointer', accentColor:'var(--orange)' }} />
                       <Avatar name={name} size={38} />
-                      <div className="email-item-name" style={{ width:200, minWidth:0, flexShrink:1 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                          <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                            {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
+                      <div className="email-item-body">
+                        <div className="email-item-name" style={{ width:200, minWidth:0, flexShrink:1 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                            <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
+                            </span>
+                            {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'rgba(37,99,235,0.08)', color:'var(--orange)', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}
+                            {email.isReply && <Reply size={11} color="var(--orange)" style={{flexShrink:0}} />}
+                          </div>
+                        </div>
+                        {/* Label pills — after the sender name, solid like Gmail */}
+                        {(gmailPills.length > 0 || crmPills.length > 0) && (
+                          <div className="email-item-pills" style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0, maxWidth:240, overflow:'hidden' }}>
+                            {gmailPills.map(l => (
+                              <span key={l.id} style={{ fontSize:11, padding:'2px 9px', borderRadius:5, background:l.color||'var(--orange)', color:'#fff', fontWeight:700, whiteSpace:'nowrap' }}>{l.name}</span>
+                            ))}
+                            {crmPills.map(cfg => (
+                              <span key={cfg.label} style={{ fontSize:11, padding:'2px 9px', borderRadius:5, background:cfg.color, color:'#fff', fontWeight:700, whiteSpace:'nowrap' }}>{cfg.label}</span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="email-item-preview" style={{ flex:1, minWidth:0, display:'flex', alignItems:'baseline', gap:8 }}>
+                          <span className="email-item-subject" style={{ fontSize:13, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:300 }}>
+                            {email.subject||'(no subject)'}
                           </span>
-                          {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'rgba(37,99,235,0.08)', color:'var(--orange)', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}
-                          {email.isReply && <Reply size={11} color="var(--orange)" style={{flexShrink:0}} />}
+                          <span className="email-item-snippet" style={{ fontSize:12, color:'var(--muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1 }}>
+                            — {getPreview(email)}
+                          </span>
                         </div>
-                      </div>
-                      {/* Label pills — after the sender name, solid like Gmail */}
-                      {(gmailPills.length > 0 || crmPills.length > 0) && (
-                        <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0, maxWidth:240, overflow:'hidden' }}>
-                          {gmailPills.map(l => (
-                            <span key={l.id} style={{ fontSize:11, padding:'2px 9px', borderRadius:5, background:l.color||'var(--orange)', color:'#fff', fontWeight:700, whiteSpace:'nowrap' }}>{l.name}</span>
-                          ))}
-                          {crmPills.map(cfg => (
-                            <span key={cfg.label} style={{ fontSize:11, padding:'2px 9px', borderRadius:5, background:cfg.color, color:'#fff', fontWeight:700, whiteSpace:'nowrap' }}>{cfg.label}</span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="email-item-preview" style={{ flex:1, minWidth:0, display:'flex', alignItems:'baseline', gap:8 }}>
-                        <span style={{ fontSize:13, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:300 }}>
-                          {email.subject||'(no subject)'}
-                        </span>
-                        <span className="email-item-snippet" style={{ fontSize:12, color:'var(--muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1 }}>
-                          — {getPreview(email)}
-                        </span>
                       </div>
                       <div className="email-item-labels" style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                         {isGmail && <LabelButton labelKey="favorite" active={isFav} onClick={e => { e.stopPropagation(); toggleLabel(email,'favorite'); }} size={13} />}

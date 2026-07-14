@@ -530,6 +530,8 @@ textarea:focus, select:focus {
 /* ── Email page: full-width list on mobile; sidebar folders become a drawer ─── */
 .email-folders-btn { display: none; }
 .email-sidebar-overlay { display: none; }
+/* Sender + subject group. Desktop: single row (same as before). */
+.email-item-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
 @media (max-width: 768px) {
   .email-sidebar {
     position: fixed !important; top: 0; left: 0; bottom: 0;
@@ -545,6 +547,17 @@ textarea:focus, select:focus {
   .email-folders-btn { display: inline-flex; }
   .email-detail-content { padding: 16px !important; }
   .email-detail-header, .email-list-header { padding: 11px 14px !important; }
+
+  /* Stack the sender (line 1) over the subject + preview (line 2) so each row
+     shows what the email actually says. Hide the star to reclaim the space and
+     shrink the date, pinned top-right. */
+  .email-list-item { align-items: flex-start !important; padding: 12px 14px !important; gap: 10px !important; }
+  .email-item-body { flex-direction: column; align-items: stretch; gap: 3px; }
+  .email-item-name { width: auto !important; }
+  .email-item-preview { max-width: none; }
+  .email-item-subject { max-width: none !important; font-weight: 500 !important; }
+  .email-item-labels { display: none !important; }
+  .email-item-time { font-size: 10px !important; width: auto !important; white-space: nowrap; }
 }
 
 @media (max-width: 560px) {
