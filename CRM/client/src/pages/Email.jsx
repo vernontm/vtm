@@ -94,10 +94,17 @@ function HtmlEmail({ html }) {
       a{color:#1a73e8;}
       blockquote{color:#555;border-left:3px solid #ddd;margin:10px 0;padding:4px 12px;}
     </style>`;
+    // Measure the true content height (the last element's bottom edge) so the
+    // iframe hugs the email with no trailing dead space.
     const resizeScript = `<script>
-      function postH(){window.parent.postMessage({iframeHeight:document.body.scrollHeight},'*');}
-      window.addEventListener('load',function(){postH();setTimeout(postH,500);setTimeout(postH,1500);});
-      new MutationObserver(postH).observe(document.body,{childList:true,subtree:true});
+      function contentH(){
+        var b=document.body, max=0, kids=b.children;
+        for(var i=0;i<kids.length;i++){var r=kids[i].getBoundingClientRect();if(r.bottom>max)max=r.bottom;}
+        return Math.ceil(Math.min(max||b.scrollHeight, b.scrollHeight)) + 12;
+      }
+      function postH(){window.parent.postMessage({iframeHeight:contentH()},'*');}
+      window.addEventListener('load',function(){postH();setTimeout(postH,300);setTimeout(postH,1200);});
+      new MutationObserver(postH).observe(document.body,{childList:true,subtree:true,attributes:true});
     <\/script>`;
     // Insert base+style+script right after <head> if present, otherwise prepend
     if (/<head[^>]*>/i.test(html)) {
@@ -109,26 +116,28 @@ function HtmlEmail({ html }) {
   React.useEffect(() => {
     const handler = (e) => {
       if (e.data?.iframeHeight && ref.current) {
-        ref.current.style.height = Math.max(e.data.iframeHeight + 20, 100) + 'px';
+        ref.current.style.height = Math.max(e.data.iframeHeight, 32) + 'px';
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  return <iframe ref={ref} srcDoc={patched} sandbox="allow-same-origin allow-scripts allow-popups" style={{ width:'100%', border:'none', minHeight:200, borderRadius:8, background:'#fff' }} />;
+  return <iframe ref={ref} srcDoc={patched} sandbox="allow-same-origin allow-scripts allow-popups" style={{ width:'100%', border:'none', height:32, minHeight:32, borderRadius:8, background:'#fff', display:'block' }} />;
 }
 
-/* Helper: render body as HTML iframe or plain text with Linkify */
+/* Helper: render body as HTML iframe or plain text with Linkify.
+   Prefer the plain-text part — it renders inline with no iframe and no dead
+   whitespace (the common cause of huge blank gaps). Fall back to the HTML part
+   only for emails that are HTML-only (marketing / newsletters). */
 function EmailBody({ msg, fallbackText }) {
   const html = msg?.bodyHtml || '';
-  const body = msg?.body || fallbackText || '';
-  // If bodyHtml is set from API, use it
+  const text = (msg?.body || '').trim();
+  if (text && !looksLikeHtml(text)) return <Linkify text={text} />;
   if (html) return <HtmlEmail html={html} />;
-  // If the plain body looks like HTML (detection fallback), render in iframe
-  if (looksLikeHtml(body)) return <HtmlEmail html={body} />;
-  // Otherwise render as plain text with linkify
-  return <Linkify text={body || '(empty)'} />;
+  const fb = (fallbackText || '').trim();
+  if (looksLikeHtml(fb)) return <HtmlEmail html={fb} />;
+  return <Linkify text={fb || text || '(empty)'} />;
 }
 
 /* ── tiny helpers ─────────────────────────────────────────────────────────── */
