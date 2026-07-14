@@ -37,12 +37,37 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
   const [fromName, setFromName] = useState('');
   const [fromEmail, setFromEmail] = useState('');
   const [body, setBody]         = useState('');
+  const [testEmail, setTestEmail] = useState('');
+  const [testing, setTesting]   = useState(false);
 
   useEffect(() => {
     getCampaignDefaults(clientId)
-      .then(d => { setFromName(d.from_name || ''); setFromEmail(d.from_email || ''); })
+      .then(d => {
+        setFromName(d.from_name || '');
+        setFromEmail(d.from_email || '');
+        setTestEmail(d.from_email || '');
+      })
       .catch(() => {});
   }, [clientId]);
+
+  const canCompose = subject.trim() && fromEmail.trim() && body.trim();
+
+  async function sendTest() {
+    if (!testEmail.trim()) { toast('error', 'Enter a test email address'); return; }
+    setTesting(true);
+    try {
+      await sendMailerliteCampaign({
+        client_id: clientId, subject: subject.trim(),
+        from_name: fromName.trim(), from_email: fromEmail.trim(), body,
+        test_email: testEmail.trim(),
+      });
+      toast('success', `Test sent to ${testEmail.trim()}. Check your inbox before blasting the group.`);
+    } catch (e) {
+      toast('error', e.message || 'Test failed');
+    } finally {
+      setTesting(false);
+    }
+  }
 
   const group = groups.find(g => String(g.id) === String(groupId));
   const count = group ? (group.total || group.active || 0) : 0;
@@ -115,6 +140,16 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>Plain text is fine — an unsubscribe link is added automatically.</div>
               </div>
             </div>
+            {/* Test-first row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Test to</span>
+              <input value={testEmail} onChange={e => setTestEmail(e.target.value)} placeholder="you@domain.com"
+                style={{ flex: 1, minWidth: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', color: 'var(--text)', fontSize: 12.5, fontFamily: 'var(--font-display)' }} />
+              <button className="btn-ghost" disabled={!canCompose || testing} onClick={sendTest} style={{ whiteSpace: 'nowrap' }}>
+                <Send size={12} /> {testing ? 'Sending…' : 'Send test'}
+              </button>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>{group ? `${count.toLocaleString()} recipient${count !== 1 ? 's' : ''}` : ''}</span>
               <div style={{ display: 'flex', gap: 8 }}>

@@ -38,8 +38,9 @@ module.exports = async function handler(req, res) {
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { group_id, subject, from_name, from_email, body } = req.body || {};
-    if (!group_id) return res.status(400).json({ error: 'group_id required' });
+    const { group_id, subject, from_name, from_email, body, test_email } = req.body || {};
+    const isTest = !!(test_email && test_email.trim());
+    if (!isTest && !group_id) return res.status(400).json({ error: 'group_id required' });
     if (!subject || !subject.trim()) return res.status(400).json({ error: 'subject required' });
     if (!from_email || !from_email.trim()) return res.status(400).json({ error: 'from_email required' });
     if (!body || !body.trim()) return res.status(400).json({ error: 'body required' });
@@ -52,13 +53,47 @@ module.exports = async function handler(req, res) {
       : `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#111">${body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>`;
     const content = `${inner}<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#888;margin-top:28px">You're receiving this because you subscribed to ${(from_name || 'us').replace(/</g, '&lt;')}.<br><a href="{$unsubscribe}" style="color:#888">Unsubscribe</a></p>`;
 
+    // MailerLite has no test-send API. For a test, send the real campaign to a
+    // dedicated single-recipient group ("CRM · Test Send") holding only the
+    // tester, so the preview is a true MailerLite render but reaches no one else.
+    let targetGroupId = group_id;
+    if (isTest) {
+      const email = test_email.trim();
+      // Ensure the tester exists as an (active) subscriber.
+      const subRes = await ml('POST', 'subscribers', { email });
+      const subJson = await subRes.json().catch(() => ({}));
+      const subId = subJson?.data?.id;
+      if (!subId) return res.status(502).json({ error: `Couldn't prepare test recipient: ${subJson?.message || 'unknown error'}` });
+
+      // Find or create the test group.
+      const groupsList = (await (await ml('GET', 'groups?limit=500')).json())?.data || [];
+      let testGroup = groupsList.find(g => g.name === 'CRM · Test Send');
+      if (!testGroup) {
+        testGroup = (await (await ml('POST', 'groups', { name: 'CRM · Test Send' })).json())?.data;
+      }
+      if (!testGroup?.id) return res.status(502).json({ error: 'Could not create the test group.' });
+
+      // Strip any stale members so ONLY the tester receives it.
+      let cursor = null;
+      do {
+        const j = await (await ml('GET', `groups/${testGroup.id}/subscribers?limit=100${cursor ? `&cursor=${cursor}` : ''}`)).json();
+        for (const s of (j?.data || [])) {
+          if (String(s.id) !== String(subId)) await ml('DELETE', `subscribers/${s.id}/groups/${testGroup.id}`);
+        }
+        cursor = j?.meta?.next_cursor;
+      } while (cursor);
+
+      await ml('POST', `subscribers/${subId}/groups/${testGroup.id}`);
+      targetGroupId = testGroup.id;
+    }
+
     // 1) Create the regular campaign targeting the group.
     const createRes = await ml('POST', 'campaigns', {
-      name: `Blast: ${subject.trim().slice(0, 120)}`,
+      name: `${isTest ? 'TEST' : 'Blast'}: ${subject.trim().slice(0, 120)}`,
       type: 'regular',
-      groups: [String(group_id)],
+      groups: [String(targetGroupId)],
       emails: [{
-        subject: subject.trim(),
+        subject: isTest ? `[TEST] ${subject.trim()}` : subject.trim(),
         from_name: (from_name || 'Vernon Tech & Media').trim(),
         from: from_email.trim(),
         content,
@@ -81,7 +116,7 @@ module.exports = async function handler(req, res) {
       return res.status(502).json({ error: `Campaign created but sending failed: ${msg}`, campaignId });
     }
 
-    return res.json({ ok: true, campaignId, status: schedJson?.data?.status || 'sending' });
+    return res.json({ ok: true, test: isTest, campaignId, status: schedJson?.data?.status || 'sending' });
   } catch (err) {
     console.error('mailerlite-campaign error:', err);
     return res.status(500).json({ error: err.message });
