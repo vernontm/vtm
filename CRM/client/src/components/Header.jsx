@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, RefreshCw } from 'lucide-react';
+import { Bell, Search, RefreshCw, Menu } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { useUi } from '../context/UiContext';
+import { useMobile } from '../App';
 import { getNotifications } from '../api';
 import GlobalSearch from './GlobalSearch';
 
@@ -58,6 +59,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { triggerRefresh } = useRefresh();
   const { pageActions } = useUi();
+  const { setSidebarOpen } = useMobile();
 
   const [searchOpen,  setSearchOpen]  = useState(false);
   const [notifCount,  setNotifCount]  = useState(0);
@@ -100,7 +102,7 @@ export default function Header() {
 
   return (
     <>
-      <div style={{
+      <div className="app-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '13px 24px',
         background: 'var(--bg)',
@@ -109,23 +111,38 @@ export default function Header() {
         gap: 16,
       }}>
 
-        {/* ── Left: page title + subtitle ── */}
-        <div style={{ minWidth: 0 }}>
-          <div className="page-title" style={{
-            fontSize: 20, fontWeight: 800, color: 'var(--text)',
-            fontFamily: 'var(--font-display)', lineHeight: 1.2, letterSpacing: '-0.01em',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {meta.title}
-          </div>
-          {meta.sub && (
-            <div className="page-sub" style={{
-              fontSize: 11, color: 'var(--muted)',
-              fontFamily: 'var(--font-display)', marginTop: 1,
+        {/* ── Left: hamburger (mobile) + page title + subtitle ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <button
+            className="header-hamburger"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            style={{
+              alignItems: 'center', justifyContent: 'center',
+              width: 38, height: 38, borderRadius: 8, flexShrink: 0,
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              color: 'var(--text)', cursor: 'pointer',
+            }}
+          >
+            <Menu size={20} />
+          </button>
+          <div style={{ minWidth: 0 }}>
+            <div className="page-title" style={{
+              fontSize: 20, fontWeight: 800, color: 'var(--text)',
+              fontFamily: 'var(--font-display)', lineHeight: 1.2, letterSpacing: '-0.01em',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {meta.sub}
+              {meta.title}
             </div>
-          )}
+            {meta.sub && (
+              <div className="page-sub" style={{
+                fontSize: 11, color: 'var(--muted)',
+                fontFamily: 'var(--font-display)', marginTop: 1,
+              }}>
+                {meta.sub}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Right: page actions · search · bell · refresh ── */}

@@ -493,19 +493,15 @@ textarea:focus, select:focus {
 }
 
 /* ── Mobile hamburger / overlay ─────────────────────────────────────────────── */
-.mobile-hamburger {
-  display: none; position: fixed; top: 14px; left: 14px; z-index: 200;
-  background: var(--surface); border: 1px solid var(--border-light);
-  border-radius: 10px; padding: 8px; cursor: pointer; color: var(--text);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-}
+/* Hamburger lives inside the top header bar; shown only on mobile. */
+.header-hamburger { display: none; }
 .sidebar-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.6); z-index: 99; backdrop-filter: blur(2px);
 }
 
 @media (max-width: 768px) {
-  .mobile-hamburger { display: flex; }
+  .header-hamburger { display: inline-flex; }
   .sidebar-overlay.sidebar-open { display: block; }
   .app-sidebar {
     position: fixed !important; top: 0; left: 0; bottom: 0;
@@ -518,25 +514,17 @@ textarea:focus, select:focus {
   .grid-1, .grid-2, .grid-3, .grid-4, .rgrid { grid-template-columns: 1fr !important; }
   .table-container { margin: 12px; }
   .search-input { width: 160px; }
+
+  /* Mobile top bar: a clean full-width strip with the menu button on the left.
+     Tighten padding + hide the subtitle and "Search / ⌘K" labels so the title
+     fits next to the menu and the action icons don't overflow. */
+  .app-header { padding: 11px 14px !important; }
+  .app-header .page-sub { display: none; }
+  .app-header .header-search-label { display: none; }
 }
 
-/* ── Mobile polish ─────────────────────────────────────────────────────────── */
-/* At narrower widths, trim the header and stack AdminUsers controls so nothing
-   overflows horizontally. */
 @media (max-width: 640px) {
-  /* Header: hide "Search" label + the ⌘K chip; keep the icon-only button. */
-  .app-main header .search-label,
-  .app-main .header-search-label { display: none; }
-  /* Client switcher: cap width and truncate long client names. */
-  .client-switcher-btn {
-    max-width: 140px !important;
-  }
-  .client-switcher-btn > span:not([class]) {
-    max-width: 80px;
-  }
-  /* Page title: shrink a touch so the header doesn't wrap. */
-  .app-main header .page-title { font-size: 15px !important; }
-  .app-main header .page-sub { display: none; }
+  .app-header .page-title { font-size: 16px !important; }
 }
 
 @media (max-width: 560px) {

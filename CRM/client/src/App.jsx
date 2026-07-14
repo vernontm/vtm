@@ -58,7 +58,6 @@ function NoAccess() {
 import { RecorderProvider } from './context/RecorderContext';
 import { TeamProvider } from './context/TeamContext';
 import { UiProvider } from './context/UiContext';
-import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import RecordingBar from './components/RecordingBar';
@@ -130,11 +129,6 @@ function AppLayout() {
   return (
     <MobileContext.Provider value={{ sidebarOpen, setSidebarOpen }}>
       <div className={privacyMode ? 'privacy-mode' : ''} style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
-        {/* Mobile hamburger */}
-        <button className="mobile-hamburger" onClick={() => setSidebarOpen(true)}>
-          <Menu size={20} />
-        </button>
-
         {/* Sidebar overlay */}
         <div className={`sidebar-overlay${sidebarOpen ? ' sidebar-open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
