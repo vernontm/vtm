@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, ExternalLink, Pencil, Trash2, BookOpen, Search } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, BookOpen, Search, ChevronDown } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { usePageActions } from '../context/UiContext';
 import { getEmployeeResources, createEmployeeResource, updateEmployeeResource, deleteEmployeeResource } from '../api';
@@ -15,6 +15,7 @@ export default function EmployeeResources() {
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null); // 'add' | editing row | { del: row }
   const [form, setForm] = useState(EMPTY);
+  const [open, setOpen] = useState({}); // resource id -> expanded?
 
   const load = async () => {
     try { setRows(await getEmployeeResources()); } catch (e) { toast('error', e.message); }
@@ -73,29 +74,60 @@ export default function EmployeeResources() {
           <div key={category} style={{ marginBottom: 26 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, fontFamily: 'var(--font-display)' }}>{category}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-              {items.map(r => (
-                <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(37,99,235,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <BookOpen size={15} style={{ color: 'var(--orange)' }} />
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', flex: 1, lineHeight: 1.3 }}>{r.title}</div>
-                    {isAdmin && (
-                      <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                        <button className="btn-ghost" style={{ padding: '4px 6px' }} onClick={() => openEdit(r)} title="Edit"><Pencil size={13} /></button>
-                        <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => remove(r)} title="Delete"><Trash2 size={13} /></button>
+              {items.map(r => {
+                // First paragraph = the summary (what we do); the rest is
+                // detail (e.g. pricing tiers) that collapses/expands.
+                const parts = (r.description || '').split(/\n\s*\n/);
+                const summary = parts[0] || '';
+                const detail = parts.slice(1).join('\n\n').trim();
+                const isOpen = !!open[r.id];
+                const isPricing = /pric/i.test(r.category || '');
+                return (
+                  <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(37,99,235,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <BookOpen size={15} style={{ color: 'var(--orange)' }} />
                       </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', flex: 1, lineHeight: 1.3 }}>{r.title}</div>
+                      {isAdmin && (
+                        <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                          <button className="btn-ghost" style={{ padding: '4px 6px' }} onClick={() => openEdit(r)} title="Edit"><Pencil size={13} /></button>
+                          <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => remove(r)} title="Delete"><Trash2 size={13} /></button>
+                        </div>
+                      )}
+                    </div>
+                    {summary && <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{summary}</div>}
+
+                    {detail && (
+                      <>
+                        <button
+                          onClick={() => setOpen(o => ({ ...o, [r.id]: !o[r.id] }))}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+                            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                            fontSize: 12, fontWeight: 700, color: 'var(--link)', fontFamily: 'var(--font-display)',
+                          }}
+                        >
+                          {isOpen ? (isPricing ? 'Hide pricing' : 'Show less') : (isPricing ? 'View pricing' : 'Show more')}
+                          <ChevronDown size={13} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                        </button>
+                        {isOpen && (
+                          <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.55, whiteSpace: 'pre-wrap', borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 2 }}>
+                            {detail}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {r.url && (
+                      <a href={r.url.startsWith('http') ? r.url : `https://${r.url}`} target="_blank" rel="noreferrer"
+                        style={{ marginTop: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: 'var(--link)', textDecoration: 'none' }}>
+                        Open <ExternalLink size={12} />
+                      </a>
                     )}
                   </div>
-                  {r.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{r.description}</div>}
-                  {r.url && (
-                    <a href={r.url.startsWith('http') ? r.url : `https://${r.url}`} target="_blank" rel="noreferrer"
-                      style={{ marginTop: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: 'var(--link)', textDecoration: 'none' }}>
-                      Open <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
