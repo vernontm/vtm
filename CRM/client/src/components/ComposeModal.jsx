@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, PenLine, Search, Loader, RefreshCw, MessageSquare, Send, Zap } from 'lucide-react';
+import { X, PenLine, Search, Loader, RefreshCw, MessageSquare, Send, Zap, Plus, ChevronDown } from 'lucide-react';
 import { getLeads, createQueueItem, updateQueueItem, syncLeadGmail, generateSingleEmail, getGmailLabels } from '../api';
 
 const SEGMENT_COLORS = { hot: '#fdab3d', warm: '#2563eb', cold: '#4a4845' };
@@ -44,6 +44,7 @@ export default function ComposeModal({ onClose, onComplete }) {
   // ── Labels ─────────────────────────────────────────────────────────────────
   const [labelDefs, setLabelDefs]       = useState([]);
   const [selectedLabels, setSelectedLabels] = useState(['Leads']);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
 
   // ── Save state ─────────────────────────────────────────────────────────────
   const [saving, setSaving]             = useState(false);
@@ -458,34 +459,48 @@ export default function ComposeModal({ onClose, onComplete }) {
             </select>
           </div>
 
-          {/* ── Labels ───────────────────────────────────────────────────────── */}
+          {/* ── Labels — chips + add-from-dropdown ────────────────────────────── */}
           {labelDefs.length > 0 && (
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
                 Labels
               </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {labelDefs.map(l => {
-                  const on = selectedLabels.includes(l.name);
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                {/* Selected labels as solid chips */}
+                {selectedLabels.map(name => {
+                  const def = labelDefs.find(l => l.name === name);
+                  const color = def?.color || 'var(--orange)';
                   return (
-                    <button
-                      key={l.id}
-                      type="button"
-                      onClick={() => setSelectedLabels(prev => on ? prev.filter(x => x !== l.name) : [...prev, l.name])}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 5,
-                        padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer', transition: 'all 0.15s',
-                        background: on ? (l.color || 'var(--orange)') + '22' : '#f5f7fa',
-                        border: `1.5px solid ${on ? (l.color || 'var(--orange)') : '#e5e7ef'}`,
-                        color: on ? (l.color || 'var(--orange)') : '#4a4845',
-                      }}
-                    >
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: l.color || 'var(--orange)', flexShrink: 0 }} />
-                      {l.name}
-                    </button>
+                    <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 6px 4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, background: color, color: '#fff' }}>
+                      {name}
+                      <button type="button" onClick={() => setSelectedLabels(prev => prev.filter(x => x !== name))}
+                        style={{ background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 4, cursor: 'pointer', color: '#fff', display: 'flex', padding: 1 }}>
+                        <X size={11} />
+                      </button>
+                    </span>
                   );
                 })}
+                {/* Add-label control: dropdown to choose; a "+" once at least one is chosen */}
+                {labelDefs.some(l => !selectedLabels.includes(l.name)) && (
+                  <div style={{ position: 'relative' }}>
+                    <button type="button" onClick={() => setLabelMenuOpen(o => !o)} onBlur={() => setTimeout(() => setLabelMenuOpen(false), 150)}
+                      title="Add a label"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 8, border: '1px dashed var(--border)', background: 'var(--surface)', color: 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      <Plus size={13} /> {selectedLabels.length ? 'Add another' : 'Add label'} <ChevronDown size={12} />
+                    </button>
+                    {labelMenuOpen && (
+                      <div onMouseDown={e => e.preventDefault()} style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 60, background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 10, boxShadow: 'var(--shadow-lg)', minWidth: 200, maxHeight: 220, overflow: 'auto', padding: 5 }}>
+                        {labelDefs.filter(l => !selectedLabels.includes(l.name)).map(l => (
+                          <button key={l.id} type="button" onClick={() => { setSelectedLabels(prev => [...prev, l.name]); setLabelMenuOpen(false); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', borderRadius: 6, border: 'none', background: 'transparent', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, textAlign: 'left' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: l.color || 'var(--orange)', flexShrink: 0 }} />{l.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

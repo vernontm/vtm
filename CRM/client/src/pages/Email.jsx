@@ -280,6 +280,7 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
   const [customSchedule, setCustomSchedule] = useState('');
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState(() => labelDefs.some(l => l.name === 'Leads') ? ['Leads'] : []);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const bodyRef = useRef(null);
   useEffect(() => { if (bodyRef.current && !minimized) bodyRef.current.focus(); }, [minimized]);
 
@@ -323,24 +324,40 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
             <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject"
               style={{ flex:1, border:'none', outline:'none', fontSize:13, color:'var(--text)', background:'transparent' }} />
           </div>
-          {/* Labels */}
+          {/* Labels — solid chips + add-from-dropdown */}
           {labelDefs.length > 0 && (
-            <div style={{ display:'flex', alignItems:'center', borderBottom:'1px solid var(--border)', padding:'6px 16px', gap:8, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', borderBottom:'1px solid var(--border)', padding:'8px 16px', gap:8, flexWrap:'wrap' }}>
               <span style={{ fontSize:11, color:'var(--muted)', fontWeight:500, width:50, flexShrink:0 }}>Labels</span>
-              {labelDefs.map(l => {
-                const on = selectedLabels.includes(l.name);
+              {selectedLabels.map(name => {
+                const def = labelDefs.find(l => l.name === name);
+                const color = def?.color || 'var(--orange)';
                 return (
-                  <button
-                    key={l.id}
-                    type="button"
-                    onClick={() => setSelectedLabels(prev => on ? prev.filter(x => x !== l.name) : [...prev, l.name])}
-                    style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer', transition:'all 0.15s', background: on ? (l.color||'var(--orange)')+'22' : 'var(--surface-3)', border:`1.5px solid ${on ? (l.color||'var(--orange)') : 'var(--border)'}`, color: on ? (l.color||'var(--orange)') : 'var(--muted)' }}
-                  >
-                    <div style={{ width:6, height:6, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />
-                    {l.name}
-                  </button>
+                  <span key={name} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 5px 3px 9px', borderRadius:5, fontSize:11, fontWeight:700, background:color, color:'#fff' }}>
+                    {name}
+                    <button type="button" onClick={() => setSelectedLabels(prev => prev.filter(x => x !== name))}
+                      style={{ background:'rgba(255,255,255,0.25)', border:'none', borderRadius:4, cursor:'pointer', color:'#fff', display:'flex', padding:1 }}><X size={10} /></button>
+                  </span>
                 );
               })}
+              {labelDefs.some(l => !selectedLabels.includes(l.name)) && (
+                <div style={{ position:'relative' }}>
+                  <button type="button" onClick={() => setLabelMenuOpen(o => !o)} onBlur={() => setTimeout(() => setLabelMenuOpen(false), 150)} title="Add a label"
+                    style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'4px 10px', borderRadius:8, border:'1px dashed var(--border)', background:'var(--surface)', color:'var(--muted)', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                    <Plus size={12} /> {selectedLabels.length ? 'Add' : 'Add label'} <ChevronDown size={11} />
+                  </button>
+                  {labelMenuOpen && (
+                    <div onMouseDown={e => e.preventDefault()} style={{ position:'absolute', bottom:'calc(100% + 4px)', left:0, zIndex:60, background:'var(--surface)', border:'1px solid var(--border-light)', borderRadius:10, boxShadow:'var(--shadow-lg)', minWidth:200, maxHeight:220, overflow:'auto', padding:5 }}>
+                      {labelDefs.filter(l => !selectedLabels.includes(l.name)).map(l => (
+                        <button key={l.id} type="button" onClick={() => { setSelectedLabels(prev => [...prev, l.name]); setLabelMenuOpen(false); }}
+                          style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'8px 10px', borderRadius:6, border:'none', background:'transparent', color:'var(--text)', cursor:'pointer', fontSize:12.5, textAlign:'left' }}
+                          onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                          <span style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />{l.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {/* Custom schedule picker */}
@@ -889,16 +906,17 @@ export default function EmailPage() {
                   </div>
                 )}
 
-                {/* Reply button */}
-                {selected._type!=='queue' && !(selected.status==='draft'||selected.status==='pending') && (
-                  <button onClick={openReply} style={{ marginTop:20, display:'flex', alignItems:'center', gap:8, width:'100%', padding:'12px 18px', borderRadius:10, cursor:'pointer', background:'var(--surface)', border:'1px solid var(--border)', color:'var(--muted)', fontSize:13, fontWeight:500, transition:'all 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor='var(--orange)'; e.currentTarget.style.color='var(--orange)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.color='var(--muted)'; }}>
-                    <Reply size={14} /> Click here to reply...
-                  </button>
-                )}
               </div>
             </div>
+
+            {/* Sticky Reply bar — pinned to the bottom of the reading pane */}
+            {selected._type!=='queue' && !(selected.status==='draft'||selected.status==='pending') && (
+              <div style={{ flexShrink:0, borderTop:'1px solid var(--border)', background:'var(--surface)', padding:'12px 32px' }}>
+                <button onClick={openReply} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'12px 18px', borderRadius:10, cursor:'pointer', background:'var(--btn-black)', border:'none', color:'#fff', fontSize:14, fontWeight:700 }}>
+                  <Reply size={15} /> Reply
+                </button>
+              </div>
+            )}
           </div>
 
         ) : (
