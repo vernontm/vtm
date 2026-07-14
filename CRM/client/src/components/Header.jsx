@@ -15,6 +15,7 @@ const PAGE_META = {
   '/projects':                    { title: 'Projects',            sub: 'Active work & deliverables' },
   '/appointments':                { title: 'Appointments',        sub: 'Schedule & recordings' },
   '/todos':                       { title: 'To-Do',               sub: 'Shared team task list' },
+  '/routines':                    { title: 'Routines',            sub: 'Recurring daily & weekly checklists' },
   '/employees':                   { title: 'Employees',           sub: 'Team accounts & access' },
   '/time':                        { title: 'Time',                sub: 'Clock in/out & timesheets' },
   '/employee-resources':          { title: 'Resources',           sub: 'Guides, SOPs & links for the team' },

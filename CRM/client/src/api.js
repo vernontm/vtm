@@ -353,6 +353,13 @@ export async function uploadFile(file) {
   return res.json();
 }
 
+// Recurring checklists / routines (daily / weekly / monthly, auto-reset)
+export const getRoutines   = ()        => request('/routines');
+export const createRoutine = (data)    => request('/routines', { method: 'POST', body: JSON.stringify(data) });
+export const updateRoutine = (id, d)   => request(`/routines?id=${id}`, { method: 'PUT', body: JSON.stringify(d) });
+export const deleteRoutine = (id)      => request(`/routines?id=${id}`, { method: 'DELETE' });
+export const checkRoutineItem = (data) => request('/routines?action=check', { method: 'POST', body: JSON.stringify(data) });
+
 // Shared team to-do list (everyone sees + adds; open vs. locked-to-a-user)
 export const getTodos       = ()        => request('/team-todos');
 export const getTodoMembers = ()        => request('/team-todos?members=1');
