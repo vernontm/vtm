@@ -87,7 +87,7 @@ export default function EmployeeResources() {
                       </div>
                     )}
                   </div>
-                  {r.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>{r.description}</div>}
+                  {r.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{r.description}</div>}
                   {r.url && (
                     <a href={r.url.startsWith('http') ? r.url : `https://${r.url}`} target="_blank" rel="noreferrer"
                       style={{ marginTop: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: 'var(--link)', textDecoration: 'none' }}>
