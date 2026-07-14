@@ -784,8 +784,8 @@ export default function EmailPage() {
             </div>
 
             {/* Content */}
-            <div className="email-detail-content" style={{ flex:1, overflowY:'auto', overflowX:'hidden', minHeight:0, padding:24 }}>
-              <div className="email-detail-inner" style={{ maxWidth:740, margin:'0 auto' }}>
+            <div className="email-detail-content" style={{ flex:1, overflowY:'auto', overflowX:'hidden', minHeight:0, padding:'24px 32px' }}>
+              <div className="email-detail-inner" style={{ width:'100%' }}>
                 <h1 style={{ fontSize:22, fontWeight:700, color:'var(--text)', margin:'0 0 6px' }}>{selected.subject||'(no subject)'}</h1>
                 <div style={{ fontSize:12, color:'var(--muted)', marginBottom:20 }}>{fmtFullDate(getDate(selected))}</div>
 
