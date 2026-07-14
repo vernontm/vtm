@@ -1,5 +1,7 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import { getGmailAuth, getSetting, setSetting } from '../_lib/gmail.js';
+import { fetchTranscriptForMeeting } from '../_lib/meet.js';
+import { summarizeAndStore } from '../_lib/meeting-summary.js';
 
 // Pull events from Google Calendar (primary) into crm_meetings. Uses the stored
 // Gmail/Calendar OAuth token. Upserts on the Google event id so re-syncs update
@@ -202,12 +204,75 @@ export default async function handler(req, res) {
         return res.status(201).json(result[0] || result);
       }
       if (action === 'summarize' && id) {
-        // AI summary placeholder - Phase 4
-        return res.json({ message: 'Meeting summarization will be available in Phase 4' });
+        // Manual "Summarize now": fetch the Google Meet transcript for this
+        // meeting on demand, summarize with Claude, store on the meeting +
+        // matched client. Same logic the cron runs automatically.
+        const [meeting] = await supaFetch(`crm_meetings?id=eq.${id}`);
+        if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+        if (!meeting.meet_link) return res.status(400).json({ error: 'This meeting has no Google Meet link.' });
+        try {
+          const r = await fetchTranscriptForMeeting({ meetLink: meeting.meet_link, endTime: meeting.end_time });
+          if (r.status !== 'ready') {
+            const msg = r.status === 'pending'
+              ? 'Transcript is still processing on Google\'s side — try again in a few minutes.'
+              : 'No transcript found for this meeting. Make sure transcription was turned on during the call.';
+            await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ transcript_status: r.status === 'pending' ? 'pending' : 'none' }) }).catch(() => {});
+            return res.status(202).json({ ok: false, status: r.status, message: msg });
+          }
+          const stored = await summarizeAndStore(meeting, r.text, { source: 'google_meet', transcriptDocId: r.transcriptDocId });
+          await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ transcript_status: 'ready' }) });
+          if (!stored) return res.json({ ok: false, message: 'Transcript found but had no substantive conversation to summarize.' });
+          return res.json({ ok: true, summary: stored.summary, matchedClientId: stored.matchedClientId });
+        } catch (e) {
+          console.error('Manual summarize failed:', e.message);
+          const hint = /403|PERMISSION|not been used|disabled/i.test(e.message)
+            ? 'Google Meet API access is not set up yet — enable the Google Meet API in the Cloud project and reconnect Gmail in Settings.'
+            : e.message;
+          return res.status(500).json({ error: hint });
+        }
       }
       if (action === 'ask' && id) {
-        // AI sidekick placeholder - Phase 4
-        return res.json({ message: 'Meeting AI assistant will be available in Phase 4' });
+        // Answer questions about this meeting using its stored transcript +
+        // summary as context. Persists the Q&A to crm_meeting_chat_history.
+        const { question, conversationHistory = [] } = req.body || {};
+        if (!question) return res.status(400).json({ error: 'question required' });
+        const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+        if (!ANTHROPIC_API_KEY) return res.status(500).json({ error: 'AI is not configured.' });
+
+        const [meeting] = await supaFetch(`crm_meetings?id=eq.${id}`);
+        const [summary] = await supaFetch(`crm_meeting_summaries?meeting_id=eq.${id}&order=created_at.desc&limit=1`).catch(() => [null]);
+        if (!summary || !(summary.transcript || summary.summary)) {
+          return res.json({ answer: "I don't have a transcript or summary for this meeting yet. Generate the summary first (or wait for it to sync after the call)." });
+        }
+
+        const context = [
+          `Meeting: ${meeting?.title || meeting?.summary || 'Client meeting'}`,
+          summary.summary ? `Summary: ${summary.summary}` : '',
+          (summary.action_items || []).length ? `Action items: ${summary.action_items.join('; ')}` : '',
+          summary.transcript ? `Transcript:\n${summary.transcript}` : '',
+        ].filter(Boolean).join('\n\n');
+
+        const messages = [
+          ...(Array.isArray(conversationHistory) ? conversationHistory.filter(m => m && m.role && m.content) : []),
+          { role: 'user', content: `Using the meeting context below, answer concisely and specifically. If the answer isn't in the meeting, say so.\n\n${context}\n\nQuestion: ${question}` },
+        ];
+
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 800, messages }),
+        });
+        if (!aiRes.ok) return res.status(500).json({ error: `AI failed: ${aiRes.status}` });
+        const data = await aiRes.json();
+        const answer = data.content?.[0]?.text || 'Sorry, I could not generate an answer.';
+
+        // Persist both turns (best-effort).
+        await supaFetch('crm_meeting_chat_history', { method: 'POST', body: JSON.stringify([
+          { meeting_id: id, role: 'user', content: question },
+          { meeting_id: id, role: 'assistant', content: answer },
+        ]) }).catch(() => {});
+
+        return res.json({ answer });
       }
     }
 

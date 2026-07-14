@@ -163,14 +163,25 @@ export default function MeetingDetail() {
   }
 
   // ── Summarize ─────────────────────────────────────────────────────────────
+  // Pulls the Google Meet transcript for this meeting, summarizes it with Claude,
+  // and (when an attendee matches a client) saves it to that client's file.
   async function handleSummarize() {
     setSummarizing(true);
     setMeeting(prev => ({ ...prev, status: 'processing' }));
     try {
       const result = await summarizeMeeting(eventId);
-      setSummary(result);
+      if (!result || result.ok === false) {
+        setMeeting(prev => ({ ...prev, status: 'no_recording' }));
+        showToast(result?.message || 'No transcript available yet.');
+        return;
+      }
+      const a = result.summary || {};
+      setSummary({
+        summary: a.summary, key_points: a.key_points || [], action_items: a.action_items || [],
+        source: 'google_meet', created_at: new Date().toISOString(),
+      });
       setMeeting(prev => ({ ...prev, status: 'summarized' }));
-      showToast('✓ AI summary generated!');
+      showToast(result.matchedClientId ? '✓ Summary saved to the client\'s file' : '✓ AI summary generated');
     } catch (e) {
       setMeeting(prev => ({ ...prev, status: 'no_recording' }));
       showToast('Error generating summary: ' + e.message);
@@ -450,77 +461,59 @@ export default function MeetingDetail() {
                   ) : summary ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-                      {/* Summary title + general summary */}
+                      {/* General summary */}
                       <div style={{ background: 'var(--surface)', border: '1px solid #784bd130', borderRadius: 10, padding: '16px 18px' }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
-                          {summary.summary_title || meeting?.title}
-                        </div>
-                        <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7 }}>
-                          {summary.general_summary}
+                        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.75 }}>
+                          {summary.summary}
                         </div>
                       </div>
 
-                      {/* Topics */}
-                      {summary.topics?.length > 0 && (
-                        <div>
+                      {/* Key points */}
+                      {summary.key_points?.length > 0 && (
+                        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                            Topics Discussed
+                            Key Points
                           </div>
-                          {summary.topics.map((topic, i) => (
-                            <div key={i} style={{ background: '#1a1d2e', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', marginBottom: 8 }}>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 7 }}>{topic.title}</div>
-                              {topic.bullets?.map((b, bi) => (
-                                <div key={bi} style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 8, marginBottom: 4, alignItems: 'flex-start' }}>
-                                  <span style={{ color: '#784bd1', flexShrink: 0, marginTop: 1 }}>•</span>
-                                  <span>{b}</span>
-                                </div>
-                              ))}
+                          {summary.key_points.map((b, bi) => (
+                            <div key={bi} style={{ fontSize: 12.5, color: 'var(--text)', display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
+                              <span style={{ color: '#784bd1', flexShrink: 0, marginTop: 1 }}>•</span>
+                              <span>{b}</span>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      {/* Action Items + Key Decisions */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        {summary.action_items?.length > 0 && (
-                          <div style={{ background: '#1a1d2e', border: '1px solid var(--orange)30', borderRadius: 8, padding: '12px 14px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                              Action Items
-                            </div>
-                            {summary.action_items.map((item, i) => (
-                              <div key={i} style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 7, marginBottom: 6, alignItems: 'flex-start' }}>
-                                <Check size={11} color="var(--orange)" style={{ marginTop: 2, flexShrink: 0 }} />
-                                <span>{item}</span>
-                              </div>
-                            ))}
+                      {/* Action items */}
+                      {summary.action_items?.length > 0 && (
+                        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--link)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+                            Action Items
                           </div>
-                        )}
-                        {summary.key_decisions?.length > 0 && (
-                          <div style={{ background: '#1a1d2e', border: '1px solid var(--orange)30', borderRadius: 8, padding: '12px 14px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
-                              Key Decisions
+                          {summary.action_items.map((item, i) => (
+                            <div key={i} style={{ fontSize: 12.5, color: 'var(--text)', display: 'flex', gap: 7, marginBottom: 6, alignItems: 'flex-start' }}>
+                              <Check size={12} color="#16a34a" style={{ marginTop: 2, flexShrink: 0 }} />
+                              <span>{item}</span>
                             </div>
-                            {summary.key_decisions.map((item, i) => (
-                              <div key={i} style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 7, marginBottom: 6, alignItems: 'flex-start' }}>
-                                <ChevronRight size={11} color="var(--orange)" style={{ marginTop: 2, flexShrink: 0 }} />
-                                <span>{item}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Follow-up suggestion */}
-                      {summary.follow_up_suggested && (
-                        <div style={{ background: '#fdab3d10', border: '1px solid #fdab3d30', borderRadius: 8, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: 11, color: '#fdab3d', fontWeight: 700, flexShrink: 0 }}>Follow-up:</span>
-                          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{summary.follow_up_suggested}</span>
+                          ))}
                         </div>
                       )}
 
+                      {/* Full transcript (collapsible) */}
+                      {summary.transcript && (
+                        <details style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
+                          <summary style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', cursor: 'pointer' }}>
+                            Full transcript
+                          </summary>
+                          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.7, whiteSpace: 'pre-wrap', marginTop: 10, maxHeight: 320, overflowY: 'auto' }}>
+                            {summary.transcript}
+                          </div>
+                        </details>
+                      )}
+
                       {/* Meta footer */}
-                      <div style={{ fontSize: 10, color: 'var(--border-light)', textAlign: 'right' }}>
-                        Generated {summary.generated_at ? new Date(summary.generated_at).toLocaleDateString() : ''} · {summary.model_used || ''}
+                      <div style={{ fontSize: 10, color: 'var(--muted)', textAlign: 'right' }}>
+                        {summary.source === 'google_meet' ? 'From Google Meet transcript' : 'AI summary'}
+                        {summary.created_at ? ` · ${new Date(summary.created_at).toLocaleDateString()}` : ''}
                       </div>
                     </div>
                   ) : (
@@ -528,7 +521,7 @@ export default function MeetingDetail() {
                       <Sparkles size={30} color="#784bd1" style={{ marginBottom: 12, opacity: 0.55 }} />
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#784bd1', marginBottom: 7 }}>No Summary Yet</div>
                       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16, lineHeight: 1.65 }}>
-                        Generate an AI summary to get meeting highlights,<br />action items, and key decisions
+                        Pull this meeting's Google Meet transcript and generate a<br />summary, key points, and action items. Auto-runs after<br />each call — or click below to do it now.
                       </div>
                       <button
                         onClick={handleSummarize}
@@ -715,8 +708,8 @@ export default function MeetingDetail() {
                   <div style={{
                     maxWidth: '88%', padding: '8px 12px',
                     borderRadius: msg.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
-                    background: msg.role === 'user' ? 'var(--orange)' : '#ffffff',
-                    fontSize: 12, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap',
+                    background: msg.role === 'user' ? 'var(--btn-black)' : 'var(--surface-2)',
+                    fontSize: 12, color: msg.role === 'user' ? '#fff' : 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap',
                   }}>
                     {msg.content}
                   </div>
@@ -753,10 +746,10 @@ export default function MeetingDetail() {
                 type="submit"
                 disabled={!chatInput.trim() || chatLoading}
                 style={{
-                  background: chatInput.trim() && !chatLoading ? 'var(--orange)' : '#ffffff',
+                  background: chatInput.trim() && !chatLoading ? 'var(--btn-black)' : 'var(--surface-3)',
                   border: 'none', borderRadius: 8, padding: '8px 12px',
                   cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default',
-                  color: 'var(--text)', display: 'flex', alignItems: 'center',
+                  color: chatInput.trim() && !chatLoading ? '#fff' : 'var(--muted)', display: 'flex', alignItems: 'center',
                   transition: 'background 0.15s',
                 }}
               >

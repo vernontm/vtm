@@ -80,6 +80,9 @@ function getAuthUrl() {
       'https://www.googleapis.com/auth/contacts.other.readonly',
       'https://www.googleapis.com/auth/calendar',
       'https://www.googleapis.com/auth/calendar.events',
+      // Google Meet: read conference records + transcripts (post-call notes sync).
+      // Requires the Google Meet API enabled in the Cloud project + a reconnect.
+      'https://www.googleapis.com/auth/meetings.space.readonly',
     ].join(' '),
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
