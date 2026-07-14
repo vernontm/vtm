@@ -278,31 +278,40 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
     catch (e) { toast('error', e.message); }
   };
 
+  const stage = stageOf(client.stage);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       {/* Header */}
-      <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <button className="btn-ghost" onClick={onBack} style={{ padding: '6px 8px' }}><ArrowLeft size={16} /></button>
-        <div style={{ width: 38, height: 38, borderRadius: 9, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-          {client.logo_url ? <img src={client.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={18} style={{ color: 'var(--muted)' }} />}
+      <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <button className="btn-ghost" onClick={onBack} style={{ padding: '7px 9px', flexShrink: 0 }}><ArrowLeft size={16} /></button>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+          {client.logo_url ? <img src={client.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={20} style={{ color: 'var(--muted)' }} />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{client.business_name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{client.owner_name || 'No owner set'}</span>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{client.business_name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+            <span style={{ fontSize: 13, color: 'var(--muted)' }}>{client.owner_name || 'No owner set'}</span>
             {(client.client_type || []).map(t => (
               <span key={t} style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(255,155,38,0.12)', border: '1px solid rgba(255,155,38,0.3)', borderRadius: 999, padding: '1px 8px' }}>{t}</span>
             ))}
           </div>
         </div>
-        <select className="form-input" style={{ width: 'auto', padding: '6px 10px', fontSize: 12 }} value={client.stage || 'lead'} onChange={e => saveField('stage', e.target.value)}>
-          {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-        </select>
-        <button className="btn-ghost" style={{ padding: '6px 8px', color: '#ff5c5c' }} onClick={onDelete} title="Delete client"><Trash2 size={15} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <select
+            className="form-input"
+            style={{ width: 'auto', padding: '7px 12px', fontSize: 12, fontWeight: 700, color: stage.color, background: `${stage.color}14`, border: `1px solid ${stage.color}40`, borderRadius: 999 }}
+            value={client.stage || 'lead'}
+            onChange={e => saveField('stage', e.target.value)}
+          >
+            {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+          <button className="btn-ghost" style={{ padding: '7px 9px', color: '#ff5c5c' }} onClick={onDelete} title="Delete client"><Trash2 size={15} /></button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 4, padding: '0 28px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '11px 14px', background: 'none', border: 'none',
@@ -314,7 +323,7 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
         ))}
       </div>
 
-      <div style={{ padding: 24, maxWidth: 900 }}>
+      <div style={{ padding: 28 }}>
         {tab === 'overview'  && <OverviewTab client={client} saveField={saveField} />}
         {tab === 'activity'  && <ActivityTab clientId={client.id} />}
         {tab === 'agreement' && <AgreementTab client={client} />}
@@ -324,6 +333,19 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
         {tab === 'projects'  && <ProjectsTab client={client} />}
       </div>
       {children}
+    </div>
+  );
+}
+
+function Card({ title, children, style }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', ...style }}>
+      {title && (
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontSize: 13, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+          {title}
+        </div>
+      )}
+      <div style={{ padding: 20 }}>{children}</div>
     </div>
   );
 }
@@ -341,21 +363,41 @@ function Field({ label, value, onSave, placeholder }) {
 
 function OverviewTab({ client, saveField }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18 }}>
-        <Field label="Business Name" value={client.business_name} onSave={v => saveField('business_name', v)} placeholder="Business" />
-        <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
-        <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
-        <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
-        <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Walk-in / Referral…" />
-        <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
-        <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
-        <Field label="Instagram" value={client.instagram} onSave={v => saveField('instagram', v)} placeholder="@handle" />
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+        <Card title="Business details">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18 }}>
+            <Field label="Business Name" value={client.business_name} onSave={v => saveField('business_name', v)} placeholder="Business" />
+            <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
+            <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
+            <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
+            <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
+            <Field label="Instagram" value={client.instagram} onSave={v => saveField('instagram', v)} placeholder="@handle" />
+          </div>
+        </Card>
+
+        <Card title="What we're doing / notes">
+          <textarea className="form-input" rows={7} defaultValue={client.notes || ''} onBlur={e => saveField('notes', e.target.value)} placeholder="Scope, goals, what VTM is delivering for this client…" style={{ resize: 'vertical', width: '100%' }} />
+        </Card>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>What we're doing / notes</span>
-        <textarea className="form-input" rows={5} defaultValue={client.notes || ''} onBlur={e => saveField('notes', e.target.value)} placeholder="Scope, goals, what VTM is delivering for this client…" style={{ resize: 'vertical' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <Card title="Quick info">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Stage</span>
+              <div><StageBadge stage={client.stage} /></div>
+            </div>
+            <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Walk-in / Referral…" />
+            <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
+            {client.created_at && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Client since</span>
+                <span style={{ fontSize: 14, color: 'var(--text)' }}>{new Date(client.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+              </div>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );
