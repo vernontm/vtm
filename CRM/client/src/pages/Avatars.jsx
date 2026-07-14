@@ -25,7 +25,7 @@ const LOGO_POSITIONS = [
 ];
 
 const DEFAULT_CAPTION_STYLE = {
-  font: 'Montserrat', size: 64, color: '#FFFFFF', highlight: '#ff9b26',
+  font: 'Montserrat', size: 64, color: '#FFFFFF', highlight: '#2563eb',
   y_position: 0.75, words_per_chunk: 2, stroke: '#000000', stroke_width: 6,
 };
 
@@ -163,7 +163,7 @@ function HeyGenImportModal({ open, onClose, onImported }) {
                     key={g.id}
                     onClick={() => { setSelected(g); setName(g.name || ''); }}
                     style={{
-                      background: selected?.id === g.id ? 'rgba(255,155,38,0.1)' : 'var(--surface-2)',
+                      background: selected?.id === g.id ? 'rgba(37,99,235,0.1)' : 'var(--surface-2)',
                       border: selected?.id === g.id ? '2px solid var(--orange)' : '1px solid var(--border)',
                       borderRadius: 10, padding: 0, overflow: 'hidden',
                       cursor: 'pointer', textAlign: 'left',

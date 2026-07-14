@@ -256,8 +256,8 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
       const s = doc.createElement('style');
       s.setAttribute('data-vtm-chrome', '1');
       s.textContent = `
-        [data-vtm-hover="1"] { outline: 2px dashed #ff9b26 !important; outline-offset: 2px; cursor: text; }
-        [contenteditable="true"]:focus { outline: 2px solid #ff9b26 !important; outline-offset: 2px; }
+        [data-vtm-hover="1"] { outline: 2px dashed #2563eb !important; outline-offset: 2px; cursor: text; }
+        [contenteditable="true"]:focus { outline: 2px solid #2563eb !important; outline-offset: 2px; }
         a[data-vtm-hover="1"], img[data-vtm-hover="1"] { cursor: pointer !important; }
       `;
       doc.head.appendChild(s);
@@ -402,7 +402,7 @@ const EmailEditor = forwardRef(function EmailEditor({ value, onChange, onSelecti
 
   const Btn = ({ onClick, title, children, active }) => (
     <button type="button" onClick={onClick} title={title}
-      style={{ ...tbStyle, background: active ? 'rgba(255,155,38,0.15)' : 'transparent', color: active ? 'var(--orange)' : '#5a5a6e' }}
+      style={{ ...tbStyle, background: active ? 'rgba(37,99,235,0.15)' : 'transparent', color: active ? 'var(--orange)' : '#5a5a6e' }}
       onMouseEnter={e => !active && (e.currentTarget.style.background = '#f0f0f5')}
       onMouseLeave={e => !active && (e.currentTarget.style.background = 'transparent')}>
       {children}
@@ -620,7 +620,7 @@ function PopoverEditor({ info, onClose, onSaveLink, onSaveImage, onDelete, onUpl
               style={{ width: '100%', padding: '8px 10px', fontSize: 13, border: '1px solid #d9d9e3', borderRadius: 6, marginBottom: 8, boxSizing: 'border-box' }}
             />
             {isYouTube && info.nestedImg && (
-              <div style={{ fontSize: 11, color: '#ff9b26', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 11, color: '#2563eb', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Youtube size={12} /> Thumbnail will auto-update to this video
               </div>
             )}
@@ -633,7 +633,7 @@ function PopoverEditor({ info, onClose, onSaveLink, onSaveImage, onDelete, onUpl
               </button>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={onClose} style={{ padding: '7px 12px', fontSize: 12, border: '1px solid #d9d9e3', background: '#fff', borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
-                <button onClick={() => onSaveLink(href)} style={{ padding: '7px 14px', fontSize: 12, border: 'none', background: 'var(--orange, #ff9b26)', color: '#fff', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Save</button>
+                <button onClick={() => onSaveLink(href)} style={{ padding: '7px 14px', fontSize: 12, border: 'none', background: 'var(--orange, #2563eb)', color: '#fff', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Save</button>
               </div>
             </div>
           </>
@@ -665,7 +665,7 @@ function PopoverEditor({ info, onClose, onSaveLink, onSaveImage, onDelete, onUpl
                   <Trash2 size={12} />
                 </button>
                 <button onClick={onClose} style={{ padding: '7px 12px', fontSize: 12, border: '1px solid #d9d9e3', background: '#fff', borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
-                <button onClick={() => onSaveImage(src, alt)} style={{ padding: '7px 14px', fontSize: 12, border: 'none', background: 'var(--orange, #ff9b26)', color: '#fff', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Save</button>
+                <button onClick={() => onSaveImage(src, alt)} style={{ padding: '7px 14px', fontSize: 12, border: 'none', background: 'var(--orange, #2563eb)', color: '#fff', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Save</button>
               </div>
             </div>
           </>

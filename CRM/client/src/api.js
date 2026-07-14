@@ -84,6 +84,7 @@ export const getProjects    = () => request('/projects');
 export const createProject  = (data) => request('/projects', { method: 'POST', body: JSON.stringify(data) });
 export const updateProject  = (id, data) => request(`/projects?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteProject  = (id) => request(`/projects?id=${id}`, { method: 'DELETE' });
+export const createProjectInvoice = (id, data) => request(`/project-invoice?id=${id}`, { method: 'POST', body: JSON.stringify(data) });
 
 // Project Items (subitems)
 export const getProjectItems    = (project_id) => request(`/project-items?project_id=${project_id}`);

@@ -21,8 +21,8 @@ function pillStyle(active) {
     fontSize: 13,
     fontWeight: active ? 600 : 500,
     cursor: 'pointer',
-    background: active ? 'rgba(255,155,38,0.12)' : 'var(--surface)',
-    border: active ? '1px solid rgba(255,155,38,0.45)' : '1px solid var(--border)',
+    background: active ? 'rgba(37,99,235,0.12)' : 'var(--surface)',
+    border: active ? '1px solid rgba(37,99,235,0.45)' : '1px solid var(--border)',
     color: active ? 'var(--orange)' : 'var(--muted)',
     fontFamily: 'var(--font-body)',
     transition: 'all 0.15s',
@@ -34,8 +34,8 @@ function tagChip(t) {
   return (
     <span key={t} style={{
       display: 'inline-block',
-      background: 'rgba(255,155,38,0.1)',
-      border: '1px solid rgba(255,155,38,0.2)',
+      background: 'rgba(37,99,235,0.1)',
+      border: '1px solid rgba(37,99,235,0.2)',
       color: 'var(--orange)',
       fontSize: 11, padding: '2px 8px', borderRadius: 100,
       marginRight: 4, marginBottom: 2,

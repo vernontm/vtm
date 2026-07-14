@@ -22,7 +22,7 @@ const TABS = [
   { key: 'spam',    label: 'Spam',    icon: Ban },
 ];
 
-const AVATAR_COLORS = ['var(--orange)','#784bd1','#22c55e','#f5a623','#ff5c5c','#00b8d4','#e91e8c','#ff6b35'];
+const AVATAR_COLORS = ['var(--orange)','#784bd1','#22c55e','#f5a623','#ff5c5c','#00b8d4','#e91e8c','#2563eb'];
 
 const LABEL_CONFIG = {
   favorite:    { icon: Star,          color: '#f5a623', label: 'Favorite' },
@@ -247,7 +247,7 @@ function ContactSearch({ value, onChange, contacts, gmailContacts }) {
                 <div style={{ fontSize:12, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name||c.email}</div>
                 <div style={{ fontSize:10, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.email}</div>
               </div>
-              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(255,155,38,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>{c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'Contact'}</span>
+              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(37,99,235,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>{c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'Contact'}</span>
             </div>
           ))}
         </div>
@@ -362,10 +362,10 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
           <div style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderTop:'1px solid var(--border)', position:'relative', flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'stretch', borderRadius:8, overflow:'hidden' }}>
               <button onClick={handleSend} disabled={sending||!to||!subject}
-                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject)?0.5:1, borderRight:'1px solid rgba(255,255,255,0.2)' }}>
+                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject)?0.5:1, borderRight:'1px solid rgba(255,255,255,0.2)' }}>
                 <Send size={12} /> {sending?'Sending...':'Send'}
               </button>
-              <button onClick={() => setShowSchedule(!showSchedule)} style={{ padding:'7px 8px', cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', display:'flex', alignItems:'center' }}>
+              <button onClick={() => setShowSchedule(!showSchedule)} style={{ padding:'7px 8px', cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', display:'flex', alignItems:'center' }}>
                 <ChevronDown size={13} />
               </button>
             </div>
@@ -808,7 +808,7 @@ export default function EmailPage() {
                 )}
 
                 {selected.auto_generated && (
-                  <div style={{ padding:'10px 16px', background:'rgba(255,155,38,0.05)', border:'1px solid var(--border-light)', borderRadius:8, marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ padding:'10px 16px', background:'rgba(37,99,235,0.05)', border:'1px solid var(--border-light)', borderRadius:8, marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
                     <Sparkles size={14} color="var(--orange)" /><span style={{ fontSize:13, color:'var(--orange)', fontWeight:500 }}>Auto-drafted from a lead submission.</span>
                   </div>
                 )}
@@ -830,7 +830,7 @@ export default function EmailPage() {
                           <div style={{ flex:1 }}>
                             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                               <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{msg.from?.name || msg.from?.email}</span>
-                              {msg.isFromMe && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:4, background:'rgba(255,155,38,0.08)', color:'var(--orange)', fontWeight:700 }}>You</span>}
+                              {msg.isFromMe && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:4, background:'rgba(37,99,235,0.08)', color:'var(--orange)', fontWeight:700 }}>You</span>}
                             </div>
                             <div className="private-value" style={{ fontSize:11, color:'var(--muted)' }}>
                               to {(msg.to||'').replace(/<.*>/,'').trim().split(',')[0]}
@@ -870,7 +870,7 @@ export default function EmailPage() {
                 )}
 
                 {selected.follow_up_date && (
-                  <div style={{ marginTop:16, padding:'10px 16px', background:'rgba(255,155,38,0.06)', border:'1px solid rgba(255,155,38,0.2)', borderRadius:8, display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ marginTop:16, padding:'10px 16px', background:'rgba(37,99,235,0.06)', border:'1px solid rgba(37,99,235,0.2)', borderRadius:8, display:'flex', alignItems:'center', gap:8 }}>
                     <Calendar size={14} color="var(--orange)" />
                     <span style={{ fontSize:13, color:'var(--orange)', fontWeight:500 }}>Scheduled: {new Date(selected.follow_up_date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
                   </div>
@@ -882,7 +882,7 @@ export default function EmailPage() {
                     {selected.auto_generated && selected.status==='draft' && (
                       <button onClick={() => handleApprove(selected)} style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'#22c55e', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}><Check size={14} /> Approve</button>
                     )}
-                    <button onClick={() => handleSendQueue(selected.id)} style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}><Send size={13} /> Send Now</button>
+                    <button onClick={() => handleSendQueue(selected.id)} style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}><Send size={13} /> Send Now</button>
                     {selected.auto_generated && selected.status==='draft' && (
                       <button onClick={() => handleDelete(selected.id)} style={{ padding:'9px 16px', borderRadius:8, cursor:'pointer', background:'none', border:'1px solid #ff5c5c40', color:'#ff5c5c', fontSize:13, fontWeight:500, display:'flex', alignItems:'center', gap:6 }}><X size={13} /> Deny</button>
                     )}
@@ -905,7 +905,7 @@ export default function EmailPage() {
           /* ── Email List (full width) ── */
           <>
             {selectedIds.size > 0 ? (
-              <div className="email-list-header" style={{ padding:'10px 24px', background:'rgba(255,155,38,0.08)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12 }}>
+              <div className="email-list-header" style={{ padding:'10px 24px', background:'rgba(37,99,235,0.08)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12 }}>
                 <span style={{ fontSize:13, fontWeight:700, color:'var(--text)' }}>{selectedIds.size} selected</span>
                 <div style={{ position:'relative' }}>
                   <button onClick={() => setLabelMenuOpen(o => !o)} onBlur={() => setTimeout(() => setLabelMenuOpen(false), 150)}
@@ -972,10 +972,10 @@ export default function EmailPage() {
                       style={{
                         display:'flex', alignItems:'center', gap:12, padding:'12px 24px', cursor:'pointer',
                         borderBottom:'1px solid var(--border)', transition:'background 0.1s',
-                        background: isChecked ? 'rgba(255,155,38,0.06)' : undefined,
+                        background: isChecked ? 'rgba(37,99,235,0.06)' : undefined,
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = isChecked ? 'rgba(255,155,38,0.10)' : 'var(--surface-2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = isChecked ? 'rgba(255,155,38,0.06)' : 'var(--surface)'}>
+                      onMouseEnter={e => e.currentTarget.style.background = isChecked ? 'rgba(37,99,235,0.10)' : 'var(--surface-2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = isChecked ? 'rgba(37,99,235,0.06)' : 'var(--surface)'}>
                       {/* Select checkbox */}
                       <input type="checkbox" checked={isChecked} onClick={e => e.stopPropagation()} onChange={() => toggleSelectId(email.id)}
                         style={{ flexShrink:0, width:15, height:15, cursor:'pointer', accentColor:'var(--orange)' }} />
@@ -998,7 +998,7 @@ export default function EmailPage() {
                           <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                             {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
                           </span>
-                          {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'rgba(255,155,38,0.08)', color:'var(--orange)', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}
+                          {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'rgba(37,99,235,0.08)', color:'var(--orange)', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}
                           {email.isReply && <Reply size={11} color="var(--orange)" style={{flexShrink:0}} />}
                         </div>
                       </div>
@@ -1012,7 +1012,7 @@ export default function EmailPage() {
                       </div>
                       <div className="email-item-labels" style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                         {isGmail && <LabelButton labelKey="favorite" active={isFav} onClick={e => { e.stopPropagation(); toggleLabel(email,'favorite'); }} size={13} />}
-                        {email.auto_generated && <span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(255,155,38,0.08)',color:'var(--orange)',fontWeight:600,display:'flex',alignItems:'center',gap:2}}><Sparkles size={8} /> Auto</span>}
+                        {email.auto_generated && <span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(37,99,235,0.08)',color:'var(--orange)',fontWeight:600,display:'flex',alignItems:'center',gap:2}}><Sparkles size={8} /> Auto</span>}
                       </div>
                       <span className="email-item-time" style={{ fontSize:11, color:'var(--muted)', flexShrink:0, width:70, textAlign:'right' }}>
                         {timeAgo(getDate(email))}
@@ -1067,7 +1067,7 @@ export default function EmailPage() {
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
                   <span style={{
                     fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:4, textTransform:'uppercase',
-                    background: f.priority==='high'?'#ff5c5c15':f.priority==='medium'?'#f5a62315':'rgba(255,155,38,0.09)',
+                    background: f.priority==='high'?'#ff5c5c15':f.priority==='medium'?'#f5a62315':'rgba(37,99,235,0.09)',
                     color: f.priority==='high'?'#ff5c5c':f.priority==='medium'?'#f5a623':'var(--orange)',
                   }}>{f.priority}</span>
                   <span style={{ fontSize:12, fontWeight:600, color:'var(--text)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -1085,7 +1085,7 @@ export default function EmailPage() {
                   <button onClick={() => {
                     setComposeOpen({ subject: f.suggested_subject, to_email: f.original_to, from: { email: f.original_to } });
                     setFollowups(prev => prev.filter((_,j) => j!==i));
-                  }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
+                  }} style={{ fontSize:11, padding:'5px 12px', borderRadius:6, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
                     <Edit3 size={10} /> Draft Follow-up
                   </button>
                   <button onClick={() => setFollowups(prev => prev.filter((_,j) => j!==i))}

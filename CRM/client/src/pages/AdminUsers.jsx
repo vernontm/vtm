@@ -27,7 +27,6 @@ const PAGE_GROUPS = [
   { label: 'Tools', pages: [
     { slug: 'email',         name: 'Email' },
     { slug: 'meetings',      name: 'Meetings' },
-    { slug: 'invoices',      name: 'Invoices' },
     { slug: 'quick-notes',   name: 'Quick Notes' },
     { slug: 'notifications', name: 'Notifications' },
     { slug: 'settings',      name: 'Settings' },
@@ -176,7 +175,7 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{user.email}</div>
             {user.is_admin && !isRestricted && (
-              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(255,155,38,0.15)', color: 'var(--orange)', fontWeight: 700 }}>ADMIN</span>
+              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(37,99,235,0.15)', color: 'var(--orange)', fontWeight: 700 }}>ADMIN</span>
             )}
             {isRestricted && (
               <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.18)', color: '#a5b4fc', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>

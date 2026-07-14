@@ -885,7 +885,7 @@ export default function EmailMarketing() {
               {TABS.map(t => (
                 <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
                   padding: '8px 14px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                  background: activeTab === t.key ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                  background: activeTab === t.key ? 'linear-gradient(135deg, var(--orange), #2563eb)' : 'var(--surface-3)',
                   color: activeTab === t.key ? 'var(--surface)' : 'var(--muted)', transition: 'all 0.15s',
                 }}>
                   <t.Icon size={14} /> {t.label}
@@ -1100,7 +1100,7 @@ export default function EmailMarketing() {
                   {['welcome', 'blast'].map(t => (
                     <button key={t} onClick={() => setTplType(t)} style={{
                       padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-                      background: tplType === t ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                      background: tplType === t ? 'linear-gradient(135deg, var(--orange), #2563eb)' : 'var(--surface-3)',
                       color: tplType === t ? 'var(--surface)' : 'var(--muted)',
                     }}>{t}</button>
                   ))}
@@ -1463,7 +1463,7 @@ export default function EmailMarketing() {
                 {['welcome', 'blast'].map(t => (
                   <button key={t} onClick={() => setTplType(t)} style={{
                     padding: '7px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-                    background: tplType === t ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-3)',
+                    background: tplType === t ? 'linear-gradient(135deg, var(--orange), #2563eb)' : 'var(--surface-3)',
                     color: tplType === t ? 'var(--surface)' : 'var(--muted)',
                   }}>{t}</button>
                 ))}
@@ -1677,7 +1677,7 @@ export default function EmailMarketing() {
                           setCampGroupIds(isSelected ? campGroupIds.filter(id => id !== g.id) : [...campGroupIds, g.id]);
                         }} style={{
                           padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                          background: isSelected ? 'linear-gradient(135deg, var(--orange), #ee7c1a)' : 'var(--surface-2)',
+                          background: isSelected ? 'linear-gradient(135deg, var(--orange), #2563eb)' : 'var(--surface-2)',
                           color: isSelected ? 'var(--surface)' : 'var(--text)',
                           border: '1px solid ' + (isSelected ? 'transparent' : 'var(--border)'),
                           display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -1725,7 +1725,7 @@ export default function EmailMarketing() {
 
               {/* CTA inputs (only for slot templates) */}
               {campTemplateHtml && (
-                <div style={{ padding: 10, background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(251,146,60,0.3)', borderRadius: 8, display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
+                <div style={{ padding: 10, background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(251,146,60,0.3)', borderRadius: 8, display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
                   <div>
                     <label style={{ ...labelStyle, color: '#fb923c' }}>CTA text</label>
                     <input style={inputStyle} placeholder="Get Access" value={campCtaText} onChange={e => setCampCtaText(e.target.value)} />
@@ -1810,7 +1810,7 @@ export default function EmailMarketing() {
 
             {/* Selection chip */}
             {aiSelection && (
-              <div style={{ padding: '8px 12px', background: 'rgba(255,155,38,0.12)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+              <div style={{ padding: '8px 12px', background: 'rgba(37,99,235,0.12)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
                 <MousePointer size={11} color="var(--orange)" />
                 <span style={{ color: 'var(--orange)', fontWeight: 600 }}>&lt;{aiSelection.tag}&gt;</span>
                 <span style={{ color: 'var(--muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

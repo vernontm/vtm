@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Users, Briefcase, LayoutDashboard, RefreshCw,
-  Mail, Calendar, Settings, Receipt, LogOut,
+  Users, Briefcase, LayoutDashboard,
+  Mail, Calendar, Settings, LogOut,
   Eye, EyeOff, Building2, UserCog, X, UserPlus,
 } from 'lucide-react';
-import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../context/TeamContext';
@@ -24,7 +23,6 @@ const nav = [
 ];
 
 const navTools = [
-  { to: '/invoices',      icon: Receipt,    label: 'Invoices',      slug: 'invoices' },
   { to: '/email',         icon: Mail,       label: 'Email',         slug: 'email' },
   { to: '/settings',      icon: Settings,   label: 'Settings',      slug: 'settings' },
 ];
@@ -43,15 +41,14 @@ const NAV_LABEL_STYLE = {
 const FOOTER_BTN = (active = false) => ({
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
   width: '100%', padding: '8px 0', borderRadius: 10, cursor: 'pointer',
-  background: active ? 'rgba(255,155,38,0.16)' : 'var(--side-hover)',
-  border: active ? '1px solid rgba(255,155,38,0.35)' : '1px solid var(--side-border)',
-  color: active ? '#ffb055' : 'var(--side-muted)',
+  background: active ? 'rgba(37,99,235,0.16)' : 'var(--side-hover)',
+  border: active ? '1px solid rgba(37,99,235,0.35)' : '1px solid var(--side-border)',
+  color: active ? '#60a5fa' : 'var(--side-muted)',
   fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
   fontFamily: 'var(--font-display)',
 });
 
 export default function Sidebar() {
-  const [spinning, setSpinning]     = useState(false);
   const [emailCount, setEmailCount] = useState(0);
 
   const { hasPermission, isOwner, viewingAs, clearViewingAs } = useTeam();
@@ -60,15 +57,8 @@ export default function Sidebar() {
   // (for sub-team filtering) AND a page grant in their current client.
   // Admins bypass both.
   const canSee = (slug) => hasPermission(slug) && canAccess(slug);
-  const { triggerRefresh } = useRefresh();
 
-  function handleRefresh() {
-    setSpinning(true);
-    triggerRefresh();
-    setTimeout(() => setSpinning(false), 800);
-  }
-
-  // Only fetch email count — notifications + refresh + search live in Header now
+  // Only fetch email count — notifications + search live in Header now
   useEffect(() => {
     const fetchCounts = () => {
       getGmailInbox({ maxResults: '10' }).then(d => {
@@ -133,7 +123,7 @@ export default function Sidebar() {
               width: 32, height: 32, borderRadius: 9, flexShrink: 0,
               background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(255,155,38,0.3)',
+              boxShadow: '0 4px 14px rgba(37,99,235,0.3)',
               overflow: 'hidden', padding: 4,
             }}>
               <img
@@ -190,9 +180,9 @@ export default function Sidebar() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <div style={{
                 width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(255,155,38,0.16)', border: '1px solid rgba(255,155,38,0.35)',
+                background: 'rgba(37,99,235,0.16)', border: '1px solid rgba(37,99,235,0.35)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#ffb055', fontSize: 12, fontWeight: 800, fontFamily: 'var(--font-display)',
+                color: '#60a5fa', fontSize: 12, fontWeight: 800, fontFamily: 'var(--font-display)',
               }}>
                 {user.email[0].toUpperCase()}
               </div>
@@ -212,10 +202,6 @@ export default function Sidebar() {
               {privacyMode ? 'Privacy On' : 'Privacy Mode'}
             </button>
           )}
-          <button onClick={handleRefresh} style={FOOTER_BTN(false)}>
-            <RefreshCw size={13} style={{ transition: 'transform 0.7s', transform: spinning ? 'rotate(360deg)' : 'rotate(0deg)' }} />
-            Refresh All
-          </button>
           {!viewingAs && (
             <button onClick={signOut} style={FOOTER_BTN(false)}>
               <LogOut size={13} />

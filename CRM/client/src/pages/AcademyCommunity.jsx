@@ -135,7 +135,7 @@ export default function AcademyCommunity() {
         <div key={post.id} style={{ ...cardStyle, borderLeft: post.pinned ? '3px solid #f59e0b' : undefined, opacity: actionLoading === post.id ? 0.6 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: 12, flex: 1 }}>
-              <div className="private-value" style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
+              <div className="private-value" style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
                 {getInitials(post.author_name)}
               </div>
               <div style={{ flex: 1 }}>

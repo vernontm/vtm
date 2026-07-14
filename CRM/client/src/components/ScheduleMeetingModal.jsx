@@ -166,7 +166,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg,var(--orange),#ee7c1a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg,var(--orange),#2563eb)', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <Calendar size={16} color="#fff" />
             </div>
             <span style={{ fontSize:16, fontWeight:700, color:'var(--text)' }}>Schedule Meeting</span>
@@ -196,12 +196,12 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                 <div style={{ background:'var(--surface-2)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'center', gap:10 }}>
                   <Video size={14} color="var(--orange)" style={{ flexShrink:0 }} />
                   <span style={{ fontSize:12, color:'var(--orange)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{success.meet_link}</span>
-                  <button onClick={copyMeetLink} style={{ flexShrink:0, padding:'4px 10px', borderRadius:5, border:'1px solid var(--orange)', background:'rgba(255,155,38,0.08)', color:'var(--orange)', cursor:'pointer', fontSize:11, fontWeight:600 }}>
+                  <button onClick={copyMeetLink} style={{ flexShrink:0, padding:'4px 10px', borderRadius:5, border:'1px solid var(--orange)', background:'rgba(37,99,235,0.08)', color:'var(--orange)', cursor:'pointer', fontSize:11, fontWeight:600 }}>
                     {copied?'Copied!':'Copy Link'}
                   </button>
                 </div>
               ) : <div style={{ fontSize:12, color:'var(--muted)' }}>No Meet link attached.</div>}
-              <button onClick={onClose} style={{ alignSelf:'flex-end', padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>Done</button>
+              <button onClick={onClose} style={{ alignSelf:'flex-end', padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>Done</button>
             </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
@@ -270,7 +270,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                                 <div style={{ fontSize:12, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name||c.email}</div>
                                 <div style={{ fontSize:10, color:'var(--muted)' }}>{c.email}</div>
                               </div>
-                              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(255,155,38,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>
+                              <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(37,99,235,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>
                                 {c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'CRM'}
                               </span>
                             </div>
@@ -285,7 +285,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                   {attendees.length>0 && (
                     <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                       {attendees.map(att => (
-                        <div key={att.email} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 8px 4px 6px', borderRadius:20, background:'rgba(255,155,38,0.08)', border:'1px solid var(--orange)30' }}>
+                        <div key={att.email} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 8px 4px 6px', borderRadius:20, background:'rgba(37,99,235,0.08)', border:'1px solid var(--orange)30' }}>
                           <div style={{ width:20, height:20, borderRadius:'50%', background:'var(--orange)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff', flexShrink:0 }}>
                             {(att.name||att.email)[0].toUpperCase()}
                           </div>
@@ -332,7 +332,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                 <div>
                   <label style={labelStyle}>Google Meet Link</label>
                   <div onClick={() => setAddMeetLink(v=>!v)}
-                    style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:8, border:`1px solid ${addMeetLink?'rgba(255,155,38,0.2)':'#e5e7ef'}`, background:addMeetLink?'rgba(255,155,38,0.05)':'transparent', cursor:'pointer' }}>
+                    style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:8, border:`1px solid ${addMeetLink?'rgba(37,99,235,0.2)':'#e5e7ef'}`, background:addMeetLink?'rgba(37,99,235,0.05)':'transparent', cursor:'pointer' }}>
                     <div style={{ width:32, height:18, borderRadius:9, background:addMeetLink?'var(--orange)':'#d0d0d8', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
                       <div style={{ position:'absolute', top:3, left:addMeetLink?15:3, width:12, height:12, borderRadius:'50%', background:'var(--surface)', transition:'left 0.18s' }} />
                     </div>
@@ -352,7 +352,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
           <div style={{ padding:'14px 20px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'flex-end', gap:10, flexShrink:0 }}>
             <button onClick={onClose} style={{ padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--surface)', color:'var(--muted)', fontSize:13, fontWeight:500, cursor:'pointer' }}>Cancel</button>
             <button onClick={handleSchedule} disabled={saving}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity:saving?0.7:1 }}>
+              style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity:saving?0.7:1 }}>
               {saving ? <Loader size={14} style={{ animation:'spin 0.7s linear infinite' }} /> : <Calendar size={14} />}
               {saving ? 'Scheduling…' : 'Schedule Meeting'}
             </button>

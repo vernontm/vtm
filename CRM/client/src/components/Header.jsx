@@ -19,7 +19,6 @@ const PAGE_META = {
   '/employees':                   { title: 'Employees',           sub: 'Team accounts & access' },
   '/email':                       { title: 'Email',               sub: 'Inbox & communications' },
   '/meetings':                    { title: 'Meetings',            sub: 'Schedule & recordings' },
-  '/invoices':                    { title: 'Invoices',            sub: 'Billing & payments' },
   '/quick-notes':                 { title: 'Quick Notes',         sub: 'Thoughts & reminders' },
   '/notifications':               { title: 'Notifications',       sub: 'Alerts & activity' },
   '/blog':                        { title: 'Blog',                sub: 'Content & publishing' },
@@ -149,7 +148,7 @@ export default function Header() {
                   fontFamily: 'var(--font-display)', fontWeight: 600,
                   maxWidth: 220,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,155,38,0.4)'; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(37,99,235,0.4)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
               >
                 {selectedClient.logo_url ? (
@@ -262,7 +261,7 @@ export default function Header() {
               fontFamily: 'var(--font-display)', transition: 'border-color 0.15s, color 0.15s',
               whiteSpace: 'nowrap',
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,155,38,0.4)'; e.currentTarget.style.color = 'var(--text)'; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(37,99,235,0.4)'; e.currentTarget.style.color = 'var(--text)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
           >
             <Search size={13} style={{ flexShrink: 0 }} />
@@ -280,7 +279,7 @@ export default function Header() {
             onClick={() => navigate('/notifications')}
             title="Notifications"
             style={{ ...iconBtn, position: 'relative' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,155,38,0.4)'; e.currentTarget.style.color = 'var(--text)'; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(37,99,235,0.4)'; e.currentTarget.style.color = 'var(--text)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
           >
             <Bell size={14} />
@@ -303,7 +302,7 @@ export default function Header() {
             onClick={handleRefresh}
             title="Refresh all data"
             style={iconBtn}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,155,38,0.4)'; e.currentTarget.style.color = 'var(--text)'; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(37,99,235,0.4)'; e.currentTarget.style.color = 'var(--text)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
           >
             <RefreshCw

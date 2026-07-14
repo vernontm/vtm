@@ -85,7 +85,7 @@ function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
             style={{
               display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px',
               borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-              background: item.visible ? 'rgba(255,155,38,0.1)' : 'rgba(255,92,92,0.1)',
+              background: item.visible ? 'rgba(37,99,235,0.1)' : 'rgba(255,92,92,0.1)',
               color: item.visible ? 'var(--orange)' : '#f87171',
             }}
           >
@@ -321,7 +321,7 @@ function EditModal({ item, onClose, onSave }) {
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
                 fontSize: 12, fontWeight: 600, border: 'none',
-                background: form.visible ? 'rgba(255,155,38,0.08)' : '#ff5c5c10',
+                background: form.visible ? 'rgba(37,99,235,0.08)' : '#ff5c5c10',
                 color: form.visible ? 'var(--orange)' : '#ff5c5c',
               }}
             >

@@ -821,7 +821,7 @@ export default function GlobalAgent() {
         <button onClick={() => handleSend()} disabled={(!input.trim() && attachments.length === 0) || loading} style={{
           padding: '7px 12px', borderRadius: 8, border: 'none',
           cursor: (input.trim() || attachments.length) && !loading ? 'pointer' : 'default',
-          background: (input.trim() || attachments.length) && !loading ? 'linear-gradient(135deg, var(--orange), #ffb347)' : 'var(--surface-3)',
+          background: (input.trim() || attachments.length) && !loading ? 'linear-gradient(135deg, var(--orange), #2563eb)' : 'var(--surface-3)',
           color: (input.trim() || attachments.length) && !loading ? '#fff' : 'var(--muted)',
           fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
         }}>

@@ -206,7 +206,7 @@ export default function AcademySettings() {
             </div>
           )}
 
-          <div style={{ ...cardStyle, background: 'rgba(255,155,38,0.05)' }}>
+          <div style={{ ...cardStyle, background: 'rgba(37,99,235,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Info size={16} color="var(--orange)" />
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Configuration Note</span>

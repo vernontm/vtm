@@ -1271,7 +1271,7 @@ export default function ContentScheduler() {
                 style={{
                   ...cardStyle, padding: '20px 24px', cursor: 'pointer',
                   border: bulkDragOver ? '2px dashed var(--orange)' : '2px dashed rgba(255,255,255,0.15)',
-                  background: bulkDragOver ? 'rgba(255,155,38,0.06)' : 'var(--surface-2)',
+                  background: bulkDragOver ? 'rgba(37,99,235,0.06)' : 'var(--surface-2)',
                   display: 'flex', alignItems: 'center', gap: 16,
                   transition: 'all 0.2s',
                 }}

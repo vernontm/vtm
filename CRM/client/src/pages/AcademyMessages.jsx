@@ -143,7 +143,7 @@ export default function AcademyMessages() {
   return (
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <MessageSquare size={18} color="var(--orange)" />
         </div>
         <h1 style={headingStyle}>Student Messages</h1>
@@ -173,7 +173,7 @@ export default function AcademyMessages() {
                   onClick={() => selectThread(t)}
                   style={{
                     padding: '14px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f1f5',
-                    background: isSelected ? 'rgba(255,155,38,0.05)' : 'var(--surface)',
+                    background: isSelected ? 'rgba(37,99,235,0.05)' : 'var(--surface)',
                     borderLeft: isSelected ? '3px solid var(--orange)' : '3px solid transparent',
                   }}
                 >

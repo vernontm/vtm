@@ -56,7 +56,6 @@ import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
 import MeetingDetail from './pages/MeetingDetail';
 import Notifications from './pages/Notifications';
-import Invoices from './pages/Invoices';
 import QuickNotes from './pages/QuickNotes';
 import Blog from './pages/Blog';
 import EmailPage from './pages/Email';
@@ -143,7 +142,6 @@ function AppLayout() {
               <Route path="/meetings/:eventId" element={<Gated slug="meetings"><MeetingDetail /></Gated>} />
               <Route path="/meetings" element={<Gated slug="meetings"><Meetings /></Gated>} />
               <Route path="/notifications" element={<Notifications />} />
-              <Route path="/invoices" element={<Gated slug="invoices"><Invoices /></Gated>} />
               <Route path="/quick-notes" element={<Gated slug="quick-notes"><QuickNotes /></Gated>} />
               <Route path="/blog" element={<Gated slug="blog"><Blog /></Gated>} />
               <Route path="/email" element={<Gated slug="email"><EmailPage /></Gated>} />

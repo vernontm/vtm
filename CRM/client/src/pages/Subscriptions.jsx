@@ -15,7 +15,7 @@ const STATUS_OPTIONS = ['active','paused','cancelled'];
 const CATEGORY_COLORS = {
   software:'var(--orange)', hosting:'#22c55e', marketing:'#f5a623', productivity:'#784bd1',
   communication:'#00b8d4', storage:'#6e8efb', security:'#ff5c5c', entertainment:'#e91e8c',
-  finance:'#ff6b35', other:'#8e8ea0',
+  finance:'#2563eb', other:'#8e8ea0',
 };
 
 function fmtDate(iso) {
@@ -139,7 +139,7 @@ export default function SubscriptionsPage() {
             <Scan size={13} style={{ animation:scanning?'spin 1s linear infinite':'none' }} /> {scanning ? 'Scanning emails...' : 'Scan Gmail'}
           </button>
           <button onClick={() => { setShowAdd(true); setEditing(null); setForm({ service:'', amount:'', billing_cycle:'monthly', next_renewal:'', category:'software', status:'active', notes:'' }); }}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:12, fontWeight:600 }}>
+            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:12, fontWeight:600 }}>
             <Plus size={13} /> Add Subscription
           </button>
         </div>
@@ -191,7 +191,7 @@ export default function SubscriptionsPage() {
         {['all','active','paused','cancelled'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{ padding:'6px 14px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', border:'1px solid', textTransform:'capitalize',
-              background: filter===f ? 'rgba(255,155,38,0.1)' : 'var(--surface-2)', color: filter===f ? 'var(--orange)' : 'var(--muted)', borderColor: filter===f ? 'rgba(255,155,38,0.3)' : 'var(--border)' }}>
+              background: filter===f ? 'rgba(37,99,235,0.1)' : 'var(--surface-2)', color: filter===f ? 'var(--orange)' : 'var(--muted)', borderColor: filter===f ? 'rgba(37,99,235,0.3)' : 'var(--border)' }}>
             {f}
           </button>
         ))}
@@ -325,7 +325,7 @@ export default function SubscriptionsPage() {
               <button onClick={() => { setShowAdd(false); setEditing(null); }}
                 style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'var(--surface)', border:'1px solid var(--border)', color:'var(--muted)', fontSize:13, fontWeight:500 }}>Cancel</button>
               <button onClick={handleSave}
-                style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#ee7c1a)', border:'none', color:'#fff', fontSize:13, fontWeight:600 }}>
+                style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:13, fontWeight:600 }}>
                 {editing ? 'Update' : 'Add'} Subscription
               </button>
             </div>

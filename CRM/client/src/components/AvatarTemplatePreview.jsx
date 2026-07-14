@@ -178,7 +178,7 @@ export default function AvatarTemplatePreview({ avatar, draft, previewWidth = 24
           }}>
             {words.map((wd, i) => (
               <span key={i} style={{
-                color: i === 0 ? (cap.highlight || '#ff9b26') : (cap.color || '#FFFFFF'),
+                color: i === 0 ? (cap.highlight || '#2563eb') : (cap.color || '#FFFFFF'),
                 marginRight: i < words.length - 1 ? '0.35em' : 0,
               }}>{wd}</span>
             ))}

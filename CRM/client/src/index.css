@@ -4,10 +4,11 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Orange accent — kept for small status accents (dots, thin bars, chips),
-     but primary buttons and prominent links now use near-black (see below). */
-  --orange:      #ff9b26;
-  --orange-dark: #ee4c27;
+  /* Brand accent — now BLUE (was orange). Token name kept as --orange so the
+     ~40 files that reference var(--orange) all pick up the new color. Used for
+     accents/chips/active states; primary buttons stay near-black. */
+  --orange:      #2563eb;
+  --orange-dark: #1d4ed8;
 
   /* Near-black used for primary buttons + former-orange interactive text/links.
      Ray asked to drop the bright-orange buttons/text in favor of black. */
@@ -40,9 +41,9 @@
   --font-body:    'DM Sans', sans-serif;
 
   /* Legacy aliases */
-  --accent:      #ff9b26;
-  --accent-dim:  rgba(255,155,38,0.10);
-  --accent-mid:  rgba(255,155,38,0.20);
+  --accent:      #2563eb;
+  --accent-dim:  rgba(37,99,235,0.10);
+  --accent-mid:  rgba(37,99,235,0.20);
   --text-muted:  #6b7280;
 
   /* Sidebar (stays dark; white text) */
@@ -104,7 +105,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display); color: var(--text); background: var(--surface-2);
   transition: border-color 0.15s, background 0.15s;
 }
-.btn-secondary:hover { border-color: rgba(255,155,38,0.35); background: var(--surface-3); }
+.btn-secondary:hover { border-color: rgba(37,99,235,0.35); background: var(--surface-3); }
 
 .btn-ghost {
   display: inline-flex; align-items: center; gap: 6px;
@@ -137,7 +138,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Focus outline (replace browser blue with orange) ───────────────────────── */
 *:focus-visible {
-  outline: 2px solid rgba(255,155,38,0.5);
+  outline: 2px solid rgba(37,99,235,0.5);
   outline-offset: 2px;
 }
 button:focus, input:focus, select:focus, textarea:focus {
@@ -155,7 +156,7 @@ button:focus, input:focus, select:focus, textarea:focus {
   box-shadow: var(--shadow-sm);
   transition: border-color 0.15s;
 }
-.card:hover { border-color: rgba(255,155,38,0.3); }
+.card:hover { border-color: rgba(37,99,235,0.3); }
 
 /* Stat tile — icon-in-tinted-square + big tabular number, for dashboard-style
    summary cards. Tint the icon square with the accent's own color at low
@@ -180,15 +181,15 @@ button:focus, input:focus, select:focus, textarea:focus {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 14px; margin: 1px 8px;
   border-radius: 10px; border: 1px solid transparent;
-  color: var(--side-text); font-size: 13px; font-weight: 600;
+  color: var(--side-text); font-size: 13px; font-weight: 400;
   font-family: var(--font-display); text-decoration: none;
   transition: background 0.15s, color 0.15s, border-color 0.15s; cursor: pointer;
 }
 .sidebar-item:hover { background: var(--side-hover); color: #fff; }
 .sidebar-item.active {
-  background: rgba(255,155,38,0.14);
-  box-shadow: inset 0 0 0 1px rgba(255,155,38,0.4);
-  border-color: transparent; color: #ffb055; font-weight: 700;
+  background: rgba(37,99,235,0.14);
+  box-shadow: inset 0 0 0 1px rgba(37,99,235,0.4);
+  border-color: transparent; color: #60a5fa; font-weight: 500;
 }
 
 /* ── Main / App Layout ──────────────────────────────────────────────────────── */
@@ -277,7 +278,7 @@ tr:hover td { background: var(--surface-2); }
   font-family: var(--font-display); transition: border-color 0.15s, box-shadow 0.15s;
 }
 .search-input:focus {
-  border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,155,38,0.15);
+  border-color: var(--orange); box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 .search-input::placeholder { color: var(--muted); }
 
@@ -302,7 +303,7 @@ input[type="text"]:focus, input[type="email"]:focus,
 input[type="password"]:focus, input[type="number"]:focus,
 input[type="search"]:focus, input[type="url"]:focus,
 textarea:focus, select:focus {
-  border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,155,38,0.15);
+  border-color: var(--orange); box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 .form-select { appearance: none; cursor: pointer; }
 ::placeholder { color: var(--muted); opacity: 1; }
@@ -346,7 +347,7 @@ textarea:focus, select:focus {
 .pill-red    { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
 .pill-yellow { background: rgba(234,179,8,0.12);  color: #facc15; border: 1px solid rgba(234,179,8,0.2); }
 .pill-blue   { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
-.pill-orange { background: rgba(255,155,38,0.12); color: var(--orange); border: 1px solid rgba(255,155,38,0.25); }
+.pill-orange { background: rgba(37,99,235,0.12); color: var(--orange); border: 1px solid rgba(37,99,235,0.25); }
 .pill-muted  { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
 
 /* ── Dropdown menus ─────────────────────────────────────────────────────────── */
@@ -467,7 +468,7 @@ textarea:focus, select:focus {
 .email-detail-header { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .email-detail-content { font-size: 14px; line-height: 1.7; color: var(--text); font-family: var(--font-body); }
 .email-draft-banner {
-  background: rgba(255,155,38,0.08); border-bottom: 1px solid rgba(255,155,38,0.2);
+  background: rgba(37,99,235,0.08); border-bottom: 1px solid rgba(37,99,235,0.2);
   padding: 10px 16px; font-size: 12px; color: var(--orange); font-family: var(--font-display);
 }
 .email-trash-btn {

@@ -26,7 +26,7 @@ import { toast } from '../components/Toast';
 const STAGES = [
   { key: 'lead',            label: 'Lead',            color: '#8a8a8a' },
   { key: 'onboarding',      label: 'Onboarding Call', color: '#f5a623' },
-  { key: 'awaiting_access', label: 'Awaiting Access', color: '#ff9b26' },
+  { key: 'awaiting_access', label: 'Awaiting Access', color: '#2563eb' },
   { key: 'scoping',         label: 'Scoping',         color: '#784bd1' },
   { key: 'plan_review',     label: 'Plan Review',     color: '#3b82f6' },
   { key: 'in_build',        label: 'In Progress',     color: '#22c55e' },
@@ -48,7 +48,22 @@ const NOTE_TAGS = { Important: '#f5a623', Call: '#3b82f6', Meeting: '#784bd1', U
 const CALL_OUTCOMES = ['Connected', 'No answer', 'Left voicemail', 'Booked meeting', 'Not interested', 'Follow up'];
 const TASK_PRIORITY = { low: '#8a8a8a', medium: '#3b82f6', high: '#f5a623', urgent: '#ff5c5c' };
 
-const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'Walk-in', client_type: [], notes: '', stage: 'lead', firstNote: '' };
+// Lead pipeline temperature + ranking (leads only). Temperature is the pipeline
+// stage in the funnel; rank is how strong/priority the lead is.
+const TEMPERATURES = [
+  { key: 'hot',  label: 'Hot',  color: '#dc2626' },
+  { key: 'warm', label: 'Warm', color: '#f5a623' },
+  { key: 'cold', label: 'Cold', color: '#2563eb' },
+];
+const tempOf = (k) => TEMPERATURES.find(t => t.key === k) || TEMPERATURES[1];
+const RANKS = [
+  { key: 'high',   label: 'High',   color: '#16a34a' },
+  { key: 'medium', label: 'Medium', color: '#f5a623' },
+  { key: 'low',    label: 'Low',    color: '#8a8a8a' },
+];
+const rankOf = (k) => RANKS.find(r => r.key === k) || RANKS[1];
+
+const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'Walk-in', client_type: [], notes: '', stage: 'lead', lead_temperature: 'warm', lead_rank: 'medium', firstNote: '' };
 
 function StageBadge({ stage }) {
   const s = stageOf(stage);
@@ -60,6 +75,25 @@ function StageBadge({ stage }) {
     }}>
       {s.label}
     </span>
+  );
+}
+
+// A colored pill that opens a small dropdown to change value (temperature/rank).
+function PillSelect({ value, options, onChange, minWidth = 74 }) {
+  const cur = options.find(o => o.key === value) || options[0];
+  return (
+    <select
+      value={cur.key}
+      onClick={e => e.stopPropagation()}
+      onChange={e => { e.stopPropagation(); onChange(e.target.value); }}
+      style={{
+        appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', minWidth,
+        padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-display)',
+        color: cur.color, background: `${cur.color}18`, border: `1px solid ${cur.color}40`, textAlign: 'center',
+      }}
+    >
+      {options.map(o => <option key={o.key} value={o.key} style={{ color: 'var(--text)', background: 'var(--surface)' }}>{o.label}</option>)}
+    </select>
   );
 }
 
@@ -79,7 +113,12 @@ export default function Clients({ kind = 'client' }) {
   const [form, setForm] = useState(EMPTY_CLIENT);
   const [selected, setSelected] = useState(null); // client being viewed
   const [deleteTarget, setDeleteTarget] = useState(null); // client pending delete confirmation
+  const [selectedIds, setSelectedIds] = useState(new Set()); // row checkboxes
+  const [tempFilter, setTempFilter] = useState('all'); // leads pipeline filter
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const toggleSelectId = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const clearSelection = () => setSelectedIds(new Set());
 
   const load = async () => {
     setLoadError('');
@@ -88,8 +127,8 @@ export default function Clients({ kind = 'client' }) {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
-  // Reset the open detail view when switching between /leads and /clients.
-  useEffect(() => { setSelected(null); }, [kind]);
+  // Reset the open detail view + selection when switching between /leads and /clients.
+  useEffect(() => { setSelected(null); clearSelection(); setTempFilter('all'); }, [kind]);
 
   // Deep-link support: /clients?open=<id> (used by Dashboard links) opens a
   // specific record directly, regardless of whether it's a lead or client.
@@ -102,15 +141,41 @@ export default function Clients({ kind = 'client' }) {
     setSearchParams(searchParams, { replace: true });
   }, [searchParams, clients]);
 
+  const scoped = useMemo(() =>
+    clients.filter(c => isLeadView ? c.stage === 'lead' : c.stage !== 'lead'),
+    [clients, isLeadView]
+  );
+
   const filtered = useMemo(() =>
-    clients
-      .filter(c => isLeadView ? c.stage === 'lead' : c.stage !== 'lead')
+    scoped
+      .filter(c => !isLeadView || tempFilter === 'all' || (c.lead_temperature || 'warm') === tempFilter)
       .filter(c => !search ||
         (c.business_name || '').toLowerCase().includes(search.toLowerCase()) ||
         (c.owner_name || '').toLowerCase().includes(search.toLowerCase()) ||
         (c.industry || '').toLowerCase().includes(search.toLowerCase())),
-    [clients, search, isLeadView]
+    [scoped, search, isLeadView, tempFilter]
   );
+
+  // Persist a temperature / rank change on a lead (optimistic).
+  const patchLead = async (id, patch) => {
+    setClients(cs => cs.map(c => c.id === id ? { ...c, ...patch } : c));
+    try { await updateClient(id, patch); } catch (e) { toast('error', e.message); }
+  };
+  const bulkSetTemp = async (temp) => {
+    const ids = [...selectedIds];
+    setClients(cs => cs.map(c => selectedIds.has(c.id) ? { ...c, lead_temperature: temp } : c));
+    clearSelection();
+    try { await Promise.all(ids.map(id => updateClient(id, { lead_temperature: temp }))); }
+    catch (e) { toast('error', e.message); }
+  };
+  const bulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (!ids.length || !window.confirm(`Delete ${ids.length} ${noun.toLowerCase()}${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    setClients(cs => cs.filter(c => !selectedIds.has(c.id)));
+    clearSelection();
+    try { await Promise.all(ids.map(id => deleteClient(id))); }
+    catch (e) { toast('error', e.message); load(); }
+  };
 
   const openAdd = () => { setForm({ ...EMPTY_CLIENT, stage: isLeadView ? 'lead' : 'onboarding' }); setModal('add'); };
   const handleCreate = async () => {
@@ -162,11 +227,30 @@ export default function Clients({ kind = 'client' }) {
   // ── List view ────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 24px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
           <input className="search-input" placeholder={`Search ${isLeadView ? 'leads' : 'clients'}…`} value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
+        {/* Leads pipeline filter (cold / warm / hot) */}
+        {isLeadView && (
+          <div style={{ display: 'inline-flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, gap: 2 }}>
+            {[{ key: 'all', label: 'All', color: 'var(--text)' }, ...TEMPERATURES].map(t => {
+              const count = t.key === 'all' ? scoped.length : scoped.filter(c => (c.lead_temperature || 'warm') === t.key).length;
+              const on = tempFilter === t.key;
+              return (
+                <button key={t.key} onClick={() => setTempFilter(t.key)} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)',
+                  background: on ? 'var(--surface)' : 'transparent', color: on ? (t.color === 'var(--text)' ? 'var(--text)' : t.color) : 'var(--muted)',
+                  boxShadow: on ? 'var(--shadow-sm)' : 'none',
+                }}>
+                  {t.label}<span style={{ fontSize: 11, color: 'var(--muted)' }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {loadError && (
@@ -176,13 +260,41 @@ export default function Clients({ kind = 'client' }) {
         </div>
       )}
 
+      {/* Bulk selection bar */}
+      {selectedIds.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 24px', background: 'rgba(37,99,235,0.08)', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{selectedIds.size} selected</span>
+          {isLeadView && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Set temperature:</span>
+              {TEMPERATURES.map(t => (
+                <button key={t.key} onClick={() => bulkSetTemp(t.key)} style={{
+                  padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  color: t.color, background: `${t.color}18`, border: `1px solid ${t.color}40`,
+                }}>{t.label}</button>
+              ))}
+            </div>
+          )}
+          <button onClick={bulkDelete} className="btn-ghost" style={{ padding: '5px 12px', color: '#ff5c5c', borderColor: '#ff5c5c55' }}><Trash2 size={13} /> Delete</button>
+          <button onClick={clearSelection} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Clear</button>
+        </div>
+      )}
+
       <div className="table-container desktop-table">
         <table>
           <thead>
             <tr>
+              <th style={{ width: 34 }}>
+                <input type="checkbox"
+                  checked={filtered.length > 0 && filtered.every(c => selectedIds.has(c.id))}
+                  onChange={e => setSelectedIds(e.target.checked ? new Set(filtered.map(c => c.id)) : new Set())}
+                  style={{ cursor: 'pointer', accentColor: 'var(--orange)' }} />
+              </th>
               <th style={{ minWidth: 220 }}>Business</th>
               <th style={{ minWidth: 160 }}>Owner</th>
-              <th style={{ minWidth: 150 }}>Stage</th>
+              {isLeadView
+                ? <><th style={{ minWidth: 110 }}>Temperature</th><th style={{ minWidth: 100 }}>Rank</th></>
+                : <th style={{ minWidth: 150 }}>Stage</th>}
               <th style={{ minWidth: 130 }}>Source</th>
               <th style={{ minWidth: 150 }}>Type</th>
               <th style={{ minWidth: 120 }}>Added</th>
@@ -191,11 +303,14 @@ export default function Clients({ kind = 'client' }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No {isLeadView ? 'leads' : 'clients'} yet.</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No {isLeadView ? 'leads' : 'clients'} yet.</td></tr>
             ) : filtered.map(c => (
-              <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(c)}>
+              <tr key={c.id} style={{ cursor: 'pointer', background: selectedIds.has(c.id) ? 'rgba(37,99,235,0.06)' : undefined }} onClick={() => setSelected(c)}>
+                <td onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelectId(c.id)} style={{ cursor: 'pointer', accentColor: 'var(--orange)' }} />
+                </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
@@ -205,12 +320,19 @@ export default function Clients({ kind = 'client' }) {
                   </div>
                 </td>
                 <td style={{ color: 'var(--muted)' }}>{c.owner_name || '—'}</td>
-                <td><StageBadge stage={c.stage} /></td>
+                {isLeadView ? (
+                  <>
+                    <td onClick={e => e.stopPropagation()}><PillSelect value={c.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => patchLead(c.id, { lead_temperature: v })} /></td>
+                    <td onClick={e => e.stopPropagation()}><PillSelect value={c.lead_rank || 'medium'} options={RANKS} onChange={v => patchLead(c.id, { lead_rank: v })} /></td>
+                  </>
+                ) : (
+                  <td><StageBadge stage={c.stage} /></td>
+                )}
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.source || '—'}</td>
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(c.client_type || []).join(', ') || '—'}</td>
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
                 <td onClick={e => e.stopPropagation()}>
-                  <button className="btn-ghost" style={{ padding: '5px 7px', color: '#ff5c5c' }} onClick={() => setDeleteTarget(c)} title="Delete client"><Trash2 size={14} /></button>
+                  <button className="btn-ghost" style={{ padding: '5px 7px', color: '#ff5c5c' }} onClick={() => setDeleteTarget(c)} title={`Delete ${noun.toLowerCase()}`}><Trash2 size={14} /></button>
                 </td>
               </tr>
             ))}
@@ -221,18 +343,26 @@ export default function Clients({ kind = 'client' }) {
       {/* Mobile cards */}
       <div className="mobile-cards">
         {!loading && filtered.map(c => (
-          <div key={c.id} className="mobile-card" onClick={() => setSelected(c)} style={{ cursor: 'pointer', position: 'relative' }}>
-            <div className="mobile-card-row primary">
+          <div key={c.id} className="mobile-card" onClick={() => setSelected(c)} style={{ cursor: 'pointer', position: 'relative', border: selectedIds.has(c.id) ? '1px solid var(--orange)' : undefined }}>
+            <div className="mobile-card-row primary" style={{ gap: 8 }}>
+              <input type="checkbox" checked={selectedIds.has(c.id)} onClick={e => e.stopPropagation()} onChange={() => toggleSelectId(c.id)} style={{ accentColor: 'var(--orange)' }} />
               <Building2 size={14} style={{ color: 'var(--orange)' }} />
               <span>{c.business_name || '—'}</span>
             </div>
-            <div className="mobile-card-row"><StageBadge stage={c.stage} /></div>
+            {isLeadView ? (
+              <div className="mobile-card-row" style={{ gap: 8 }} onClick={e => e.stopPropagation()}>
+                <PillSelect value={c.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => patchLead(c.id, { lead_temperature: v })} />
+                <PillSelect value={c.lead_rank || 'medium'} options={RANKS} onChange={v => patchLead(c.id, { lead_rank: v })} />
+              </div>
+            ) : (
+              <div className="mobile-card-row"><StageBadge stage={c.stage} /></div>
+            )}
             {c.owner_name && <div className="mobile-card-row">{c.owner_name}</div>}
             <button
               className="btn-ghost"
               style={{ position: 'absolute', top: 10, right: 10, padding: '5px 7px', color: '#ff5c5c' }}
               onClick={e => { e.stopPropagation(); setDeleteTarget(c); }}
-              title="Delete client"
+              title={`Delete ${noun.toLowerCase()}`}
             ><Trash2 size={14} /></button>
           </div>
         ))}
@@ -268,6 +398,22 @@ export default function Clients({ kind = 'client' }) {
               </select>
             </div>
           </div>
+          {isLeadView && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Temperature</label>
+                <select className="form-input" value={form.lead_temperature} onChange={e => setForm(f => ({ ...f, lead_temperature: e.target.value }))}>
+                  {TEMPERATURES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Rank</label>
+                <select className="form-input" value={form.lead_rank} onChange={e => setForm(f => ({ ...f, lead_rank: e.target.value }))}>
+                  {RANKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
           <div className="form-group">
             <label className="form-label">Interested in</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -276,7 +422,7 @@ export default function Clients({ kind = 'client' }) {
                 return (
                   <button type="button" key={t} onClick={() => setForm(f => ({ ...f, client_type: on ? f.client_type.filter(x => x !== t) : [...(f.client_type || []), t] }))}
                     style={{ padding: '7px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                      border: on ? '1.5px solid var(--orange)' : '1.5px solid var(--border)', background: on ? 'rgba(255,155,38,0.12)' : 'var(--surface)', color: on ? 'var(--orange)' : 'var(--text)' }}>{t}</button>
+                      border: on ? '1.5px solid var(--orange)' : '1.5px solid var(--border)', background: on ? 'rgba(37,99,235,0.12)' : 'var(--surface)', color: on ? 'var(--orange)' : 'var(--text)' }}>{t}</button>
                 );
               })}
             </div>
@@ -338,7 +484,7 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
             <span style={{ fontSize: 13, color: 'var(--muted)' }}>{client.owner_name || 'No owner set'}</span>
             {(client.client_type || []).map(t => (
-              <span key={t} style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(255,155,38,0.12)', border: '1px solid rgba(255,155,38,0.3)', borderRadius: 999, padding: '1px 8px' }}>{t}</span>
+              <span key={t} style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 999, padding: '1px 8px' }}>{t}</span>
             ))}
           </div>
         </div>

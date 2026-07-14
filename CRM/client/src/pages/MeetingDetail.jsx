@@ -564,7 +564,7 @@ export default function MeetingDetail() {
                             )}
                           </div>
                           {linkedLead && (
-                            <span className="private-value" style={{ fontSize: 11, background: 'rgba(255,155,38,0.1)', color: 'var(--orange)', padding: '2px 8px', borderRadius: 8, border: '1px solid var(--orange)40' }}>
+                            <span className="private-value" style={{ fontSize: 11, background: 'rgba(37,99,235,0.1)', color: 'var(--orange)', padding: '2px 8px', borderRadius: 8, border: '1px solid var(--orange)40' }}>
                               {linkedLead.name}
                             </span>
                           )}
@@ -591,7 +591,7 @@ export default function MeetingDetail() {
                         to={`/leads?search=${encodeURIComponent(lead.name || lead.email || '')}`}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', padding: '10px 14px', background: '#1a1d2e', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 6 }}
                       >
-                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,155,38,0.13)', border: '1px solid var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(37,99,235,0.13)', border: '1px solid var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
                           {(lead.name || lead.email || '?')[0].toUpperCase()}
                         </div>
                         <div>

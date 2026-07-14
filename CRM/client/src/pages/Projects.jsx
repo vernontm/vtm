@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink } from 'lucide-react';
-import { getProjects, createProject, updateProject, deleteProject, getProjectItems, createProjectItem, updateProjectItem, deleteProjectItem } from '../api';
+import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink, Receipt, Loader, Check } from 'lucide-react';
+import { getProjects, createProject, updateProject, deleteProject, getProjectItems, createProjectItem, updateProjectItem, deleteProjectItem, createProjectInvoice } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
@@ -88,6 +88,8 @@ function Card({ title, children, style }) {
 function ProjectDetail({ project, onBack, onPatch, onDelete }) {
   const [items, setItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(true);
+  const [invoiceEmail, setInvoiceEmail] = useState('');
+  const [invoicing, setInvoicing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +123,21 @@ function ProjectDetail({ project, onBack, onPatch, onDelete }) {
     setItems(its => its.filter(it => it.id !== itemId));
     try { await deleteProjectItem(itemId); }
     catch (e) { toast('error', e.message); }
+  };
+
+  const sendInvoice = async () => {
+    const oneTime = project.billing_type === 'monthly' ? 0 : (project.value || 0);
+    const monthly = project.billing_type === 'one_time' ? 0 : (project.recurring_amount || 0);
+    if (oneTime <= 0 && monthly <= 0) { toast('error', 'Set a price on this project first.'); return; }
+    const parts = [oneTime > 0 ? `$${Number(oneTime).toLocaleString()} one-time` : null, monthly > 0 ? `$${Number(monthly).toLocaleString()}/mo` : null].filter(Boolean).join(' + ');
+    if (!window.confirm(`Create & send a Stripe invoice for ${parts} to ${invoiceEmail || 'the linked client'}?`)) return;
+    setInvoicing(true);
+    try {
+      const r = await createProjectInvoice(project.id, { email: invoiceEmail.trim(), name: project.client });
+      onPatch({ invoice_status: 'sent', stripe_invoice_url: r.invoiceUrl || project.stripe_invoice_url });
+      toast('success', 'Invoice created and sent via Stripe.');
+    } catch (e) { toast('error', e.message); }
+    finally { setInvoicing(false); }
   };
 
   return (
@@ -226,8 +243,47 @@ function ProjectDetail({ project, onBack, onPatch, onDelete }) {
               </div>
             </div>
           </Card>
+
+          {/* Invoicing — set the price above, then bill through Stripe */}
+          <Card title="Invoicing">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>
+                Billing this project:{' '}
+                <strong style={{ color: 'var(--text)' }}>
+                  {project.billing_type !== 'monthly' && project.value > 0 ? `$${Number(project.value).toLocaleString()} one-time` : ''}
+                  {project.billing_type !== 'one_time' && project.recurring_amount > 0 ? `${project.billing_type !== 'monthly' && project.value > 0 ? ' + ' : ''}$${Number(project.recurring_amount).toLocaleString()}/mo` : ''}
+                  {(!project.value && !project.recurring_amount) ? 'no price set' : ''}
+                </strong>
+              </div>
+
+              {project.invoice_status === 'sent' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#16a34a', fontWeight: 700 }}>
+                  <Check size={14} /> Invoice sent via Stripe
+                  {project.stripe_invoice_url && (
+                    <a href={project.stripe_invoice_url} target="_blank" rel="noreferrer" style={{ color: 'var(--orange)', marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+                      View <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Billing email</span>
+                    <input className="form-input" type="email" value={invoiceEmail} onChange={e => setInvoiceEmail(e.target.value)} placeholder="client@business.com (defaults to linked client)" />
+                  </div>
+                  <button className="btn-primary" onClick={sendInvoice} disabled={invoicing} style={{ justifyContent: 'center' }}>
+                    {invoicing ? <><Loader size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Sending…</> : <><Receipt size={14} /> Create &amp; send Stripe invoice</>}
+                  </button>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.55 }}>
+                    Stripe emails the client a hosted invoice. Monthly projects also start a recurring subscription billed each month.
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -488,7 +544,7 @@ export default function Projects() {
                     <tr
                       key={project.id}
                       onClick={() => setSelected(project)}
-                      style={{ cursor: 'pointer', background: selectedIds.has(project.id) ? 'rgba(255,155,38,0.08)' : undefined }}
+                      style={{ cursor: 'pointer', background: selectedIds.has(project.id) ? 'rgba(37,99,235,0.08)' : undefined }}
                     >
                       <td onClick={e => e.stopPropagation()}>
                         <input

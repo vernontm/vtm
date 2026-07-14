@@ -31,7 +31,7 @@ export default function Login() {
             width: 64, height: 64, borderRadius: 16,
             background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(255,155,38,0.35)',
+            boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
             overflow: 'hidden',
           }}>
             <img
@@ -60,7 +60,7 @@ export default function Login() {
                 background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
                 fontSize: 14, outline: 'none', fontFamily: 'var(--font-body)',
               }}
-              onFocus={e => { e.target.style.borderColor = 'var(--orange)'; e.target.style.boxShadow = '0 0 0 3px rgba(255,155,38,0.15)'; }}
+              onFocus={e => { e.target.style.borderColor = 'var(--orange)'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.15)'; }}
               onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
@@ -77,7 +77,7 @@ export default function Login() {
                 background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
                 fontSize: 14, outline: 'none', fontFamily: 'var(--font-body)',
               }}
-              onFocus={e => { e.target.style.borderColor = 'var(--orange)'; e.target.style.boxShadow = '0 0 0 3px rgba(255,155,38,0.15)'; }}
+              onFocus={e => { e.target.style.borderColor = 'var(--orange)'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.15)'; }}
               onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
             />
           </div>

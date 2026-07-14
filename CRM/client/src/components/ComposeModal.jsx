@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, PenLine, Search, Loader, RefreshCw, MessageSquare, Send, Zap } from 'lucide-react';
 import { getLeads, createQueueItem, updateQueueItem, syncLeadGmail, generateSingleEmail, getGmailLabels } from '../api';
 
-const SEGMENT_COLORS = { hot: '#fdab3d', warm: '#ff9b26', cold: '#4a4845' };
+const SEGMENT_COLORS = { hot: '#fdab3d', warm: '#2563eb', cold: '#4a4845' };
 const EMAIL_TYPE_OPTIONS = [
   ['cold_outreach',  'Cold Outreach'],
   ['follow_up',      'Follow-Up'],
@@ -229,7 +229,7 @@ export default function ComposeModal({ onClose, onComplete }) {
           position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 2,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PenLine size={16} color="#ff9b26" />
+            <PenLine size={16} color="#2563eb" />
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Compose Email</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 }}>
@@ -297,7 +297,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                 )}
                 {!showSuggestions && toInput.includes('@') && toInput.includes('.') && (
                   <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)' }}>
-                    Sending to: <span style={{ color: '#ff9b26', fontWeight: 600 }}>{toInput}</span> (custom address — not linked to a lead)
+                    Sending to: <span style={{ color: '#2563eb', fontWeight: 600 }}>{toInput}</span> (custom address — not linked to a lead)
                   </div>
                 )}
               </div>
@@ -312,7 +312,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                 <button
                   onClick={handleSync}
                   disabled={syncing}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer', background: '#e8ecf4', border: '1px solid var(--border)', color: '#ff9b26', opacity: syncing ? 0.7 : 1 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer', background: '#e8ecf4', border: '1px solid var(--border)', color: '#2563eb', opacity: syncing ? 0.7 : 1 }}
                 >
                   <RefreshCw size={11} style={{ animation: syncing ? 'spin 0.7s linear infinite' : 'none' }} />
                   {syncing ? 'Syncing…' : 'Sync Gmail'}
@@ -333,7 +333,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                   {/* ── Last Sent card ─────────────────────────────────────── */}
                   {syncResult.hasSent ? (
                     <div style={{ background: '#141e36', border: '1px solid #1e3a5f', borderRadius: 6, padding: '10px 12px' }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: '#ff9b26', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                         📤 Last Sent to Lead
                       </div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 2 }}>
@@ -362,7 +362,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                         <button
                           onClick={() => handleCreateEmail('sent')}
                           disabled={!!generatingFor}
-                          style={genBtnStyle('sent', '#ff9b26', '#1e3a5f')}
+                          style={genBtnStyle('sent', '#2563eb', '#1e3a5f')}
                         >
                           {generatingFor === 'sent'
                             ? <Loader size={11} style={{ animation: 'spin 0.7s linear infinite' }} />
@@ -381,7 +381,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                   {syncResult.hasReply ? (
                     <div style={{ background: '#142018', border: '1px solid #1e4028', borderRadius: 6, padding: '10px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#ff9b26', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                           💬 Their Last Reply
                         </div>
                         {syncResult.thread_message_count && (
@@ -416,7 +416,7 @@ export default function ComposeModal({ onClose, onComplete }) {
                         <button
                           onClick={() => handleCreateEmail('reply')}
                           disabled={!!generatingFor}
-                          style={genBtnStyle('reply', '#ff9b26', '#1e4028')}
+                          style={genBtnStyle('reply', '#2563eb', '#1e4028')}
                         >
                           {generatingFor === 'reply'
                             ? <Loader size={11} style={{ animation: 'spin 0.7s linear infinite' }} />
@@ -438,7 +438,7 @@ export default function ComposeModal({ onClose, onComplete }) {
 
           {/* ── AI-populated indicator ────────────────────────────────────────── */}
           {generatedItemId && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 6, background: '#0f2318', border: '1px solid #1e4028', fontSize: 11, color: '#ff9b26' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 6, background: '#0f2318', border: '1px solid #1e4028', fontSize: 11, color: '#2563eb' }}>
               <Zap size={11} />
               AI-generated — edit the subject and body below, then save.
             </div>
@@ -555,7 +555,7 @@ export default function ComposeModal({ onClose, onComplete }) {
             <button
               onClick={handleSave}
               disabled={saving}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', background: '#ff9b26', border: 'none', color: 'var(--text)', opacity: saving ? 0.7 : 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', background: '#2563eb', border: 'none', color: 'var(--text)', opacity: saving ? 0.7 : 1 }}
             >
               {saving
                 ? <Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} />

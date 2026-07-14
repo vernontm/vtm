@@ -67,7 +67,7 @@ export default function InlineEdit({
     outline: 'none',
     width: '100%',
     minWidth: 80,
-    boxShadow: '0 0 0 2px rgba(255,155,38,0.15)',
+    boxShadow: '0 0 0 2px rgba(37,99,235,0.15)',
   };
 
   if (editing) {

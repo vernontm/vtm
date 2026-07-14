@@ -191,7 +191,7 @@ function CategoriesView({ categories, loading, onOpen, onEdit, onNew, onDelete, 
                 transition: 'all 0.15s',
               }}
               onClick={() => onOpen(cat)}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,155,38,0.3)'}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(37,99,235,0.3)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -403,7 +403,7 @@ function CategoryDetail({ category, resources, loading, onBack, onEditCategory, 
                   <div style={{ fontSize: 28, flexShrink: 0 }}>{r.emoji || '📊'}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(255,155,38,0.12)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{r.tag || 'Resource'}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.12)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{r.tag || 'Resource'}</span>
                       {!r.published && <span style={{ fontSize: 10, color: 'var(--muted)', background: 'var(--surface-2)', borderRadius: 5, padding: '2px 6px' }}>Draft</span>}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>{r.title}</div>

@@ -23,7 +23,6 @@ const PAGE_GROUPS = [
   { label: 'Tools', pages: [
     { slug: 'email',         name: 'Email' },
     { slug: 'meetings',      name: 'Meetings' },
-    { slug: 'invoices',      name: 'Invoices' },
     { slug: 'quick-notes',   name: 'Quick Notes' },
     { slug: 'notifications', name: 'Notifications' },
     { slug: 'settings',      name: 'Settings' },

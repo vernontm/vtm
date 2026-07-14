@@ -439,7 +439,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
               disabled={saving}
               style={{
                 padding: '8px 22px', borderRadius: 8, border: 'none', cursor: saving ? 'wait' : 'pointer',
-                background: saving ? 'var(--surface-3)' : 'linear-gradient(135deg,var(--orange),#ee7c1a)', color: '#fff',
+                background: saving ? 'var(--surface-3)' : 'linear-gradient(135deg,var(--orange),#2563eb)', color: '#fff',
                 fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6,
               }}
             >

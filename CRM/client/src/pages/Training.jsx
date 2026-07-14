@@ -10,11 +10,11 @@ import { useTeam } from '../context/TeamContext';
 const CATEGORIES = ['General', 'Onboarding', 'Tools', 'Processes', 'Sales', 'Other'];
 
 const CAT_COLORS = {
-  General:    { bg: 'rgba(255,155,38,0.13)', fg: 'var(--orange)' },
+  General:    { bg: 'rgba(37,99,235,0.13)', fg: 'var(--orange)' },
   Onboarding: { bg: '#00d1d122', fg: '#00a8a8' },
   Tools:      { bg: '#784bd122', fg: '#784bd1' },
   Processes:  { bg: '#fdab3d22', fg: '#d97706' },
-  Sales:      { bg: 'rgba(255,155,38,0.13)', fg: '#22c55e' },
+  Sales:      { bg: 'rgba(37,99,235,0.13)', fg: '#22c55e' },
   Other:      { bg: 'var(--border)',   fg: 'var(--muted)' },
 };
 
@@ -64,7 +64,7 @@ function VideoCard({ video, onClick, onEdit, onDelete, isOwner }) {
         overflow: 'hidden', cursor: 'pointer', transition: 'all 0.15s',
         display: 'flex', flexDirection: 'column',
       }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 18px rgba(74,108,247,0.13)'; e.currentTarget.style.borderColor = 'rgba(255,155,38,0.25)'; }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 18px rgba(74,108,247,0.13)'; e.currentTarget.style.borderColor = 'rgba(37,99,235,0.25)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
     >
       {/* Thumbnail */}
@@ -505,7 +505,7 @@ function VideoFormModal({ existing, onClose, onSave }) {
                   onClick={() => fileRef.current.click()}
                   style={{
                     width: '100%', padding: '18px 16px', borderRadius: 10, border: '2px dashed #d1d5db',
-                    background: file ? 'rgba(255,155,38,0.08)' : 'var(--surface-2)', cursor: 'pointer', display: 'flex',
+                    background: file ? 'rgba(37,99,235,0.08)' : 'var(--surface-2)', cursor: 'pointer', display: 'flex',
                     flexDirection: 'column', alignItems: 'center', gap: 6, color: 'var(--muted)',
                     borderColor: file ? 'var(--orange)' : '#d1d5db', transition: 'all 0.15s',
                   }}

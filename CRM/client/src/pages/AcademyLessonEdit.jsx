@@ -338,7 +338,7 @@ export default function AcademyLessonEdit() {
           <button onClick={() => form.course_id ? navigate(`/academy/courses/${form.course_id}/edit`) : navigate('/academy/courses')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
             <ArrowLeft size={18} color="#7a7f9a" />
           </button>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <FileText size={18} color="var(--orange)" />
           </div>
           <h1 style={headingStyle}>Edit Lesson</h1>
@@ -471,7 +471,7 @@ export default function AcademyLessonEdit() {
                           <div style={{ fontSize: 11, color: '#7a7f9a', display: 'flex', gap: 12, marginTop: 2 }}>
                             <span style={{
                               padding: '1px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                              background: 'rgba(255,155,38,0.1)', color: 'var(--orange)', textTransform: 'uppercase',
+                              background: 'rgba(37,99,235,0.1)', color: 'var(--orange)', textTransform: 'uppercase',
                             }}>
                               {item.content_type}
                             </span>

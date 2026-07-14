@@ -989,7 +989,7 @@ function ScriptBrowseRow({ script }) {
         <ChevronRight size={14} color="#8e8ea0" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', flex: 1 }}>📞 {script.title}</span>
         {script.service && (
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(255,155,38,0.12)', color: 'var(--orange)' }}>{script.service}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: 'rgba(37,99,235,0.12)', color: 'var(--orange)' }}>{script.service}</span>
         )}
       </div>
       {expanded && (
@@ -1115,7 +1115,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
           {aiScript && (
             <button
               onClick={() => setShowAi(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: showAi ? 'rgba(255,155,38,0.12)' : '#f5f7fa', border: `1px solid ${showAi ? 'var(--orange)' : '#e5e7ef'}`, color: showAi ? 'var(--orange)' : '#6b7280', transition: 'all 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: showAi ? 'rgba(37,99,235,0.12)' : '#f5f7fa', border: `1px solid ${showAi ? 'var(--orange)' : '#e5e7ef'}`, color: showAi ? 'var(--orange)' : '#6b7280', transition: 'all 0.15s' }}
             >
               {showAi ? '⚡ AI' : '📄 Base'}
             </button>
@@ -1123,7 +1123,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
           <button
             onClick={handlePersonalize}
             disabled={aiLoading}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: aiLoading ? 'wait' : 'pointer', background: '#ff9b2618', border: '1px solid #ff9b2650', color: '#d97706', transition: 'all 0.15s', opacity: aiLoading ? 0.7 : 1 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: aiLoading ? 'wait' : 'pointer', background: '#2563eb18', border: '1px solid #2563eb50', color: '#d97706', transition: 'all 0.15s', opacity: aiLoading ? 0.7 : 1 }}
           >
             {aiLoading ? <><Loader size={10} style={{ animation: 'spin 0.7s linear infinite' }} /> Personalizing…</> : '✨ AI Personalize'}
           </button>
@@ -1138,7 +1138,7 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
 
       {/* AI mode badge */}
       {showAi && aiScript && (
-        <div style={{ padding: '6px 16px', background: 'rgba(255,155,38,0.08)', borderBottom: '1px solid var(--orange)20', fontSize: 11, color: 'var(--orange)', fontWeight: 600 }}>
+        <div style={{ padding: '6px 16px', background: 'rgba(37,99,235,0.08)', borderBottom: '1px solid var(--orange)20', fontSize: 11, color: 'var(--orange)', fontWeight: 600 }}>
           ⚡ AI-personalized for {lead.name || lead.company} — based on their notes & situation
         </div>
       )}
@@ -1832,7 +1832,7 @@ export default function Leads() {
       {/* ── Segment tabs ────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 8, padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
         {[
-          { key: 'inbound', label: 'Inbound', emoji: '📥', accent: 'var(--orange)', accentRaw: '#ff9b26', bg: 'rgba(255,155,38,0.1)', owner: 'Ray' },
+          { key: 'inbound', label: 'Inbound', emoji: '📥', accent: 'var(--orange)', accentRaw: '#2563eb', bg: 'rgba(37,99,235,0.1)', owner: 'Ray' },
           { key: 'cold',    label: 'Cold Calls', emoji: '❄️', accent: '#38bdf8', accentRaw: '#38bdf8', bg: 'rgba(56,189,248,0.1)', owner: 'Stephanie' },
         ].map(seg => {
           const active = activeSegment === seg.key;
@@ -1899,7 +1899,7 @@ export default function Leads() {
               onClick={() => setActiveTab(tab)}
               style={{
                 padding: '8px 14px', borderRadius: '6px 6px 0 0', border: 'none',
-                background: active ? 'rgba(255,155,38,0.1)' : 'transparent',
+                background: active ? 'rgba(37,99,235,0.1)' : 'transparent',
                 color: active ? 'var(--orange)' : 'var(--muted)',
                 fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
                 borderBottom: active ? '2px solid var(--orange)' : '2px solid transparent',
@@ -2009,7 +2009,7 @@ export default function Leads() {
               <tr
                 key={lead.id}
                 style={{
-                  background: selectedIds.has(lead.id) ? 'rgba(255,155,38,0.08)' : undefined,
+                  background: selectedIds.has(lead.id) ? 'rgba(37,99,235,0.08)' : undefined,
                   cursor: 'pointer',
                   position: 'relative',
                 }}
@@ -2184,7 +2184,7 @@ export default function Leads() {
                       {lead.email && (
                         <button aria-label="Add to Email List" onClick={() => setEmailListLead(lead)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--orange)'; e.currentTarget.style.background = 'rgba(255,155,38,0.08)'; }}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--orange)'; e.currentTarget.style.background = 'rgba(37,99,235,0.08)'; }}
                           onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
                         >
                           <ListPlus size={14} />
@@ -2473,7 +2473,7 @@ export default function Leads() {
           <div onClick={() => setScriptsModalOpen(false)} style={{ position: 'absolute', inset: 0 }} />
           <div style={{ position: 'relative', width: 520, maxHeight: '85vh', background: 'var(--surface)', borderRadius: '12px 12px 0 0', boxShadow: '0 -8px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)' }}>
-              <FileText size={16} color="#ff9b26" />
+              <FileText size={16} color="#2563eb" />
               <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', flex: 1 }}>Call Scripts</span>
               <button onClick={() => setScriptsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4 }}>
                 <X size={16} />

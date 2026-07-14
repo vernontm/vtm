@@ -71,7 +71,7 @@ export default function AcademyDashboard() {
   return (
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <LayoutDashboard size={18} color="var(--orange)" />
         </div>
         <h1 style={headingStyle}>Academy Dashboard</h1>
@@ -141,7 +141,7 @@ export default function AcademyDashboard() {
             {recentEnrollments.map((e, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: i % 2 === 0 ? '#f5f7fa' : 'var(--surface)', borderRadius: 8, marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Users size={14} color="var(--orange)" />
                   </div>
                   <div>

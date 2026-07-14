@@ -133,7 +133,7 @@ function InvoiceModal({ deal, contacts, existingInvoices, onClose, onSent }) {
                   <button key={val} onClick={() => setStructure(val)} style={{
                     flex: 1, padding: '9px 0', borderRadius: 8,
                     border: `1px solid ${structure === val ? 'var(--orange)' : '#e5e7ef'}`,
-                    background: structure === val ? 'rgba(255,155,38,0.13)' : 'transparent',
+                    background: structure === val ? 'rgba(37,99,235,0.13)' : 'transparent',
                     color: structure === val ? 'var(--orange)' : '#8e8ea0',
                     cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                   }}>{lbl}</button>
@@ -311,7 +311,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
               <button key={m} onClick={() => setMode(m)} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '5px 12px', fontSize: 12, cursor: 'pointer', border: 'none',
-                background: mode === m ? 'rgba(255,155,38,0.13)' : 'transparent',
+                background: mode === m ? 'rgba(37,99,235,0.13)' : 'transparent',
                 color: mode === m ? 'var(--orange)' : '#8e8ea0',
                 fontWeight: mode === m ? 700 : 400,
                 borderRight: m === 'manual' ? '1px solid var(--border)' : 'none',
@@ -353,7 +353,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
                       <button key={val} onClick={() => setStructure(val)} style={{
                         flex: 1, padding: '9px 0', borderRadius: 8,
                         border: `1px solid ${structure === val ? 'var(--orange)' : '#e5e7ef'}`,
-                        background: structure === val ? 'rgba(255,155,38,0.13)' : 'transparent',
+                        background: structure === val ? 'rgba(37,99,235,0.13)' : 'transparent',
                         color: structure === val ? 'var(--orange)' : '#8e8ea0',
                         cursor: 'pointer', fontSize: 13, fontWeight: structure === val ? 700 : 400,
                       }}>{lbl}</button>
@@ -490,7 +490,7 @@ function ManualInvoiceCreator({ deal, contact, contacts, existingInvoices = [], 
           {err && <div style={{ color: '#ff5c5c', fontSize: 13, background: '#ff5c5c15', borderRadius: 8, padding: '8px 12px' }}>{err}</div>}
 
           {saved && (
-            <div style={{ color: 'var(--orange)', fontSize: 13, background: 'rgba(255,155,38,0.09)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ color: 'var(--orange)', fontSize: 13, background: 'rgba(37,99,235,0.09)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
               <Check size={14} /> Invoice #{saved.invoice_number} saved successfully
             </div>
           )}
@@ -803,7 +803,7 @@ export default function Deals() {
                 </tr>
                 {!collapsed[label] && items.map(deal => (
                   <React.Fragment key={deal.id}>
-                  <tr style={{ background: selectedIds.has(deal.id) ? 'rgba(255,155,38,0.08)' : undefined }}>
+                  <tr style={{ background: selectedIds.has(deal.id) ? 'rgba(37,99,235,0.08)' : undefined }}>
                     <td><input type="checkbox" checked={selectedIds.has(deal.id)} onChange={() => toggleSelect(deal.id)} /></td>
                     <td
                       style={{ fontWeight: 500 }}
@@ -830,7 +830,7 @@ export default function Deals() {
                           placeholder="Task name…"
                           style={{
                             display: 'block', marginTop: 4, width: '100%',
-                            background: 'var(--surface-3)', border: '1px solid rgba(255,155,38,0.4)',
+                            background: 'var(--surface-3)', border: '1px solid rgba(37,99,235,0.4)',
                             borderRadius: 5, outline: 'none', color: 'var(--text)',
                             fontSize: 12, padding: '3px 8px', fontFamily: 'var(--font-display)',
                           }}
@@ -884,7 +884,7 @@ export default function Deals() {
                           onClick={() => setManualDeal(deal)}
                           title="Create or Send Invoice"
                           style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--orange)', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, flexShrink: 0, width: 'fit-content' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,155,38,0.13)'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.13)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
                           <FileText size={11} /> Invoice

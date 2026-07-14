@@ -208,7 +208,7 @@ export default function AcademyCourseEdit() {
           <button onClick={() => navigate('/academy/courses')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
             <ArrowLeft size={18} color="#7a7f9a" />
           </button>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <BookOpen size={18} color="var(--orange)" />
           </div>
           <h1 style={headingStyle}>Edit Course</h1>

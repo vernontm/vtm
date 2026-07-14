@@ -111,7 +111,7 @@ export default function AcademyStudents() {
   return (
     <div style={pageStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Users size={18} color="var(--orange)" />
         </div>
         <h1 style={headingStyle}>Student Management</h1>
@@ -174,7 +174,7 @@ export default function AcademyStudents() {
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(255,155,38,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(37,99,235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>
                     {(selectedStudent.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
                   <div>

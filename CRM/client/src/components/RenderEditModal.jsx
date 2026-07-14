@@ -26,7 +26,7 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved, onTe
     ...(render?.title_style || {}),
   });
   const [capS, setCapS] = useState({
-    font: 'montserrat', size: 64, color: '#FFFFFF', highlight: '#ff9b26',
+    font: 'montserrat', size: 64, color: '#FFFFFF', highlight: '#2563eb',
     y_position: 0.75, words_per_chunk: 2, stroke: '#000000', stroke_width: 6,
     ...(avatar?.caption_style || {}),
     ...(render?.caption_style || {}),

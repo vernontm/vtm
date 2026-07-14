@@ -14,10 +14,10 @@ import {
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
   open:          { bg: '#fdab3d22', color: '#fdab3d', label: 'Open' },
-  paid:          { bg: 'rgba(255,155,38,0.13)', color: 'var(--orange)', label: 'Paid' },
+  paid:          { bg: 'rgba(37,99,235,0.13)', color: 'var(--orange)', label: 'Paid' },
   void:          { bg: '#8e8ea022', color: 'var(--muted)', label: 'Void' },
   uncollectible: { bg: '#ff5c5c22', color: '#ff5c5c', label: 'Uncollectible' },
-  draft:         { bg: 'rgba(255,155,38,0.13)', color: 'var(--orange)', label: 'Draft' },
+  draft:         { bg: 'rgba(37,99,235,0.13)', color: 'var(--orange)', label: 'Draft' },
   cancelled:     { bg: '#8e8ea022', color: 'var(--muted)', label: 'Cancelled' },
 };
 
@@ -33,7 +33,7 @@ function StatusBadge({ status }) {
 function TypeBadge({ type }) {
   const isStripe = type === 'stripe';
   return (
-    <span style={{ background: isStripe ? '#784bd122' : 'rgba(255,155,38,0.13)', color: isStripe ? '#a78bfa' : 'var(--orange)', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
+    <span style={{ background: isStripe ? '#784bd122' : 'rgba(37,99,235,0.13)', color: isStripe ? '#a78bfa' : 'var(--orange)', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
       {isStripe ? 'Stripe' : 'Manual'}
     </span>
   );
@@ -169,7 +169,7 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
                         <div style={{ fontSize:12, fontWeight:600, color:'var(--text)' }}>{c.name||c.email}</div>
                         <div style={{ fontSize:10, color:'var(--muted)' }}>{c.email}</div>
                       </div>
-                      <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(255,155,38,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>
+                      <span style={{ fontSize:9, padding:'2px 5px', borderRadius:4, fontWeight:600, background:c._source==='lead'?'#f5a62310':c._source==='gmail'?'#22c55e10':'rgba(37,99,235,0.08)', color:c._source==='lead'?'#f5a623':c._source==='gmail'?'#22c55e':'var(--orange)' }}>
                         {c._source==='lead'?'Lead':c._source==='gmail'?'Gmail':'CRM'}
                       </span>
                     </div>
@@ -456,7 +456,7 @@ export default function Invoices() {
                 style={{
                   padding: '5px 14px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
                   border: `1px solid ${tab === key ? 'var(--orange)' : '#e5e7ef'}`,
-                  background: tab === key ? 'rgba(255,155,38,0.13)' : 'transparent',
+                  background: tab === key ? 'rgba(37,99,235,0.13)' : 'transparent',
                   color: tab === key ? 'var(--orange)' : '#8e8ea0',
                   fontWeight: tab === key ? 700 : 400,
                 }}
@@ -501,7 +501,7 @@ export default function Invoices() {
                     {/* # */}
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : 'rgba(255,155,38,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: inv._type === 'stripe' ? '#784bd122' : 'rgba(37,99,235,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           {inv._type === 'stripe' ? <CreditCard size={13} style={{ color: '#a78bfa' }} /> : <FileText size={13} style={{ color: 'var(--orange)' }} />}
                         </div>
                         <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{inv._number}</span>
@@ -558,7 +558,7 @@ export default function Invoices() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="View on Stripe"
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: 'rgba(255,155,38,0.1)', border: '1px solid var(--orange)40', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: 'rgba(37,99,235,0.1)', border: '1px solid var(--orange)40', borderRadius: 6, padding: '5px 10px', textDecoration: 'none', fontWeight: 500 }}
                               >
                                 <ExternalLink size={12} /> View
                               </a>

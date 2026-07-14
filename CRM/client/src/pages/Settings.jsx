@@ -225,7 +225,7 @@ export default function Settings() {
         <Section title="Gmail Connection" icon={Mail}>
           {/* Status messages */}
           {gmailMsg === 'connected' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,155,38,0.12)', border: '1px solid var(--orange)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: 'var(--orange)', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(37,99,235,0.12)', border: '1px solid var(--orange)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: 'var(--orange)', fontSize: 13 }}>
               <CheckCircle size={15} /> Gmail connected successfully!
             </div>
           )}

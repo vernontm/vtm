@@ -378,7 +378,7 @@ export default function Blog() {
                   {post.category && (
                     <span style={{
                       fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                      background: 'rgba(255,155,38,0.1)', color: 'var(--orange)',
+                      background: 'rgba(37,99,235,0.1)', color: 'var(--orange)',
                       fontFamily: 'var(--font-display)',
                     }}>
                       {post.category}
