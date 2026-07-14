@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink, Receipt, Loader, Check } from 'lucide-react';
-import { getProjects, createProject, updateProject, deleteProject, getProjectItems, createProjectItem, updateProjectItem, deleteProjectItem, createProjectInvoice } from '../api';
+import { getProjects, createProject, updateProject, deleteProject, getProjectItems, createProjectItem, updateProjectItem, deleteProjectItem, createProjectInvoice, getClients } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
@@ -25,7 +25,7 @@ const BILLING_TYPES = [
   { key: 'hybrid',   label: 'One-time + recurring' },
 ];
 
-const EMPTY_PROJECT = { name: '', client: '', status: 'Active', billing_type: 'one_time', value: '', recurring_amount: '', start_date: '', end_date: '', notes: '' };
+const EMPTY_PROJECT = { name: '', client: '', client_id: null, status: 'Active', billing_type: 'one_time', value: '', recurring_amount: '', start_date: '', end_date: '', notes: '' };
 const EMPTY_ITEM    = { name: '', owner: '', status: 'Not Started', date: '', text: '', link: '' };
 
 // ── Subitem row (used inside the project detail page) ─────────────────────────
@@ -85,7 +85,7 @@ function Card({ title, children, style }) {
 }
 
 // ── Project detail page ────────────────────────────────────────────────────────
-function ProjectDetail({ project, onBack, onPatch, onDelete }) {
+function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
   const [items, setItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [invoiceEmail, setInvoiceEmail] = useState('');
@@ -204,7 +204,18 @@ function ProjectDetail({ project, onBack, onPatch, onDelete }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Client</span>
-                <InlineEdit value={project.client} onSave={v => saveField('client', v)} placeholder="Client" />
+                <select
+                  className="form-input"
+                  value={project.client_id || ''}
+                  onChange={e => {
+                    const c = clients.find(x => x.id === e.target.value);
+                    onPatch({ client_id: e.target.value || null, client: c ? c.business_name : '' });
+                    updateProject(project.id, { client_id: e.target.value || null, client: c ? c.business_name : (project.client || '') }).catch(err => toast('error', err.message));
+                  }}
+                >
+                  <option value="">— No client linked —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
+                </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Billing</span>
@@ -299,12 +310,14 @@ export default function Projects() {
   const [deleteTarget, setDeleteTarget] = useState(null); // project pending delete confirmation
   const [loading, setLoading]       = useState(true);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [clients, setClients]       = useState([]); // for linking a project to a real client
 
   const load = async () => {
     try { setProjects((await getProjects()).filter(p => !p.archived)); } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => { getClients().then(setClients).catch(() => {}); }, []);
 
   const filtered = useMemo(() =>
     projects.filter(p => !search ||
@@ -432,6 +445,7 @@ export default function Projects() {
       <>
         <ProjectDetail
           project={selected}
+          clients={clients}
           onBack={() => { setSelected(null); load(); }}
           onPatch={(patch) => setSelected(s => ({ ...s, ...patch }))}
           onDelete={() => setDeleteTarget(selected)}
@@ -667,7 +681,11 @@ export default function Projects() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div className="form-group">
               <label className="form-label">Client</label>
-              <input className="form-input" value={form.client} onChange={e => setForm(f => ({ ...f, client: e.target.value }))} placeholder="Client name" />
+              <select className="form-select" value={form.client_id || ''}
+                onChange={e => { const c = clients.find(x => x.id === e.target.value); setForm(f => ({ ...f, client_id: e.target.value || null, client: c ? c.business_name : '' })); }}>
+                <option value="">— No client —</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">Status</label>
