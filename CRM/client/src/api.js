@@ -329,6 +329,12 @@ export const deleteClientTask = (id)        => request(`/client-tasks?id=${id}`,
 export const getCampaignDefaults = (client_id) => request(`/mailerlite-campaign?client_id=${client_id}`);
 export const sendMailerliteCampaign = (data)   => request('/mailerlite-campaign', { method: 'POST', body: JSON.stringify(data) });
 
+// Recurring email-blast automations (weekly, by weekday + time)
+export const getEmailAutomations   = (client_id) => request(`/email-automations?client_id=${client_id}`);
+export const createEmailAutomation = (data)      => request('/email-automations', { method: 'POST', body: JSON.stringify(data) });
+export const updateEmailAutomation = (id, data)  => request(`/email-automations?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteEmailAutomation = (id)        => request(`/email-automations?id=${id}`, { method: 'DELETE' });
+
 // Walkthroughs / SOPs (multi-step guides with links + media)
 export const getWalkthroughs  = ()        => request('/walkthroughs');
 export const getWalkthrough   = (id)      => request(`/walkthroughs?id=${id}`);

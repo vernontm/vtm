@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Users, Search, RefreshCw, Mail, AlertCircle, Send, X, AlertTriangle } from 'lucide-react';
+import {
+  Users, Search, RefreshCw, Mail, AlertCircle, Send, X, AlertTriangle,
+  Repeat, Clock, Plus, Pencil, Trash2, ChevronLeft,
+} from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { toast } from '../components/Toast';
 import {
   getMailerliteGroups, getMailerliteSubscribers,
   getCampaignDefaults, sendMailerliteCampaign,
+  getEmailAutomations, createEmailAutomation, updateEmailAutomation, deleteEmailAutomation,
 } from '../api';
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const fmtHour = (h) => new Date(2000, 0, 1, h || 0).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
 
 // Marketing > Contacts = the live MailerLite audience for the current workspace
 // (groups on the left, subscribers on the right). This is the marketing list,
@@ -226,10 +233,147 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
   );
 }
 
+// ── Recurring automation form ────────────────────────────────────────────────
+function AutomationForm({ clientId, groups, initial, onCancel, onSaved }) {
+  const [name, setName]         = useState(initial?.name || '');
+  const [groupId, setGroupId]   = useState(initial?.group_id || groups[0]?.id || '');
+  const [weekday, setWeekday]   = useState(initial?.weekday ?? 3);   // Wed
+  const [sendHour, setSendHour] = useState(initial?.send_hour ?? 9);
+  const [subject, setSubject]   = useState(initial?.subject || '');
+  const [fromName, setFromName] = useState(initial?.from_name || '');
+  const [fromEmail, setFromEmail] = useState(initial?.from_email || '');
+  const [body, setBody]         = useState(initial?.body || '');
+  const [saving, setSaving]     = useState(false);
+
+  useEffect(() => {
+    if (!initial) getCampaignDefaults(clientId).then(d => { setFromName(d.from_name || ''); setFromEmail(d.from_email || ''); }).catch(() => {});
+  }, [clientId]);
+
+  const save = async () => {
+    if (!name.trim() || !groupId || !subject.trim() || !fromEmail.trim() || !body.trim()) { toast('error', 'Fill in name, group, subject, from email, and message'); return; }
+    setSaving(true);
+    const payload = { client_id: clientId, name: name.trim(), group_id: groupId, subject: subject.trim(), from_name: fromName.trim(), from_email: fromEmail.trim(), body, weekday: Number(weekday), send_hour: Number(sendHour) };
+    try { if (initial?.id) await updateEmailAutomation(initial.id, payload); else await createEmailAutomation(payload); onSaved(); }
+    catch (e) { toast('error', e.message); setSaving(false); }
+  };
+
+  const field = { width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 11px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--font-display)' };
+  const lbl = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5, display: 'block' };
+
+  return (
+    <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <button className="btn-ghost" onClick={onCancel} style={{ alignSelf: 'flex-start' }}><ChevronLeft size={14} /> Back</button>
+      <div><label style={lbl}>Automation name</label><input value={name} onChange={e => setName(e.target.value)} style={field} placeholder="e.g. Wednesday Meetup Reminder" /></div>
+      <div><label style={lbl}>Send to group</label>
+        <select value={groupId} onChange={e => setGroupId(e.target.value)} style={field}>
+          {groups.map(g => <option key={g.id} value={g.id}>{g.name} ({(g.total || g.active || 0).toLocaleString()})</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div><label style={lbl}>Every</label>
+          <select value={weekday} onChange={e => setWeekday(Number(e.target.value))} style={field}>
+            {WEEKDAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+          </select>
+        </div>
+        <div><label style={lbl}>At</label>
+          <select value={sendHour} onChange={e => setSendHour(Number(e.target.value))} style={field}>
+            {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{fmtHour(h)}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div><label style={lbl}>From name</label><input value={fromName} onChange={e => setFromName(e.target.value)} style={field} /></div>
+        <div><label style={lbl}>From email</label><input value={fromEmail} onChange={e => setFromEmail(e.target.value)} style={field} /></div>
+      </div>
+      <div><label style={lbl}>Subject</label><input value={subject} onChange={e => setSubject(e.target.value)} style={field} placeholder="Subject line" /></div>
+      <div><label style={lbl}>Message</label><textarea value={body} onChange={e => setBody(e.target.value)} rows={7} style={{ ...field, resize: 'vertical', lineHeight: 1.5 }} placeholder={'Hello, everyone.\n\nThis goes out automatically each week…'} />
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>Central time. Plain text is fine — an unsubscribe link is added automatically.</div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button className="btn-ghost" onClick={onCancel}>Cancel</button>
+        <button className="btn-primary" onClick={save} disabled={saving}><Repeat size={13} /> {saving ? 'Saving…' : (initial?.id ? 'Save changes' : 'Create automation')}</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Automations manager (list + form) ────────────────────────────────────────
+function AutomationsPanel({ clientId, groups, onClose }) {
+  const [items, setItems]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView]       = useState('list'); // 'list' | 'new' | automation (edit)
+
+  const load = useCallback(async () => {
+    try { setItems(await getEmailAutomations(clientId)); } catch (e) { toast('error', e.message); } finally { setLoading(false); }
+  }, [clientId]);
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (a) => {
+    setItems(prev => prev.map(x => x.id === a.id ? { ...x, active: !x.active } : x));
+    try { await updateEmailAutomation(a.id, { active: !a.active }); } catch (e) { toast('error', e.message); load(); }
+  };
+  const del = async (a) => {
+    if (!window.confirm(`Delete automation "${a.name}"?`)) return;
+    setItems(prev => prev.filter(x => x.id !== a.id));
+    try { await deleteEmailAutomation(a.id); } catch (e) { toast('error', e.message); load(); }
+  };
+  const groupName = (id) => groups.find(g => String(g.id) === String(id))?.name || 'group';
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, width: 580, maxWidth: '94vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-display)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Repeat size={16} style={{ color: 'var(--orange)' }} />
+            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Email automations</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+        </div>
+
+        {view === 'list' ? (
+          <div style={{ padding: 16, overflowY: 'auto' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
+              Recurring blasts that send themselves on a weekly schedule — like your Wednesday meetup reminder or Monday webinar email.
+            </div>
+            {loading ? <div style={{ color: 'var(--muted)' }}>Loading…</div> : items.length === 0 ? (
+              <div style={{ color: 'var(--muted)', fontSize: 13, background: 'var(--surface-2)', border: '1px dashed var(--border)', borderRadius: 10, padding: 22, textAlign: 'center', marginBottom: 14 }}>No automations yet.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                {items.map(a => (
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, opacity: a.active ? 1 : 0.6 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{a.name}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                        <Clock size={11} /> Every {WEEKDAYS[a.weekday]} at {fmtHour(a.send_hour)} → {groupName(a.group_id)}
+                        {a.last_sent_at && <span>· last sent {new Date(a.last_sent_at).toLocaleDateString()}</span>}
+                      </div>
+                    </div>
+                    <button onClick={() => toggle(a)} title={a.active ? 'Pause' : 'Resume'}
+                      style={{ padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${a.active ? 'rgba(22,163,74,0.4)' : 'var(--border)'}`, background: a.active ? 'rgba(22,163,74,0.12)' : 'var(--surface)', color: a.active ? '#16a34a' : 'var(--muted)' }}>
+                      {a.active ? 'Active' : 'Paused'}
+                    </button>
+                    <button className="btn-ghost" style={{ padding: '5px 7px' }} onClick={() => setView(a)} title="Edit"><Pencil size={13} /></button>
+                    <button className="btn-ghost" style={{ padding: '5px 7px', color: '#ff5c5c' }} onClick={() => del(a)} title="Delete"><Trash2 size={13} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="btn-primary" onClick={() => setView('new')}><Plus size={14} /> New automation</button>
+          </div>
+        ) : (
+          <AutomationForm clientId={clientId} groups={groups} initial={view === 'new' ? null : view}
+            onCancel={() => setView('list')} onSaved={() => { setView('list'); load(); }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Contacts() {
   const { selectedClient, isAdmin } = useClient();
   const clientId = selectedClient?.id;
   const [composeOpen, setComposeOpen] = useState(false);
+  const [automationsOpen, setAutomationsOpen] = useState(false);
 
   const [groups, setGroups]         = useState([]);
   const [activeGroup, setActiveGroup] = useState(null); // null = all contacts
@@ -285,9 +429,14 @@ export default function Contacts() {
             <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
           {isAdmin && groups.length > 0 && (
-            <button className="btn-primary" onClick={() => setComposeOpen(true)}>
-              <Send size={13} /> Send Email
-            </button>
+            <>
+              <button className="btn-ghost" onClick={() => setAutomationsOpen(true)}>
+                <Repeat size={13} /> Automations
+              </button>
+              <button className="btn-primary" onClick={() => setComposeOpen(true)}>
+                <Send size={13} /> Send Email
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -298,6 +447,14 @@ export default function Contacts() {
           groups={groups}
           initialGroupId={activeGroup}
           onClose={() => setComposeOpen(false)}
+        />
+      )}
+
+      {automationsOpen && (
+        <AutomationsPanel
+          clientId={clientId}
+          groups={groups}
+          onClose={() => setAutomationsOpen(false)}
         />
       )}
 
