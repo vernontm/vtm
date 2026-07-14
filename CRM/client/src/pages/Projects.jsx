@@ -16,7 +16,16 @@ const ITEM_STATUSES  = ['Not Started', 'Working on it', 'Done', 'Stuck', 'On Hol
 // keeps its natural (most-recent-first) order.
 const COMPLETED_STATUSES = ['Completed', 'Cancelled'];
 
-const EMPTY_PROJECT = { name: '', client: '', status: 'Active', value: '', start_date: '', end_date: '', notes: '' };
+// How the project is billed. 'monthly' projects have no fixed end — they show
+// an "Ongoing" pill instead of a progress bar. 'hybrid' covers an upfront fee
+// plus a recurring maintenance charge (e.g. $5,000 build + $299/mo upkeep).
+const BILLING_TYPES = [
+  { key: 'one_time', label: 'One-time' },
+  { key: 'monthly',  label: 'Monthly (recurring)' },
+  { key: 'hybrid',   label: 'One-time + recurring' },
+];
+
+const EMPTY_PROJECT = { name: '', client: '', status: 'Active', billing_type: 'one_time', value: '', recurring_amount: '', start_date: '', end_date: '', notes: '' };
 const EMPTY_ITEM    = { name: '', owner: '', status: 'Not Started', date: '', text: '', link: '' };
 
 // ── Subitem row ─────────────────────────────────────────────────────────────
@@ -109,7 +118,7 @@ export default function Projects() {
   // ── Inline project field save ──
   const handleProjectField = async (id, field, value) => {
     try {
-      const parsed = field === 'value' ? (parseFloat(value) || 0) : value;
+      const parsed = (field === 'value' || field === 'recurring_amount') ? (parseFloat(value) || 0) : value;
       await updateProject(id, { [field]: parsed });
       setProjects(ps => ps.map(p => p.id === id ? { ...p, [field]: parsed } : p));
     } catch (e) { console.error(e); }
@@ -168,7 +177,7 @@ export default function Projects() {
   const handleSave = async () => {
     if (!form.name.trim()) return;
     try {
-      await createProject({ ...form, value: parseFloat(form.value) || 0 });
+      await createProject({ ...form, value: parseFloat(form.value) || 0, recurring_amount: parseFloat(form.recurring_amount) || 0 });
       await load(); setModal(null);
     } catch (e) { toast('error', e.message); }
   };
@@ -215,6 +224,7 @@ export default function Projects() {
 
   const formatDate  = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
   const formatMoney = (v) => `$${Number(v || 0).toLocaleString()}`;
+  const isOngoing   = (p) => p.billing_type === 'monthly';
 
   const progressPercent = (p) => {
     if (p.status === 'Completed') return 100;
@@ -269,14 +279,22 @@ export default function Projects() {
                   <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
                 </div>
               )}
-              {project.value > 0 && (
+              {(project.value > 0 || project.recurring_amount > 0) && (
                 <div className="mobile-card-row">
                   <span className="mobile-card-label">Value</span>
                   <DollarSign size={12} style={{ color: 'var(--orange)' }} />
-                  <span className="private-value" style={{ fontWeight: 600 }}>{Number(project.value).toLocaleString()}</span>
+                  <span className="private-value" style={{ fontWeight: 600 }}>
+                    {project.value > 0 ? Number(project.value).toLocaleString() : null}
+                    {project.recurring_amount > 0 ? `${project.value > 0 ? ' + ' : ''}$${Number(project.recurring_amount).toLocaleString()}/mo` : ''}
+                  </span>
                 </div>
               )}
-              {pct > 0 && (
+              {isOngoing(project) ? (
+                <div className="mobile-card-row">
+                  <span className="mobile-card-label">Progress</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: '#22c55e18', border: '1px solid #22c55e40', borderRadius: 999, padding: '2px 10px' }}>Ongoing</span>
+                </div>
+              ) : pct > 0 && (
                 <div className="mobile-card-row">
                   <span className="mobile-card-label">Progress</span>
                   <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden' }}>
@@ -372,22 +390,44 @@ export default function Projects() {
                           </div>
                         </td>
                         <td>
-                          <div className="private-value" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
-                            <InlineEdit value={String(project.value || '')} type="number" onSave={v => handleProjectField(project.id, 'value', v)} placeholder="0" />
+                          <div className="private-value" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {project.billing_type !== 'monthly' && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
+                                <InlineEdit value={String(project.value || '')} type="number" onSave={v => handleProjectField(project.id, 'value', v)} placeholder="0" />
+                              </div>
+                            )}
+                            {project.billing_type !== 'one_time' && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 11, color: 'var(--muted)' }}>
+                                <InlineEdit value={String(project.recurring_amount || '')} type="number" onSave={v => handleProjectField(project.id, 'recurring_amount', v)} placeholder="0" />
+                                <span>/mo</span>
+                              </div>
+                            )}
+                            <select
+                              className="form-input"
+                              style={{ width: 'auto', padding: '2px 6px', fontSize: 10, color: 'var(--muted)', background: 'var(--surface-2)' }}
+                              value={project.billing_type || 'one_time'}
+                              onChange={e => handleProjectField(project.id, 'billing_type', e.target.value)}
+                            >
+                              {BILLING_TYPES.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
+                            </select>
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
-                              <div style={{
-                                height: '100%', borderRadius: 3, width: `${pct}%`,
-                                background: pct === 100 ? '#22c55e' : pct > 60 ? 'var(--orange)' : '#ef4444',
-                                transition: 'width 0.3s',
-                              }} />
+                          {isOngoing(project) ? (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: '#22c55e18', border: '1px solid #22c55e40', borderRadius: 999, padding: '2px 10px' }}>Ongoing</span>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
+                                <div style={{
+                                  height: '100%', borderRadius: 3, width: `${pct}%`,
+                                  background: pct === 100 ? '#22c55e' : pct > 60 ? 'var(--orange)' : '#ef4444',
+                                  transition: 'width 0.3s',
+                                }} />
+                              </div>
+                              <span style={{ fontSize: 11, color: 'var(--muted)', width: 28 }}>{pct}%</span>
                             </div>
-                            <span style={{ fontSize: 11, color: 'var(--muted)', width: 28 }}>{pct}%</span>
-                          </div>
+                          )}
                         </td>
                         <td>
                           <InlineEdit value={project.notes} onSave={v => handleProjectField(project.id, 'notes', v)} placeholder="Notes" />
@@ -445,9 +485,16 @@ export default function Projects() {
                     <td colSpan={4}></td>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>Total</td>
                     <td>
-                      <div className="private-value flex items-center gap-1">
-                        <DollarSign size={13} style={{ color: 'var(--orange)' }} />
-                        <span>{formatMoney(sorted.reduce((s, p) => s + (p.value || 0), 0))}</span>
+                      <div className="private-value" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <DollarSign size={13} style={{ color: 'var(--orange)' }} />
+                          <span>{formatMoney(sorted.reduce((s, p) => s + (p.value || 0), 0))}</span>
+                        </div>
+                        {sorted.some(p => p.recurring_amount > 0) && (
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                            {formatMoney(sorted.reduce((s, p) => s + (p.recurring_amount || 0), 0))}/mo MRR
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td colSpan={4}></td>
@@ -497,8 +544,24 @@ export default function Projects() {
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Project Value ($)</label>
-            <input className="form-input" type="number" min="0" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} placeholder="0" />
+            <label className="form-label">Billing</label>
+            <select className="form-select" value={form.billing_type} onChange={e => setForm(f => ({ ...f, billing_type: e.target.value }))}>
+              {BILLING_TYPES.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: form.billing_type === 'one_time' ? '1fr' : '1fr 1fr', gap: 12 }}>
+            {form.billing_type !== 'monthly' && (
+              <div className="form-group">
+                <label className="form-label">{form.billing_type === 'hybrid' ? 'Upfront Value ($)' : 'Project Value ($)'}</label>
+                <input className="form-input" type="number" min="0" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} placeholder="0" />
+              </div>
+            )}
+            {form.billing_type !== 'one_time' && (
+              <div className="form-group">
+                <label className="form-label">Recurring Amount ($/mo)</label>
+                <input className="form-input" type="number" min="0" value={form.recurring_amount} onChange={e => setForm(f => ({ ...f, recurring_amount: e.target.value }))} placeholder="0" />
+              </div>
+            )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div className="form-group">
