@@ -65,7 +65,7 @@ const RANKS = [
 ];
 const rankOf = (k) => RANKS.find(r => r.key === k) || RANKS[1];
 
-const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'Walk-in', client_type: [], notes: '', stage: 'lead', lead_temperature: 'warm', lead_rank: 'medium', firstNote: '' };
+const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'Walk-in', client_type: [], notes: '', stage: 'lead', lead_temperature: 'warm', lead_rank: 'medium', potential_value: '', firstNote: '' };
 
 function StageBadge({ stage }) {
   const s = stageOf(stage);
@@ -100,16 +100,32 @@ function PillSelect({ value, options, onChange, minWidth = 54 }) {
   );
 }
 
+const fmtUsd = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
 // Kanban board for leads — one column per temperature (Hot / Warm / Cold).
-// Drag a card between columns to change its temperature.
-function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
+// Drag a card between columns to change its temperature. Each card carries a
+// potential-revenue amount; the board totals it per column and overall.
+function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onValueChange, onDelete }) {
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const grandTotal = leads.reduce((s, l) => s + (Number(l.potential_value) || 0), 0);
+  const commitValue = (id, raw) => {
+    const v = (raw === '' || raw == null) ? null : Number(raw);
+    onValueChange(id, Number.isNaN(v) ? null : v);
+  };
   return (
     <div style={{ overflowX: 'auto', padding: '16px 24px' }}>
+    {/* Pipeline total */}
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '8px 14px', background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.30)', borderRadius: 10 }}>
+      <DollarSign size={15} style={{ color: '#16a34a' }} />
+      <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 700 }}>Total potential: {fmtUsd(grandTotal)}</span>
+      <span style={{ fontSize: 12, color: 'var(--muted)' }}>across {leads.length} lead{leads.length !== 1 ? 's' : ''}</span>
+    </div>
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TEMPERATURES.length}, minmax(240px, 1fr))`, gap: 14, alignItems: 'start' }}>
       {TEMPERATURES.map(col => {
         const colLeads = leads.filter(l => (l.lead_temperature || 'warm') === col.key);
+        const colTotal = colLeads.reduce((s, l) => s + (Number(l.potential_value) || 0), 0);
         const isOver = overCol === col.key;
         return (
           <div
@@ -123,10 +139,13 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
               transition: 'background 0.12s, border-color 0.12s',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ width: 9, height: 9, borderRadius: '50%', background: col.color }} />
-              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{col.label}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: col.color, borderRadius: 999, padding: '0 8px', marginLeft: 'auto' }}>{colLeads.length}</span>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: col.color }} />
+                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{col.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: col.color, borderRadius: 999, padding: '0 8px', marginLeft: 'auto' }}>{colLeads.length}</span>
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#16a34a', marginTop: 6 }}>{fmtUsd(colTotal)}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, minHeight: 60 }}>
               {colLeads.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '16px 0' }}>Drop a lead here</div>}
@@ -141,7 +160,7 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
                 return (
                   <div
                     key={l.id}
-                    draggable
+                    draggable={editingId !== l.id}
                     onDragStart={() => setDragId(l.id)}
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => onOpen(l)}
@@ -167,6 +186,21 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
                     {desc && (
                       <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{desc}</div>
                     )}
+                    {/* Potential revenue — click to edit inline */}
+                    <div onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', alignSelf: 'flex-start' }}>
+                      <DollarSign size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <input
+                        type="number" min="0" step="100"
+                        defaultValue={l.potential_value ?? ''}
+                        placeholder="Add value"
+                        draggable={false}
+                        onFocus={() => setEditingId(l.id)}
+                        onBlur={e => { setEditingId(null); commitValue(l.id, e.target.value); }}
+                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                        style={{ width: 92, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)' }}
+                      />
+                    </div>
                     {/* Footer: owner + date */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--surface-3)', color: 'var(--muted)', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial}</span>
@@ -275,6 +309,9 @@ export default function Clients({ kind = 'client' }) {
     if (!form.business_name.trim()) return;
     try {
       const { firstNote, ...payload } = form;
+      // numeric column: '' -> null, otherwise a Number
+      payload.potential_value = (payload.potential_value === '' || payload.potential_value == null)
+        ? null : Number(payload.potential_value);
       const c = await createClient(payload);
       if (firstNote && firstNote.trim() && c && c.id) {
         await createClientActivity({ client_id: c.id, type: 'note', tag: 'Important', body: firstNote.trim() }).catch(() => {});
@@ -379,6 +416,7 @@ export default function Clients({ kind = 'client' }) {
             onOpen={setSelected}
             onTempChange={(id, t) => patchLead(id, { lead_temperature: t })}
             onRankChange={(id, r) => patchLead(id, { lead_rank: r })}
+            onValueChange={(id, v) => patchLead(id, { potential_value: v })}
             onDelete={setDeleteTarget}
           />
         )
@@ -525,20 +563,27 @@ export default function Clients({ kind = 'client' }) {
             </div>
           </div>
           {isLeadView && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="form-group">
-                <label className="form-label">Temperature</label>
-                <select className="form-input" value={form.lead_temperature} onChange={e => setForm(f => ({ ...f, lead_temperature: e.target.value }))}>
-                  {TEMPERATURES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-                </select>
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Temperature</label>
+                  <select className="form-input" value={form.lead_temperature} onChange={e => setForm(f => ({ ...f, lead_temperature: e.target.value }))}>
+                    {TEMPERATURES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Rank</label>
+                  <select className="form-input" value={form.lead_rank} onChange={e => setForm(f => ({ ...f, lead_rank: e.target.value }))}>
+                    {RANKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                  </select>
+                </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Rank</label>
-                <select className="form-input" value={form.lead_rank} onChange={e => setForm(f => ({ ...f, lead_rank: e.target.value }))}>
-                  {RANKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-                </select>
+                <label className="form-label">Potential revenue ($)</label>
+                <input className="form-input" type="number" min="0" step="100" value={form.potential_value ?? ''}
+                  onChange={e => setForm(f => ({ ...f, potential_value: e.target.value }))} placeholder="e.g. 5000" />
               </div>
-            </div>
+            </>
           )}
           <div className="form-group">
             <label className="form-label">Interested in</label>
