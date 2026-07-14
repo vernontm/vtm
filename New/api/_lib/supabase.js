@@ -91,7 +91,7 @@ async function requireCrmUser(req) {
 // Canonical list of page slugs. Keep in sync with AdminUsers.jsx PAGE_GROUPS.
 // Only the pages the CRM actually has now (legacy pages purged) + admin-users.
 const ALL_PAGES = [
-  'dashboard','leads','clients','projects','appointments','employees','time','employee-resources',
+  'dashboard','leads','clients','projects','appointments','todos','employees','time','employee-resources',
   'contacts','email','settings','admin-users',
 ];
 

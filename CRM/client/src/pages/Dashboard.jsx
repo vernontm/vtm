@@ -482,9 +482,10 @@ export default function Dashboard() {
             title="To-Do"
             color="#2563eb"
             right={
-              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
-                {todos.filter(t => !t.done).length} open
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{todos.filter(t => !t.done).length} open</span>
+                <Link to="/todos" style={{ fontSize: 12, color: 'var(--link)', textDecoration: 'none', fontWeight: 700 }}>View all →</Link>
+              </div>
             }
           />
           <TodoWidget todos={todos} onAdd={addTodo} onToggle={toggleTodo} onDelete={removeTodo} />

@@ -20,6 +20,7 @@ const PAGE_GROUPS = [
     { slug: 'clients',      name: 'Clients' },
     { slug: 'projects',     name: 'Projects' },
     { slug: 'appointments', name: 'Appointments' },
+    { slug: 'todos',        name: 'To-Do' },
     { slug: 'email',        name: 'Email' },
   ]},
   { label: 'Team', pages: [
@@ -46,9 +47,9 @@ const ADMIN_PAGE_GROUPS = [
 // Role presets — one-click bundles of page access. "Custom" = whatever's
 // checked. Roles are a convenience on top of the per-page checkboxes below.
 const ROLES = [
-  { key: 'full',            name: 'Full access',     pages: ['dashboard','leads','clients','projects','appointments','employees','time','employee-resources','contacts','email','settings'] },
-  { key: 'sales_assistant', name: 'Sales Assistant', pages: ['leads','appointments','time','employee-resources'] },
-  { key: 'project_manager', name: 'Project Manager', pages: ['dashboard','clients','projects','appointments','time','employee-resources'] },
+  { key: 'full',            name: 'Full access',     pages: ['dashboard','leads','clients','projects','appointments','todos','employees','time','employee-resources','contacts','email','settings'] },
+  { key: 'sales_assistant', name: 'Sales Assistant', pages: ['leads','appointments','todos','time','employee-resources'] },
+  { key: 'project_manager', name: 'Project Manager', pages: ['dashboard','clients','projects','appointments','todos','time','employee-resources'] },
   { key: 'custom',          name: 'Custom',          pages: null },
 ];
 const roleForPages = (pages = []) => {

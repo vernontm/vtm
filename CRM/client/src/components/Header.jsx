@@ -14,6 +14,7 @@ const PAGE_META = {
   '/contacts':                    { title: 'Contacts',            sub: 'Your MailerLite marketing audience' },
   '/projects':                    { title: 'Projects',            sub: 'Active work & deliverables' },
   '/appointments':                { title: 'Appointments',        sub: 'Schedule & recordings' },
+  '/todos':                       { title: 'To-Do',               sub: 'Shared team task list' },
   '/employees':                   { title: 'Employees',           sub: 'Team accounts & access' },
   '/time':                        { title: 'Time',                sub: 'Clock in/out & timesheets' },
   '/employee-resources':          { title: 'Resources',           sub: 'Guides, SOPs & links for the team' },

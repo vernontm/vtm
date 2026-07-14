@@ -353,11 +353,12 @@ export async function uploadFile(file) {
   return res.json();
 }
 
-// Personal dashboard to-do list (per-user; urgent items float to top)
-export const getTodos   = ()        => request('/todos');
-export const createTodo = (data)    => request('/todos', { method: 'POST', body: JSON.stringify(data) });
-export const updateTodo = (id, data)=> request(`/todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteTodo = (id)      => request(`/todos?id=${id}`, { method: 'DELETE' });
+// Shared team to-do list (everyone sees + adds; open vs. locked-to-a-user)
+export const getTodos       = ()        => request('/team-todos');
+export const getTodoMembers = ()        => request('/team-todos?members=1');
+export const createTodo     = (data)    => request('/team-todos', { method: 'POST', body: JSON.stringify(data) });
+export const updateTodo     = (id, data)=> request(`/team-todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteTodo     = (id)      => request(`/team-todos?id=${id}`, { method: 'DELETE' });
 
 // Client activity (notes / calls / tasks)
 export const getClientActivity    = (client_id, type) => request(`/client-activity?client_id=${client_id}${type ? '&type=' + type : ''}`);
