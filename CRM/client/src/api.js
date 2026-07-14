@@ -69,6 +69,16 @@ export const updateDeal  = (id, data) => request(`/deals?id=${id}`, { method: 'P
 export const deleteDeal  = (id) => request(`/deals?id=${id}`, { method: 'DELETE' });
 export const createDealInvoice = (id, data) => request(`/deal-invoice?id=${id}`, { method: 'POST', body: JSON.stringify(data) });
 
+// Time tracking — employee clocks in/out; admin reviews + settles.
+export const getTimeEntries   = (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/time-entries${qs ? '?' + qs : ''}`); };
+export const clockIn          = (data = {}) => request('/time-entries?action=clock-in', { method: 'POST', body: JSON.stringify(data) });
+export const clockOut         = (data = {}) => request('/time-entries?action=clock-out', { method: 'POST', body: JSON.stringify(data) });
+export const addTimeEntry     = (data) => request('/time-entries?action=add', { method: 'POST', body: JSON.stringify(data) });
+export const markTimePaid     = (data) => request('/time-entries?action=mark-paid', { method: 'POST', body: JSON.stringify(data) });
+export const setEmployeeRate  = (data) => request('/time-entries?action=set-rate', { method: 'POST', body: JSON.stringify(data) });
+export const updateTimeEntry  = (id, data) => request(`/time-entries?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteTimeEntry  = (id) => request(`/time-entries?id=${id}`, { method: 'DELETE' });
+
 // Manual Invoices
 export const getManualInvoices   = (deal_id) => request(`/manual-invoices${deal_id ? '?deal_id=' + deal_id : ''}`);
 export const createManualInvoice = (data)    => request('/manual-invoices', { method: 'POST', body: JSON.stringify(data) });

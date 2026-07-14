@@ -52,6 +52,7 @@ import Deals from './pages/Deals';
 import Clients from './pages/Clients';
 import Projects from './pages/Projects';
 import Dashboard from './pages/Dashboard';
+import Time from './pages/Time';
 import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
 import MeetingDetail from './pages/MeetingDetail';
@@ -136,6 +137,7 @@ function AppLayout() {
               <Route path="/appointments" element={<Gated slug="appointments"><Meetings /></Gated>} />
               <Route path="/appointments/:eventId" element={<Gated slug="appointments"><MeetingDetail /></Gated>} />
               <Route path="/employees" element={<Gated slug="employees" adminOnly><AdminUsers /></Gated>} />
+              <Route path="/time" element={<Gated slug="time"><Time /></Gated>} />
               {/* ── Legacy routes (hidden from nav, kept reachable) ── */}
               <Route path="/contacts" element={<Gated slug="contacts"><Contacts /></Gated>} />
               <Route path="/deals" element={<Gated slug="projects"><Deals /></Gated>} />

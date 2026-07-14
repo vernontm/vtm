@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, Briefcase, LayoutDashboard,
   Mail, Calendar, Settings, LogOut,
-  Eye, EyeOff, Building2, UserCog, X, UserPlus,
+  Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock,
 } from 'lucide-react';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,7 @@ const nav = [
   { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
   { to: '/appointments', icon: Calendar,        label: 'Appointments', slug: 'appointments' },
   { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees' },
+  { to: '/time',         icon: Clock,           label: 'Time',         slug: 'time' },
 ];
 
 const navMarketing = [
