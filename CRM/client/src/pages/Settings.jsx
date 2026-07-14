@@ -282,21 +282,6 @@ export default function Settings() {
           )}
         </Section>
 
-        {/* ── Auto-Draft ────────────────────────────────────────────────────── */}
-        <Section title="Auto-Draft" icon={Mail}>
-          <FormRow label="Auto-Save to Drafts" hint="When ON, every email you approve is automatically saved to your Gmail Drafts">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 2 }}>
-              <Toggle
-                checked={settings.auto_draft_enabled === 'true'}
-                onChange={v => set('auto_draft_enabled', String(v))}
-              />
-              <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-                {settings.auto_draft_enabled === 'true' ? 'ON — Approved emails will be saved to Gmail Drafts' : 'OFF'}
-              </span>
-            </div>
-          </FormRow>
-        </Section>
-
         {/* ── Sending Limits ────────────────────────────────────────────────── */}
         <Section title="Sending Limits" icon={SettingsIcon}>
           <FormRow label="Daily Send Cap" hint="Emails per day (Gmail free limit is ~500/day, 50 is a safe default)">

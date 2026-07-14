@@ -47,7 +47,6 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import RecordingBar from './components/RecordingBar';
 import Login from './pages/Login';
-import Leads from './pages/Leads';
 import Contacts from './pages/Contacts';
 import Deals from './pages/Deals';
 import Clients from './pages/Clients';
@@ -61,7 +60,6 @@ import Invoices from './pages/Invoices';
 import QuickNotes from './pages/QuickNotes';
 import Blog from './pages/Blog';
 import EmailPage from './pages/Email';
-import Subscriptions from './pages/Subscriptions';
 import Portfolio from './pages/Portfolio';
 import Subscribers from './pages/Subscribers';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -133,13 +131,13 @@ function AppLayout() {
               <Route path="/no-access" element={<NoAccess />} />
               <Route path="/dashboard" element={<Gated slug="dashboard"><Dashboard /></Gated>} />
               {/* ── New lean CRM (Phase 1) ── */}
-              <Route path="/clients" element={<Gated slug="clients"><Clients /></Gated>} />
+              <Route path="/leads" element={<Gated slug="leads"><Clients kind="lead" /></Gated>} />
+              <Route path="/clients" element={<Gated slug="clients"><Clients kind="client" /></Gated>} />
               <Route path="/projects" element={<Gated slug="projects"><Projects /></Gated>} />
               <Route path="/appointments" element={<Gated slug="appointments"><Meetings /></Gated>} />
               <Route path="/appointments/:eventId" element={<Gated slug="appointments"><MeetingDetail /></Gated>} />
               <Route path="/employees" element={<Gated slug="employees" adminOnly><AdminUsers /></Gated>} />
               {/* ── Legacy routes (hidden from nav, kept reachable) ── */}
-              <Route path="/leads" element={<Gated slug="leads"><Leads /></Gated>} />
               <Route path="/contacts" element={<Gated slug="contacts"><Contacts /></Gated>} />
               <Route path="/deals" element={<Gated slug="projects"><Deals /></Gated>} />
               <Route path="/meetings/:eventId" element={<Gated slug="meetings"><MeetingDetail /></Gated>} />
@@ -149,7 +147,6 @@ function AppLayout() {
               <Route path="/quick-notes" element={<Gated slug="quick-notes"><QuickNotes /></Gated>} />
               <Route path="/blog" element={<Gated slug="blog"><Blog /></Gated>} />
               <Route path="/email" element={<Gated slug="email"><EmailPage /></Gated>} />
-              <Route path="/subscriptions" element={<Gated slug="subscriptions"><Subscriptions /></Gated>} />
               <Route path="/portfolio" element={<Gated slug="portfolio"><Portfolio /></Gated>} />
               <Route path="/content-scheduler" element={<Gated slug="content-scheduler"><ContentScheduler /></Gated>} />
               <Route path="/avatars" element={<Gated slug="avatars"><Avatars /></Gated>} />

@@ -11,13 +11,15 @@ import ClientPagesModal from './ClientPagesModal';
 /* ── Page metadata map ────────────────────────────────────────────────────── */
 const PAGE_META = {
   '/dashboard':                   { title: 'Dashboard',           sub: 'Overview of your business' },
-  '/leads':                       { title: 'Leads',               sub: 'Track and manage your pipeline' },
+  '/leads':                       { title: 'Leads',               sub: 'Still converting — not yet paid & started' },
+  '/clients':                     { title: 'Clients',             sub: 'Paid & started with VTM' },
   '/contacts':                    { title: 'Contacts',            sub: 'Your client & prospect database' },
   '/projects':                    { title: 'Projects',            sub: 'Active work & deliverables' },
+  '/appointments':                { title: 'Appointments',        sub: 'Schedule & recordings' },
+  '/employees':                   { title: 'Employees',           sub: 'Team accounts & access' },
   '/email':                       { title: 'Email',               sub: 'Inbox & communications' },
   '/meetings':                    { title: 'Meetings',            sub: 'Schedule & recordings' },
   '/invoices':                    { title: 'Invoices',            sub: 'Billing & payments' },
-  '/subscriptions':               { title: 'Subscriptions',       sub: 'Recurring revenue' },
   '/quick-notes':                 { title: 'Quick Notes',         sub: 'Thoughts & reminders' },
   '/notifications':               { title: 'Notifications',       sub: 'Alerts & activity' },
   '/blog':                        { title: 'Blog',                sub: 'Content & publishing' },

@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
-  RefreshCw, Star, Mail, Sparkles, FolderOpen, CheckSquare,
-  Calendar, Clock, ArrowRight, AlertCircle, Send, Video,
-  TrendingUp, Users, FileText, DollarSign, CreditCard, Bell, Check, X,
+  RefreshCw, Star, FolderOpen, CheckSquare,
+  Calendar, ChevronLeft, ChevronRight,
+  TrendingUp, DollarSign, CreditCard, Bell, Check, X,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  getDashboardStats, getUpcomingMeetings, getEmailQueue,
-  getLeads, getProjects, getAcademyStats,
+  getDashboardStats, getUpcomingMeetings, getClients, getProjects,
   getClientAlerts, markAlertRead, markAllAlertsRead,
 } from '../api';
 
@@ -30,6 +29,20 @@ function fmtDate(iso) {
   } catch { return iso; }
 }
 
+function fmtTime(iso) {
+  if (!iso) return '';
+  try { return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso)); }
+  catch { return ''; }
+}
+
+// Out-of-office / all-day blocks aren't real meetings — filter them out of
+// the calendar entirely (Ray's request).
+function isBlock(m) {
+  if ((m.duration_minutes || 0) >= 720) return true;
+  if (/out of office/i.test(m.title || m.summary || '')) return true;
+  return false;
+}
+
 function Card({ children, style }) {
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', ...style }}>
@@ -38,7 +51,7 @@ function Card({ children, style }) {
   );
 }
 
-function CardHeader({ icon: Icon, title, color = 'var(--orange)', linkTo, linkLabel }) {
+function CardHeader({ icon: Icon, title, color = 'var(--orange)', linkTo, linkLabel, right }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -47,11 +60,11 @@ function CardHeader({ icon: Icon, title, color = 'var(--orange)', linkTo, linkLa
         </div>
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{title}</span>
       </div>
-      {linkTo && (
+      {right || (linkTo && (
         <Link to={linkTo} style={{ fontSize: 12, color: 'var(--orange)', textDecoration: 'none', fontWeight: 600 }}>
           {linkLabel || 'View All'} →
         </Link>
-      )}
+      ))}
     </div>
   );
 }
@@ -62,29 +75,136 @@ function StatMini({ icon: Icon, label, value, color = 'var(--orange)' }) {
       background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
       padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12,
     }}>
-      <div style={{
-        width: 38, height: 38, borderRadius: 10,
-        background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
+      <div className="stat-tile-icon" style={{ background: color + '18' }}>
         <Icon size={17} color={color} />
       </div>
       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>{value}</div>
+        <div className="stat-tile-value">{value}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
       </div>
     </div>
   );
 }
 
+// ── Interactive meetings calendar ──────────────────────────────────────────
+// Hover a day with meetings to see details; click a meeting to open the
+// matching client's profile (matched by attendee email), or the meeting
+// detail page if no client matches.
+function MeetingsCalendar({ meetings, onMeetingClick }) {
+  const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const [hoverKey, setHoverKey] = useState(null);
+
+  const byDay = {};
+  meetings.forEach(m => {
+    if (!m.start_time) return;
+    const key = new Date(m.start_time).toDateString();
+    (byDay[key] = byDay[key] || []).push(m);
+  });
+
+  const year = month.getFullYear(), mo = month.getMonth();
+  const firstDow = new Date(year, mo, 1).getDay();
+  const daysInMonth = new Date(year, mo + 1, 0).getDate();
+  const today = new Date();
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, mo, d));
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+          {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 4 }}>
+            <ChevronLeft size={14} />
+          </button>
+          <button onClick={() => { const d = new Date(); d.setDate(1); setMonth(d); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--muted)', fontSize: 11, fontWeight: 600, padding: '4px 8px' }}>
+            Today
+          </button>
+          <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 4 }}>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+          <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', padding: '2px 0' }}>{d}</div>
+        ))}
+        {cells.map((date, i) => {
+          if (!date) return <div key={i} />;
+          const key = date.toDateString();
+          const dayMeetings = byDay[key] || [];
+          const isToday = date.toDateString() === today.toDateString();
+          const isHovered = hoverKey === key;
+          return (
+            <div
+              key={i}
+              onMouseEnter={() => dayMeetings.length && setHoverKey(key)}
+              onMouseLeave={() => setHoverKey(k => k === key ? null : k)}
+              style={{
+                position: 'relative', minHeight: 44, borderRadius: 8, padding: '4px 6px',
+                border: isToday ? '1.5px solid var(--orange)' : '1px solid var(--border)',
+                background: isHovered ? 'var(--surface-2)' : 'var(--bg)',
+                cursor: dayMeetings.length ? 'pointer' : 'default',
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 600, color: isToday ? 'var(--orange)' : 'var(--text)' }}>{date.getDate()}</div>
+              {dayMeetings.length > 0 && (
+                <div style={{ display: 'flex', gap: 2, marginTop: 3, flexWrap: 'wrap' }}>
+                  {dayMeetings.slice(0, 3).map((m, mi) => (
+                    <div key={mi} style={{ width: 5, height: 5, borderRadius: '50%', background: '#784bd1' }} />
+                  ))}
+                  {dayMeetings.length > 3 && <span style={{ fontSize: 8, color: 'var(--muted)' }}>+{dayMeetings.length - 3}</span>}
+                </div>
+              )}
+
+              {isHovered && (
+                <div
+                  onMouseEnter={() => setHoverKey(key)}
+                  onMouseLeave={() => setHoverKey(null)}
+                  style={{
+                    position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 30,
+                    background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 10,
+                    boxShadow: 'var(--shadow-lg)', padding: 8, minWidth: 220, maxWidth: 280,
+                  }}
+                >
+                  {dayMeetings.map(m => (
+                    <div
+                      key={m.google_event_id || m.id}
+                      onClick={() => onMeetingClick(m)}
+                      style={{ padding: '7px 8px', borderRadius: 6, cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{m.title || m.summary || '(no title)'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{fmtTime(m.start_time)}</div>
+                      {(m.participants || []).length > 0 && (
+                        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.participants.map(p => p.email).filter(Boolean).slice(0, 3).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(null);
   const [meetings, setMeetings] = useState([]);
-  const [drafts, setDrafts] = useState([]);
-  const [recentLeads, setRecentLeads] = useState([]);
+  const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [academyStats, setAcademyStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
 
   async function loadAlerts() {
@@ -102,24 +222,19 @@ export default function Dashboard() {
   async function load() {
     setLoading(true);
     try {
-      const [statsData, meetingsData, emailData, leadsData, projectsData, academyData] = await Promise.allSettled([
+      const [statsData, meetingsData, clientsData, projectsData] = await Promise.allSettled([
         getDashboardStats(),
         getUpcomingMeetings(),
-        getEmailQueue(),
-        getLeads(),
+        getClients(),
         getProjects(),
-        getAcademyStats(),
       ]);
       loadAlerts();
       setStats(statsData.status === 'fulfilled' ? statsData.value : null);
-      setMeetings(meetingsData.status === 'fulfilled' ? (meetingsData.value || []).slice(0, 5) : []);
-      const allEmails = emailData.status === 'fulfilled' ? (emailData.value || []) : [];
-      setDrafts(allEmails.filter(e => (e.status === 'draft' || e.status === 'pending') && e.auto_generated));
-      const allLeads = leadsData.status === 'fulfilled' ? (leadsData.value || []) : [];
-      setRecentLeads(allLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6));
+      const allMeetings = meetingsData.status === 'fulfilled' ? (meetingsData.value || []) : [];
+      setMeetings(allMeetings.filter(m => !isBlock(m)));
+      setClients(clientsData.status === 'fulfilled' ? (clientsData.value || []) : []);
       const allProjects = projectsData.status === 'fulfilled' ? (projectsData.value || []) : [];
       setProjects(allProjects.filter(p => p.status === 'Active' || p.status === 'In Progress').slice(0, 5));
-      setAcademyStats(academyData.status === 'fulfilled' ? academyData.value : null);
     } catch (e) {
       console.error('Dashboard load error:', e);
     } finally {
@@ -130,6 +245,15 @@ export default function Dashboard() {
   async function handleRefresh() { setRefreshing(true); await load(); setRefreshing(false); }
   useEffect(() => { load(); }, []);
 
+  // Click a meeting on the calendar -> open the matching client's profile
+  // (matched by attendee email), or the meeting detail page as a fallback.
+  function handleMeetingClick(m) {
+    const attendeeEmails = (m.participants || []).map(p => (p.email || '').toLowerCase()).filter(Boolean);
+    const match = clients.find(c => c.contact_email && attendeeEmails.includes(c.contact_email.toLowerCase()));
+    if (match) navigate(`/clients?open=${match.id}`);
+    else navigate(`/appointments/${m.google_event_id || m.id}`);
+  }
+
   if (loading) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 15 }}>
@@ -138,10 +262,11 @@ export default function Dashboard() {
     );
   }
 
-  const openLeads = stats?.openLeads || 0;
+  const leads = clients.filter(c => c.stage === 'lead');
+  const recentLeads = [...leads].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6);
+  const openLeads = leads.length;
   const activeProjects = stats?.activeProjects || 0;
   const activeDeals = stats?.activeDeals || 0;
-  const pendingDrafts = drafts.length;
 
   return (
     <div className="dashboard-page" style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: 'var(--bg)' }}>
@@ -195,9 +320,8 @@ export default function Dashboard() {
       )}
 
       {/* Quick Stats */}
-      <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
+      <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
         <StatMini icon={Star} label="Open Leads" value={openLeads} color="#f5a623" />
-        <StatMini icon={Mail} label="Drafts to Review" value={pendingDrafts} color={pendingDrafts > 0 ? '#ff5c5c' : 'var(--orange)'} />
         <StatMini icon={FolderOpen} label="Active Projects" value={activeProjects} color="#00b8d4" />
         <StatMini icon={TrendingUp} label="Active Deals" value={activeDeals} color="#22c55e" />
       </div>
@@ -281,23 +405,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Action Items Banner */}
-      {pendingDrafts > 0 && (
-        <Link to="/email" style={{ textDecoration: 'none' }}>
-          <div style={{
-            background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(74,108,247,0.15)',
-            borderRadius: 12, padding: '14px 20px', marginBottom: 20,
-            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-          }}>
-            <Sparkles size={18} color="var(--orange)" />
-            <span style={{ fontSize: 14, color: 'var(--orange)', fontWeight: 600, flex: 1 }}>
-              {pendingDrafts} auto-drafted email{pendingDrafts > 1 ? 's' : ''} waiting for your review
-            </span>
-            <ArrowRight size={16} color="var(--orange)" />
-          </div>
-        </Link>
-      )}
-
       {/* Main Grid */}
       <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
 
@@ -308,8 +415,8 @@ export default function Dashboard() {
             <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No leads yet</div>
           ) : (
             recentLeads.map(lead => (
-              <div key={lead.id} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
+              <div key={lead.id} onClick={() => navigate(`/clients?open=${lead.id}`)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
                 padding: '10px 0', borderBottom: '1px solid var(--border)',
               }}>
                 <div style={{
@@ -317,89 +424,19 @@ export default function Dashboard() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, fontWeight: 700, color: '#f5a623', flexShrink: 0,
                 }}>
-                  {(lead.name || '?')[0].toUpperCase()}
+                  {(lead.business_name || '?')[0].toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {lead.name || 'Unknown'}
+                    {lead.business_name || 'Unknown'}
                   </div>
                   <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {lead.email || lead.company || lead.lead_source || ''}
+                    {lead.owner_name || lead.contact_email || lead.source || ''}
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
                   {timeAgo(lead.created_at)}
                 </div>
-              </div>
-            ))
-          )}
-        </Card>
-
-        {/* Email Drafts to Review */}
-        <Card>
-          <CardHeader icon={Mail} title="Drafts to Review" color="var(--orange)" linkTo="/email" />
-          {drafts.length === 0 ? (
-            <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
-              <CheckSquare size={20} style={{ opacity: 0.3, marginBottom: 6, display: 'block', margin: '0 auto 6px' }} />
-              All caught up — no pending drafts
-            </div>
-          ) : (
-            drafts.slice(0, 5).map(email => (
-              <div key={email.id} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 0', borderBottom: '1px solid var(--border)',
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,155,38,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Sparkles size={13} color="var(--orange)" />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {email.lead_name || email.to_email || 'Unknown'}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {email.subject || '(no subject)'}
-                  </div>
-                </div>
-                {email.follow_up_date && (
-                  <div style={{ fontSize: 10, color: 'var(--orange)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                    <Clock size={10} /> Follow-up
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </Card>
-
-        {/* Upcoming Meetings */}
-        <Card>
-          <CardHeader icon={Calendar} title="Upcoming Meetings" color="#784bd1" linkTo="/meetings" />
-          {meetings.length === 0 ? (
-            <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No upcoming meetings</div>
-          ) : (
-            meetings.map(m => (
-              <div key={m.google_event_id || m.id} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 0', borderBottom: '1px solid var(--border)',
-              }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{m.title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{fmtDate(m.start_time)}</div>
-                </div>
-                {m.meet_link && (
-                  <button
-                    onClick={() => window.open(m.meet_link, '_blank')}
-                    style={{
-                      background: '#22c55e18', color: '#22c55e', border: '1px solid #22c55e30',
-                      borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-                    }}
-                  >
-                    <Video size={11} /> Join
-                  </button>
-                )}
               </div>
             ))
           )}
@@ -441,31 +478,11 @@ export default function Dashboard() {
         </Card>
       </div>
 
-
-      {/* ── Academy Overview ── */}
-      {academyStats && (
-        <Card style={{ marginTop: 14 }}>
-          <CardHeader icon={Users} title="Academy" color="#E8650A" linkTo="/academy" linkLabel="Manage" />
-          <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Students</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{academyStats.total_students || 0}</div>
-            </div>
-            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Subscribers</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#22c55e' }}>{academyStats.active_subscribers || 0}</div>
-            </div>
-            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>MRR</div>
-              <div className="private-value" style={{ fontSize: 20, fontWeight: 800, color: 'var(--orange)' }}>${(academyStats.mrr || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            </div>
-            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pending HW</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: academyStats.pending_homework > 0 ? '#ef4444' : '#1a1a2e' }}>{academyStats.pending_homework || 0}</div>
-            </div>
-          </div>
-        </Card>
-      )}
+      {/* ── Upcoming Meetings (interactive calendar) ── */}
+      <Card style={{ marginBottom: 20 }}>
+        <CardHeader icon={Calendar} title="Upcoming Meetings" color="#784bd1" linkTo="/appointments" />
+        <MeetingsCalendar meetings={meetings} onMeetingClick={handleMeetingClick} />
+      </Card>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Plus, Search, Trash2, ArrowLeft, Building2,
   KeyRound, CheckCircle2, Circle, Clock, ShieldCheck, ListChecks,
@@ -62,7 +63,14 @@ function StageBadge({ stage }) {
   );
 }
 
-export default function Clients() {
+// kind='lead'   -> stage === 'lead' (still trying to convert, hasn't paid/started)
+// kind='client' -> stage !== 'lead' (paid and started with VTM)
+// Same crm_clients table either way — moving a lead's stage off 'lead' is what
+// "converts" it; it just disappears from the Leads list and shows up in Clients.
+export default function Clients({ kind = 'client' }) {
+  const isLeadView = kind === 'lead';
+  const noun = isLeadView ? 'Lead' : 'Client';
+
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -71,6 +79,7 @@ export default function Clients() {
   const [form, setForm] = useState(EMPTY_CLIENT);
   const [selected, setSelected] = useState(null); // client being viewed
   const [deleteTarget, setDeleteTarget] = useState(null); // client pending delete confirmation
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const load = async () => {
     setLoadError('');
@@ -79,16 +88,31 @@ export default function Clients() {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+  // Reset the open detail view when switching between /leads and /clients.
+  useEffect(() => { setSelected(null); }, [kind]);
+
+  // Deep-link support: /clients?open=<id> (used by Dashboard links) opens a
+  // specific record directly, regardless of whether it's a lead or client.
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || !clients.length) return;
+    const found = clients.find(c => c.id === openId);
+    if (found) setSelected(found);
+    searchParams.delete('open');
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, clients]);
 
   const filtered = useMemo(() =>
-    clients.filter(c => !search ||
-      (c.business_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (c.owner_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (c.industry || '').toLowerCase().includes(search.toLowerCase())),
-    [clients, search]
+    clients
+      .filter(c => isLeadView ? c.stage === 'lead' : c.stage !== 'lead')
+      .filter(c => !search ||
+        (c.business_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (c.owner_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (c.industry || '').toLowerCase().includes(search.toLowerCase())),
+    [clients, search, isLeadView]
   );
 
-  const openAdd = () => { setForm(EMPTY_CLIENT); setModal('add'); };
+  const openAdd = () => { setForm({ ...EMPTY_CLIENT, stage: isLeadView ? 'lead' : 'onboarding' }); setModal('add'); };
   const handleCreate = async () => {
     if (!form.business_name.trim()) return;
     try {
@@ -111,11 +135,11 @@ export default function Clients() {
   };
 
   usePageActions(() => selected ? null : (
-    <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New Client</button>
-  ), [selected]);
+    <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New {noun}</button>
+  ), [selected, noun]);
 
   const deleteModal = deleteTarget && (
-    <Modal title="Delete Client" onClose={() => setDeleteTarget(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
+    <Modal title={`Delete ${noun}`} onClose={() => setDeleteTarget(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
       <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{deleteTarget.business_name}</strong> and all its platforms, tasks, and links? This cannot be undone.</p>
     </Modal>
   );
@@ -141,7 +165,7 @@ export default function Clients() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-          <input className="search-input" placeholder="Search clients…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
+          <input className="search-input" placeholder={`Search ${isLeadView ? 'leads' : 'clients'}…`} value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
       </div>
 
@@ -169,7 +193,7 @@ export default function Clients() {
             {loading ? (
               <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No clients yet.</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No {isLeadView ? 'leads' : 'clients'} yet.</td></tr>
             ) : filtered.map(c => (
               <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(c)}>
                 <td>

@@ -204,74 +204,10 @@ export default async function handler(req, res) {
     results.zapier = 'skipped (progressive save)';
   }
 
-  // 5. Auto-draft email + schedule follow-up (only on final submission with email)
-  if (!isProgressiveSave && lead.email) {
-    try {
-      const firstName = (lead.name || '').split(' ')[0] || 'there';
-      const draftSubject = `Hey ${firstName} — following up from Vernon Tech & Media`;
-      const draftBody = [
-        `Hey ${firstName},`,
-        '',
-        `Thanks for reaching out through our site! I saw you're looking for help with ${lead.problem || 'your project'}.`,
-        '',
-        lead.current_state ? `It sounds like right now: ${lead.current_state}.` : '',
-        lead.goal ? `And your goal is: ${lead.goal}.` : '',
-        '',
-        `I'd love to hop on a quick call to see how we can help. What does your schedule look like${lead.best_time ? ` around ${lead.best_time}` : ' this week'}?`,
-        '',
-        'Talk soon,',
-        'Ray Vernon',
-        'Vernon Tech & Media',
-      ].filter(Boolean).join('\n');
-
-      // Create auto-draft in email queue
-      await fetch(`${CRM_URL}/rest/v1/crm_email_queue`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': CRM_KEY,
-          'Authorization': `Bearer ${CRM_KEY}`,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({
-          to_email: lead.email,
-          lead_name: lead.name,
-          subject: draftSubject,
-          body: draftBody,
-          status: 'draft',
-          auto_generated: true,
-          created_at: new Date().toISOString(),
-        }),
-      });
-
-      // Schedule 3-day follow-up draft
-      const followUpDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
-      await fetch(`${CRM_URL}/rest/v1/crm_email_queue`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': CRM_KEY,
-          'Authorization': `Bearer ${CRM_KEY}`,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({
-          to_email: lead.email,
-          lead_name: lead.name,
-          subject: `Quick follow-up, ${firstName}`,
-          body: `Hey ${firstName},\n\nJust wanted to circle back — I know things get busy. If you're still interested in ${lead.problem || 'getting started'}, I'm happy to find a time that works.\n\nNo pressure at all, just don't want you to miss out.\n\nBest,\nRay Vernon\nVernon Tech & Media`,
-          status: 'draft',
-          auto_generated: true,
-          follow_up_date: followUpDate,
-          created_at: new Date().toISOString(),
-        }),
-      });
-
-      results.autoDraft = 'created';
-    } catch (err) {
-      console.error('Auto-draft failed:', err);
-      results.autoDraft = 'error';
-    }
-  }
+  // 5. Auto-draft email generation is disabled (2026-07-13, Ray's request) — it
+  // was queuing unreviewed follow-up drafts into crm_email_queue on every lead
+  // capture. Follow-ups now happen manually from the Email/Clients pages.
+  results.autoDraft = 'disabled';
 
   return res.status(200).json({ success: true, results });
 }

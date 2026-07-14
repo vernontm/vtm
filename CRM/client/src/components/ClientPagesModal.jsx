@@ -24,7 +24,6 @@ const PAGE_GROUPS = [
     { slug: 'email',         name: 'Email' },
     { slug: 'meetings',      name: 'Meetings' },
     { slug: 'invoices',      name: 'Invoices' },
-    { slug: 'subscriptions', name: 'Subscriptions' },
     { slug: 'quick-notes',   name: 'Quick Notes' },
     { slug: 'notifications', name: 'Notifications' },
     { slug: 'settings',      name: 'Settings' },

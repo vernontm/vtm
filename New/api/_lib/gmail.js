@@ -244,6 +244,28 @@ async function getOrCreateLabel(accessToken, labelName) {
   return newLabel.id;
 }
 
+// List real Gmail labels. `type: 'user'` excludes system labels (INBOX,
+// SENT, UNREAD, etc.) — those aren't user-manageable and clutter a picker.
+async function listLabels() {
+  const { accessToken } = await getGmailAuth();
+  const res = await gmailFetch('/labels', accessToken);
+  return (res.labels || []).filter(l => l.type === 'user');
+}
+
+async function deleteLabel(labelId) {
+  const { accessToken } = await getGmailAuth();
+  await gmailFetch(`/labels/${labelId}`, accessToken, { method: 'DELETE' });
+  if (_labelCache) _labelCache = _labelCache.filter(l => l.id !== labelId);
+}
+
+async function modifyMessageLabels(messageId, { addLabelIds = [], removeLabelIds = [] } = {}) {
+  const { accessToken } = await getGmailAuth();
+  return gmailFetch(`/messages/${messageId}/modify`, accessToken, {
+    method: 'POST',
+    body: JSON.stringify({ addLabelIds, removeLabelIds }),
+  });
+}
+
 // ── Send + Draft ─────────────────────────────────────────────────────────────
 
 async function sendEmail({ to, from: fromOverride, subject, body, threadId, inReplyTo, references, labelName }) {
@@ -368,5 +390,6 @@ async function disconnectGmail() {
 module.exports = {
   getAuthUrl, exchangeCode, getGmailAuth, getSetting, setSetting,
   sendEmail, createDraft, getInboxThreads, getGmailStatus, disconnectGmail,
+  getOrCreateLabel, listLabels, deleteLabel, modifyMessageLabels,
   GOOGLE_REDIRECT_URI,
 };

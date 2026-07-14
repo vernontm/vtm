@@ -10,7 +10,8 @@ import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
   addEmailLabel, removeEmailLabel, getGmailContacts, getGmailThread,
-  getLabelDefs, createLabelDef, deleteLabelDef, getAIFollowups, trashGmailMessage,
+  getGmailLabels, createGmailLabel, deleteGmailLabel, applyGmailLabel, removeGmailLabel,
+  getAIFollowups, trashGmailMessage,
 } from '../api';
 
 const TABS = [
@@ -457,8 +458,8 @@ export default function EmailPage() {
       try { const gc = await getGmailContacts({pageSize:'100'}); setGmailContactsList(gc?.contacts||[]); } catch{}
     }
     loadContacts();
-    // Load custom labels
-    getLabelDefs().then(l => setCustomLabels(l||[])).catch(() => {});
+    // Load real Gmail labels (synced both ways — see gmail-labels.js)
+    getGmailLabels().then(l => setCustomLabels(l||[])).catch(() => {});
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -481,17 +482,36 @@ export default function EmailPage() {
 
   const handleRefresh = async () => { setRefreshing(true); await load(true); setRefreshing(false); };
 
-  // Label management
+  // Label management — creates/deletes a real Gmail label (two-way synced)
   const handleCreateLabel = async () => {
     if (!newLabelName.trim()) return;
     try {
-      const created = await createLabelDef({ name: newLabelName.trim(), color: newLabelColor });
-      setCustomLabels(prev => [...prev, created]);
+      const created = await createGmailLabel({ name: newLabelName.trim(), color: newLabelColor });
+      setCustomLabels(prev => [...prev.filter(l => l.id !== created.id), created]);
       setNewLabelName(''); setShowNewLabel(false);
     } catch (e) { toast('error', 'Failed: ' + e.message); }
   };
   const handleDeleteLabel = async (id) => {
-    try { await deleteLabelDef(id); setCustomLabels(prev => prev.filter(l => l.id !== id)); } catch {}
+    try { await deleteGmailLabel(id); setCustomLabels(prev => prev.filter(l => l.id !== id)); }
+    catch (e) { toast('error', 'Failed: ' + e.message); }
+  };
+
+  // Apply/remove a real Gmail label on a specific message (updates local
+  // state immediately; the message's `labelIds` array is the source of truth).
+  const toggleGmailLabel = async (msg, label) => {
+    const has = (msg.labelIds || []).includes(label.id);
+    try {
+      if (has) await removeGmailLabel(msg.id, label.id);
+      else await applyGmailLabel(msg.id, label.id);
+      const update = prev => prev.map(m => {
+        if (m.id !== msg.id) return m;
+        return { ...m, labelIds: has ? (m.labelIds||[]).filter(l => l !== label.id) : [...(m.labelIds||[]), label.id] };
+      });
+      setInboxMessages(update); setSentMessages(update); setDraftMessages(update);
+      if (selected?.id === msg.id) {
+        setSelected(s => ({ ...s, labelIds: has ? (s.labelIds||[]).filter(l => l !== label.id) : [...(s.labelIds||[]), label.id] }));
+      }
+    } catch (e) { toast('error', 'Label failed: ' + e.message); }
   };
 
   // AI Follow-ups
@@ -670,17 +690,24 @@ export default function EmailPage() {
             </div>
           )}
           <div style={{ display:'flex', flexDirection:'column', gap:2, maxHeight:120, overflow:'auto' }}>
-            {customLabels.map(l => (
-              <div key={l.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 8px', borderRadius:6, cursor:'pointer', fontSize:12, color:'var(--muted)' }}
-                onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                <div style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />
-                <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</span>
-                <button onClick={e => { e.stopPropagation(); handleDeleteLabel(l.id); }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:1 }}
-                  onMouseEnter={e => e.currentTarget.style.color='#ff5c5c'} onMouseLeave={e => e.currentTarget.style.color='var(--muted)'}>
-                  <X size={11} />
-                </button>
-              </div>
-            ))}
+            {customLabels.map(l => {
+              const applied = selected && (selected.labelIds||[]).includes(l.id);
+              return (
+                <div key={l.id}
+                  onClick={() => selected && toggleGmailLabel(selected, l)}
+                  title={selected ? (applied ? `Remove "${l.name}" from this email` : `Apply "${l.name}" to this email`) : l.name}
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 8px', borderRadius:6, cursor:selected?'pointer':'default', fontSize:12, color: applied ? 'var(--text)' : 'var(--muted)', background: applied ? 'var(--surface-2)' : 'transparent' }}
+                  onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background=applied?'var(--surface-2)':'transparent'}>
+                  <div style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />
+                  <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</span>
+                  {applied && <Check size={11} style={{ color:l.color||'var(--orange)', flexShrink:0 }} />}
+                  <button onClick={e => { e.stopPropagation(); handleDeleteLabel(l.id); }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:1 }}
+                    onMouseEnter={e => e.currentTarget.style.color='#ff5c5c'} onMouseLeave={e => e.currentTarget.style.color='var(--muted)'}>
+                    <X size={11} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -732,8 +759,19 @@ export default function EmailPage() {
 
                 {/* CRM labels */}
                 {(selected.crmLabels||[]).filter(l=>l!=='spam').length > 0 && (
-                  <div style={{ display:'flex', gap:6, marginBottom:16 }}>
+                  <div style={{ display:'flex', gap:6, marginBottom:8 }}>
                     {(selected.crmLabels||[]).filter(l=>l!=='spam').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{ fontSize:10, padding:'4px 10px', borderRadius:6, background:cfg.color+'15', color:cfg.color, fontWeight:600 }}>{cfg.label}</span> : null; })}
+                  </div>
+                )}
+
+                {/* Real Gmail labels — click a label in the sidebar to toggle it here */}
+                {(selected.labelIds||[]).some(id => customLabels.some(l => l.id===id)) && (
+                  <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
+                    {customLabels.filter(l => (selected.labelIds||[]).includes(l.id)).map(l => (
+                      <span key={l.id} style={{ fontSize:10, padding:'4px 10px', borderRadius:6, background:(l.color||'var(--orange)')+'15', color:l.color||'var(--orange)', fontWeight:600, display:'flex', alignItems:'center', gap:5 }}>
+                        <Tag size={10} /> {l.name}
+                      </span>
+                    ))}
                   </div>
                 )}
 
@@ -895,6 +933,9 @@ export default function EmailPage() {
                       <div className="email-item-labels" style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                         {isGmail && <LabelButton labelKey="favorite" active={isFav} onClick={e => { e.stopPropagation(); toggleLabel(email,'favorite'); }} size={13} />}
                         {crmLabels.filter(l=>l!=='spam'&&l!=='favorite').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:cfg.color+'15',color:cfg.color,fontWeight:600}}>{cfg.label}</span> : null; })}
+                        {customLabels.filter(l => (email.labelIds||[]).includes(l.id)).map(l => (
+                          <span key={l.id} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:(l.color||'var(--orange)')+'15',color:l.color||'var(--orange)',fontWeight:600}}>{l.name}</span>
+                        ))}
                         {email.auto_generated && <span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(255,155,38,0.08)',color:'var(--orange)',fontWeight:600,display:'flex',alignItems:'center',gap:2}}><Sparkles size={8} /> Auto</span>}
                       </div>
                       <span className="email-item-time" style={{ fontSize:11, color:'var(--muted)', flexShrink:0, width:70, textAlign:'right' }}>

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, Briefcase, LayoutDashboard, RefreshCw,
   Mail, Calendar, Settings, Receipt, LogOut,
-  Eye, EyeOff, CreditCard, Building2, UserCog, X,
+  Eye, EyeOff, Building2, UserCog, X, UserPlus,
 } from 'lucide-react';
 import { useRefresh } from '../context/RefreshContext';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -16,6 +16,7 @@ import { getGmailInbox } from '../api';
 // ── Nav definitions ───────────────────────────────────────────────────────────
 const nav = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard',    slug: 'dashboard' },
+  { to: '/leads',        icon: UserPlus,        label: 'Leads',        slug: 'leads' },
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
   { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
   { to: '/appointments', icon: Calendar,        label: 'Appointments', slug: 'appointments' },
@@ -24,7 +25,6 @@ const nav = [
 
 const navTools = [
   { to: '/invoices',      icon: Receipt,    label: 'Invoices',      slug: 'invoices' },
-  { to: '/subscriptions', icon: CreditCard, label: 'Subscriptions', slug: 'subscriptions' },
   { to: '/email',         icon: Mail,       label: 'Email',         slug: 'email' },
   { to: '/settings',      icon: Settings,   label: 'Settings',      slug: 'settings' },
 ];

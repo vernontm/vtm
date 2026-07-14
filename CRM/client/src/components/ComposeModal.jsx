@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, PenLine, Search, Loader, RefreshCw, MessageSquare, Send, Zap } from 'lucide-react';
-import { getLeads, createQueueItem, updateQueueItem, syncLeadGmail, generateSingleEmail, getLabelDefs } from '../api';
+import { getLeads, createQueueItem, updateQueueItem, syncLeadGmail, generateSingleEmail, getGmailLabels } from '../api';
 
 const SEGMENT_COLORS = { hot: '#fdab3d', warm: '#ff9b26', cold: '#4a4845' };
 const EMAIL_TYPE_OPTIONS = [
@@ -52,7 +52,7 @@ export default function ComposeModal({ onClose, onComplete }) {
   // ── Load leads + label defs on mount ──────────────────────────────────────
   useEffect(() => {
     getLeads().then(setLeads).catch(() => {});
-    getLabelDefs().then(l => setLabelDefs(l || [])).catch(() => {});
+    getGmailLabels().then(l => setLabelDefs(l || [])).catch(() => {});
   }, []);
 
   // ── Close suggestions on outside click ────────────────────────────────────

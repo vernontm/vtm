@@ -168,10 +168,16 @@ export const updateSubscription = (id, data) => request(`/subscriptions?id=${id}
 export const deleteSubscription = (id) => request(`/subscriptions?id=${id}`, { method: 'DELETE' });
 export const scanSubscriptions = () => request('/subscriptions?action=scan', { method: 'POST' });
 
-// Label Definitions (custom labels with colors)
-export const getLabelDefs = () => request('/label-defs');
-export const createLabelDef = (data) => request('/label-defs', { method: 'POST', body: JSON.stringify(data) });
-export const deleteLabelDef = (id) => request(`/label-defs?id=${id}`, { method: 'DELETE' });
+// Gmail labels — real Gmail labels, two-way synced (create here -> exists in
+// Gmail; created in Gmail -> shows up here). Color is a CRM-only display
+// preference stored against the real Gmail label id.
+export const getGmailLabels = () => request('/gmail-labels');
+export const createGmailLabel = (data) => request('/gmail-labels', { method: 'POST', body: JSON.stringify(data) });
+export const deleteGmailLabel = (id) => request(`/gmail-labels?id=${id}`, { method: 'DELETE' });
+export const applyGmailLabel = (message_id, label_id) =>
+  request('/gmail-labels?action=apply', { method: 'POST', body: JSON.stringify({ message_id, label_id }) });
+export const removeGmailLabel = (message_id, label_id) =>
+  request('/gmail-labels?action=remove', { method: 'POST', body: JSON.stringify({ message_id, label_id }) });
 
 // Portfolio
 export const getPortfolio = () => request('/portfolio');
