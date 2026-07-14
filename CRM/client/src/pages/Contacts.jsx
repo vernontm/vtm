@@ -70,8 +70,17 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
 
   const canCompose = subject.trim() && fromEmail.trim() && body.trim();
 
+  // Guardrail: "Review & send" only unlocks after a test of the CURRENT content.
+  // A signature of the message (sender + subject + body) — if any of it changes
+  // after a test, the signature no longer matches and a fresh test is required.
+  const contentSig = JSON.stringify({ n: fromName.trim(), e: fromEmail.trim(), s: subject.trim(), b: body });
+  const [testedSig, setTestedSig] = useState(null);
+  const testedOk = testedSig !== null && testedSig === contentSig;
+  const testedStale = testedSig !== null && testedSig !== contentSig;
+
   async function sendTest() {
     if (!testEmail.trim()) { toast('error', 'Enter a test email address'); return; }
+    const sig = contentSig;
     setTesting(true);
     try {
       await sendMailerliteCampaign({
@@ -79,7 +88,8 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
         from_name: fromName.trim(), from_email: fromEmail.trim(), body,
         test_email: testEmail.trim(),
       });
-      toast('success', `Test sent to ${testEmail.trim()}. Check your inbox before blasting the group.`);
+      setTestedSig(sig);   // this exact content is now cleared to send
+      toast('success', `Test sent to ${testEmail.trim()}. Review it, then you can send to the group.`);
     } catch (e) {
       toast('error', e.message || 'Test failed');
     } finally {
@@ -90,7 +100,7 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
   const group = groups.find(g => String(g.id) === String(groupId));
   const count = group ? (group.total || group.active || 0) : 0;
 
-  const canProceed = groupId && subject.trim() && fromEmail.trim() && body.trim();
+  const canProceed = group && canCompose && testedOk;
 
   async function send() {
     setStep('sending');
@@ -193,10 +203,18 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{group ? `${count.toLocaleString()} recipient${count !== 1 ? 's' : ''}` : ''}</span>
+              <span style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {testedOk ? (
+                  <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Test sent — cleared to send</span>
+                ) : testedStale ? (
+                  <span style={{ color: '#dc2626', fontWeight: 600 }}>Message changed — send a new test</span>
+                ) : (
+                  <span style={{ color: 'var(--muted)' }}>Send a test first to unlock sending</span>
+                )}
+              </span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn-ghost" onClick={onClose}>Cancel</button>
-                <button className="btn-primary" disabled={!canProceed || step === 'sending'} onClick={() => setStep('confirm')}>
+                <button className="btn-primary" disabled={!canProceed || step === 'sending'} title={!testedOk ? 'Send a test email first' : ''} onClick={() => setStep('confirm')}>
                   <Send size={13} /> Review &amp; send
                 </button>
               </div>
