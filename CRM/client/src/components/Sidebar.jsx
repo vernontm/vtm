@@ -55,7 +55,7 @@ export default function Sidebar() {
   const [emailCount, setEmailCount] = useState(0);
 
   const { hasPermission, isOwner, viewingAs, clearViewingAs } = useTeam();
-  const { isAdmin, canAccess } = useClient();
+  const { isAdmin, canAccess, user } = useClient();
   // A nav item is visible when the user has BOTH legacy team permission
   // (for sub-team filtering) AND a page grant in their current client.
   // Admins bypass both.
@@ -185,7 +185,27 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--side-border)', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--side-border)', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
+          {user?.email && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(255,155,38,0.16)', border: '1px solid rgba(255,155,38,0.35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#ffb055', fontSize: 12, fontWeight: 800, fontFamily: 'var(--font-display)',
+              }}>
+                {user.email[0].toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user.email.split('@')[0]}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--side-muted)', fontFamily: 'var(--font-display)' }}>
+                  {isAdmin ? 'Admin' : 'Team member'}
+                </div>
+              </div>
+            </div>
+          )}
           {!viewingAs && (
             <button onClick={togglePrivacy} style={FOOTER_BTN(privacyMode)}>
               {privacyMode ? <EyeOff size={13} /> : <Eye size={13} />}

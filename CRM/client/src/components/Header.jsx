@@ -112,8 +112,8 @@ export default function Header() {
         {/* ── Left: page title + subtitle ── */}
         <div style={{ minWidth: 0 }}>
           <div className="page-title" style={{
-            fontSize: 18, fontWeight: 800, color: 'var(--text)',
-            fontFamily: 'var(--font-display)', lineHeight: 1.2,
+            fontSize: 20, fontWeight: 800, color: 'var(--text)',
+            fontFamily: 'var(--font-display)', lineHeight: 1.2, letterSpacing: '-0.01em',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
             {meta.title}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, ChevronDown, ChevronRight, DollarSign, Calendar, FolderOpen, ExternalLink } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink } from 'lucide-react';
 import { getProjects, createProject, updateProject, deleteProject, getProjectItems, createProjectItem, updateProjectItem, deleteProjectItem } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -28,12 +28,11 @@ const BILLING_TYPES = [
 const EMPTY_PROJECT = { name: '', client: '', status: 'Active', billing_type: 'one_time', value: '', recurring_amount: '', start_date: '', end_date: '', notes: '' };
 const EMPTY_ITEM    = { name: '', owner: '', status: 'Not Started', date: '', text: '', link: '' };
 
-// ── Subitem row ─────────────────────────────────────────────────────────────
+// ── Subitem row (used inside the project detail page) ─────────────────────────
 function SubitemRow({ item, onFieldSave, onDelete }) {
   return (
-    <tr style={{ background: 'var(--surface-2)' }}>
-      <td style={{ width: 70 }}></td>
-      <td style={{ paddingLeft: 36 }}>
+    <tr>
+      <td style={{ paddingLeft: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 3, height: 20, background: 'var(--surface-3)', borderRadius: 2, flexShrink: 0 }} />
           <InlineEdit value={item.name} onSave={v => onFieldSave(item.id, 'name', v)} placeholder="Subitem name" />
@@ -48,7 +47,6 @@ function SubitemRow({ item, onFieldSave, onDelete }) {
       <td style={{ minWidth: 120 }}>
         <InlineEdit value={item.date} type="date" onSave={v => onFieldSave(item.id, 'date', v)} placeholder="Date" />
       </td>
-      <td></td>
       <td style={{ minWidth: 200 }}>
         <InlineEdit value={item.text} onSave={v => onFieldSave(item.id, 'text', v)} placeholder="Notes / text" />
       </td>
@@ -73,16 +71,176 @@ function SubitemRow({ item, onFieldSave, onDelete }) {
   );
 }
 
+function Card({ title, children, style }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', ...style }}>
+      {title && (
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontSize: 13, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+          {title}
+        </div>
+      )}
+      <div style={{ padding: 20 }}>{children}</div>
+    </div>
+  );
+}
+
+// ── Project detail page ────────────────────────────────────────────────────────
+function ProjectDetail({ project, onBack, onPatch, onDelete }) {
+  const [items, setItems] = useState([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setItemsLoading(true);
+    getProjectItems(project.id)
+      .then(rows => { if (!cancelled) setItems(rows); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setItemsLoading(false); });
+    return () => { cancelled = true; };
+  }, [project.id]);
+
+  const saveField = async (field, value) => {
+    const parsed = (field === 'value' || field === 'recurring_amount') ? (parseFloat(value) || 0) : value;
+    onPatch({ [field]: parsed });
+    try { await updateProject(project.id, { [field]: parsed }); }
+    catch (e) { toast('error', e.message); }
+  };
+
+  const addSubitem = async () => {
+    try {
+      const item = await createProjectItem({ project_id: project.id, ...EMPTY_ITEM });
+      setItems(its => [...its, item]);
+    } catch (e) { toast('error', e.message); }
+  };
+  const handleItemField = async (itemId, field, value) => {
+    setItems(its => its.map(it => it.id === itemId ? { ...it, [field]: value } : it));
+    try { await updateProjectItem(itemId, { [field]: value }); }
+    catch (e) { toast('error', e.message); }
+  };
+  const deleteSubitem = async (itemId) => {
+    setItems(its => its.filter(it => it.id !== itemId));
+    try { await deleteProjectItem(itemId); }
+    catch (e) { toast('error', e.message); }
+  };
+
+  return (
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
+      {/* Header */}
+      <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <button className="btn-ghost" onClick={onBack} style={{ padding: '7px 9px', flexShrink: 0 }}><ArrowLeft size={16} /></button>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FolderOpen size={20} style={{ color: 'var(--muted)' }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>
+            <InlineEdit value={project.name} onSave={v => saveField('name', v)} placeholder="Project name" />
+          </div>
+          {project.client && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{project.client}</div>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => saveField('status', s)} />
+          <button className="btn-ghost" style={{ padding: '7px 9px', color: '#ff5c5c' }} onClick={onDelete} title="Delete project"><Trash2 size={15} /></button>
+        </div>
+      </div>
+
+      <div style={{ padding: 28, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+          <Card title="Subitems">
+            {itemsLoading ? (
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ paddingLeft: 16 }}>Subitem</th>
+                      <th>Owner</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th>Text</th>
+                      <th>Link</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map(item => (
+                      <SubitemRow key={item.id} item={item} onFieldSave={handleItemField} onDelete={deleteSubitem} />
+                    ))}
+                    <tr>
+                      <td colSpan={7} style={{ padding: 0 }}>
+                        <div className="add-row" onClick={addSubitem}><Plus size={13} /> Add subitem</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card title="Notes">
+            <textarea className="form-input" rows={6} defaultValue={project.notes || ''} onBlur={e => saveField('notes', e.target.value)} placeholder="Project notes…" style={{ resize: 'vertical', width: '100%' }} />
+          </Card>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <Card title="Project details">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Client</span>
+                <InlineEdit value={project.client} onSave={v => saveField('client', v)} placeholder="Client" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Billing</span>
+                <select className="form-input" value={project.billing_type || 'one_time'} onChange={e => saveField('billing_type', e.target.value)}>
+                  {BILLING_TYPES.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
+                </select>
+              </div>
+              {project.billing_type !== 'monthly' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {project.billing_type === 'hybrid' ? 'Upfront Value' : 'Value'}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
+                    <InlineEdit value={String(project.value || '')} type="number" onSave={v => saveField('value', v)} placeholder="0" />
+                  </div>
+                </div>
+              )}
+              {project.billing_type !== 'one_time' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recurring Amount</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
+                    <InlineEdit value={String(project.recurring_amount || '')} type="number" onSave={v => saveField('recurring_amount', v)} placeholder="0" />
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>/mo</span>
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Start Date</span>
+                <InlineEdit value={project.start_date} type="date" onSave={v => saveField('start_date', v)} placeholder="—" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>End Date</span>
+                <InlineEdit value={project.end_date} type="date" onSave={v => saveField('end_date', v)} placeholder="—" />
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function Projects() {
   const [searchParams] = useSearchParams();
   const [projects, setProjects]     = useState([]);
-  const [allItems, setAllItems]     = useState({}); // { project_id: [items] }
-  const [expanded, setExpanded]     = useState({}); // which projects are expanded
   const [search, setSearch]         = useState(() => searchParams.get('search') || '');
   const [modal, setModal]           = useState(null);
   const [form, setForm]             = useState(EMPTY_PROJECT);
-  const [selected, setSelected]     = useState(null);
+  const [selected, setSelected]     = useState(null); // project being viewed (detail page)
+  const [deleteTarget, setDeleteTarget] = useState(null); // project pending delete confirmation
   const [loading, setLoading]       = useState(true);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -131,48 +289,9 @@ export default function Projects() {
     } catch (e) { toast('error', e.message); }
   };
 
-  // ── Expand / load subitems ──
-  const toggleExpand = useCallback(async (projectId) => {
-    setExpanded(e => ({ ...e, [projectId]: !e[projectId] }));
-    if (!allItems[projectId]) {
-      try {
-        const items = await getProjectItems(projectId);
-        setAllItems(a => ({ ...a, [projectId]: items }));
-      } catch (err) { console.error(err); }
-    }
-  }, [allItems]);
-
-  // ── Subitem field save ──
-  const handleItemField = async (projectId, itemId, field, value) => {
-    try {
-      await updateProjectItem(itemId, { [field]: value });
-      setAllItems(a => ({
-        ...a,
-        [projectId]: (a[projectId] || []).map(it => it.id === itemId ? { ...it, [field]: value } : it),
-      }));
-    } catch (e) { console.error(e); }
-  };
-
-  // ── Add subitem ──
-  const addSubitem = async (projectId) => {
-    try {
-      const item = await createProjectItem({ project_id: projectId, ...EMPTY_ITEM });
-      setAllItems(a => ({ ...a, [projectId]: [...(a[projectId] || []), item] }));
-      setExpanded(e => ({ ...e, [projectId]: true }));
-    } catch (e) { console.error(e); }
-  };
-
-  // ── Delete subitem ──
-  const deleteSubitem = async (projectId, itemId) => {
-    try {
-      await deleteProjectItem(itemId);
-      setAllItems(a => ({ ...a, [projectId]: (a[projectId] || []).filter(it => it.id !== itemId) }));
-    } catch (e) { console.error(e); }
-  };
-
   // ── Project CRUD modals ──
   const openAdd    = () => { setForm(EMPTY_PROJECT); setModal('add'); };
-  const openDelete = (p) => { setSelected(p); setModal('delete'); };
+  const openDelete = (p) => setDeleteTarget(p);
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
@@ -182,7 +301,13 @@ export default function Projects() {
     } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
-    try { await deleteProject(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
+    if (!deleteTarget) return;
+    try {
+      await deleteProject(deleteTarget.id);
+      if (selected?.id === deleteTarget.id) setSelected(null);
+      setDeleteTarget(null);
+      await load();
+    } catch (e) { toast('error', e.message); }
   };
 
   // Bulk actions
@@ -236,9 +361,29 @@ export default function Projects() {
     return Math.round(((now - start) / (end - start)) * 100);
   };
 
-  usePageActions(() => (
+  usePageActions(() => selected ? null : (
     <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New Project</button>
-  ), [openAdd]);
+  ), [openAdd, selected]);
+
+  const deleteModal = deleteTarget && (
+    <Modal title="Delete Project" onClose={() => setDeleteTarget(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
+      <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{deleteTarget.name}</strong> and all its subitems? This cannot be undone.</p>
+    </Modal>
+  );
+
+  if (selected) {
+    return (
+      <>
+        <ProjectDetail
+          project={selected}
+          onBack={() => { setSelected(null); load(); }}
+          onPatch={(patch) => setSelected(s => ({ ...s, ...patch }))}
+          onDelete={() => setDeleteTarget(selected)}
+        />
+        {deleteModal}
+      </>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
@@ -258,7 +403,7 @@ export default function Projects() {
         ) : sorted.map(project => {
           const pct = progressPercent(project);
           return (
-            <div key={project.id} className="mobile-card" onClick={() => toggleExpand(project.id)}>
+            <div key={project.id} className="mobile-card" onClick={() => setSelected(project)}>
               <div className="mobile-card-row primary">
                 <span className="private-value">{project.name || '—'}</span>
               </div>
@@ -318,164 +463,96 @@ export default function Projects() {
         <table>
           <thead>
             <tr>
-              {/* Combined: checkbox + expand */}
-              <th style={{ width: 70 }}></th>
+              <th style={{ width: 36 }}></th>
               <th style={{ minWidth: 220 }}>Project</th>
-              <th style={{ minWidth: 120 }}>Owner / Client</th>
+              <th style={{ minWidth: 120 }}>Client</th>
               <th style={{ minWidth: 145 }}>Status</th>
               <th style={{ minWidth: 120 }}>Timeline</th>
               <th style={{ minWidth: 120 }}>Value</th>
               <th style={{ minWidth: 160 }}>Progress</th>
-              <th style={{ minWidth: 150 }}>Text / Notes</th>
-              <th style={{ minWidth: 140 }}>Link</th>
+              <th style={{ minWidth: 150 }}>Notes</th>
               <th style={{ width: 44 }}></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No projects yet.</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No projects yet.</td></tr>
             ) : (
               <>
                 {sorted.map(project => {
-                  const pct   = progressPercent(project);
-                  const isExp = expanded[project.id];
-                  const items_ = allItems[project.id] || [];
+                  const pct = progressPercent(project);
 
                   return (
-                    <React.Fragment key={project.id}>
-                      {/* Project row */}
-                      <tr style={{ background: selectedIds.has(project.id) ? 'rgba(255,155,38,0.08)' : undefined }}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 4 }}>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(project.id)}
-                              onChange={() => toggleSelect(project.id)}
-                            />
-                            <button
-                              onClick={() => toggleExpand(project.id)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '2px 2px', display: 'flex', alignItems: 'center' }}
-                              title={isExp ? 'Collapse' : 'Expand subitems'}
-                            >
-                              {isExp ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <InlineEdit value={project.name} onSave={v => handleProjectField(project.id, 'name', v)} placeholder="Project name" privacy="name" />
-                            {isExp && items_.length > 0 && (
-                              <span style={{ background: 'var(--border-light)', borderRadius: 10, padding: '0px 6px', fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
-                                {items_.length}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <InlineEdit value={project.client} onSave={v => handleProjectField(project.id, 'client', v)} placeholder="Client" privacy="name" />
-                        </td>
-                        <td>
-                          <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
-                        </td>
-                        <td>
-                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                            {project.start_date || project.end_date ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Calendar size={11} style={{ color: 'var(--muted)' }} />
-                                <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
-                              </div>
-                            ) : <span style={{ color: '#555880' }}>—</span>}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="private-value" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            {project.billing_type !== 'monthly' && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
-                                <InlineEdit value={String(project.value || '')} type="number" onSave={v => handleProjectField(project.id, 'value', v)} placeholder="0" />
-                              </div>
-                            )}
-                            {project.billing_type !== 'one_time' && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 11, color: 'var(--muted)' }}>
-                                <InlineEdit value={String(project.recurring_amount || '')} type="number" onSave={v => handleProjectField(project.id, 'recurring_amount', v)} placeholder="0" />
-                                <span>/mo</span>
-                              </div>
-                            )}
-                            <select
-                              className="form-input"
-                              style={{ width: 'auto', padding: '2px 6px', fontSize: 10, color: 'var(--muted)', background: 'var(--surface-2)' }}
-                              value={project.billing_type || 'one_time'}
-                              onChange={e => handleProjectField(project.id, 'billing_type', e.target.value)}
-                            >
-                              {BILLING_TYPES.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
-                            </select>
-                          </div>
-                        </td>
-                        <td>
-                          {isOngoing(project) ? (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: '#22c55e18', border: '1px solid #22c55e40', borderRadius: 999, padding: '2px 10px' }}>Ongoing</span>
-                          ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
-                                <div style={{
-                                  height: '100%', borderRadius: 3, width: `${pct}%`,
-                                  background: pct === 100 ? '#22c55e' : pct > 60 ? 'var(--orange)' : '#ef4444',
-                                  transition: 'width 0.3s',
-                                }} />
-                              </div>
-                              <span style={{ fontSize: 11, color: 'var(--muted)', width: 28 }}>{pct}%</span>
+                    <tr
+                      key={project.id}
+                      onClick={() => setSelected(project)}
+                      style={{ cursor: 'pointer', background: selectedIds.has(project.id) ? 'rgba(255,155,38,0.08)' : undefined }}
+                    >
+                      <td onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(project.id)}
+                          onChange={() => toggleSelect(project.id)}
+                        />
+                      </td>
+                      <td>
+                        <span className="private-value" style={{ fontWeight: 700, color: 'var(--text)' }}>{project.name || '—'}</span>
+                      </td>
+                      <td style={{ color: 'var(--muted)' }} className="private-value">{project.client || '—'}</td>
+                      <td onClick={e => e.stopPropagation()}>
+                        <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
+                      </td>
+                      <td>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                          {project.start_date || project.end_date ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Calendar size={11} style={{ color: 'var(--muted)' }} />
+                              <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
+                            </div>
+                          ) : <span style={{ color: '#555880' }}>—</span>}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="private-value" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {project.billing_type !== 'monthly' && project.value > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
+                              <span>{Number(project.value).toLocaleString()}</span>
                             </div>
                           )}
-                        </td>
-                        <td>
-                          <InlineEdit value={project.notes} onSave={v => handleProjectField(project.id, 'notes', v)} placeholder="Notes" />
-                        </td>
-                        <td></td>
-                        <td>
-                          <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => openDelete(project)} title="Delete">
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-
-                      {/* Subitems */}
-                      {isExp && (
-                        <>
-                          {/* Subitem header row */}
-                          <tr style={{ background: 'var(--surface-3)' }}>
-                            <td></td>
-                            <td style={{ paddingLeft: 36, fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 6, paddingBottom: 6 }}>Subitem</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date</td>
-                            <td></td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Text</td>
-                            <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Link</td>
-                            <td></td>
-                          </tr>
-
-                          {items_.map(item => (
-                            <SubitemRow
-                              key={item.id}
-                              item={item}
-                              onFieldSave={(itemId, field, val) => handleItemField(project.id, itemId, field, val)}
-                              onDelete={(itemId) => deleteSubitem(project.id, itemId)}
-                            />
-                          ))}
-
-                          {/* Add subitem row */}
-                          <tr style={{ background: 'var(--surface-2)' }}>
-                            <td colSpan={10} style={{ padding: 0, paddingLeft: 36 }}>
-                              <div className="add-row" style={{ paddingLeft: 20 }} onClick={() => addSubitem(project.id)}>
-                                <Plus size={13} /> Add subitem
-                              </div>
-                            </td>
-                          </tr>
-                        </>
-                      )}
-                    </React.Fragment>
+                          {project.billing_type !== 'one_time' && project.recurring_amount > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--muted)' }}>${Number(project.recurring_amount).toLocaleString()}/mo</div>
+                          )}
+                          {!project.value && !project.recurring_amount && <span style={{ color: '#555880' }}>—</span>}
+                        </div>
+                      </td>
+                      <td>
+                        {isOngoing(project) ? (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: '#22c55e18', border: '1px solid #22c55e40', borderRadius: 999, padding: '2px 10px' }}>Ongoing</span>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
+                              <div style={{
+                                height: '100%', borderRadius: 3, width: `${pct}%`,
+                                background: pct === 100 ? '#22c55e' : pct > 60 ? 'var(--orange)' : '#ef4444',
+                                transition: 'width 0.3s',
+                              }} />
+                            </div>
+                            <span style={{ fontSize: 11, color: 'var(--muted)', width: 28 }}>{pct}%</span>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ color: 'var(--muted)', fontSize: 12 }}>
+                        {project.notes ? (project.notes.length > 50 ? project.notes.slice(0, 50) + '…' : project.notes) : '—'}
+                      </td>
+                      <td onClick={e => e.stopPropagation()}>
+                        <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => openDelete(project)} title="Delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
 
@@ -497,13 +574,13 @@ export default function Projects() {
                         )}
                       </div>
                     </td>
-                    <td colSpan={4}></td>
+                    <td colSpan={3}></td>
                   </tr>
                 )}
 
                 {/* Add project */}
                 <tr>
-                  <td colSpan={10} style={{ padding: 0 }}>
+                  <td colSpan={9} style={{ padding: 0 }}>
                     <div className="add-row" onClick={openAdd}><Plus size={14} /> Add Project</div>
                   </td>
                 </tr>
@@ -580,11 +657,7 @@ export default function Projects() {
         </Modal>
       )}
 
-      {modal === 'delete' && (
-        <Modal title="Delete Project" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong> and all its subitems? This cannot be undone.</p>
-        </Modal>
-      )}
+      {deleteModal}
     </div>
   );
 }
