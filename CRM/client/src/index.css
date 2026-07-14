@@ -512,7 +512,10 @@ textarea:focus, select:focus {
     z-index: 100; transform: translateX(-100%);
   }
   .app-sidebar.sidebar-open { transform: translateX(0); }
-  .grid-2, .grid-4 { grid-template-columns: 1fr; }
+  /* Collapse multi-column layouts to a single column on mobile. !important so
+     it beats inline gridTemplateColumns styles. .rgrid is the opt-in class for
+     any inline grid that should stack on mobile. */
+  .grid-1, .grid-2, .grid-3, .grid-4, .rgrid { grid-template-columns: 1fr !important; }
   .table-container { margin: 12px; }
   .search-input { width: 160px; }
 }

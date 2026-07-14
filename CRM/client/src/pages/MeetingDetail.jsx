@@ -374,7 +374,7 @@ export default function MeetingDetail() {
       </div>
 
       {/* ── Body: Left tabs + Right Sidekick ──────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
+      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
 
         {/* ── LEFT PANEL ─────────────────────────────────────────────────── */}
         <div>

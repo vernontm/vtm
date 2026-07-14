@@ -168,7 +168,7 @@ function ComposeBlast({ clientId, groups, initialGroupId, onClose }) {
                   {groups.map(g => <option key={g.id} value={g.id}>{g.name} ({(g.total || g.active || 0).toLocaleString()})</option>)}
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div><label style={label}>From name</label><input value={fromName} onChange={e => setFromName(e.target.value)} style={field} placeholder="Vernon Tech & Media" /></div>
                 <div><label style={label}>From email</label><input value={fromEmail} onChange={e => setFromEmail(e.target.value)} style={field} placeholder="you@domain.com" /></div>
               </div>
@@ -269,7 +269,7 @@ function AutomationForm({ clientId, groups, initial, onCancel, onSaved }) {
           {groups.map(g => <option key={g.id} value={g.id}>{g.name} ({(g.total || g.active || 0).toLocaleString()})</option>)}
         </select>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div><label style={lbl}>Every</label>
           <select value={weekday} onChange={e => setWeekday(Number(e.target.value))} style={field}>
             {WEEKDAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
@@ -281,7 +281,7 @@ function AutomationForm({ clientId, groups, initial, onCancel, onSaved }) {
           </select>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div><label style={lbl}>From name</label><input value={fromName} onChange={e => setFromName(e.target.value)} style={field} /></div>
         <div><label style={lbl}>From email</label><input value={fromEmail} onChange={e => setFromEmail(e.target.value)} style={field} /></div>
       </div>
@@ -458,7 +458,7 @@ export default function Contacts() {
         />
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, padding: 20, alignItems: 'start' }}>
+      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, padding: 20, alignItems: 'start' }}>
         {/* Groups rail */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Groups</div>
