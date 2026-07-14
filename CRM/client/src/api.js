@@ -300,6 +300,12 @@ export const createClientTask = (data)      => request('/client-tasks', { method
 export const updateClientTask = (id, data)  => request(`/client-tasks?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClientTask = (id)        => request(`/client-tasks?id=${id}`, { method: 'DELETE' });
 
+// Client activity (notes / calls / tasks)
+export const getClientActivity    = (client_id, type) => request(`/client-activity?client_id=${client_id}${type ? '&type=' + type : ''}`);
+export const createClientActivity = (data)      => request('/client-activity', { method: 'POST', body: JSON.stringify(data) });
+export const updateClientActivity = (id, data)  => request(`/client-activity?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteClientActivity = (id)        => request(`/client-activity?id=${id}`, { method: 'DELETE' });
+
 // Client credential vault (secrets encrypted at rest; decrypted server-side)
 export const getClientCredentials   = (client_id) => request(`/client-credentials?client_id=${client_id}`);
 export const createClientCredential = (data)      => request('/client-credentials', { method: 'POST', body: JSON.stringify(data) });
