@@ -497,6 +497,9 @@ export const editEmailAI = async (data, { onProgress } = {}) => {
 
 // MailerLite groups for a client (for broadcast audience picker)
 export const getMailerliteGroups = (client_id) => request(`/mailerlite-groups?client_id=${client_id}`);
+// Live MailerLite subscribers (marketing audience) — optionally filtered by group
+export const getMailerliteSubscribers = (client_id, group_id) =>
+  request(`/mailerlite-subscribers?client_id=${client_id}${group_id ? `&group_id=${group_id}` : ''}`);
 
 // ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══

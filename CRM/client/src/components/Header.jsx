@@ -13,7 +13,7 @@ const PAGE_META = {
   '/dashboard':                   { title: 'Dashboard',           sub: 'Overview of your business' },
   '/leads':                       { title: 'Leads',               sub: 'Still converting — not yet paid & started' },
   '/clients':                     { title: 'Clients',             sub: 'Paid & started with VTM' },
-  '/contacts':                    { title: 'Contacts',            sub: 'Your client & prospect database' },
+  '/contacts':                    { title: 'Contacts',            sub: 'Your MailerLite marketing audience' },
   '/projects':                    { title: 'Projects',            sub: 'Active work & deliverables' },
   '/appointments':                { title: 'Appointments',        sub: 'Schedule & recordings' },
   '/employees':                   { title: 'Employees',           sub: 'Team accounts & access' },

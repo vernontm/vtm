@@ -1,312 +1,154 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, Phone, Mail } from 'lucide-react';
-import { usePageActions } from '../context/UiContext';
-import { getContacts, createContact, updateContact, deleteContact } from '../api';
-import Modal from '../components/Modal';
-import InlineEdit from '../components/InlineEdit';
-import SelectionBar from '../components/SelectionBar';
-import CopyCell from '../components/CopyCell';
-import { toast } from '../components/Toast';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Users, Search, RefreshCw, Mail, AlertCircle } from 'lucide-react';
+import { useClient } from '../context/ClientContext';
+import { getMailerliteGroups, getMailerliteSubscribers } from '../api';
 
-const EMPTY = { name: '', email: '', phone: '', company: '', title: '', notes: '' };
-const gmailLink = (email) => `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
+// Marketing > Contacts = the live MailerLite audience for the current workspace
+// (groups on the left, subscribers on the right). This is the marketing list,
+// distinct from Leads (the sales pipeline).
+
+const STATUS = {
+  active:       { label: 'Active',       color: '#16a34a' },
+  unsubscribed: { label: 'Unsubscribed', color: '#8a8a8a' },
+  unconfirmed:  { label: 'Unconfirmed',  color: '#f5a623' },
+  bounced:      { label: 'Bounced',      color: '#dc2626' },
+  junk:         { label: 'Junk',         color: '#dc2626' },
+};
+const fmtDate = (d) => { if (!d) return '—'; try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return '—'; } };
+
+const rail = (active) => ({
+  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+  padding: '10px 14px', border: 'none', cursor: 'pointer', fontSize: 13,
+  fontFamily: 'var(--font-display)', fontWeight: active ? 700 : 500,
+  background: active ? 'rgba(37,99,235,0.10)' : 'transparent',
+  color: active ? 'var(--text)' : 'var(--muted)',
+  borderLeft: `3px solid ${active ? 'var(--orange)' : 'transparent'}`,
+});
 
 export default function Contacts() {
-  const [searchParams] = useSearchParams();
-  const [contacts, setContacts] = useState([]);
-  const [search, setSearch] = useState(() => searchParams.get('search') || '');
-  const [modal, setModal] = useState(null);
-  const [form, setForm] = useState(EMPTY);
-  const [selected, setSelected] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [loadError, setLoadError] = useState('');
+  const { selectedClient } = useClient();
+  const clientId = selectedClient?.id;
 
-  const load = async () => {
-    setLoadError('');
-    try { setContacts((await getContacts()).filter(c => !c.archived)); }
-    catch (e) { console.error(e); setLoadError(e?.message || 'Failed to load contacts'); }
+  const [groups, setGroups]         = useState([]);
+  const [activeGroup, setActiveGroup] = useState(null); // null = all contacts
+  const [subs, setSubs]             = useState([]);
+  const [total, setTotal]           = useState(0);
+  const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch]         = useState('');
+  const [error, setError]           = useState('');
+
+  const loadGroups = useCallback(async () => {
+    if (!clientId) return;
+    try { const r = await getMailerliteGroups(clientId); setGroups(r.groups || []); } catch { /* surfaced via subs error */ }
+  }, [clientId]);
+
+  const loadSubs = useCallback(async (groupId) => {
+    if (!clientId) return;
+    setLoading(true); setError('');
+    try { const r = await getMailerliteSubscribers(clientId, groupId); setSubs(r.subscribers || []); setTotal(r.total || 0); }
+    catch (e) { setError(e.message || 'Failed to load contacts'); setSubs([]); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
+  }, [clientId]);
+
+  useEffect(() => { setActiveGroup(null); loadGroups(); }, [clientId, loadGroups]);
+  useEffect(() => { loadSubs(activeGroup); }, [activeGroup, loadSubs]);
+
+  const refresh = async () => { setRefreshing(true); await Promise.all([loadGroups(), loadSubs(activeGroup)]); setRefreshing(false); };
 
   const filtered = useMemo(() =>
-    contacts.filter(c => !search ||
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.company || '').toLowerCase().includes(search.toLowerCase()) ||
-      (c.email || '').toLowerCase().includes(search.toLowerCase())),
-    [contacts, search]
+    subs.filter(s => !search ||
+      (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (s.name || '').toLowerCase().includes(search.toLowerCase())),
+    [subs, search]
   );
 
-  // Selection helpers
-  const toggleSelect = (id) => setSelectedIds(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-  const clearSelection = () => setSelectedIds(new Set());
-  const selectedItems = contacts.filter(c => selectedIds.has(c.id));
-
-  const handleFieldSave = async (id, field, value) => {
-    try {
-      await updateContact(id, { [field]: value });
-      setContacts(cs => cs.map(c => c.id === id ? { ...c, [field]: value } : c));
-    } catch (e) { console.error(e); }
-  };
-
-  const openAdd = () => { setForm(EMPTY); setModal('add'); };
-  const openDelete = (c) => { setSelected(c); setModal('delete'); };
-
-  const handleSave = async () => {
-    if (!form.name.trim()) return;
-    try { await createContact(form); await load(); setModal(null); } catch (e) { toast('error', e.message); }
-  };
-  const handleDelete = async () => {
-    try { await deleteContact(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
-  };
-
-  // Bulk actions
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.size} contact(s)? This cannot be undone.`)) return;
-    try {
-      await Promise.all([...selectedIds].map(id => deleteContact(id)));
-      setContacts(cs => cs.filter(c => !selectedIds.has(c.id)));
-      clearSelection();
-    } catch (e) { console.error(e); }
-  };
-
-  const handleBulkArchive = async () => {
-    try {
-      await Promise.all([...selectedIds].map(id => updateContact(id, { archived: true })));
-      setContacts(cs => cs.filter(c => !selectedIds.has(c.id)));
-      clearSelection();
-    } catch (e) { console.error(e); }
-  };
-
-  const handleBulkDuplicate = async () => {
-    try {
-      const items = contacts.filter(c => selectedIds.has(c.id));
-      await Promise.all(items.map(({ id, created_at, updated_at, ...rest }) =>
-        createContact({ ...rest, name: `${rest.name} (copy)` })
-      ));
-      await load();
-      clearSelection();
-    } catch (e) { console.error(e); }
-  };
-
-  const initials = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  const avatarColor = (name) => {
-    const colors = ['var(--orange)', '#784bd1', '#22c55e', '#f5a623', '#ff5c5c'];
-    return colors[name.charCodeAt(0) % colors.length];
-  };
-
-  usePageActions(() => (
-    <button className="btn-primary" onClick={openAdd}><Plus size={15} /> New Contact</button>
-  ), [openAdd]);
+  if (!clientId) {
+    return <div style={{ padding: 40, color: 'var(--muted)', fontSize: 14 }}>Pick a workspace up top to see its marketing contacts.</div>;
+  }
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 24px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
           <input className="search-input" placeholder="Search contacts…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+          {activeGroup ? `${filtered.length} in group` : `${total.toLocaleString()} contacts`}
+        </span>
+        <button className="btn-ghost" onClick={refresh} disabled={refreshing} style={{ marginLeft: 'auto' }}>
+          <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
+        </button>
       </div>
 
-      {loadError && (
-        <div style={{ margin: '12px 20px', padding: '12px 16px', background: '#ff5c5c15', border: '1px solid #ff5c5c40', borderRadius: 8, fontSize: 13, color: '#ff5c5c', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <span>Couldn't load contacts: {loadError}</span>
-          <button onClick={load} style={{ padding: '6px 14px', borderRadius: 6, background: '#ff5c5c', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, padding: 20, alignItems: 'start' }}>
+        {/* Groups rail */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Groups</div>
+          <button onClick={() => setActiveGroup(null)} style={rail(activeGroup === null)}>
+            <Users size={14} /> <span style={{ flex: 1, textAlign: 'left' }}>All contacts</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{total.toLocaleString()}</span>
+          </button>
+          {groups.map(g => (
+            <button key={g.id} onClick={() => setActiveGroup(g.id)} style={rail(activeGroup === g.id)}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--orange)', flexShrink: 0 }} />
+              <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{(g.total || 0).toLocaleString()}</span>
+            </button>
+          ))}
+          {groups.length === 0 && <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--muted)' }}>No groups yet.</div>}
         </div>
-      )}
 
-      {/* ── Mobile card view ── */}
-      <div className="mobile-cards">
-        {loading ? (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts yet.</div>
-        ) : filtered.map(contact => (
-          <div key={contact.id} className="mobile-card">
-            <div className="mobile-card-row primary">
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%',
-                background: avatarColor(contact.name),
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 10, fontWeight: 700, color: '#ffffff', flexShrink: 0
-              }}>
-                {initials(contact.name)}
-              </div>
-              <span className="private-value">{contact.name || '—'}</span>
+        {/* Subscribers */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+          {error ? (
+            <div style={{ padding: '28px 24px', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
+              <AlertCircle size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
+              <span>{/No MailerLite/i.test(error) ? 'This workspace has no MailerLite connected. Add its API key in Settings to see marketing contacts.' : error}</span>
             </div>
-            {contact.email && (
-              <div className="mobile-card-row">
-                <Mail size={12} style={{ color: 'var(--orange)', flexShrink: 0 }} />
-                <span className="private-value">{contact.email}</span>
-              </div>
-            )}
-            {contact.phone && (
-              <div className="mobile-card-row">
-                <Phone size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-                <span className="private-value">{contact.phone}</span>
-              </div>
-            )}
-            {(contact.company || contact.title) && (
-              <div className="mobile-card-row">
-                {contact.company && <span>{contact.company}</span>}
-                {contact.company && contact.title && <span style={{ color: '#d0d0d0' }}>·</span>}
-                {contact.title && <span>{contact.title}</span>}
-              </div>
-            )}
-            <div className="mobile-card-actions">
-              {contact.email && (
-                <a href={gmailLink(contact.email)} target="_blank" rel="noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', textDecoration: 'none' }}>
-                  <Mail size={12} /> Email
-                </a>
-              )}
-              {contact.phone && (
-                <a href={`tel:${contact.phone}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>
-                  <Phone size={12} /> Call
-                </a>
-              )}
-              <button onClick={() => openDelete(contact)}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#ff5c5c', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <Trash2 size={12} /> Delete
-              </button>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ minWidth: 220 }}>Email</th>
+                    <th style={{ minWidth: 140 }}>Name</th>
+                    <th style={{ minWidth: 110 }}>Status</th>
+                    <th style={{ minWidth: 120 }}>Subscribed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading…</td></tr>
+                  ) : filtered.length === 0 ? (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts{search ? ' match your search' : ''}.</td></tr>
+                  ) : filtered.map(s => {
+                    const st = STATUS[s.status] || { label: s.status || '—', color: '#8a8a8a' };
+                    return (
+                      <tr key={s.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Mail size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                            <span className="private-value" style={{ fontWeight: 600, color: 'var(--text)' }}>{s.email}</span>
+                          </div>
+                        </td>
+                        <td className="private-value" style={{ color: 'var(--muted)' }}>{s.name || '—'}</td>
+                        <td>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: `${st.color}18`, border: `1px solid ${st.color}40`, borderRadius: 999, padding: '2px 10px' }}>{st.label}</span>
+                        </td>
+                        <td style={{ color: 'var(--muted)', fontSize: 12 }}>{fmtDate(s.subscribed_at)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
-        ))}
+          )}
+        </div>
       </div>
-
-      {/* ── Desktop table view ── */}
-      <div className="table-container desktop-table">
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: 36 }}></th>
-              <th style={{ minWidth: 220 }}>Name</th>
-              <th style={{ minWidth: 220 }}>Email</th>
-              <th style={{ minWidth: 160 }}>Phone</th>
-              <th style={{ minWidth: 180 }}>Company</th>
-              <th style={{ minWidth: 150 }}>Title</th>
-              <th style={{ minWidth: 120 }}>Added</th>
-              <th style={{ width: 44 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No contacts yet.</td></tr>
-            ) : filtered.map(contact => (
-              <tr key={contact.id} style={{ background: selectedIds.has(contact.id) ? 'rgba(37,99,235,0.08)' : undefined }}>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(contact.id)}
-                    onChange={() => toggleSelect(contact.id)}
-                  />
-                </td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <div style={{
-                      width: 30, height: 30, borderRadius: '50%',
-                      background: avatarColor(contact.name),
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700, color: '#ffffff', flexShrink: 0
-                    }}>
-                      {initials(contact.name)}
-                    </div>
-                    <CopyCell value={contact.name}>
-                      <InlineEdit value={contact.name} onSave={val => handleFieldSave(contact.id, 'name', val)} placeholder="Name" privacy="name" />
-                    </CopyCell>
-                  </div>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {contact.email && (
-                      <a href={gmailLink(contact.email)} target="_blank" rel="noreferrer" title="Compose in Gmail" style={{ display: 'flex', flexShrink: 0 }}>
-                        <Mail size={13} style={{ color: 'var(--orange)' }} />
-                      </a>
-                    )}
-                    <CopyCell value={contact.email}>
-                      <InlineEdit value={contact.email} type="email" onSave={val => handleFieldSave(contact.id, 'email', val)} placeholder="Add email" privacy="email" />
-                    </CopyCell>
-                  </div>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {contact.phone && <Phone size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
-                    <CopyCell value={contact.phone}>
-                      <InlineEdit value={contact.phone} type="tel" onSave={val => handleFieldSave(contact.id, 'phone', val)} placeholder="Add phone" privacy="phone" />
-                    </CopyCell>
-                  </div>
-                </td>
-                <td><InlineEdit value={contact.company} onSave={val => handleFieldSave(contact.id, 'company', val)} placeholder="Company" /></td>
-                <td><InlineEdit value={contact.title} onSave={val => handleFieldSave(contact.id, 'title', val)} placeholder="Title" /></td>
-                <td style={{ color: 'var(--muted)', fontSize: 12, paddingLeft: 8 }}>
-                  {contact.created_at ? new Date(contact.created_at).toLocaleDateString() : '—'}
-                </td>
-                <td>
-                  <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => openDelete(contact)} title="Delete">
-                    <Trash2 size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <SelectionBar
-        count={selectedIds.size}
-        selectedItems={selectedItems}
-        onClear={clearSelection}
-        onDelete={handleBulkDelete}
-        onArchive={handleBulkArchive}
-        onDuplicate={handleBulkDuplicate}
-      />
-
-      {modal === 'add' && (
-        <Modal title="New Contact" onClose={() => setModal(null)} onSubmit={handleSave} submitLabel="Add Contact">
-          <div className="form-group">
-            <label className="form-label">Name *</label>
-            <input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" required />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input className="form-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 555 000 0000" />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Company</label>
-              <input className="form-input" value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="Company name" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Title</label>
-              <input className="form-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Job title" />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            <textarea className="form-input" rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Additional notes..." style={{ resize: 'vertical' }} />
-          </div>
-        </Modal>
-      )}
-      {modal === 'delete' && (
-        <Modal title="Delete Contact" onClose={() => setModal(null)} onSubmit={handleDelete} submitLabel="Delete" danger>
-          <p style={{ color: 'var(--muted)' }}>Delete <strong style={{ color: 'var(--text)' }}>{selected?.name}</strong>? This cannot be undone.</p>
-        </Modal>
-      )}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

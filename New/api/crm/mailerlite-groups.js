@@ -46,7 +46,8 @@ module.exports = async function handler(req, res) {
     const groups = (data?.data || []).map(g => ({
       id: String(g.id),
       name: g.name,
-      total: g.total || 0,
+      // MailerLite doesn't return a plain `total`; active_count is the real number.
+      total: g.total ?? g.active_count ?? 0,
       active: g.active_count || 0,
     }));
     return res.json({ groups });
