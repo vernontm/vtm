@@ -325,6 +325,12 @@ export const createClientTask = (data)      => request('/client-tasks', { method
 export const updateClientTask = (id, data)  => request(`/client-tasks?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClientTask = (id)        => request(`/client-tasks?id=${id}`, { method: 'DELETE' });
 
+// Personal dashboard to-do list (per-user; urgent items float to top)
+export const getTodos   = ()        => request('/todos');
+export const createTodo = (data)    => request('/todos', { method: 'POST', body: JSON.stringify(data) });
+export const updateTodo = (id, data)=> request(`/todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteTodo = (id)      => request(`/todos?id=${id}`, { method: 'DELETE' });
+
 // Client activity (notes / calls / tasks)
 export const getClientActivity    = (client_id, type) => request(`/client-activity?client_id=${client_id}${type ? '&type=' + type : ''}`);
 export const createClientActivity = (data)      => request('/client-activity', { method: 'POST', body: JSON.stringify(data) });

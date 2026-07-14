@@ -38,7 +38,9 @@ export default async function handler(req, res) {
     // until per-client Stripe accounts are supported.
     let stripeRevenue = null;
     const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
-    if (all && STRIPE_KEY && !STRIPE_KEY.includes('REPLACE')) {
+    // Stripe is Ray's account-level money data — show it to any admin
+    // regardless of client scope (the CRM is single-account now).
+    if (user.is_admin && STRIPE_KEY && !STRIPE_KEY.includes('REPLACE')) {
       try {
         const stripeHeaders = { 'Authorization': `Bearer ${STRIPE_KEY}` };
         const stripeFetch = async (path) => {
@@ -66,10 +68,11 @@ export default async function handler(req, res) {
         const thirtyDaysAgoTs = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
         const yearAgoTs = Math.floor((Date.now() - 365 * 24 * 60 * 60 * 1000) / 1000);
 
-        const [balance, recentCharges, yearCharges] = await Promise.all([
+        const [balance, recentCharges, yearCharges, activeSubs] = await Promise.all([
           stripeFetch('/balance'),
           stripeFetchAll(`/charges?created[gte]=${thirtyDaysAgoTs}`),
           stripeFetchAll(`/charges?created[gte]=${yearAgoTs}&status=succeeded`),
+          stripeFetchAll(`/subscriptions?status=active`),
         ]);
 
         const availableBalance = balance.available.reduce((s, b) => s + b.amount, 0) / 100;
@@ -86,6 +89,37 @@ export default async function handler(req, res) {
           stripeMonthly[k] = (stripeMonthly[k] || 0) + c.amount / 100;
         });
 
+        // This calendar month's sales (month-to-date).
+        const nowD = new Date();
+        const thisMonthKey = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
+        const thisMonthCharges = yearCharges.data.filter(c => {
+          const d = new Date(c.created * 1000);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === thisMonthKey;
+        });
+        const thisMonthSales = thisMonthCharges.reduce((s, c) => s + c.amount, 0) / 100;
+
+        // Current MRR — sum of active subscriptions, each normalized to a
+        // monthly figure (yearly ÷ 12, weekly × 52/12, daily × 365/12).
+        const toMonthly = (amount, interval, count = 1) => {
+          const per = amount / (count || 1);
+          switch (interval) {
+            case 'year':  return per / 12;
+            case 'week':  return per * (52 / 12);
+            case 'day':   return per * (365 / 12);
+            default:      return per; // month
+          }
+        };
+        let mrr = 0;
+        (activeSubs.data || []).forEach(sub => {
+          (sub.items?.data || []).forEach(it => {
+            const price = it.price || {};
+            const rec = price.recurring || {};
+            if (!rec.interval) return;
+            const line = (price.unit_amount || 0) * (it.quantity || 1) / 100;
+            mrr += toMonthly(line, rec.interval, rec.interval_count);
+          });
+        });
+
         const recentPayments = succeededRecent.slice(0, 10).map(c => ({
           id: c.id,
           amount: c.amount / 100,
@@ -100,6 +134,10 @@ export default async function handler(req, res) {
           pending: pendingBalance,
           last30Days: last30Revenue,
           last30Count: succeededRecent.length,
+          thisMonth: thisMonthSales,
+          thisMonthCount: thisMonthCharges.length,
+          mrr,
+          activeSubCount: (activeSubs.data || []).length,
           total: totalStripeRevenue,
           byMonth: stripeMonthly,
           recentPayments,

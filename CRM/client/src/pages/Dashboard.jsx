@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
-  RefreshCw, Star, FolderOpen, CheckSquare,
-  Calendar,
-  TrendingUp, DollarSign, CreditCard, Bell, Check, X,
+  RefreshCw, FolderOpen, CheckSquare, ListChecks,
+  Calendar, Plus, Trash2, AlertTriangle,
+  TrendingUp, DollarSign, CreditCard, Bell, Check, X, Repeat,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   getDashboardStats, getUpcomingMeetings, getClients, getProjects,
   getClientAlerts, markAlertRead, markAllAlertsRead,
+  getTodos, createTodo, updateTodo, deleteTodo,
 } from '../api';
 
 function timeAgo(iso) {
@@ -65,23 +66,6 @@ function CardHeader({ icon: Icon, title, color = 'var(--orange)', linkTo, linkLa
           {linkLabel || 'View All'} →
         </Link>
       ))}
-    </div>
-  );
-}
-
-function StatMini({ icon: Icon, label, value, color = 'var(--orange)' }) {
-  return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
-      padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12,
-    }}>
-      <div className="stat-tile-icon" style={{ background: color + '18' }}>
-        <Icon size={17} color={color} />
-      </div>
-      <div>
-        <div className="stat-tile-value">{value}</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{label}</div>
-      </div>
     </div>
   );
 }
@@ -156,6 +140,102 @@ function WeekMeetings({ meetings, onMeetingClick }) {
   );
 }
 
+// ── To-Do / urgent tasks widget ────────────────────────────────────────────
+function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
+  const [title, setTitle] = useState('');
+  const [urgent, setUrgent] = useState(false);
+
+  function submit(e) {
+    e.preventDefault();
+    const t = title.trim();
+    if (!t) return;
+    onAdd({ title: t, urgent });
+    setTitle(''); setUrgent(false);
+  }
+
+  const open = todos.filter(t => !t.done);
+  const done = todos.filter(t => t.done);
+
+  return (
+    <div>
+      <form onSubmit={submit} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Add a task…"
+          style={{
+            flex: 1, minWidth: 0, background: 'var(--surface-2)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '8px 10px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--font-display)',
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setUrgent(u => !u)}
+          title="Mark urgent"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32,
+            borderRadius: 8, cursor: 'pointer', flexShrink: 0,
+            background: urgent ? '#ef444418' : 'var(--surface-2)',
+            border: `1px solid ${urgent ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`,
+            color: urgent ? '#ef4444' : 'var(--muted)',
+          }}
+        >
+          <AlertTriangle size={14} />
+        </button>
+        <button type="submit" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32,
+          borderRadius: 8, cursor: 'pointer', flexShrink: 0, border: 'none',
+          background: 'var(--btn-black)', color: '#fff',
+        }}>
+          <Plus size={15} />
+        </button>
+      </form>
+
+      {open.length === 0 && done.length === 0 ? (
+        <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Nothing to do. Add a task above.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 420, overflowY: 'auto' }}>
+          {[...open, ...done].map(t => (
+            <div key={t.id} className="todo-row" style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)',
+            }}>
+              <button
+                onClick={() => onToggle(t)}
+                title={t.done ? 'Mark not done' : 'Mark done'}
+                style={{
+                  width: 19, height: 19, borderRadius: 5, flexShrink: 0, cursor: 'pointer', padding: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: t.done ? '#22c55e' : 'transparent',
+                  border: `1.5px solid ${t.done ? '#22c55e' : 'var(--border-strong, #cbd5e1)'}`,
+                }}
+              >
+                {t.done && <Check size={12} color="#fff" />}
+              </button>
+              {t.urgent && !t.done && (
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} title="Urgent" />
+              )}
+              <span style={{
+                flex: 1, minWidth: 0, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                color: t.done ? 'var(--muted)' : 'var(--text)',
+                textDecoration: t.done ? 'line-through' : 'none',
+                fontWeight: t.urgent && !t.done ? 700 : 500,
+              }}>{t.title}</span>
+              <button
+                onClick={() => onDelete(t)}
+                className="todo-del"
+                title="Delete"
+                style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', flexShrink: 0, opacity: 0.5 }}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -165,6 +245,22 @@ export default function Dashboard() {
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [todos, setTodos] = useState([]);
+
+  async function loadTodos() {
+    try { const r = await getTodos(); setTodos(r.todos || []); } catch { /* ignore */ }
+  }
+  async function addTodo(data) {
+    try { await createTodo(data); loadTodos(); } catch { /* ignore */ }
+  }
+  async function toggleTodo(t) {
+    setTodos(prev => prev.map(x => x.id === t.id ? { ...x, done: !x.done } : x));
+    try { await updateTodo(t.id, { done: !t.done }); loadTodos(); } catch { loadTodos(); }
+  }
+  async function removeTodo(t) {
+    setTodos(prev => prev.filter(x => x.id !== t.id));
+    try { await deleteTodo(t.id); } catch { loadTodos(); }
+  }
 
   async function loadAlerts() {
     try { setAlerts(await getClientAlerts(true)); } catch { /* ignore */ }
@@ -188,6 +284,7 @@ export default function Dashboard() {
         getProjects(),
       ]);
       loadAlerts();
+      loadTodos();
       setStats(statsData.status === 'fulfilled' ? statsData.value : null);
       const allMeetings = meetingsData.status === 'fulfilled' ? (meetingsData.value || []) : [];
       setMeetings(allMeetings.filter(m => !isBlock(m)));
@@ -221,11 +318,8 @@ export default function Dashboard() {
     );
   }
 
-  const leads = clients.filter(c => c.stage === 'lead');
-  const recentLeads = [...leads].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6);
-  const openLeads = leads.length;
-  const activeProjects = stats?.activeProjects || 0;
-  const activeDeals = stats?.activeDeals || 0;
+  const money = (v) => `$${(Number(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  const sr = stats?.stripeRevenue;
 
   return (
     <div className="dashboard-page" style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: 'var(--bg)' }}>
@@ -278,35 +372,38 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
-        <StatMini icon={Star} label="Open Leads" value={openLeads} color="#f5a623" />
-        <StatMini icon={FolderOpen} label="Active Projects" value={activeProjects} color="#00b8d4" />
-        <StatMini icon={TrendingUp} label="Active Deals" value={activeDeals} color="#22c55e" />
-      </div>
-
-      {/* ── Stripe Revenue ── */}
-      {stats?.stripeRevenue && (
+      {/* ── Stripe money row ── */}
+      {sr ? (
         <div style={{ marginBottom: 22 }}>
-          {/* Revenue Stats Row */}
+          {/* This Month · MRR · Balance · Last 30 Days */}
           <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Stripe Balance</div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>${stats.stripeRevenue.available?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-              {stats.stripeRevenue.pending > 0 && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>${stats.stripeRevenue.pending.toFixed(2)} pending</div>}
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <TrendingUp size={12} /> This Month's Sales
+              </div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--orange)' }}>{money(sr.thisMonth)}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sr.thisMonthCount || 0} payment{sr.thisMonthCount !== 1 ? 's' : ''} this month</div>
             </div>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Last 30 Days</div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--orange)' }}>${stats.stripeRevenue.last30Days?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{stats.stripeRevenue.last30Count} payment{stats.stripeRevenue.last30Count !== 1 ? 's' : ''}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Repeat size={12} /> Current MRR
+              </div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#784bd1' }}>{money(sr.mrr)}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sr.activeSubCount || 0} active subscription{sr.activeSubCount !== 1 ? 's' : ''}</div>
             </div>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>12-Month Revenue</div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>${stats.stripeRevenue.total?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <DollarSign size={12} /> Stripe Balance
+              </div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>{money(sr.available)}</div>
+              {sr.pending > 0 && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{money(sr.pending)} pending</div>}
             </div>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Pipeline Value</div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#784bd1' }}>${(stats?.pipelineValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <CreditCard size={12} /> Last 30 Days
+              </div>
+              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{money(sr.last30Days)}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sr.last30Count || 0} payment{sr.last30Count !== 1 ? 's' : ''}</div>
             </div>
           </div>
 
@@ -335,11 +432,11 @@ export default function Dashboard() {
 
             {/* Recent Payments */}
             <Card>
-              <CardHeader icon={CreditCard} title="Recent Payments" color="#22c55e" linkTo="/invoices" />
-              {(stats.stripeRevenue.recentPayments || []).length === 0 ? (
+              <CardHeader icon={CreditCard} title="Recent Payments" color="#22c55e" />
+              {(sr.recentPayments || []).length === 0 ? (
                 <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No recent payments</div>
               ) : (
-                (stats.stripeRevenue.recentPayments || []).slice(0, 6).map(p => (
+                (sr.recentPayments || []).slice(0, 6).map(p => (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#22c55e18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <DollarSign size={13} color="#22c55e" />
@@ -362,9 +459,14 @@ export default function Dashboard() {
             </Card>
           </div>
         </div>
+      ) : (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
+          <DollarSign size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
+          <span>Stripe isn't returning data yet — sales &amp; MRR will appear here once payments come through.</span>
+        </div>
       )}
 
-      {/* Three-column widgets: this-week meetings (left) · recent leads · active projects */}
+      {/* Three-column widgets: this-week meetings · to-do · active projects */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20, alignItems: 'start' }}>
 
         {/* Upcoming Meetings — this week */}
@@ -373,38 +475,19 @@ export default function Dashboard() {
           <WeekMeetings meetings={meetings} onMeetingClick={handleMeetingClick} />
         </Card>
 
-        {/* Recent Leads */}
+        {/* To-Do / urgent tasks */}
         <Card>
-          <CardHeader icon={Star} title="Recent Leads" color="#f5a623" linkTo="/leads" />
-          {recentLeads.length === 0 ? (
-            <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No leads yet</div>
-          ) : (
-            recentLeads.map(lead => (
-              <div key={lead.id} onClick={() => navigate(`/clients?open=${lead.id}`)} style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                padding: '10px 0', borderBottom: '1px solid var(--border)',
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%', background: '#f5a62318',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 700, color: '#f5a623', flexShrink: 0,
-                }}>
-                  {(lead.business_name || '?')[0].toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {lead.business_name || 'Unknown'}
-                  </div>
-                  <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {lead.owner_name || lead.contact_email || lead.source || ''}
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
-                  {timeAgo(lead.created_at)}
-                </div>
-              </div>
-            ))
-          )}
+          <CardHeader
+            icon={ListChecks}
+            title="To-Do"
+            color="#2563eb"
+            right={
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
+                {todos.filter(t => !t.done).length} open
+              </span>
+            }
+          />
+          <TodoWidget todos={todos} onAdd={addTodo} onToggle={toggleTodo} onDelete={removeTodo} />
         </Card>
 
         {/* Active Projects */}
@@ -443,7 +526,11 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .todo-row .todo-del { transition: opacity 0.15s; }
+        .todo-row:hover .todo-del { opacity: 1 !important; }
+      `}</style>
     </div>
   );
 }
