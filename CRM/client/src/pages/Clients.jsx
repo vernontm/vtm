@@ -105,15 +105,10 @@ const fmtUsd = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFr
 // Kanban board for leads — one column per temperature (Hot / Warm / Cold).
 // Drag a card between columns to change its temperature. Each card carries a
 // potential-revenue amount; the board totals it per column and overall.
-function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onValueChange, onDelete }) {
+function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
-  const [editingId, setEditingId] = useState(null);
   const grandTotal = leads.reduce((s, l) => s + (Number(l.potential_value) || 0), 0);
-  const commitValue = (id, raw) => {
-    const v = (raw === '' || raw == null) ? null : Number(raw);
-    onValueChange(id, Number.isNaN(v) ? null : v);
-  };
   return (
     <div style={{ overflowX: 'auto', padding: '16px 24px' }}>
     {/* Pipeline total */}
@@ -160,7 +155,7 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onValueChange, 
                 return (
                   <div
                     key={l.id}
-                    draggable={editingId !== l.id}
+                    draggable
                     onDragStart={() => setDragId(l.id)}
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => onOpen(l)}
@@ -186,21 +181,13 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onValueChange, 
                     {desc && (
                       <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{desc}</div>
                     )}
-                    {/* Potential revenue — click to edit inline */}
-                    <div onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', alignSelf: 'flex-start' }}>
-                      <DollarSign size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
-                      <input
-                        type="number" min="0" step="100"
-                        defaultValue={l.potential_value ?? ''}
-                        placeholder="Add value"
-                        draggable={false}
-                        onFocus={() => setEditingId(l.id)}
-                        onBlur={e => { setEditingId(null); commitValue(l.id, e.target.value); }}
-                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                        style={{ width: 92, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)' }}
-                      />
-                    </div>
+                    {/* Potential revenue — shown only when set; edited on the detail page */}
+                    {(l.potential_value != null && l.potential_value !== '') && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.28)', borderRadius: 8, padding: '3px 8px', alignSelf: 'flex-start' }}>
+                        <DollarSign size={12} style={{ color: '#16a34a', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: '#16a34a' }}>{fmtUsd(l.potential_value)}</span>
+                      </div>
+                    )}
                     {/* Footer: owner + date */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--surface-3)', color: 'var(--muted)', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial}</span>
@@ -416,7 +403,6 @@ export default function Clients({ kind = 'client' }) {
             onOpen={setSelected}
             onTempChange={(id, t) => patchLead(id, { lead_temperature: t })}
             onRankChange={(id, r) => patchLead(id, { lead_rank: r })}
-            onValueChange={(id, v) => patchLead(id, { potential_value: v })}
             onDelete={setDeleteTarget}
           />
         )
@@ -737,6 +723,14 @@ function OverviewTab({ client, saveField }) {
             <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
             <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
             <Field label="Instagram" value={client.instagram} onSave={v => saveField('instagram', v)} placeholder="@handle" />
+            {client.stage === 'lead' && (
+              <Field
+                label="Potential Revenue ($)"
+                value={client.potential_value != null ? String(client.potential_value) : ''}
+                onSave={v => { const n = (v === '' || v == null) ? null : Number(v); saveField('potential_value', Number.isNaN(n) ? null : n); }}
+                placeholder="e.g. 5000"
+              />
+            )}
           </div>
         </Card>
 
