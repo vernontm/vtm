@@ -15,6 +15,7 @@ import {
   getClientCredentials, createClientCredential, updateClientCredential, deleteClientCredential,
   getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity,
   getProjects,
+  getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
   analyzeDeal, generateAgreement, approveAgreement,
 } from '../api';
@@ -578,6 +579,7 @@ export default function Clients({ kind = 'client' }) {
 const TABS = [
   { key: 'overview',  label: 'Overview',   icon: Building2 },
   { key: 'activity',  label: 'Activity',   icon: Activity },
+  { key: 'deals',     label: 'Deals',      icon: DollarSign },
   { key: 'agreement', label: 'Agreement',  icon: FileSignature },
   { key: 'vault',     label: 'Vault',      icon: Lock },
   { key: 'access',    label: 'Platforms & Access', icon: KeyRound },
@@ -642,6 +644,7 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
       <div style={{ padding: 28 }}>
         {tab === 'overview'  && <OverviewTab client={client} saveField={saveField} />}
         {tab === 'activity'  && <ActivityTab clientId={client.id} />}
+        {tab === 'deals'     && <DealsTab client={client} />}
         {tab === 'agreement' && <AgreementTab client={client} />}
         {tab === 'vault'     && <VaultTab clientId={client.id} />}
         {tab === 'access'    && <AccessTab clientId={client.id} />}
@@ -1397,6 +1400,187 @@ function ActivityTab({ clientId }) {
             </div>
           )
         ))}
+    </div>
+  );
+}
+
+// ── Deals tab ───────────────────────────────────────────────────────────────
+// A Deal groups this client's projects into one agreement + one combined
+// invoice. One client can have several deals; each bills as a single invoice
+// with a line item per project — so multiple projects never split into
+// separate bills.
+const fmtMoney = (v) => `$${Number(v || 0).toLocaleString()}`;
+const dealTotals = (deal) => {
+  const ps = deal.projects || [];
+  const oneTime = ps.filter(p => p.billing_type !== 'monthly').reduce((s, p) => s + Number(p.value || 0), 0);
+  const monthly = ps.filter(p => p.billing_type !== 'one_time').reduce((s, p) => s + Number(p.recurring_amount || 0), 0);
+  return { oneTime, monthly };
+};
+
+function DealCard({ deal, clientProjects, onChanged }) {
+  const [editing, setEditing] = useState(false);
+  const [picked, setPicked] = useState(new Set((deal.projects || []).map(p => p.id)));
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { oneTime, monthly } = dealTotals(deal);
+
+  const saveMembership = async () => {
+    setBusy(true);
+    try { await updateDeal(deal.id, { project_ids: [...picked] }); setEditing(false); onChanged(); }
+    catch (e) { toast('error', e.message); } finally { setBusy(false); }
+  };
+  const sendInvoice = async () => {
+    if (!window.confirm(`Create & send ONE combined Stripe invoice for "${deal.name}" (${(deal.projects || []).length} project${(deal.projects || []).length === 1 ? '' : 's'})?`)) return;
+    setBusy(true);
+    try { await createDealInvoice(deal.id, { email: email.trim(), name: deal.name }); toast('success', 'Combined invoice sent via Stripe.'); onChanged(); }
+    catch (e) { toast('error', e.message); } finally { setBusy(false); }
+  };
+  const remove = async () => {
+    if (!window.confirm(`Delete the deal "${deal.name}"? Its projects stay, just ungrouped.`)) return;
+    try { await deleteDeal(deal.id); onChanged(); } catch (e) { toast('error', e.message); }
+  };
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+        <DollarSign size={16} style={{ color: 'var(--orange)' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{deal.name || 'Untitled deal'}</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            {fmtMoney(oneTime)}{monthly > 0 ? ` + ${fmtMoney(monthly)}/mo` : ''} · {(deal.projects || []).length} project{(deal.projects || []).length === 1 ? '' : 's'}
+          </div>
+        </div>
+        {deal.invoice_status === 'sent' && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: '#16a34a18', border: '1px solid #16a34a40', borderRadius: 999, padding: '2px 10px' }}>Invoiced</span>
+        )}
+        <button className="btn-ghost" style={{ padding: '5px 7px', color: '#ff5c5c' }} onClick={remove} title="Delete deal"><Trash2 size={13} /></button>
+      </div>
+
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Line items (projects) */}
+        {editing ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Projects in this deal</div>
+            {clientProjects.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>This client has no projects yet — create them on the Projects page.</div>}
+            {clientProjects.map(p => {
+              const on = picked.has(p.id);
+              const inOther = p.deal_id && p.deal_id !== deal.id;
+              return (
+                <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={on} onChange={() => setPicked(s => { const n = new Set(s); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} style={{ accentColor: 'var(--orange)' }} />
+                  <span style={{ flex: 1 }}>{p.name}{inOther ? ' (in another deal)' : ''}</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 12 }}>{p.billing_type !== 'monthly' && p.value ? fmtMoney(p.value) : ''}{p.recurring_amount ? ` ${fmtMoney(p.recurring_amount)}/mo` : ''}</span>
+                </label>
+              );
+            })}
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button className="btn-primary" onClick={saveMembership} disabled={busy} style={{ padding: '7px 14px' }}>{busy ? 'Saving…' : 'Save projects'}</button>
+              <button className="btn-ghost" onClick={() => { setPicked(new Set((deal.projects || []).map(p => p.id))); setEditing(false); }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(deal.projects || []).length === 0 ? (
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>No projects in this deal yet.</div>
+            ) : (deal.projects || []).map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text)' }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--orange)', flexShrink: 0 }} />
+                <span style={{ flex: 1 }}>{p.name}</span>
+                <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+                  {p.billing_type !== 'monthly' && p.value ? fmtMoney(p.value) : ''}{p.recurring_amount ? ` ${fmtMoney(p.recurring_amount)}/mo` : ''}
+                </span>
+              </div>
+            ))}
+            <button className="btn-ghost" onClick={() => setEditing(true)} style={{ alignSelf: 'flex-start', marginTop: 4, padding: '5px 10px' }}><Pencil size={12} /> Edit projects</button>
+          </div>
+        )}
+
+        {/* Combined invoice */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+          {deal.invoice_status === 'sent' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#16a34a', fontWeight: 700 }}>
+              <CheckCircle2 size={15} /> Combined invoice sent
+              {deal.stripe_invoice_url && <a href={deal.stripe_invoice_url} target="_blank" rel="noreferrer" style={{ color: 'var(--orange)', marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>View <ExternalLink size={12} /></a>}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Billing email (defaults to the client's)" />
+              <button className="btn-primary" onClick={sendInvoice} disabled={busy || (deal.projects || []).length === 0} style={{ justifyContent: 'center' }}>
+                {busy ? 'Sending…' : <><DollarSign size={14} /> Create & send combined invoice</>}
+              </button>
+              <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>One Stripe invoice with a line item per project. Monthly projects roll into one subscription.</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DealsTab({ client }) {
+  const [deals, setDeals] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPicked, setNewPicked] = useState(new Set());
+
+  const load = async () => {
+    try {
+      const [d, all] = await Promise.all([getDeals(client.id), getProjects()]);
+      setDeals(d || []);
+      setProjects((all || []).filter(p => p.client_id === client.id || (!p.client_id && p.client === client.business_name)));
+    } catch (e) { toast('error', e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [client.id]);
+
+  const createNew = async () => {
+    if (!newName.trim()) return;
+    try {
+      await createDeal({ client_id: client.id, name: newName.trim(), project_ids: [...newPicked] });
+      setNewName(''); setNewPicked(new Set()); setCreating(false); load();
+    } catch (e) { toast('error', e.message); }
+  };
+
+  if (loading) return <div style={{ color: 'var(--muted)' }}>Loading…</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', flex: 1, lineHeight: 1.5 }}>
+          A deal bundles this client's projects into one agreement + one combined invoice.
+        </div>
+        {!creating && <button className="btn-primary" onClick={() => setCreating(true)} style={{ padding: '8px 14px' }}><Plus size={14} /> New Deal</button>}
+      </div>
+
+      {creating && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Deal name</label>
+            <input className="form-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Veteran Nexus — CRM + 2 sites" autoFocus />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Include projects</div>
+            {projects.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>This client has no projects yet — create them on the Projects page, then group them here.</div>
+            ) : projects.map(p => (
+              <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text)', cursor: 'pointer', padding: '3px 0' }}>
+                <input type="checkbox" checked={newPicked.has(p.id)} onChange={() => setNewPicked(s => { const n = new Set(s); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} style={{ accentColor: 'var(--orange)' }} />
+                <span style={{ flex: 1 }}>{p.name}{p.deal_id ? ' (in another deal)' : ''}</span>
+                <span style={{ color: 'var(--muted)', fontSize: 12 }}>{p.billing_type !== 'monthly' && p.value ? fmtMoney(p.value) : ''}{p.recurring_amount ? ` ${fmtMoney(p.recurring_amount)}/mo` : ''}</span>
+              </label>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-primary" onClick={createNew} disabled={!newName.trim()} style={{ padding: '8px 14px' }}>Create deal</button>
+            <button className="btn-ghost" onClick={() => { setCreating(false); setNewName(''); setNewPicked(new Set()); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {deals.length === 0 && !creating && <div style={{ color: 'var(--muted)', fontSize: 13 }}>No deals yet. Create one to bundle this client's projects into a single agreement + invoice.</div>}
+      {deals.map(d => <DealCard key={d.id} deal={d} clientProjects={projects} onChanged={load} />)}
     </div>
   );
 }

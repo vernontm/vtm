@@ -61,11 +61,13 @@ export const createContact  = (data) => request('/contacts', { method: 'POST', b
 export const updateContact  = (id, data) => request(`/contacts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteContact  = (id) => request(`/contacts?id=${id}`, { method: 'DELETE' });
 
-// Deals
-export const getDeals    = () => request('/deals');
+// Deals — the billable container: one agreement + one combined invoice,
+// grouping a client's projects. Pass a crm_clients.id to scope to that client.
+export const getDeals    = (clientId) => request(`/deals${clientId ? `?client_id=${clientId}` : ''}`);
 export const createDeal  = (data) => request('/deals', { method: 'POST', body: JSON.stringify(data) });
 export const updateDeal  = (id, data) => request(`/deals?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteDeal  = (id) => request(`/deals?id=${id}`, { method: 'DELETE' });
+export const createDealInvoice = (id, data) => request(`/deal-invoice?id=${id}`, { method: 'POST', body: JSON.stringify(data) });
 
 // Manual Invoices
 export const getManualInvoices   = (deal_id) => request(`/manual-invoices${deal_id ? '?deal_id=' + deal_id : ''}`);
