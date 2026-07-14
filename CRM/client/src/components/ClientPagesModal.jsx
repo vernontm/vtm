@@ -7,31 +7,19 @@ import { X, Check } from 'lucide-react';
 import { updateContentClient } from '../api';
 import { useToast } from './Toast';
 
+// Only the pages the CRM actually has now (legacy pages purged).
 const PAGE_GROUPS = [
   { label: 'Workspace', pages: [
-    { slug: 'dashboard',         name: 'Dashboard' },
-    { slug: 'leads',             name: 'Leads' },
-    { slug: 'contacts',          name: 'Contacts' },
-    { slug: 'projects',          name: 'Projects' },
-    { slug: 'blog',              name: 'Blog' },
-    { slug: 'portfolio',         name: 'Portfolio' },
-    { slug: 'resources',         name: 'Resources' },
-    { slug: 'content-scheduler', name: 'Content' },
-    { slug: 'avatars',           name: 'Avatars' },
-    { slug: 'email-marketing',   name: 'Email Marketing' },
+    { slug: 'dashboard',    name: 'Dashboard' },
+    { slug: 'leads',        name: 'Leads' },
+    { slug: 'clients',      name: 'Clients' },
+    { slug: 'projects',     name: 'Projects' },
+    { slug: 'appointments', name: 'Appointments' },
+    { slug: 'employees',    name: 'Employees' },
   ]},
   { label: 'Tools', pages: [
-    { slug: 'email',         name: 'Email' },
-    { slug: 'meetings',      name: 'Meetings' },
-    { slug: 'quick-notes',   name: 'Quick Notes' },
-    { slug: 'notifications', name: 'Notifications' },
-    { slug: 'settings',      name: 'Settings' },
-    { slug: 'deals',         name: 'Deals' },
-  ]},
-  { label: 'Training', pages: [
-    { slug: 'scripts',  name: 'Call Scripts' },
-    { slug: 'training', name: 'Training Videos' },
-    { slug: 'products', name: 'Products & Services' },
+    { slug: 'email',    name: 'Email' },
+    { slug: 'settings', name: 'Settings' },
   ]},
 ];
 

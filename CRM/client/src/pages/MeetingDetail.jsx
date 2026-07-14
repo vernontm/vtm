@@ -266,6 +266,9 @@ export default function MeetingDetail() {
 
   const recordingUrl = meeting?.drive_recording_url || null;
   const webViewUrl   = meeting?.drive_web_view_url  || null;
+  // "Hasn't occurred yet" = its end time (or start) is still in the future.
+  const meetingEndMs = meeting ? new Date(meeting.end_time || meeting.start_time || 0).getTime() : 0;
+  const isPastMeeting = meetingEndMs > 0 && meetingEndMs < Date.now();
 
   // ── Loading / Error ───────────────────────────────────────────────────────
   if (loading) {
@@ -329,6 +332,12 @@ export default function MeetingDetail() {
 
           {/* Action buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* Join Meeting — only while the meeting hasn't ended yet */}
+            {meeting?.meet_link && !isPastMeeting && (
+              <a href={meeting.meet_link} target="_blank" rel="noreferrer" className="btn-green" style={{ fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <Video size={14} /> Join Meeting
+              </a>
+            )}
             <button
               onClick={() => { setShowLinkModal(true); setLeadSearch(''); }}
               className="btn-ghost"

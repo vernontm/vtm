@@ -9,33 +9,22 @@ import {
   upsertUserGrant, revokeUserGrant,
 } from '../api';
 
-// Canonical list of page slugs that can be toggled per client grant.
-// Keep in sync with Sidebar.jsx / supabase.js ALL_PAGES.
+// Canonical list of page slugs that can be toggled per grant — only the pages
+// the CRM actually has now. Keep in sync with Sidebar.jsx nav + supabase.js
+// ALL_PAGES. (Legacy pages — Contacts, Resources, Content, Avatars, Email
+// Marketing, Blog, Portfolio, Deals, Scripts, Training, Products… — purged.)
 const PAGE_GROUPS = [
   { label: 'Workspace', pages: [
-    { slug: 'dashboard',         name: 'Dashboard' },
-    { slug: 'leads',             name: 'Leads' },
-    { slug: 'contacts',          name: 'Contacts' },
-    { slug: 'projects',          name: 'Projects' },
-    { slug: 'blog',              name: 'Blog' },
-    { slug: 'portfolio',         name: 'Portfolio' },
-    { slug: 'resources',         name: 'Resources' },
-    { slug: 'content-scheduler', name: 'Content' },
-    { slug: 'avatars',           name: 'Avatars' },
-    { slug: 'email-marketing',   name: 'Email Marketing' },
+    { slug: 'dashboard',    name: 'Dashboard' },
+    { slug: 'leads',        name: 'Leads' },
+    { slug: 'clients',      name: 'Clients' },
+    { slug: 'projects',     name: 'Projects' },
+    { slug: 'appointments', name: 'Appointments' },
+    { slug: 'employees',    name: 'Employees' },
   ]},
   { label: 'Tools', pages: [
-    { slug: 'email',         name: 'Email' },
-    { slug: 'meetings',      name: 'Meetings' },
-    { slug: 'quick-notes',   name: 'Quick Notes' },
-    { slug: 'notifications', name: 'Notifications' },
-    { slug: 'settings',      name: 'Settings' },
-    { slug: 'deals',         name: 'Deals' },
-  ]},
-  { label: 'Training', pages: [
-    { slug: 'scripts',  name: 'Call Scripts' },
-    { slug: 'training', name: 'Training Videos' },
-    { slug: 'products', name: 'Products & Services' },
+    { slug: 'email',    name: 'Email' },
+    { slug: 'settings', name: 'Settings' },
   ]},
 ];
 
@@ -47,7 +36,21 @@ const ADMIN_PAGE_GROUPS = [
   ]},
 ];
 
-const DEFAULT_PAGES = ['leads','contacts','content-scheduler','avatars','email-marketing'];
+// Role presets — one-click bundles of page access. "Custom" = whatever's
+// checked. Roles are a convenience on top of the per-page checkboxes below.
+const ROLES = [
+  { key: 'full',            name: 'Full access',     pages: ['dashboard','leads','clients','projects','appointments','employees','email','settings'] },
+  { key: 'sales_assistant', name: 'Sales Assistant', pages: ['leads','appointments'] },
+  { key: 'project_manager', name: 'Project Manager', pages: ['dashboard','clients','projects','appointments'] },
+  { key: 'custom',          name: 'Custom',          pages: null },
+];
+const roleForPages = (pages = []) => {
+  const set = [...pages].sort().join(',');
+  const match = ROLES.find(r => r.pages && [...r.pages].sort().join(',') === set);
+  return match ? match.key : 'custom';
+};
+
+const DEFAULT_PAGES = ['leads','appointments'];
 // Flat list of every toggle-able slug (mirrors PAGE_GROUPS).
 const ALL_SLUGS = PAGE_GROUPS.flatMap(g => g.pages.map(p => p.slug));
 
@@ -369,14 +372,20 @@ function GrantRow({ user, grant, onChanged }) {
     return a !== b;
   }, [pages, grant.allowed_pages]);
 
+  const currentRole = roleForPages(pages);
+
   function togglePage(slug) {
     setPages(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+  }
+  function applyRole(key) {
+    const r = ROLES.find(x => x.key === key);
+    if (r && r.pages) setPages(r.pages);
   }
 
   async function save() {
     setSaving(true);
     try {
-      await upsertUserGrant(user.id, { client_id: grant.client_id, allowed_pages: pages, role: grant.role });
+      await upsertUserGrant(user.id, { client_id: grant.client_id, allowed_pages: pages, role: currentRole });
       toast.success('Access updated');
       onChanged();
     } catch (e) { toast.error(e.message); }
@@ -407,6 +416,15 @@ function GrantRow({ user, grant, onChanged }) {
             <X size={13} /> Revoke
           </button>
         </div>
+      </div>
+
+      {/* Role preset — one-click bundle; still fully overridable below */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Role</span>
+        <select value={currentRole} onChange={e => applyRole(e.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: 170, padding: '6px 10px' }}>
+          {ROLES.map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
+        </select>
+        <span style={{ fontSize: 11, color: 'var(--muted)' }}>or tick individual pages below</span>
       </div>
 
       {PAGE_GROUPS.map(group => (
@@ -440,8 +458,9 @@ function CreateUserModal({ clients, onClose, onCreated }) {
   const [password, setPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [restrictAdmin, setRestrictAdmin] = useState(false);
-  const [adminPages, setAdminPages] = useState([...DEFAULT_PAGES, 'admin-users']);
+  const [adminPages, setAdminPages] = useState(['admin-users', ...DEFAULT_PAGES]);
   const [clientId, setClientId] = useState(clients[0]?.id || '');
+  const [role, setRole] = useState('sales_assistant');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -453,8 +472,9 @@ function CreateUserModal({ clients, onClose, onCreated }) {
     e.preventDefault();
     setSaving(true); setErr(null);
     try {
+      const rolePages = ROLES.find(r => r.key === role)?.pages || DEFAULT_PAGES;
       const grants = (!isAdmin && clientId)
-        ? [{ client_id: clientId, allowed_pages: DEFAULT_PAGES, role: 'viewer' }]
+        ? [{ client_id: clientId, allowed_pages: rolePages, role }]
         : [];
       const payload = { email, password, is_admin: isAdmin, grants };
       if (isAdmin && restrictAdmin && adminPages.length) {
@@ -523,13 +543,17 @@ function CreateUserModal({ clients, onClose, onCreated }) {
 
         {!isAdmin && (
           <>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Role</label>
+            <select value={role} onChange={e => setRole(e.target.value)} style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }}>
+              {ROLES.filter(r => r.key !== 'custom').map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
+            </select>
             <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Starting client</label>
             <select value={clientId} onChange={e => setClientId(e.target.value)} style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }}>
               <option value="">— None (assign later) —</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>
-              Defaults to: leads, contacts, content, avatars, email marketing. You can adjust after creation.
+              This role grants: {(ROLES.find(r => r.key === role)?.pages || []).join(', ')}. You can fine-tune the checkboxes after creating the user.
             </div>
           </>
         )}
