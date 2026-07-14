@@ -158,6 +158,9 @@ button:focus, input:focus, select:focus, textarea:focus {
 }
 .card:hover { border-color: rgba(37,99,235,0.3); }
 
+/* Compact table — tighter rows/columns for dense lists (e.g. contacts). */
+.compact-table td, .compact-table th { padding: 6px 12px; font-size: 12.5px; }
+
 /* Kanban lead card — delete only shows on hover, keeps the card clean. */
 .lead-card { transition: box-shadow 0.12s, border-color 0.12s; }
 .lead-card:hover { border-color: var(--border-light); box-shadow: var(--shadow-md); }

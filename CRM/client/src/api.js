@@ -79,6 +79,12 @@ export const setEmployeeRate  = (data) => request('/time-entries?action=set-rate
 export const updateTimeEntry  = (id, data) => request(`/time-entries?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTimeEntry  = (id) => request(`/time-entries?id=${id}`, { method: 'DELETE' });
 
+// Employee resources — internal team hub (SOPs, guides, links). Admin edits.
+export const getEmployeeResources    = () => request('/employee-resources');
+export const createEmployeeResource  = (data) => request('/employee-resources', { method: 'POST', body: JSON.stringify(data) });
+export const updateEmployeeResource  = (id, data) => request(`/employee-resources?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteEmployeeResource  = (id) => request(`/employee-resources?id=${id}`, { method: 'DELETE' });
+
 // Manual Invoices
 export const getManualInvoices   = (deal_id) => request(`/manual-invoices${deal_id ? '?deal_id=' + deal_id : ''}`);
 export const createManualInvoice = (data)    => request('/manual-invoices', { method: 'POST', body: JSON.stringify(data) });

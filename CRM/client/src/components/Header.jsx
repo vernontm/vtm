@@ -18,6 +18,7 @@ const PAGE_META = {
   '/appointments':                { title: 'Appointments',        sub: 'Schedule & recordings' },
   '/employees':                   { title: 'Employees',           sub: 'Team accounts & access' },
   '/time':                        { title: 'Time',                sub: 'Clock in/out & timesheets' },
+  '/employee-resources':          { title: 'Resources',           sub: 'Guides, SOPs & links for the team' },
   '/email':                       { title: 'Email',               sub: 'Inbox & communications' },
   '/meetings':                    { title: 'Meetings',            sub: 'Schedule & recordings' },
   '/quick-notes':                 { title: 'Quick Notes',         sub: 'Thoughts & reminders' },

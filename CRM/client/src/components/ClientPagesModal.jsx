@@ -17,6 +17,7 @@ const PAGE_GROUPS = [
     { slug: 'appointments', name: 'Appointments' },
     { slug: 'employees',    name: 'Employees' },
     { slug: 'time',         name: 'Time' },
+    { slug: 'employee-resources', name: 'Resources' },
   ]},
   { label: 'Marketing', pages: [
     { slug: 'contacts', name: 'Contacts' },

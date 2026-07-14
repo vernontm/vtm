@@ -109,14 +109,14 @@ export default function Contacts() {
               <span>{/No MailerLite/i.test(error) ? 'This workspace has no MailerLite connected. Add its API key in Settings to see marketing contacts.' : error}</span>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table>
+            <div style={{ maxHeight: 'calc(100vh - 230px)', overflowY: 'auto', overflowX: 'auto' }}>
+              <table className="compact-table">
                 <thead>
                   <tr>
-                    <th style={{ minWidth: 220 }}>Email</th>
-                    <th style={{ minWidth: 140 }}>Name</th>
-                    <th style={{ minWidth: 110 }}>Status</th>
-                    <th style={{ minWidth: 120 }}>Subscribed</th>
+                    <th style={{ minWidth: 150 }}>Name</th>
+                    <th style={{ minWidth: 200 }}>Email</th>
+                    <th style={{ minWidth: 96 }}>Status</th>
+                    <th style={{ minWidth: 100 }}>Subscribed</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -128,15 +128,15 @@ export default function Contacts() {
                     const st = STATUS[s.status] || { label: s.status || '—', color: '#8a8a8a' };
                     return (
                       <tr key={s.id}>
+                        <td className="private-value" style={{ fontWeight: 600, color: 'var(--text)' }}>{s.name || '—'}</td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Mail size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-                            <span className="private-value" style={{ fontWeight: 600, color: 'var(--text)' }}>{s.email}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <Mail size={12} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                            <span className="private-value" style={{ color: 'var(--muted)' }}>{s.email}</span>
                           </div>
                         </td>
-                        <td className="private-value" style={{ color: 'var(--muted)' }}>{s.name || '—'}</td>
                         <td>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: `${st.color}18`, border: `1px solid ${st.color}40`, borderRadius: 999, padding: '2px 10px' }}>{st.label}</span>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: st.color, background: `${st.color}18`, border: `1px solid ${st.color}40`, borderRadius: 999, padding: '1px 8px' }}>{st.label}</span>
                         </td>
                         <td style={{ color: 'var(--muted)', fontSize: 12 }}>{fmtDate(s.subscribed_at)}</td>
                       </tr>
