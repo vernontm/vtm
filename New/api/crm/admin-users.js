@@ -131,6 +131,16 @@ module.exports = async function handler(req, res) {
       return res.status(201).json({ id: uid, email });
     }
 
+    // ── Admin resets a user's password ──────────────────────────────────
+    if (action === 'reset-password' && id && req.method === 'PUT') {
+      const { password } = req.body || {};
+      if (!password || String(password).length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
+      await adminFetch(`users/${id}`, { method: 'PUT', body: JSON.stringify({ password: String(password) }) });
+      return res.json({ success: true });
+    }
+
     if (req.method === 'PUT' && id) {
       const { is_admin, allowed_pages_global } = req.body || {};
       // Fetch existing metadata so we can do a partial merge instead of

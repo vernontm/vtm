@@ -43,6 +43,7 @@ export const getAdminUsers    = () => request('/admin-users');
 export const createAdminUser  = (data) => request('/admin-users', { method: 'POST', body: JSON.stringify(data) });
 export const updateAdminUser  = (id, data) => request(`/admin-users?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteAdminUser  = (id) => request(`/admin-users?id=${id}`, { method: 'DELETE' });
+export const resetUserPassword = (id, password) => request(`/admin-users?id=${id}&action=reset-password`, { method: 'PUT', body: JSON.stringify({ password }) });
 export const upsertUserGrant  = (id, data) => request(`/admin-users?id=${id}&action=grant`, { method: 'POST', body: JSON.stringify(data) });
 export const revokeUserGrant  = (id, client_id) => request(`/admin-users?id=${id}&client_id=${client_id}&action=grant`, { method: 'DELETE' });
 

@@ -1,12 +1,12 @@
 // Admin-only page to manage CRM user accounts + per-client page access.
 // Non-admins see a friendly "not authorized" card instead.
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye } from 'lucide-react';
+import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { useToast } from '../components/Toast';
 import {
   getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
-  upsertUserGrant, revokeUserGrant,
+  upsertUserGrant, revokeUserGrant, resetUserPassword,
 } from '../api';
 
 // Canonical list of page slugs that can be toggled per grant — only the pages
@@ -158,8 +158,54 @@ export default function AdminUsers() {
   );
 }
 
+function ResetPasswordModal({ user, onClose }) {
+  const toast = useToast();
+  const [pw, setPw] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  function generate() {
+    const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = ''; for (let i = 0; i < 12; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    setPw(s);
+  }
+  async function save() {
+    if (pw.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    setSaving(true);
+    try { await resetUserPassword(user.id, pw); toast.success(`Password reset for ${user.email}`); onClose(); }
+    catch (e) { toast.error(e.message); setSaving(false); }
+  }
+  const copy = async () => { try { await navigator.clipboard.writeText(pw); toast.success('Password copied'); } catch { /* ignore */ } };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ ...card, width: 420, maxWidth: '92vw' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Reset password</div>
+          <button type="button" style={btnGhost} onClick={onClose}><X size={13} /></button>
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.5 }}>
+          Set a new password for <strong style={{ color: 'var(--text)' }}>{user.email}</strong>, then share it with them. They'll use it to log in immediately.
+        </div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>New password</label>
+        <div style={{ display: 'flex', gap: 6, marginTop: 4, marginBottom: 12 }}>
+          <input type="text" value={pw} onChange={e => setPw(e.target.value)} minLength={8} placeholder="At least 8 characters" style={{ ...inputStyle }} />
+          <button type="button" style={btnGhost} onClick={generate} title="Generate">Generate</button>
+          {pw && <button type="button" style={btnGhost} onClick={copy} title="Copy">Copy</button>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button type="button" style={btnGhost} onClick={onClose}>Cancel</button>
+          <button type="button" style={btnPrimary} onClick={save} disabled={saving || pw.length < 8}>
+            <KeyRound size={13} /> {saving ? 'Saving…' : 'Set password'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSelf }) {
   const toast = useToast();
+  const [resetOpen, setResetOpen] = useState(false);
   const isRestricted = user.is_admin && Array.isArray(user.allowed_pages_global) && user.allowed_pages_global.length > 0;
   async function toggleAdmin(e) {
     e.stopPropagation();
@@ -216,6 +262,9 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
               <Eye size={13} /> View as
             </button>
           )}
+          <button style={btnGhost} onClick={e => { e.stopPropagation(); setResetOpen(true); }} title="Set a new password">
+            <KeyRound size={13} /> Reset password
+          </button>
           <button style={btnGhost} onClick={toggleAdmin} title={user.is_admin ? 'Revoke admin' : 'Grant admin'}>
             {user.is_admin ? <ShieldOff size={13} /> : <Shield size={13} />}
             {user.is_admin ? 'Revoke admin' : 'Make admin'}
@@ -225,6 +274,8 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
           </button>
         </div>
       </div>
+
+      {resetOpen && <ResetPasswordModal user={user} onClose={() => setResetOpen(false)} />}
 
       {expanded && (
         user.is_admin
