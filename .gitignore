@@ -9,3 +9,4 @@ CRM/server/db.json
 CRM/server/client-demos/
 CRM/content-output/
 New/.env.production
+.vercel

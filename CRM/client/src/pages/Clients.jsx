@@ -711,9 +711,188 @@ const LEAD_STEPS = [
   { key: 'send',      label: 'Send',               blurb: 'Send the agreement to the client to sign.' },
 ];
 
+// Lightweight markdown → styled document HTML (headings, bold, bullets, rules).
+function mdToDocHtml(md) {
+  if (!md) return '';
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\b_(.+?)_\b/g, '<em>$1</em>');
+  const lines = md.split('\n');
+  let html = '', inList = false;
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) { closeList(); continue; }
+    if (/^(---|___|\*\*\*)\s*$/.test(line.trim())) { closeList(); html += '<div style="height:1px;background:var(--border);margin:16px 0"></div>'; continue; }
+    if (/^#{1,6}\s/.test(line)) {
+      closeList();
+      const level = line.match(/^#+/)[0].length;
+      const txt = inline(line.replace(/^#+\s*/, ''));
+      const size = level === 1 ? 20 : level === 2 ? 15 : 13.5;
+      html += `<div style="font-weight:800;font-size:${size}px;margin:${level <= 2 ? '18px 0 8px' : '12px 0 4px'};color:var(--text);font-family:var(--font-display)">${txt}</div>`;
+    } else if (/^[-*]\s/.test(line)) {
+      if (!inList) { html += '<ul style="margin:4px 0;padding-left:20px">'; inList = true; }
+      html += `<li style="margin:4px 0;line-height:1.6">${inline(line.replace(/^[-*]\s+/, ''))}</li>`;
+    } else {
+      closeList();
+      html += `<p style="margin:7px 0;line-height:1.65">${inline(line)}</p>`;
+    }
+  }
+  closeList();
+  return html;
+}
+
+// Step 1 — Terms: pull AI-proposed terms into an editable preview, let Ray type
+// changes / additions, regenerate, then approve to lock them in for the pipeline.
+function TermsStep({ client, savedDraft, onApprove }) {
+  const [loading, setLoading] = useState(true);
+  const [existing, setExisting] = useState(null); // an already-approved/sent agreement, if any
+  const [analysis, setAnalysis] = useState(null);
+  const [terms, setTerms] = useState('');
+  const [changes, setChanges] = useState('');
+  const [draft, setDraft] = useState(savedDraft || null);
+  const [docTab, setDocTab] = useState('agreement');
+  const [busy, setBusy] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await getAgreements(client.id);
+        const ag = (d.agreements || [])[0];
+        if (ag) {
+          setExisting(ag);
+          if (!savedDraft && ag.terms) {
+            setDraft({
+              total: ag.total_amount,
+              installments: (d.payments || []).filter(p => p.kind !== 'recurring').map(p => ({ amount: p.amount, trigger: p.due_condition })),
+              monthly: (d.payments || []).filter(p => p.kind === 'recurring').map(p => ({ amount: p.amount, item: p.description || 'Recurring' })),
+              agreement_markdown: ag.terms.agreement_markdown,
+              nda_markdown: ag.terms.nda_markdown,
+            });
+          }
+        }
+      } catch (e) { /* no agreement yet — fine */ }
+      finally { setLoading(false); }
+    })();
+  }, [client.id]);
+
+  const runAnalyze = async () => {
+    setBusy('analyze');
+    try {
+      const a = await analyzeDeal(client.id);
+      setAnalysis(a);
+      const seed = (a.suggested_installments || []).map(i => `- ${money(i.amount)} ${i.trigger ? '(' + i.trigger + ')' : ''}`).join('\n');
+      const monthly = (a.suggested_monthly || []).map(m => `- ${money(m.amount)}/mo ${m.item}`).join('\n');
+      setTerms(`${a.suggested_structure || ''}\n\nInstallments:\n${seed}${monthly ? '\n\nMonthly:\n' + monthly : ''}`.trim());
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  const runGenerate = async (withChanges) => {
+    const prompt = withChanges && changes.trim() ? `${terms}\n\nAdditional changes / additions:\n${changes.trim()}` : terms;
+    if (!prompt.trim()) { toast('error', 'Add some terms first (or run Analyze).'); return; }
+    setBusy('generate');
+    try {
+      const d = await generateAgreement(client.id, prompt);
+      setDraft(d);
+      if (withChanges && changes.trim()) { setTerms(prompt); setChanges(''); }
+      setDocTab('agreement');
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading terms…</div>;
+
+  return (
+    <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Review the terms</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>AI proposes the billing from this client's notes and projects. Edit freely, request changes, then approve to lock it in.</div>
+      </div>
+
+      {existing && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 16, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.28)', borderRadius: 10 }}>
+          <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+          <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
+            An agreement already exists for this client — <strong>{money(existing.total_amount)}</strong>, <span style={{ textTransform: 'capitalize' }}>{existing.status}</span>. The current terms are shown below. Regenerate to change them, or approve to continue.
+          </div>
+        </div>
+      )}
+
+      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: draft ? 'minmax(0,1fr) 340px' : '1fr', gap: 20, alignItems: 'start' }}>
+        {/* Left: preview (or seed if nothing yet) */}
+        <div>
+          {draft ? (
+            <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Proposed agreement · total {money(draft.total)}</div>
+                {draft.nda_markdown && (
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'agreement' ? 800 : 500 }} onClick={() => setDocTab('agreement')}>Agreement</button>
+                    <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'nda' ? 800 : 500 }} onClick={() => setDocTab('nda')}>NDA</button>
+                  </div>
+                )}
+              </div>
+              {docTab === 'agreement' && Array.isArray(draft.installments) && draft.installments.length > 0 && (
+                <div style={{ padding: '14px 18px 4px' }}>
+                  <PaymentRows payments={draft.installments.map((i, idx) => ({ id: 'd' + idx, amount: i.amount, due_condition: i.trigger, status: 'pending' }))} />
+                </div>
+              )}
+              <div style={{ padding: '10px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 520, overflow: 'auto' }}
+                dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? draft.nda_markdown : draft.agreement_markdown) }} />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {!analysis && (
+                <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'analyze'} onClick={runAnalyze}>
+                  <Sparkles size={15} /> {busy === 'analyze' ? 'Analyzing…' : 'Analyze deal with AI'}
+                </button>
+              )}
+              {(analysis?.flags || []).length > 0 && (
+                <div style={{ padding: '14px 16px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f5a623', marginBottom: 8 }}>Worth a look before you price it</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text)', fontSize: 13, lineHeight: 1.7 }}>
+                    {analysis.flags.map((f, i) => <li key={i}>{f}</li>)}
+                  </ul>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Billing terms</label>
+                <textarea className="form-input" rows={8} value={terms} onChange={e => setTerms(e.target.value)} placeholder="e.g. $1,000 up front to start, then $800/mo for 5 months. $199/mo maintenance begins month 7." style={{ resize: 'vertical' }} />
+              </div>
+              <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'generate'} onClick={() => runGenerate(false)}>
+                <FileSignature size={15} /> {busy === 'generate' ? 'Drafting…' : 'Generate terms'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right: request changes + approve */}
+        {draft && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 12 }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Request changes</label>
+              <textarea className="form-input" rows={5} value={changes} onChange={e => setChanges(e.target.value)} placeholder="e.g. Add a $500 rush fee. Change maintenance to $249/mo. Include a 2-week revision window." style={{ resize: 'vertical' }} />
+            </div>
+            <button className="btn-ghost" disabled={busy === 'generate'} onClick={() => runGenerate(true)}>
+              <Sparkles size={14} /> {busy === 'generate' ? 'Regenerating…' : 'Regenerate with changes'}
+            </button>
+            <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+            <button className="btn-primary" onClick={() => { onApprove(draft); toast('success', 'Terms approved — on to Deals & Projects.'); }}>
+              <CheckCircle2 size={15} /> Approve terms &amp; continue
+            </button>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>Approving locks these terms for the pipeline. The agreement document is created and previewed at the Agreement step.</div>
+            <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setDraft(null); setAnalysis(null); }}>Start terms over</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [step, setStep] = useState(0);
   const [view, setView] = useState('pipeline'); // 'pipeline' | 'details'
+  const [termsDraft, setTermsDraft] = useState(null);
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
@@ -798,8 +977,10 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
 
       {/* Step content */}
       <div style={{ flex: 1, padding: 24 }}>
-        {step === 0 ? (
+        {cur.key === 'overview' ? (
           <LeadActivity client={client} />
+        ) : cur.key === 'terms' ? (
+          <TermsStep client={client} savedDraft={termsDraft} onApprove={(d) => { setTermsDraft(d); setStep(2); }} />
         ) : (
           <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>

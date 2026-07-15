@@ -1,0 +1,200 @@
+<!--
+  ============================================================================
+  SANABREH — BIRTHDAY EMAIL  (MailerLite automation: ~3 days before birthday)
+  ============================================================================
+  Offer: FREE KUNAFA (signature dessert). No code — redeemed by showing the email.
+  Paste into a MailerLite "Custom HTML" block. Tags used: {$name} (first name),
+  {$email} (in the Redeem button URL for tracking), {$unsubscribe}.
+  Redeem button → redeem.html (on the website) → server confirms → Zapier logs it.
+  See sanabreh-site/REDEMPTION_TRACKING.md for the setup.
+
+  SUBJECT LINE OPTIONS (A/B):
+    1. Happy Birthday, {$name} 🎂 A little gift from Sanabreh
+    2. {$name}, your birthday dessert is on us 🎂
+    3. It's your birthday — here's a free Kunafa, {$name}
+
+  PREHEADER (set in MailerLite preview-text field):
+    A little something to celebrate you — your free Kunafa is waiting. 🎂
+
+  PLAIN-TEXT FALLBACK:
+    Happy Birthday, {$name}!
+    From all of us at Sanabreh Mediterranean — we're so glad you're part of
+    the family. To celebrate you, your next visit comes with a FREE KUNAFA,
+    our signature dessert, on us.
+    Just show this email to your server to redeem — no code needed.
+    Valid through your birthday month · dine-in · with any purchase.
+    487 Bay Area Blvd, Houston TX 77062 (Clear Lake / Bay Area) · Open daily 11AM–11PM
+    (346) 509-8888 · @sanabreh_mediterranean · 100% Halal
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>Happy Birthday from Sanabreh</title>
+  <!-- Web fonts (honored by Apple Mail / iOS; safe fallbacks elsewhere) -->
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; padding:0; background:#0A0A08; }
+    table { border-collapse:collapse; }
+    img { border:0; line-height:100%; outline:none; text-decoration:none; }
+    a { text-decoration:none; }
+    .px-pad { padding-left:40px; padding-right:40px; }
+    @media only screen and (max-width:600px){
+      .container { width:100% !important; }
+      .px-pad { padding-left:24px !important; padding-right:24px !important; }
+      .h1 { font-size:30px !important; }
+      .code-val { font-size:24px !important; letter-spacing:4px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background:#0A0A08;">
+
+  <!-- Preheader (hidden) -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all; font-size:1px; line-height:1px; color:#0A0A08;">
+    A little something to celebrate you — your free Kunafa is waiting. 🎂
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0A0A08" style="background:#0A0A08;">
+    <tr>
+      <td align="center" style="padding:32px 12px;">
+
+        <!-- Card -->
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background:#111110; border:1px solid rgba(201,168,76,0.20);">
+
+          <!-- Top gold hairline -->
+          <tr><td style="height:3px; background:#C9A84C; line-height:3px; font-size:3px;">&nbsp;</td></tr>
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:40px; padding-bottom:8px;">
+              <div style="font-family:'Cinzel', Georgia, 'Times New Roman', serif; font-size:22px; letter-spacing:6px; color:#C9A84C; text-transform:uppercase;">Sanabreh</div>
+              <div style="font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:10px; letter-spacing:4px; color:rgba(245,237,216,0.45); text-transform:uppercase; padding-top:8px;">Mediterranean Restaurant</div>
+              <div style="width:48px; height:1px; background:#C9A84C; opacity:0.6; margin:18px auto 0;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Birthday GIF -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:28px;">
+              <img src="https://ssllepovajmohdhvhzsa.supabase.co/storage/v1/object/public/sanabreh_images/BIRTHDAY-GIF.gif"
+                   alt="Happy Birthday from Sanabreh" width="320"
+                   style="display:block; width:320px; max-width:80%; height:auto; margin:0 auto; border-radius:3px;">
+            </td>
+          </tr>
+
+          <!-- Eyebrow + headline -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:24px;">
+              <div style="font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:11px; letter-spacing:5px; color:#C9A84C; text-transform:uppercase;">A Gift For You</div>
+              <h1 class="h1" style="margin:14px 0 0; font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif; font-weight:400; font-size:38px; line-height:1.15; color:#F5EDD8;">
+                Happy Birthday,<br><em style="font-style:italic; color:#E2C97E;">{$name}</em>
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Message -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:18px;">
+              <p style="margin:0; font-family:'DM Sans', Arial, Helvetica, sans-serif; font-weight:300; font-size:15px; line-height:1.7; color:rgba(245,237,216,0.70);">
+                From all of us at Sanabreh — we're so glad you're part of the family.
+                To celebrate <em style="color:#E2C97E; font-style:normal;">you</em>, your next
+                visit comes with a little something sweet, on us.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Gift / code box -->
+          <tr>
+            <td class="px-pad" style="padding-top:30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:rgba(201,168,76,0.07); border:1px solid rgba(201,168,76,0.35);">
+                <tr>
+                  <td align="center" style="padding:26px 20px;">
+                    <div style="font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:10px; letter-spacing:5px; color:#C9A84C; text-transform:uppercase;">Your Birthday Gift</div>
+                    <div class="code-val" style="font-family:'Cinzel', Georgia, serif; font-size:30px; letter-spacing:6px; color:#E2C97E; padding:12px 0 4px;">FREE KUNAFA</div>
+                    <div style="font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-size:16px; color:rgba(245,237,216,0.65);">Our signature dessert — crispy pastry &amp; sweet cheese</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- How to redeem -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:18px;">
+              <p style="margin:0; font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:13px; line-height:1.6; color:rgba(245,237,216,0.70);">
+                Coming in to celebrate? <strong style="color:#E2C97E; font-weight:500;">Show this email to your server</strong> — they'll tap below to redeem your free Kunafa.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA button -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" bgcolor="#C9A84C" style="background:#C9A84C; border-radius:2px;">
+                    <a href="https://sanabrehrestaurant.com/redeem.html?email={$email}&amp;name={$name}" target="_blank"
+                       style="display:inline-block; font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:12px; font-weight:500; letter-spacing:3px; text-transform:uppercase; color:#0A0A08; padding:16px 38px;">
+                      Redeem My Free Kunafa
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <div style="font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:10px; letter-spacing:2px; color:rgba(245,237,216,0.30); text-transform:uppercase; padding-top:12px;">For server use at the table</div>
+            </td>
+          </tr>
+
+          <!-- Details -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:34px;">
+              <div style="width:100%; height:1px; background:rgba(201,168,76,0.18);">&nbsp;</div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:22px;">
+              <p style="margin:0; font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:12px; line-height:1.9; color:rgba(245,237,216,0.55);">
+                <span style="color:#C9A84C; letter-spacing:2px;">100% HALAL</span><br>
+                487 Bay Area Blvd, Houston TX 77062<br>
+                Clear Lake / Bay Area &nbsp;·&nbsp; Open Daily 11AM–11PM<br>
+                <a href="tel:+13465098888" style="color:#E2C97E;">(346) 509-8888</a>
+                &nbsp;·&nbsp;
+                <a href="https://instagram.com/sanabreh_mediterranean" target="_blank" style="color:#E2C97E;">@sanabreh_mediterranean</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Fine print -->
+          <tr>
+            <td align="center" class="px-pad" style="padding-top:20px; padding-bottom:36px;">
+              <p style="margin:0; font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:10px; line-height:1.7; color:rgba(245,237,216,0.30);">
+                Valid through your birthday month · Dine-in · One per guest with any purchase · Cannot be combined with other offers.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Bottom gold hairline -->
+          <tr><td style="height:3px; background:#C9A84C; line-height:3px; font-size:3px;">&nbsp;</td></tr>
+        </table>
+
+        <!-- Unsubscribe / footer -->
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+          <tr>
+            <td align="center" style="padding:20px 24px 40px;">
+              <p style="margin:0; font-family:'DM Sans', Arial, Helvetica, sans-serif; font-size:11px; line-height:1.7; color:rgba(245,237,216,0.30);">
+                You're receiving this because you joined the Sanabreh loyalty program.<br>
+                <a href="{$unsubscribe}" style="color:rgba(245,237,216,0.45); text-decoration:underline;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
