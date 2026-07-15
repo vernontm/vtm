@@ -15,7 +15,7 @@ import {
   getClientTasks, createClientTask, updateClientTask, deleteClientTask,
   getClientCredentials, createClientCredential, updateClientCredential, deleteClientCredential,
   getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity, generateClientSummary, uploadFile,
-  getProjects,
+  getProjects, createProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
   analyzeDeal, generateAgreement, approveAgreement, approveAgreementRow, previewAgreementToken,
@@ -889,10 +889,141 @@ function TermsStep({ client, savedDraft, onApprove }) {
   );
 }
 
+// Step 2 — Deals & Projects: turn the approved terms into a billable deal +
+// project line items (one-time and monthly), so invoicing/Stripe can bill them.
+function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
+  const [loading, setLoading] = useState(true);
+  const [deal, setDeal] = useState(null); // an existing deal for this client, if any
+  const [name, setName] = useState(`${client.business_name || 'Client'} — Service Agreement`);
+  const [items, setItems] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const deals = await getDeals(client.id);
+        if (deals && deals.length) setDeal(deals[0]);
+      } catch (e) { /* none yet */ }
+      finally { setLoading(false); }
+    })();
+  }, [client.id]);
+
+  // Seed line items from the approved terms once loaded (only if no deal exists).
+  useEffect(() => {
+    if (loading || deal || items.length) return;
+    const seed = [];
+    const buildTotal = Array.isArray(termsDraft?.installments)
+      ? termsDraft.installments.reduce((s, i) => s + Number(i.amount || 0), 0)
+      : (termsDraft?.total || 0);
+    if (buildTotal > 0) seed.push({ name: 'Custom CRM Build', value: buildTotal, recurring: 0 });
+    const maint = Array.isArray(termsDraft?.monthly) ? termsDraft.monthly[0] : null;
+    if (maint?.amount) seed.push({ name: maint.item || 'Maintenance & Support', value: 0, recurring: Number(maint.amount) });
+    if (seed.length) setItems(seed);
+    else setItems([{ name: '', value: 0, recurring: 0 }]);
+  }, [loading, deal, termsDraft]);
+
+  const setItem = (idx, patch) => setItems(xs => xs.map((x, i) => i === idx ? { ...x, ...patch } : x));
+  const addItem = () => setItems(xs => [...xs, { name: '', value: 0, recurring: 0 }]);
+  const removeItem = (idx) => setItems(xs => xs.filter((_, i) => i !== idx));
+
+  const oneTimeTotal = items.reduce((s, i) => s + Number(i.value || 0), 0);
+  const monthlyTotal = items.reduce((s, i) => s + Number(i.recurring || 0), 0);
+
+  const billingType = (it) => (Number(it.value) > 0 && Number(it.recurring) > 0) ? 'both' : (Number(it.recurring) > 0 ? 'monthly' : 'one_time');
+
+  const create = async () => {
+    const valid = items.filter(i => i.name.trim() && (Number(i.value) > 0 || Number(i.recurring) > 0));
+    if (!valid.length) { toast('error', 'Add at least one project line with a name and an amount.'); return; }
+    setBusy(true);
+    try {
+      const d = await createDeal({ client_id: client.id, name: name.trim() });
+      const created = [];
+      for (const it of valid) {
+        const p = await createProject({
+          client_id: client.id, deal_id: d.id, name: it.name.trim(),
+          value: Number(it.value) || 0, recurring_amount: Number(it.recurring) || 0,
+          billing_type: billingType(it), plan_status: 'none', status: 'active',
+        });
+        created.push(Array.isArray(p) ? p[0] : p);
+      }
+      // Attach the new projects to the deal.
+      const ids = created.map(p => p?.id).filter(Boolean);
+      if (ids.length) await updateDeal(d.id, { project_ids: ids }).catch(() => {});
+      toast('success', 'Deal & projects created.');
+      onCreated(d.id);
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(false); }
+  };
+
+  if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
+
+  // Already created — show it and let Ray continue.
+  if (deal) {
+    const ps = deal.projects || [];
+    return (
+      <div style={{ maxWidth: 820, margin: '0 auto' }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Deal &amp; projects</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>A deal already exists for this client. Review it below, then continue.</div>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <Briefcase size={16} style={{ color: 'var(--orange)' }} />
+            <span style={{ fontWeight: 800, color: 'var(--text)', flex: 1 }}>{deal.name}</span>
+          </div>
+          {ps.length === 0 && <div style={{ fontSize: 13, color: 'var(--muted)' }}>No projects on this deal yet.</div>}
+          {ps.map(p => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+              <span style={{ flex: 1, color: 'var(--text)', fontSize: 13.5 }}>{p.name}</span>
+              <span style={{ color: 'var(--muted)', fontSize: 12.5 }}>{p.billing_type !== 'monthly' && p.value ? money(p.value) : ''}{p.recurring_amount ? ` · ${money(p.recurring_amount)}/mo` : ''}</span>
+            </div>
+          ))}
+        </div>
+        <button className="btn-primary" style={{ marginTop: 16 }} onClick={() => { onCreated(deal.id); }}>Continue <ChevronRight size={15} /></button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 820, margin: '0 auto' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Create the deal &amp; projects</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+        {termsDraft ? 'Pre-filled from the approved terms. Adjust the line items, then create.' : 'Add the project line items (one-time and/or monthly), then create the deal.'}
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Deal name</label>
+        <input className="form-input" value={name} onChange={e => setName(e.target.value)} />
+      </div>
+
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '10px 0 8px' }}>Project line items</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {items.map((it, idx) => (
+          <div key={idx} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 120px 120px 32px', gap: 8, alignItems: 'center' }}>
+            <input className="form-input" placeholder="Project name" value={it.name} onChange={e => setItem(idx, { name: e.target.value })} />
+            <input className="form-input" type="number" min="0" step="100" placeholder="One-time $" value={it.value || ''} onChange={e => setItem(idx, { value: e.target.value })} />
+            <input className="form-input" type="number" min="0" step="10" placeholder="$/mo" value={it.recurring || ''} onChange={e => setItem(idx, { recurring: e.target.value })} />
+            <button className="btn-ghost" style={{ padding: '7px 8px', color: '#ff5c5c' }} onClick={() => removeItem(idx)} title="Remove"><X size={14} /></button>
+          </div>
+        ))}
+      </div>
+      <button className="btn-ghost" style={{ marginTop: 8 }} onClick={addItem}><Plus size={14} /> Add line item</button>
+
+      <div style={{ display: 'flex', gap: 20, margin: '18px 0', fontSize: 13, color: 'var(--text)' }}>
+        <div><span style={{ color: 'var(--muted)' }}>One-time total: </span><strong>{money(oneTimeTotal)}</strong></div>
+        {monthlyTotal > 0 && <div><span style={{ color: 'var(--muted)' }}>Recurring: </span><strong>{money(monthlyTotal)}/mo</strong></div>}
+      </div>
+
+      <button className="btn-primary" disabled={busy} onClick={create}>
+        <Briefcase size={15} /> {busy ? 'Creating…' : 'Create deal & projects'}
+      </button>
+    </div>
+  );
+}
+
 function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [step, setStep] = useState(0);
   const [view, setView] = useState('pipeline'); // 'pipeline' | 'details'
   const [termsDraft, setTermsDraft] = useState(null);
+  const [dealId, setDealId] = useState(null);
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
@@ -981,6 +1112,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <LeadActivity client={client} />
         ) : cur.key === 'terms' ? (
           <TermsStep client={client} savedDraft={termsDraft} onApprove={(d) => { setTermsDraft(d); setStep(2); }} />
+        ) : cur.key === 'deals' ? (
+          <DealsStep client={client} termsDraft={termsDraft} savedDealId={dealId} onCreated={(id) => { setDealId(id); setStep(3); }} />
         ) : (
           <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>
