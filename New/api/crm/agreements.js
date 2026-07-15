@@ -114,6 +114,21 @@ module.exports = async function handler(req, res) {
       return res.json({ ok: true, status: 'approved', deal_id: dealId });
     }
 
+    // POST action=mark-sent -> make the agreement signable (status=sent, mint the
+    // sign token) WITHOUT emailing — used when the personalized proposal email is
+    // the delivery vehicle and already carries the sign link.
+    if (req.method === 'POST' && action === 'mark-sent') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=id,sign_token,status,sent_at`);
+      if (!ag) return res.status(404).json({ error: 'Agreement not found' });
+      const signToken = ag.sign_token || crypto.randomUUID();
+      const patch = { sign_token: signToken };
+      if (ag.status !== 'signed') patch.status = 'sent';
+      if (!ag.sent_at) patch.sent_at = new Date().toISOString();
+      await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+      return res.json({ ok: true, sign_token: signToken, link: `https://vernontm.com/sign?token=${signToken}` });
+    }
+
     // POST action=send -> mint a signing link, email + text it to the client
     if (req.method === 'POST' && action === 'send') {
       if (!id) return res.status(400).json({ error: 'id required' });

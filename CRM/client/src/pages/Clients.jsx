@@ -18,7 +18,7 @@ import {
   getProjects, createProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement,
+  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -1532,16 +1532,25 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
   useStepFooter(setFooter, { label: 'Continue to send', disabled: !emailDraft, onClick: onDone });
 
   useEffect(() => {
-    (async () => { try { const d = await getAgreements(client.id); setAg((d.agreements || [])[0] || null); } catch (e) { /* ok */ } })();
+    (async () => {
+      try {
+        const d = await getAgreements(client.id);
+        const a = (d.agreements || [])[0] || null;
+        // Mint (or reuse) the client's personal sign token now, so the drafted
+        // email can carry their real signing link.
+        if (a) { try { const { token } = await previewAgreementToken(a.id); a.sign_token = token; } catch (e) { /* ok */ } }
+        setAg(a);
+      } catch (e) { /* ok */ }
+    })();
   }, [client.id]);
 
-  const portalUrl = `${window.location.origin}/client`;
   const signUrl = ag?.sign_token ? `${window.location.origin}/sign?token=${ag.sign_token}` : null;
 
   const gen = async (nextTone) => {
     const useTone = nextTone || tone;
+    if (!signUrl) { toast('error', 'Approve the agreement first so the sign link exists.'); return; }
     setBusy('gen');
-    try { const r = await draftClientEmail(client.id, useTone, portalUrl, signUrl); setEmailDraft({ subject: r.subject || '', body: r.body || '' }); }
+    try { const r = await draftClientEmail(client.id, useTone, null, signUrl); setEmailDraft({ subject: r.subject || '', body: r.body || '' }); }
     catch (e) { toast('error', e.message); }
     finally { setBusy(''); }
   };
@@ -1558,7 +1567,7 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
       <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Proposal email</div>
       <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        A cover note letting {client.owner_name || 'them'} know what you're sending, with their portal link — drafted from your notes, terms, and the plan. Pick a style; you'll send it on the next step.
+        A cover note letting {client.owner_name || 'them'} know what you're sending, with their personal link to review &amp; sign — drafted from your notes, terms, and the plan. Pick a style; you'll send it on the next step.
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -1634,9 +1643,14 @@ function SendStep({ client, emailDraft, onSent, paymentMode }) {
     if (!emailDraft?.body?.trim()) { toast('error', 'Draft the proposal on the previous step first.'); return; }
     setBusy('email');
     try {
+      // Make the agreement signable (status=sent) so the link in the email works,
+      // without firing the plain system email — the proposal email IS the delivery.
+      if (ag && ag.status !== 'signed') { try { await markAgreementSent(ag.id); } catch (e) { /* non-fatal */ } }
       await sendClientEmail({ to: client.contact_email, subject: emailDraft.subject, body: emailDraft.body, mode: 'send' });
       setEmailSent(true);
-      toast('success', `Proposal email sent to ${client.contact_email}.`);
+      toast('success', `Sent to ${client.contact_email} — they can review & sign from the link.`);
+      onSent && onSent();
+      setLoading(true); load();
     } catch (e) { toast('error', e.message); }
     finally { setBusy(''); }
   };
@@ -1678,16 +1692,17 @@ function SendStep({ client, emailDraft, onSent, paymentMode }) {
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {!custom && ag.status !== 'signed' && (
-          <button className="btn-primary" disabled={!approved || busy === 'send'} onClick={send}>
-            <FileSignature size={15} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend to client' : 'Send agreement to sign'}
+        {emailDraft?.body ? (
+          <button className="btn-primary" disabled={busy === 'email' || !client.contact_email} onClick={sendProposal}>
+            <Mail size={15} /> {busy === 'email' ? 'Sending…' : emailSent ? 'Resend to client' : 'Send to client'}
           </button>
-        )}
-        <button className={custom ? 'btn-primary' : 'btn-ghost'} disabled={busy === 'email' || !client.contact_email || !emailDraft?.body} onClick={sendProposal}>
-          <Mail size={15} /> {busy === 'email' ? 'Sending…' : emailSent ? 'Resend proposal email' : custom ? 'Send portal invite email' : 'Send proposal email'}
-        </button>
+        ) : !custom && ag.status !== 'signed' ? (
+          <button className="btn-primary" disabled={!approved || busy === 'send'} onClick={send}>
+            <FileSignature size={15} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend plain link' : 'Send agreement to sign'}
+          </button>
+        ) : null}
       </div>
-      {!emailDraft?.body && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Draft the proposal on the previous step to enable the email send.</div>}
+      {!emailDraft?.body && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Draft the proposal on the previous step to send a personalized email with their sign link (or use the plain send above).</div>}
 
       {ag.sent_at && (
         <div style={{ marginTop: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>

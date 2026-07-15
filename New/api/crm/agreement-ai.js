@@ -156,13 +156,12 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
         gain: 'Value- and outcome-focused. Lead with what the client gains and the momentum ahead; call out any bonus/extra feature included at no cost and any goodwill on timeline as wins. Motivating but sincere.',
       }[tone] || 'Polished, businesslike, and concise.';
 
-      const system = `You are Ray (Rayvaughn Vernon) of Vernon Tech & Media, writing a short email to a client right after sending their service agreement to sign. First person, human, warm — never robotic. Reference what was actually agreed: use the discovery notes, agreement terms, and the payment plan below. If the notes mention a bonus feature added at no extra cost, or an adjusted/extended delivery timeline, weave it in as a positive. Tell them the agreement is ready to sign and point them to their client portal. Keep it tight (roughly 120–200 words). Sign off as Ray, Vernon Tech & Media.
+      const system = `You are Ray (Rayvaughn Vernon) of Vernon Tech & Media, writing a short email to a client to send over their service agreement. First person, human, warm — never robotic. Reference what was actually agreed: use the discovery notes, agreement terms, and the payment plan below. If the notes mention a bonus feature added at no extra cost, or an adjusted/extended delivery timeline, weave it in as a positive. Keep it tight (roughly 120–180 words). Sign off as Ray, Vernon Tech & Media.
 TONE: ${toneGuide}
-Include the portal link${sign_url ? ' and the signing link' : ''} exactly as given (plain URLs, do not invent links). Return ONLY JSON: { "subject": string, "body": string }`;
+CALL TO ACTION: The email's single main link is the SIGNING LINK below — it is this client's personal link that opens their agreement so they can review the terms and sign it (no account or login needed). Present it clearly as "Review & sign your agreement:" followed by the exact URL. Tell them that once they sign, they'll set up their client portal and complete the deposit. Do NOT invent any links and do NOT include a separate generic portal URL — the signing link is the only link. Return ONLY JSON: { "subject": string, "body": string }`;
       const user = `Draft the email.
 Client: ${client.business_name} — contact ${client.owner_name || 'there'}
-Portal link: ${portal_url || '(none)'}
-${sign_url ? `Signing link: ${sign_url}` : ''}
+SIGNING LINK (their personal link — use this exact URL as the call to action): ${sign_url || '(will be added when you send)'}
 Agreement total: ${ag?.total_amount ?? 'n/a'}
 Installments: ${JSON.stringify(t.installments || [])}
 Monthly: ${JSON.stringify(t.monthly || [])}
