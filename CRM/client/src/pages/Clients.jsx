@@ -775,6 +775,7 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
   // Custom-plan state
   const allow = paymentMode === 'custom';
   const [total, setTotal] = useState('');
+  const [maint, setMaint] = useState(''); // monthly maintenance ($)
   const [offered, setOffered] = useState(null); // { planKey: bool }
 
   useEffect(() => {
@@ -786,6 +787,7 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
           if (ag.payment_mode === 'custom') {
             setPaymentMode('custom');
             if (ag.total_amount) setTotal(String(ag.total_amount));
+            if (ag.terms?.maintenance) setMaint(String(ag.terms.maintenance));
             if (Array.isArray(ag.plan_options) && ag.plan_options.length) {
               setOffered(Object.fromEntries(computePlans(ag.total_amount).map(p => [p.key, ag.plan_options.some(o => o.key === p.key)])));
             }
@@ -817,6 +819,7 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
       const a = await analyzeDeal(client.id);
       setAnalysis(a);
       if (a.suggested_total && !total) setTotal(String(a.suggested_total));
+      if (Array.isArray(a.suggested_monthly) && a.suggested_monthly[0] && !maint) setMaint(String(a.suggested_monthly[0].amount || ''));
       const seed = (a.suggested_installments || []).map(i => `- ${money(i.amount)} ${i.trigger ? '(' + i.trigger + ')' : ''}`).join('\n');
       const monthly = (a.suggested_monthly || []).map(m => `- ${money(m.amount)}/mo ${m.item}`).join('\n');
       setTerms(`${a.suggested_structure || ''}\n\nInstallments:\n${seed}${monthly ? '\n\nMonthly:\n' + monthly : ''}`.trim());
@@ -854,7 +857,7 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
       let doc = {};
       try { doc = await generateAgreement(client.id, `Build value $${Number(total)}. The client selects a custom payment plan in their portal.`, null, 'custom'); }
       catch (e) { /* still save the plan options; doc can be regenerated */ }
-      await setupCustomAgreement(client.id, { total: Number(total), plan_options: plans, agreement_markdown: doc.agreement_markdown || null, nda_markdown: doc.nda_markdown || null });
+      await setupCustomAgreement(client.id, { total: Number(total), maintenance: Number(maint) || 0, plan_options: plans, agreement_markdown: doc.agreement_markdown || null, nda_markdown: doc.nda_markdown || null });
       onApprove({ total: Number(total), custom: true });
       toast('success', 'Payment-plan options saved — the client picks one in their portal.');
     } catch (e) { toast('error', e.message); }
@@ -873,7 +876,6 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading terms…</div>;
 
   const plans = allow && Number(total) > 0 ? computePlans(Number(total)) : [];
-  const maint = (draft?.monthly || [])[0];
 
   return (
     <div style={{ maxWidth: 1080, margin: '0 auto' }}>
@@ -897,15 +899,20 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
       {allow ? (
         /* ── Custom payment-plan mode ── */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0,1fr)', gap: 16, alignItems: 'end' }}>
+          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '200px 200px minmax(0,1fr)', gap: 16, alignItems: 'end' }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Build value ($)</label>
               <input className="form-input" type="number" min="0" step="100" value={total} onChange={e => { setTotal(e.target.value); setOffered(null); }} placeholder="e.g. 5000" />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Maintenance ($/mo)</label>
+              <input className="form-input" type="number" min="0" step="10" value={maint} onChange={e => setMaint(e.target.value)} placeholder="e.g. 199" />
             </div>
             <button className="btn-ghost" style={{ justifySelf: 'start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'analyze'} onClick={runAnalyze}>
               {busy === 'analyze' ? <><Spinner /> Estimating…</> : <><Sparkles size={14} /> Estimate from notes</>}
             </button>
           </div>
+          {Number(maint) > 0 && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -6 }}>{money(Number(maint))}/mo maintenance applies to every plan, starting the month after the last plan payment.</div>}
 
           {plans.length > 0 ? (
             <div>

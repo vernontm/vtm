@@ -162,13 +162,14 @@
     function money(n){ return '$'+(Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:0}); }
 
     function renderPlanChooser(){
-      const plans=data.plan_options||[];
+      const plans=data.plan_options||[], maint=Number(data.maintenance)||0;
       let h='<div class="lead"><h1>Choose your payment plan</h1><p>Pick the option that works best for you — you\'ll review and sign your agreement next.</p></div><div class="plans">';
       plans.forEach(p=>{
         const rest=(p.installments||[]).length ? ('then '+(p.installments.length===1 ? money(p.installments[0].amount) : (p.installments.length+' × '+money(p.installments[0].amount)))) : 'paid in full today';
         h+='<div class="planc"><div class="planhd"><div><div class="plname">'+esc(p.label)+'</div><div class="plsum">'+esc(p.summary||'')+'</div></div>'
           +'<div class="pltoday"><div class="plamt">'+money(p.deposit)+'</div><div class="pltd">due today</div></div></div>'
           +'<div class="plmeta">'+rest+' · total '+money(p.grand_total)+(p.finance_charge?(' (incl. '+money(p.finance_charge)+' financing)'):'')+'</div>'
+          +(maint>0?'<div class="plmeta" style="margin-top:4px">+ '+money(maint)+'/mo maintenance (begins after the final payment)</div>':'')
           +'<button class="plbtn" data-k="'+esc(p.key)+'">Choose this plan</button></div>';
       });
       h+='</div>';

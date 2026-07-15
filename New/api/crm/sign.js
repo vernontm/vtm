@@ -22,11 +22,12 @@ const money = (n) => '$' + Number(n || 0).toLocaleString('en-US', { maximumFract
 
 // Build the concrete payment-schedule markdown for a chosen plan, to fill the
 // {{PAYMENT_SCHEDULE}} placeholder in a custom agreement.
-function scheduleMarkdown(plan) {
-  const lines = [`**Total: ${money(plan.grand_total)}**`, ''];
+function scheduleMarkdown(plan, maintenance) {
+  const lines = [`**Build total: ${money(plan.grand_total)}**`, ''];
   lines.push(`- **Deposit (due upon signing):** ${money(plan.deposit)}`);
   (plan.installments || []).forEach(i => lines.push(`- **${i.label || i.trigger || 'Payment'}:** ${money(i.amount)}`));
   if (plan.finance_charge) lines.push('', `_Includes ${money(plan.finance_charge)} financing charge._`);
+  if (maintenance > 0) lines.push('', `**Maintenance & Support: ${money(maintenance)}/month**, beginning the month after the final build payment and continuing monthly.`);
   lines.push('', 'The deposit is charged upon signing. Remaining payments are billed automatically to the card on file per the schedule above. All payments are authorized by the Client\'s signature and recurring-billing consent.');
   return lines.join('\n');
 }
@@ -116,10 +117,12 @@ async function signedUrlFor(fileUrl, expiresIn = 604800) {
 async function setupPlanSubscription(ag, client, session) {
   if (!stripe.configured()) return null;
   const terms = ag.terms || {};
-  // Custom pay-in-full / 50-50 plans: deposit only at signing; any remainder is a
-  // pending payment (settled via the portal), not an auto-charging subscription.
   const planKey = terms.plan_key || null;
-  if (planKey && planKey !== '20_3' && planKey !== '20_6') return null;
+  // Only monthly plans (and fixed-mode agreements, which have no plan_key)
+  // auto-bill their build installments. Pay-in-full / 50-50 have no recurring
+  // build charges — their remainder (if any) is settled via the portal. But
+  // maintenance still runs on EVERY plan, starting after the last build payment.
+  const autoBuild = !planKey || planKey === '20_3' || planKey === '20_6';
 
   // Resolve the deal (custom agreements aren't always linked — fall back to the
   // client's most recent deal) for storing the Stripe customer/subscription ids.
@@ -130,7 +133,7 @@ async function setupPlanSubscription(ag, client, session) {
   if (!deal || deal.stripe_subscription_id) return null; // already set up
 
   const installments = Array.isArray(terms.installments) ? terms.installments : [];
-  const builds = installments.filter(i => !/deposit/i.test(i.label || ''));
+  const builds = autoBuild ? installments.filter(i => !/deposit/i.test(i.label || '')) : [];
   const buildAmt = builds.length ? Math.round(Number(builds[0].amount) * 100) : 0;
   const buildCount = builds.length;
   const maint = (Array.isArray(terms.monthly) && terms.monthly[0]) ? Math.round(Number(terms.monthly[0].amount) * 100) : 0;
@@ -218,13 +221,15 @@ module.exports = async function handler(req, res) {
       const plan = (ag.plan_options || []).find(p => p.key === planKey);
       if (!plan) return res.status(400).json({ error: 'Pick a valid plan.' });
 
-      const schedMd = scheduleMarkdown(plan);
+      const maintAmt = Number(terms.maintenance) || 0;
+      const schedMd = scheduleMarkdown(plan, maintAmt);
       let md = terms.agreement_markdown || '';
       md = md.includes('{{PAYMENT_SCHEDULE}}')
         ? md.replace('{{PAYMENT_SCHEDULE}}', schedMd)
         : `${md}\n\n## Payment Schedule\n${schedMd}`;
       const installments = planToInstallments(plan);
-      const newTerms = { ...terms, agreement_markdown: md, installments, monthly: [], plan_key: plan.key };
+      const monthly = maintAmt > 0 ? [{ item: 'Maintenance & Support', amount: maintAmt }] : [];
+      const newTerms = { ...terms, agreement_markdown: md, installments, monthly, plan_key: plan.key };
 
       await supaFetch(`crm_agreements?id=eq.${ag.id}`, {
         method: 'PATCH',
@@ -251,6 +256,7 @@ module.exports = async function handler(req, res) {
           status: ag.signed_at ? 'signed' : 'sent',
           needs_plan: true,
           plan_options: ag.plan_options || [],
+          maintenance: Number(terms.maintenance) || 0,
           business_name: client.business_name,
           owner_name: client.owner_name,
         });
