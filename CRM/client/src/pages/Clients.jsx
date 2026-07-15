@@ -1127,6 +1127,268 @@ function AgreementStep({ client, termsDraft, onApproved }) {
   );
 }
 
+// Step 4 — Stripe: confirm the billing plan that auto-sets-up when the client
+// signs (deposit Checkout + recurring plan on the same card — Option A). No
+// charge happens here; this is the confirmation view before sending.
+function StripeStep({ client, onDone }) {
+  const [loading, setLoading] = useState(true);
+  const [ag, setAg] = useState(null);
+  const [payments, setPayments] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await getAgreements(client.id);
+        setAg((d.agreements || [])[0] || null);
+        setPayments(d.payments || []);
+      } catch (e) { toast('error', e.message); }
+      finally { setLoading(false); }
+    })();
+  }, [client.id]);
+
+  if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
+  if (!ag) return (
+    <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', color: 'var(--muted)' }}>
+      <DollarSign size={28} style={{ opacity: 0.4 }} />
+      <div style={{ marginTop: 12, fontSize: 14 }}>Approve the agreement first — go to the <strong>Agreement</strong> step.</div>
+    </div>
+  );
+
+  const terms = ag.terms || {};
+  const installments = Array.isArray(terms.installments) ? terms.installments : [];
+  const monthly = Array.isArray(terms.monthly) ? terms.monthly : [];
+  const deposit = installments[0];
+  const buildRest = installments.slice(1);
+  const maint = monthly[0];
+
+  const Line = ({ label, value, sub }) => (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '10px 0', borderTop: '1px solid var(--border)' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 600 }}>{label}</div>
+        {sub && <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>{sub}</div>}
+      </div>
+      <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{value}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Billing plan</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>This is what Stripe sets up automatically the moment {client.business_name || 'the client'} signs. Nothing is charged until then.</div>
+
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 18px 14px' }}>
+        {deposit && <Line label="Deposit — charged at signing" sub="Stripe Checkout on the card the client enters" value={money(deposit.amount)} />}
+        {buildRest.length > 0 && (
+          <Line
+            label={`Build installments — ${buildRest.length} × ${money(buildRest[0].amount)}`}
+            sub="Auto-charged monthly on the same card, starting the month after the deposit"
+            value={money(buildRest.reduce((s, i) => s + Number(i.amount || 0), 0))}
+          />
+        )}
+        {maint?.amount && (
+          <Line label={maint.item || 'Maintenance & Support'} sub="Recurring subscription, begins right after the build" value={`${money(maint.amount)}/mo`} />
+        )}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '12px 0 2px', borderTop: '2px solid var(--border)', marginTop: 4 }}>
+          <div style={{ flex: 1, color: 'var(--text)', fontSize: 13.5, fontWeight: 800 }}>Build total</div>
+          <div style={{ color: 'var(--text)', fontSize: 15, fontWeight: 800 }}>{money(ag.total_amount)}</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14, padding: '12px 14px', background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 10 }}>
+        <ShieldCheck size={16} style={{ color: 'var(--orange)', flexShrink: 0, marginTop: 1 }} />
+        <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.55 }}>
+          On signing, VTM charges the deposit via Stripe Checkout and sets the recurring plan up on that same card automatically. You don't need to send a separate invoice — it's all wired into the signature.
+        </div>
+      </div>
+
+      <button className="btn-primary" style={{ marginTop: 18 }} onClick={onDone}>Confirm plan &amp; continue <ChevronRight size={15} /></button>
+    </div>
+  );
+}
+
+// Step 5 — Platforms & Access: a checklist of tools the client must grant VTM
+// access to, each with copy-ready instructions. Persisted as client tasks.
+const ACCESS_SEED = [
+  { title: 'Website & hosting login', description: 'Add ray@vernontm.com as an Administrator on your website host. WordPress: Users → Add New → role Administrator. Squarespace/Shopify/Wix: Settings → Permissions → invite as admin. This lets us build and connect the CRM to your site.' },
+  { title: 'Domain / DNS (registrar)', description: 'Grant delegate access at your domain registrar (GoDaddy, Namecheap, Google Domains) or share DNS management. GoDaddy: Account Settings → Delegate Access → invite ray@vernontm.com. We need this to point records for email and the CRM.' },
+  { title: 'Google Workspace / email admin', description: 'Add ray@vernontm.com as a delegated admin, or provide a temporary admin login, so we can configure email routing and the AI email assistant.' },
+  { title: 'Stripe', description: 'In Stripe: Settings → Team → invite ray@vernontm.com as Admin. This wires up checkout, subscriptions, and invoicing for your bookings.' },
+  { title: 'Existing CRM export (Keap / Monday.com)', description: 'Export your contacts, pipelines, and bookings as CSV — or add ray@vernontm.com as a user — so we can migrate your data into the new CRM with no loss.' },
+  { title: 'Booking & calendar', description: 'Share your booking tool and calendar (Calendly, Acuity, Google Calendar) so we can integrate scheduling and prevent double-booking.' },
+  { title: 'Social & ad accounts', description: 'Add VTM as a partner/admin on Meta Business Suite and any ad accounts, so we can set up retargeting and lower your lead cost.' },
+];
+
+function AccessStep({ client, onDone }) {
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([]);
+  const [open, setOpen] = useState(null);
+
+  const load = async () => {
+    try {
+      let rows = (await getClientTasks(client.id)).filter(t => t.category === 'access');
+      if (rows.length === 0) {
+        await Promise.all(ACCESS_SEED.map(s => createClientTask({ client_id: client.id, category: 'access', title: s.title, description: s.description, status: 'todo', assigned_to: 'Client' })));
+        rows = (await getClientTasks(client.id)).filter(t => t.category === 'access');
+      }
+      setItems(rows);
+    } catch (e) { toast('error', e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [client.id]);
+
+  const toggle = async (t) => {
+    const status = t.status === 'done' ? 'todo' : 'done';
+    setItems(xs => xs.map(x => x.id === t.id ? { ...x, status } : x));
+    try { await updateClientTask(t.id, { status }); } catch (e) { toast('error', e.message); }
+  };
+  const remove = async (t) => { setItems(xs => xs.filter(x => x.id !== t.id)); try { await deleteClientTask(t.id); } catch (e) { toast('error', e.message); } };
+  const addCustom = async () => {
+    const title = prompt('What access do you need? (e.g. "Instagram login")');
+    if (!title || !title.trim()) return;
+    try { const t = await createClientTask({ client_id: client.id, category: 'access', title: title.trim(), status: 'todo', assigned_to: 'Client' }); setItems(xs => [...xs, t]); }
+    catch (e) { toast('error', e.message); }
+  };
+
+  const copyRequest = () => {
+    const pending = items.filter(i => i.status !== 'done');
+    const list = (pending.length ? pending : items).map(i => `• ${i.title}${i.description ? `\n   ${i.description}` : ''}`).join('\n\n');
+    const msg = `Hi ${client.owner_name || 'there'},\n\nTo get your build started, we'll need access to a few things. Here's what we need and how to grant it:\n\n${list}\n\nSend ray@vernontm.com over as the invite email wherever it's needed. Let me know if anything's unclear!\n\n— Ray, Vernon Tech & Media`;
+    navigator.clipboard?.writeText(msg).then(() => toast('success', 'Access request copied — paste into an email or text.'), () => toast('error', 'Could not copy'));
+  };
+
+  if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
+
+  const doneCount = items.filter(i => i.status === 'done').length;
+
+  return (
+    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Platforms &amp; access</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>What you'll need access to before the build. Check items off as they come in; each has copy-ready instructions to send the client.</div>
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', whiteSpace: 'nowrap', marginTop: 4 }}>{doneCount}/{items.length} granted</span>
+      </div>
+
+      <button className="btn-ghost" style={{ marginBottom: 12 }} onClick={copyRequest}><Copy size={14} /> Copy access request for client</button>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {items.map(t => (
+          <div key={t.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
+              <button onClick={() => toggle(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: t.status === 'done' ? '#16a34a' : 'var(--muted)' }}>
+                {t.status === 'done' ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+              </button>
+              <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: 'var(--text)', textDecoration: t.status === 'done' ? 'line-through' : 'none', opacity: t.status === 'done' ? 0.6 : 1 }}>{t.title}</span>
+              {t.description && <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setOpen(open === t.id ? null : t.id)}>{open === t.id ? 'Hide' : 'Instructions'}</button>}
+              <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => remove(t)} title="Remove"><X size={14} /></button>
+            </div>
+            {open === t.id && t.description && (
+              <div style={{ padding: '0 14px 12px 42px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span style={{ flex: 1 }}>{t.description}</span>
+                <button className="btn-ghost" style={{ padding: '3px 8px', fontSize: 11.5, flexShrink: 0 }} onClick={() => navigator.clipboard?.writeText(t.description).then(() => toast('success', 'Copied'))}>Copy</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button className="btn-ghost" onClick={addCustom}><Plus size={14} /> Add access item</button>
+      </div>
+
+      <button className="btn-primary" style={{ marginTop: 18 }} onClick={onDone}>Continue <ChevronRight size={15} /></button>
+    </div>
+  );
+}
+
+// Step 6 — Send: final gate. Confirms readiness, sends the agreement to sign,
+// then shows live status (sent → opened → signed).
+function SendStep({ client, onSent }) {
+  const [loading, setLoading] = useState(true);
+  const [ag, setAg] = useState(null);
+  const [deals, setDeals] = useState([]);
+  const [busy, setBusy] = useState('');
+
+  const load = async () => {
+    try {
+      const d = await getAgreements(client.id);
+      setAg((d.agreements || [])[0] || null);
+      setDeals(await getDeals(client.id).catch(() => []));
+    } catch (e) { toast('error', e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [client.id]);
+
+  const send = async () => {
+    if (!ag) return;
+    setBusy('send');
+    try {
+      await sendAgreementForSignature(ag.id);
+      toast('success', ag.sent_at ? 'Re-sent to client.' : 'Sent to client to sign.');
+      onSent && onSent();
+      setLoading(true); load();
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
+  if (!ag) return (
+    <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', color: 'var(--muted)' }}>
+      <FileSignature size={28} style={{ opacity: 0.4 }} />
+      <div style={{ marginTop: 12, fontSize: 14 }}>No agreement yet — complete the <strong>Agreement</strong> step first.</div>
+    </div>
+  );
+
+  const approved = ag.status === 'approved' || ag.status === 'sent' || ag.status === 'signed';
+  const signLink = ag.sign_token ? `${window.location.origin}/sign?token=${ag.sign_token}` : null;
+  const Check = ({ ok, label }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: ok ? 'var(--text)' : 'var(--muted)' }}>
+      {ok ? <CheckCircle2 size={16} style={{ color: '#16a34a' }} /> : <Circle size={16} />} {label}
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Send for signature</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>Nothing goes out until you send. On signing, the deposit is charged and the plan is set up automatically.</div>
+
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ready to send</div>
+        <Check ok={approved} label="Agreement approved" />
+        <Check ok={deals.length > 0} label="Deal & projects created" />
+        <Check ok={!!ag.total_amount} label={`Billing plan set — ${money(ag.total_amount)}`} />
+      </div>
+
+      {ag.status !== 'signed' && (
+        <button className="btn-primary" disabled={!approved || busy === 'send'} onClick={send}>
+          <FileSignature size={15} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend to client' : 'Send to client to sign'}
+        </button>
+      )}
+
+      {ag.sent_at && (
+        <div style={{ marginTop: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Signature status</div>
+            <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }} disabled={busy === 'refresh'} onClick={() => { setBusy('refresh'); load().finally(() => setBusy('')); }}>Refresh</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Check ok={!!ag.sent_at} label={`Sent ${ag.sent_at ? new Date(ag.sent_at).toLocaleString() : ''}`} />
+            <Check ok={!!ag.opened_at} label={ag.opened_at ? `Client opened the signature page ${new Date(ag.opened_at).toLocaleString()}` : 'Not opened yet'} />
+            <Check ok={!!ag.signed_at} label={ag.signed_at ? `Signed ${new Date(ag.signed_at).toLocaleString()} by ${ag.signer_name || 'client'}` : 'Not signed yet'} />
+          </div>
+          {signLink && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '10px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8 }}>
+              <span style={{ flex: 1, fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{signLink}</span>
+              <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => navigator.clipboard?.writeText(signLink).then(() => toast('success', 'Sign link copied'))}><Copy size={13} /> Copy link</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [step, setStep] = useState(0);
   const [view, setView] = useState('pipeline'); // 'pipeline' | 'details'
@@ -1225,11 +1487,16 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <DealsStep client={client} termsDraft={termsDraft} savedDealId={dealId} onCreated={(id) => { setDealId(id); setStep(3); }} />
         ) : cur.key === 'agreement' ? (
           <AgreementStep client={client} termsDraft={termsDraft} onApproved={(id) => { setAgreementId(id); setStep(4); }} />
+        ) : cur.key === 'stripe' ? (
+          <StripeStep client={client} onDone={() => setStep(5)} />
+        ) : cur.key === 'access' ? (
+          <AccessStep client={client} onDone={() => setStep(6)} />
+        ) : cur.key === 'send' ? (
+          <SendStep client={client} />
         ) : (
           <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>
             <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>{cur.blurb}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 16, fontStyle: 'italic' }}>This step is being built next.</div>
           </div>
         )}
       </div>

@@ -174,6 +174,11 @@ module.exports = async function handler(req, res) {
 
     // GET — load the documents for signing
     if (req.method === 'GET') {
+      // Track the first time the client actually opens the signing page (not a
+      // preview, and only once it's been sent). Ray sees this on the Send step.
+      if (req.query.preview !== '1' && ag.sent_at && !ag.opened_at) {
+        await supaFetch(`crm_agreements?id=eq.${ag.id}`, { method: 'PATCH', body: JSON.stringify({ opened_at: new Date().toISOString() }) }).catch(() => {});
+      }
       return res.json({
         status: ag.signed_at ? 'signed' : 'sent',
         business_name: client.business_name,

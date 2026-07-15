@@ -269,7 +269,7 @@
     async function load(){
       if(!token){app.innerHTML='<div class="state"><h2>Invalid link</h2><p>This signing link is missing its token.</p></div>';return;}
       try{
-        const r=await fetch('/api/crm/sign?token='+encodeURIComponent(token));
+        const r=await fetch('/api/crm/sign?token='+encodeURIComponent(token)+(isPreview?'&preview=1':''));
         if(r.status===404){app.innerHTML='<div class="state"><h2>Not found</h2><p>This agreement link is not valid.</p></div>';return;}
         data=await r.json();
         if(data.status==='signed'){renderDone(true);return;}
