@@ -405,6 +405,8 @@ export const analyzeDeal      = (client_id)        => request('/agreement-ai?act
 export const generateAgreement = (client_id, terms, base) => request('/agreement-ai?action=generate', { method: 'POST', body: JSON.stringify({ client_id, terms, base }) });
 export const suggestProjects   = (client_id) => request('/agreement-ai?action=suggest-projects', { method: 'POST', body: JSON.stringify({ client_id }) });
 export const generateAccessInstructions = (title, notes) => request('/agreement-ai?action=access-instructions', { method: 'POST', body: JSON.stringify({ title, notes }) });
+export const draftClientEmail = (client_id, tone, portal_url, sign_url) => request('/agreement-ai?action=client-email', { method: 'POST', body: JSON.stringify({ client_id, tone, portal_url, sign_url }) });
+export const sendClientEmail  = (payload) => request('/client-email', { method: 'POST', body: JSON.stringify(payload) });
 export const approveAgreement  = (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) });
 
 // Content Clients

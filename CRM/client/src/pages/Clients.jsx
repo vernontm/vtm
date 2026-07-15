@@ -18,7 +18,7 @@ import {
   getProjects, createProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, approveAgreement, approveAgreementRow, previewAgreementToken,
+  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -1412,6 +1412,9 @@ function SendStep({ client, onSent }) {
   const [ag, setAg] = useState(null);
   const [deals, setDeals] = useState([]);
   const [busy, setBusy] = useState('');
+  const [tone, setTone] = useState('professional');
+  const [email, setEmail] = useState(null); // { subject, body }
+  const [emailBusy, setEmailBusy] = useState('');
 
   const load = async () => {
     try {
@@ -1433,6 +1436,30 @@ function SendStep({ client, onSent }) {
       setLoading(true); load();
     } catch (e) { toast('error', e.message); }
     finally { setBusy(''); }
+  };
+
+  const portalUrl = `${window.location.origin}/client`;
+  const signUrl = ag?.sign_token ? `${window.location.origin}/sign?token=${ag.sign_token}` : null;
+
+  const genEmail = async (nextTone) => {
+    const useTone = nextTone || tone;
+    setEmailBusy('gen');
+    try {
+      const r = await draftClientEmail(client.id, useTone, portalUrl, signUrl);
+      setEmail({ subject: r.subject || '', body: r.body || '' });
+    } catch (e) { toast('error', e.message); }
+    finally { setEmailBusy(''); }
+  };
+  const doSendEmail = async (mode) => {
+    const to = client.contact_email;
+    if (!to) { toast('error', 'This client has no email on file (add it in Business Details).'); return; }
+    if (!email?.body?.trim()) { toast('error', 'Generate or write the email first.'); return; }
+    setEmailBusy(mode);
+    try {
+      await sendClientEmail({ to, subject: email.subject, body: email.body, mode });
+      toast('success', mode === 'draft' ? 'Saved as a Gmail draft.' : `Email sent to ${to}.`);
+    } catch (e) { toast('error', e.message); }
+    finally { setEmailBusy(''); }
   };
 
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
@@ -1488,6 +1515,55 @@ function SendStep({ client, onSent }) {
           )}
         </div>
       )}
+
+      {/* Cover email to the client */}
+      <div style={{ marginTop: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <Mail size={16} style={{ color: 'var(--orange)' }} />
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Email the client</div>
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
+          A cover note letting {client.owner_name || 'them'} know what you sent, with their portal link — drafted from your notes, terms, and the plan. Pick a style:
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {[{ k: 'professional', label: 'Professional' }, { k: 'friendly', label: 'Friendly' }, { k: 'gain', label: 'Gain-focused' }].map(o => (
+            <button key={o.k} onClick={() => { setTone(o.k); genEmail(o.k); }} disabled={emailBusy === 'gen'}
+              style={{ padding: '6px 14px', borderRadius: 999, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)', border: `1px solid ${tone === o.k ? 'var(--orange)' : 'var(--border)'}`, background: tone === o.k ? 'rgba(37,99,235,0.10)' : 'var(--surface)', color: tone === o.k ? 'var(--orange)' : 'var(--muted)' }}>
+              {o.label}
+            </button>
+          ))}
+          {emailBusy === 'gen' && <span style={{ fontSize: 12, color: 'var(--orange)', alignSelf: 'center', display: 'inline-flex', gap: 5, alignItems: 'center' }}><Sparkles size={12} /> Drafting…</span>}
+        </div>
+
+        {!email && emailBusy !== 'gen' && (
+          <button className="btn-primary" onClick={() => genEmail()}><Sparkles size={15} /> Draft the email</button>
+        )}
+
+        {email && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>
+              <label className="form-label">Subject</label>
+              <input className="form-input" value={email.subject} onChange={e => setEmail(m => ({ ...m, subject: e.target.value }))} />
+            </div>
+            <div>
+              <label className="form-label">Message</label>
+              <textarea className="form-input" rows={12} value={email.body} onChange={e => setEmail(m => ({ ...m, body: e.target.value }))} style={{ resize: 'vertical', fontSize: 13, lineHeight: 1.6 }} />
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>To: {client.contact_email || <span style={{ color: '#ff5c5c' }}>no email on file — add one in Business Details</span>}</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn-primary" disabled={emailBusy === 'send' || !client.contact_email} onClick={() => doSendEmail('send')}>
+                <Mail size={15} /> {emailBusy === 'send' ? 'Sending…' : 'Send email'}
+              </button>
+              <button className="btn-ghost" disabled={emailBusy === 'draft' || !client.contact_email} onClick={() => doSendEmail('draft')}>
+                {emailBusy === 'draft' ? 'Saving…' : 'Save as Gmail draft'}
+              </button>
+              <button className="btn-ghost" onClick={() => navigator.clipboard?.writeText(`${email.subject}\n\n${email.body}`).then(() => toast('success', 'Copied'))}><Copy size={13} /> Copy</button>
+              <button className="btn-ghost" style={{ marginLeft: 'auto' }} disabled={emailBusy === 'gen'} onClick={() => genEmail()}><Sparkles size={13} /> Regenerate</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

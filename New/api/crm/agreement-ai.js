@@ -140,6 +140,38 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
       return res.json(parseJson(out));
     }
 
+    // ── client-email: draft the cover email to the client after sending the
+    //    agreement, in a chosen tone (professional / friendly / gain). ──
+    if (req.method === 'POST' && action === 'client-email') {
+      const { client_id, tone, portal_url, sign_url } = req.body || {};
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      const { client, projects, activity } = await loadContext(client_id);
+      const agRows = await supaFetch(`crm_agreements?client_id=eq.${client_id}&select=total_amount,terms&order=created_at.desc&limit=1`).catch(() => []);
+      const ag = agRows && agRows[0];
+      const t = ag?.terms || {};
+
+      const toneGuide = {
+        professional: 'Polished, businesslike, and concise. Courteous and clear, no slang.',
+        friendly: 'Warm, personable, and conversational — like a trusted partner. Upbeat but genuine, contractions are fine.',
+        gain: 'Value- and outcome-focused. Lead with what the client gains and the momentum ahead; call out any bonus/extra feature included at no cost and any goodwill on timeline as wins. Motivating but sincere.',
+      }[tone] || 'Polished, businesslike, and concise.';
+
+      const system = `You are Ray (Rayvaughn Vernon) of Vernon Tech & Media, writing a short email to a client right after sending their service agreement to sign. First person, human, warm — never robotic. Reference what was actually agreed: use the discovery notes, agreement terms, and the payment plan below. If the notes mention a bonus feature added at no extra cost, or an adjusted/extended delivery timeline, weave it in as a positive. Tell them the agreement is ready to sign and point them to their client portal. Keep it tight (roughly 120–200 words). Sign off as Ray, Vernon Tech & Media.
+TONE: ${toneGuide}
+Include the portal link${sign_url ? ' and the signing link' : ''} exactly as given (plain URLs, do not invent links). Return ONLY JSON: { "subject": string, "body": string }`;
+      const user = `Draft the email.
+Client: ${client.business_name} — contact ${client.owner_name || 'there'}
+Portal link: ${portal_url || '(none)'}
+${sign_url ? `Signing link: ${sign_url}` : ''}
+Agreement total: ${ag?.total_amount ?? 'n/a'}
+Installments: ${JSON.stringify(t.installments || [])}
+Monthly: ${JSON.stringify(t.monthly || [])}
+
+${contextBlock(client, projects, activity)}`;
+      const out = await callClaude(system, user, 1200);
+      return res.json(parseJson(out));
+    }
+
     // ── access-instructions: write/refine client-facing access instructions ──
     if (req.method === 'POST' && action === 'access-instructions') {
       const { title, notes } = req.body || {};
