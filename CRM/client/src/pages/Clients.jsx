@@ -706,7 +706,7 @@ const LEAD_STEPS = [
   { key: 'terms',     label: 'Terms',              blurb: 'Review and edit the agreement terms, then approve.' },
   { key: 'deals',     label: 'Deals & Projects',   blurb: 'Create the deal and projects with pricing.' },
   { key: 'agreement', label: 'Agreement',          blurb: 'Preview the agreement and approve it.' },
-  { key: 'stripe',    label: 'Stripe',             blurb: 'Set up the live invoicing and subscription.' },
+  { key: 'payment',   label: 'Payment',            blurb: 'Choose which payment plans to offer the client in their portal.' },
   { key: 'access',    label: 'Platforms & Access', blurb: 'A task list of the tools you need access to, with instructions.' },
   { key: 'proposal',  label: 'Proposal',           blurb: 'Draft the cover email to the client, with their portal link.' },
   { key: 'send',      label: 'Send',               blurb: 'Send the agreement to sign and the proposal email, then track it.' },
@@ -1164,20 +1164,47 @@ function AgreementStep({ client, termsDraft, onApproved }) {
   );
 }
 
-// Step 4 — Stripe: confirm the billing plan that auto-sets-up when the client
-// signs (deposit Checkout + recurring plan on the same card — Option A). No
-// charge happens here; this is the confirmation view before sending.
-function StripeStep({ client, onDone }) {
+// Compute the standard VTM payment-plan menu from a build total. The client
+// picks one in their portal; the chosen plan's deposit + installments drive the
+// agreement schedule and Stripe. (Maintenance is separate and unaffected.)
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+function computePlans(total, financePct = 10) {
+  total = Number(total) || 0;
+  if (!total) return [];
+  const dep20 = round2(total * 0.2);
+  const fin = round2(total - dep20);               // 80% financed portion
+  const m3 = round2(fin / 3);
+  const inst3 = [m3, m3, round2(fin - m3 * 2)].map((a, i) => ({ label: `Month ${i + 1}`, amount: a, trigger: `Month ${i + 1}` }));
+  const fin6 = round2(fin * (1 + financePct / 100));
+  const m6 = round2(fin6 / 6);
+  const inst6 = Array.from({ length: 6 }, (_, i) => (i < 5 ? m6 : round2(fin6 - m6 * 5))).map((a, i) => ({ label: `Month ${i + 1}`, amount: a, trigger: `Month ${i + 1}` }));
+  const half = round2(total * 0.5);
+  return [
+    { key: 'full', label: 'Pay in full', summary: '100% today', deposit: total, installments: [], grand_total: total },
+    { key: '50_50', label: '50% now, 50% on completion', summary: 'Half today, half on delivery', deposit: half, installments: [{ label: '50% on completion', amount: round2(total - half), trigger: 'On completion' }], grand_total: total },
+    { key: '20_3', label: '20% down + 3 months', summary: '20% today, remainder over 3 monthly payments', deposit: dep20, installments: inst3, grand_total: total },
+    { key: '20_6', label: '20% down + 6 months', summary: `20% today, remainder + ${financePct}% financing over 6 monthly payments`, deposit: dep20, installments: inst6, grand_total: round2(dep20 + fin6), finance_charge: round2(fin6 - fin) },
+  ];
+}
+
+// Step 5 — Payment: choose which of the standard plans to offer this client.
+// Saved on the agreement; the client picks one in their portal.
+function PaymentStep({ client, onDone }) {
   const [loading, setLoading] = useState(true);
   const [ag, setAg] = useState(null);
-  const [payments, setPayments] = useState([]);
+  const [chosen, setChosen] = useState({});   // { planKey: true }
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const d = await getAgreements(client.id);
-        setAg((d.agreements || [])[0] || null);
-        setPayments(d.payments || []);
+        const a = (d.agreements || [])[0] || null;
+        setAg(a);
+        const saved = Array.isArray(a?.plan_options) ? a.plan_options.map(p => p.key) : null;
+        const plans = computePlans(a?.total_amount);
+        // Default: everything on (or the previously-saved set).
+        setChosen(Object.fromEntries(plans.map(p => [p.key, saved ? saved.includes(p.key) : true])));
       } catch (e) { toast('error', e.message); }
       finally { setLoading(false); }
     })();
@@ -1191,54 +1218,66 @@ function StripeStep({ client, onDone }) {
     </div>
   );
 
-  const terms = ag.terms || {};
-  const installments = Array.isArray(terms.installments) ? terms.installments : [];
-  const monthly = Array.isArray(terms.monthly) ? terms.monthly : [];
-  const deposit = installments[0];
-  const buildRest = installments.slice(1);
-  const maint = monthly[0];
+  const plans = computePlans(ag.total_amount);
+  const monthly = (ag.terms?.monthly || [])[0];
+  const offeredCount = Object.values(chosen).filter(Boolean).length;
 
-  const Line = ({ label, value, sub }) => (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '10px 0', borderTop: '1px solid var(--border)' }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 600 }}>{label}</div>
-        {sub && <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>{sub}</div>}
-      </div>
-      <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{value}</div>
-    </div>
-  );
+  const save = async () => {
+    const offered = plans.filter(p => chosen[p.key]);
+    if (!offered.length) { toast('error', 'Offer at least one plan.'); return; }
+    setBusy(true);
+    try {
+      await setAgreementPlans(ag.id, offered);
+      toast('success', `${offered.length} plan${offered.length > 1 ? 's' : ''} offered — the client picks one in their portal.`);
+      onDone();
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(false); }
+  };
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto' }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Billing plan</div>
-      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>This is what Stripe sets up automatically the moment {client.business_name || 'the client'} signs. Nothing is charged until then.</div>
+    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Payment plans to offer</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+        Build total <strong>{money(ag.total_amount)}</strong>. Pick which plans {client.business_name || 'the client'} can choose from in their portal — every option here is one you're happy to accept.{monthly?.amount ? ` Maintenance (${money(monthly.amount)}/mo) is separate and applies to every plan.` : ''}
+      </div>
 
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 18px 14px' }}>
-        {deposit && <Line label="Deposit — charged at signing" sub="Stripe Checkout on the card the client enters" value={money(deposit.amount)} />}
-        {buildRest.length > 0 && (
-          <Line
-            label={`Build installments — ${buildRest.length} × ${money(buildRest[0].amount)}`}
-            sub="Auto-charged monthly on the same card, starting the month after the deposit"
-            value={money(buildRest.reduce((s, i) => s + Number(i.amount || 0), 0))}
-          />
-        )}
-        {maint?.amount && (
-          <Line label={maint.item || 'Maintenance & Support'} sub="Recurring subscription, begins right after the build" value={`${money(maint.amount)}/mo`} />
-        )}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '12px 0 2px', borderTop: '2px solid var(--border)', marginTop: 4 }}>
-          <div style={{ flex: 1, color: 'var(--text)', fontSize: 13.5, fontWeight: 800 }}>Build total</div>
-          <div style={{ color: 'var(--text)', fontSize: 15, fontWeight: 800 }}>{money(ag.total_amount)}</div>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {plans.map(p => {
+          const on = !!chosen[p.key];
+          return (
+            <div key={p.key} onClick={() => setChosen(c => ({ ...c, [p.key]: !c[p.key] }))}
+              style={{ cursor: 'pointer', background: 'var(--surface)', border: `1px solid ${on ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 12, padding: '14px 16px', boxShadow: on ? '0 0 0 1px var(--orange) inset' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {on ? <CheckCircle2 size={18} style={{ color: 'var(--orange)' }} /> : <Circle size={18} style={{ color: 'var(--muted)' }} />}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{p.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{p.summary}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{money(p.deposit)} <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 12 }}>today</span></div>
+                  {p.installments.length > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>then {p.installments.length === 1 ? money(p.installments[0].amount) : `${p.installments.length} × ${money(p.installments[0].amount)}`}</div>}
+                </div>
+              </div>
+              {(p.finance_charge || p.grand_total !== ag.total_amount) && (
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, paddingLeft: 28 }}>
+                  {p.finance_charge ? `Includes ${money(p.finance_charge)} financing. ` : ''}Total {money(p.grand_total)}{monthly?.amount ? ` + ${money(monthly.amount)}/mo maintenance` : ''}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14, padding: '12px 14px', background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 10 }}>
         <ShieldCheck size={16} style={{ color: 'var(--orange)', flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.55 }}>
-          On signing, VTM charges the deposit via Stripe Checkout and sets the recurring plan up on that same card automatically. You don't need to send a separate invoice — it's all wired into the signature.
+          The client picks one of these in their portal. Their choice fills in the agreement's payment schedule, and on signing Stripe charges the deposit and sets up the rest automatically on the same card.
         </div>
       </div>
 
-      <button className="btn-primary" style={{ marginTop: 18 }} onClick={onDone}>Confirm plan &amp; continue <ChevronRight size={15} /></button>
+      <button className="btn-primary" style={{ marginTop: 18 }} disabled={busy || !offeredCount} onClick={save}>
+        {busy ? 'Saving…' : `Offer ${offeredCount} plan${offeredCount === 1 ? '' : 's'} & continue`} <ChevronRight size={15} />
+      </button>
     </div>
   );
 }
@@ -1686,8 +1725,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <DealsStep client={client} termsDraft={termsDraft} savedDealId={dealId} onCreated={(id) => { setDealId(id); setStep(3); }} />
         ) : cur.key === 'agreement' ? (
           <AgreementStep client={client} termsDraft={termsDraft} onApproved={(id) => { setAgreementId(id); setStep(4); }} />
-        ) : cur.key === 'stripe' ? (
-          <StripeStep client={client} onDone={() => setStep(5)} />
+        ) : cur.key === 'payment' ? (
+          <PaymentStep client={client} onDone={() => setStep(5)} />
         ) : cur.key === 'access' ? (
           <AccessStep client={client} onDone={() => setStep(6)} />
         ) : cur.key === 'proposal' ? (

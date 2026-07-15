@@ -33,6 +33,15 @@ module.exports = async function handler(req, res) {
       return res.json({ token });
     }
 
+    // POST action=set-plans -> save the menu of payment plans offered to the
+    // client (they pick one in the portal, which builds the real schedule).
+    if (req.method === 'POST' && action === 'set-plans') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const { plan_options } = req.body || {};
+      await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ plan_options: plan_options || [] }) });
+      return res.json({ ok: true });
+    }
+
     // POST action=approve -> lock the draft in: create the payment schedule
     // from the agreement's installments and a linked Deal, so it shows on the
     // pipeline. Idempotent — won't duplicate payments or the deal.
