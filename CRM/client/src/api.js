@@ -377,6 +377,7 @@ export const deleteTodo     = (id)      => request(`/team-todos?id=${id}`, { met
 
 // Client activity (notes / calls / tasks)
 export const getClientActivity    = (client_id, type) => request(`/client-activity?client_id=${client_id}${type ? '&type=' + type : ''}`);
+export const generateClientSummary = (data) => request('/client-summary', { method: 'POST', body: JSON.stringify(data) });
 export const createClientActivity = (data)      => request('/client-activity', { method: 'POST', body: JSON.stringify(data) });
 export const updateClientActivity = (id, data)  => request(`/client-activity?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteClientActivity = (id)        => request(`/client-activity?id=${id}`, { method: 'DELETE' });

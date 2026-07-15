@@ -5,7 +5,7 @@ import {
   KeyRound, CheckCircle2, Circle, Clock, ShieldCheck, ListChecks,
   Briefcase, Lock, Eye, EyeOff, Copy, Pencil, ExternalLink,
   FileSignature, Sparkles, DollarSign, Download,
-  StickyNote, Phone, CheckSquare, PhoneIncoming, PhoneOutgoing, Flag, Activity, X,
+  StickyNote, Phone, CheckSquare, PhoneIncoming, PhoneOutgoing, Flag, Activity, X, Mail,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import {
@@ -13,7 +13,7 @@ import {
   getClientPlatforms, createClientPlatform, updateClientPlatform, deleteClientPlatform,
   getClientTasks, createClientTask, updateClientTask, deleteClientTask,
   getClientCredentials, createClientCredential, updateClientCredential, deleteClientCredential,
-  getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity,
+  getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity, generateClientSummary,
   getProjects,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
@@ -328,9 +328,10 @@ export default function Clients({ kind = 'client' }) {
 
   // ── Detail view ──────────────────────────────────────────────────────────
   if (selected) {
+    const DetailComponent = (selected.stage === 'lead') ? LeadDetail : ClientDetail;
     return (
       <>
-        <ClientDetail
+        <DetailComponent
           client={selected}
           onBack={() => { setSelected(null); load(); }}
           onDelete={() => setDeleteTarget(selected)}
@@ -683,6 +684,236 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
         {tab === 'projects'  && <ProjectsTab client={client} />}
       </div>
       {children}
+    </div>
+  );
+}
+
+// ── Lead one-page view (business details + activity timeline) ───────────────
+const ACT_TYPES = [
+  { key: 'note',    label: 'Note',    icon: StickyNote },
+  { key: 'call',    label: 'Call',    icon: Phone },
+  { key: 'meeting', label: 'Meeting', icon: Calendar },
+  { key: 'email',   label: 'Email',   icon: Mail },
+  { key: 'task',    label: 'Task',    icon: CheckSquare },
+];
+const isSummary = (a) => a.tag === 'Summary' || (a.body || '').startsWith('📝');
+
+function LeadDetail({ client, onBack, onDelete, onPatch }) {
+  const saveField = async (field, value) => {
+    onPatch({ [field]: value });
+    try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
+  };
+  const stage = stageOf(client.stage);
+  return (
+    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
+      {/* Header */}
+      <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <button className="btn-ghost" onClick={onBack} style={{ padding: '7px 9px', flexShrink: 0 }}><ArrowLeft size={16} /></button>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+          {client.logo_url ? <img src={client.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={20} style={{ color: 'var(--muted)' }} />}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{client.business_name}</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{client.owner_name || 'No owner set'}</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <select className="form-input" style={{ width: 'auto', padding: '7px 12px', fontSize: 12, fontWeight: 700, color: stage.color, background: `${stage.color}14`, border: `1px solid ${stage.color}40`, borderRadius: 999 }}
+            value={client.stage || 'lead'} onChange={e => saveField('stage', e.target.value)}>
+            {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+          <button className="btn-ghost" style={{ padding: '7px 9px', color: '#ff5c5c' }} onClick={onDelete} title="Delete lead"><Trash2 size={15} /></button>
+        </div>
+      </div>
+
+      {/* One page: activity timeline + business details */}
+      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 20, padding: 24, alignItems: 'start' }}>
+        <LeadActivity client={client} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Card title="Business details">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
+              <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
+              <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
+              <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
+              <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
+              <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
+            </div>
+          </Card>
+          <Card title="Lead">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Temperature</span>
+                <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />
+              </div>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Rank</span>
+                <PillSelect value={client.lead_rank || 'medium'} options={RANKS} onChange={v => saveField('lead_rank', v)} />
+              </div>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Potential revenue ($)</span>
+                <input className="form-input" type="number" min="0" step="100" defaultValue={client.potential_value ?? ''}
+                  onBlur={e => saveField('potential_value', e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 5000" />
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LeadActivity({ client }) {
+  const clientId = client.id;
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [type, setType] = useState(null);        // null = not adding; else the type being added
+  const [draft, setDraft] = useState({});
+  const [summaryPrompt, setSummaryPrompt] = useState(null); // { text, title }
+  const [summarizing, setSummarizing] = useState(false);
+
+  const load = async () => {
+    try { const rows = await getClientActivity(clientId); setItems((rows || []).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))); }
+    catch (e) { toast('error', e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [clientId]);
+
+  const draftFor = (t) => t === 'call' ? { direction: 'outbound', outcome: 'Connected', body: '' }
+    : t === 'task' ? { title: '', priority: 'medium', assigned_to: 'Ray', due_date: '' }
+    : (t === 'meeting' || t === 'email') ? { title: '', body: '' }
+    : { tag: 'Important', body: '' };
+  const openAdd = (t = 'note') => { setType(t); setDraft(draftFor(t)); };
+
+  const save = async () => {
+    const ok = type === 'task' ? draft.title?.trim() : (draft.body?.trim() || draft.title?.trim());
+    if (!ok) return;
+    const src = [draft.title, draft.body].filter(Boolean).join('\n').trim();
+    const t = type;
+    try {
+      await createClientActivity({ client_id: clientId, type: t, ...draft, due_date: draft.due_date || null });
+      setType(null); setDraft({}); await load();
+      if (['note', 'call', 'meeting', 'email'].includes(t) && src.split(/\s+/).filter(Boolean).length >= 15) {
+        setSummaryPrompt({ text: src, title: draft.title || ACT_TYPES.find(x => x.key === t)?.label || 'Note' });
+      }
+    } catch (e) { toast('error', e.message); }
+  };
+
+  const runSummary = async () => {
+    setSummarizing(true);
+    try { await generateClientSummary({ client_id: clientId, text: summaryPrompt.text, title: summaryPrompt.title }); toast('success', 'Summary saved to the file'); setSummaryPrompt(null); await load(); }
+    catch (e) { toast('error', e.message); }
+    finally { setSummarizing(false); }
+  };
+
+  const remove = async (a) => { setItems(x => x.filter(i => i.id !== a.id)); try { await deleteClientActivity(a.id); } catch (e) { toast('error', e.message); } };
+  const toggleTask = async (a) => { const status = a.status === 'done' ? 'todo' : 'done'; setItems(x => x.map(i => i.id === a.id ? { ...i, status } : i)); try { await updateClientActivity(a.id, { status }); } catch (e) { toast('error', e.message); } };
+
+  const inp = { width: '100%' };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Activity</span>
+        {!type && <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={() => openAdd('note')}><Plus size={14} /> New</button>}
+      </div>
+
+      {type && (
+        <div style={{ padding: 16, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Type</span>
+            <select className="form-input" style={{ width: 'auto' }} value={type} onChange={e => openAdd(e.target.value)}>
+              {ACT_TYPES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+          </div>
+          {type === 'note' && (
+            <>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {Object.keys(NOTE_TAGS).map(tg => (
+                  <button key={tg} type="button" onClick={() => setDraft(d => ({ ...d, tag: tg }))} style={{ padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${draft.tag === tg ? NOTE_TAGS[tg] : 'var(--border)'}`, background: draft.tag === tg ? NOTE_TAGS[tg] + '18' : 'var(--surface)', color: draft.tag === tg ? NOTE_TAGS[tg] : 'var(--muted)' }}>{tg}</button>
+                ))}
+              </div>
+              <textarea className="form-input" rows={3} autoFocus placeholder="Write a note…" value={draft.body || ''} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} style={{ resize: 'vertical' }} />
+            </>
+          )}
+          {type === 'call' && (
+            <>
+              <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <select className="form-input" value={draft.direction} onChange={e => setDraft(d => ({ ...d, direction: e.target.value }))}><option value="outbound">Outbound</option><option value="inbound">Inbound</option></select>
+                <select className="form-input" value={draft.outcome} onChange={e => setDraft(d => ({ ...d, outcome: e.target.value }))}>{CALL_OUTCOMES.map(o => <option key={o} value={o}>{o}</option>)}</select>
+              </div>
+              <textarea className="form-input" rows={3} autoFocus placeholder="Call notes…" value={draft.body || ''} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} style={{ resize: 'vertical' }} />
+            </>
+          )}
+          {(type === 'meeting' || type === 'email') && (
+            <>
+              <input className="form-input" autoFocus placeholder={type === 'email' ? 'Subject' : 'Meeting title'} value={draft.title || ''} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} />
+              <textarea className="form-input" rows={4} placeholder={type === 'email' ? 'Email content / notes…' : 'Meeting notes…'} value={draft.body || ''} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} style={{ resize: 'vertical' }} />
+            </>
+          )}
+          {type === 'task' && (
+            <>
+              <input className="form-input" autoFocus placeholder="Task title…" value={draft.title || ''} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} />
+              <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                <select className="form-input" value={draft.priority} onChange={e => setDraft(d => ({ ...d, priority: e.target.value }))}>{Object.keys(TASK_PRIORITY).map(p => <option key={p} value={p}>{p[0].toUpperCase() + p.slice(1)}</option>)}</select>
+                <input className="form-input" placeholder="Assignee" value={draft.assigned_to || ''} onChange={e => setDraft(d => ({ ...d, assigned_to: e.target.value }))} />
+                <input className="form-input" type="date" value={draft.due_date || ''} onChange={e => setDraft(d => ({ ...d, due_date: e.target.value }))} />
+              </div>
+            </>
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-primary" onClick={save}>Save</button>
+            <button className="btn-ghost" onClick={() => setType(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div style={{ color: 'var(--muted)' }}>Loading…</div>
+        : items.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13, padding: '10px 0' }}>No activity yet. Click <b>New</b> to log a call, note, or meeting.</div>
+        : items.map(a => {
+          if (a.type === 'task') return (
+            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 11, boxShadow: 'var(--shadow-sm)' }}>
+              <button onClick={() => toggleTask(a)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>{a.status === 'done' ? <CheckCircle2 size={19} style={{ color: '#22c55e' }} /> : <Circle size={19} style={{ color: 'var(--muted)' }} />}</button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: a.status === 'done' ? 'var(--muted)' : 'var(--text)', textDecoration: a.status === 'done' ? 'line-through' : 'none', fontWeight: 600 }}>{a.title}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{a.assigned_to ? a.assigned_to + ' · ' : ''}{a.due_date ? 'due ' + a.due_date : actTimeAgo(a.created_at)}</div>
+              </div>
+              <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
+            </div>
+          );
+          if (a.type === 'call') return (
+            <div key={a.id} style={{ display: 'flex', gap: 12, padding: '13px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{a.direction === 'inbound' ? <PhoneIncoming size={14} style={{ color: '#22c55e' }} /> : <PhoneOutgoing size={14} style={{ color: 'var(--orange)' }} />}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', textTransform: 'capitalize' }}>{a.direction} call</span>
+                  {a.outcome && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.1)', borderRadius: 999, padding: '1px 9px' }}>{a.outcome}</span>}
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{actTimeAgo(a.created_at)}</span>
+                  <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
+                </div>
+                {a.body && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{a.body}</div>}
+              </div>
+            </div>
+          );
+          const summary = isSummary(a);
+          const Icon = summary ? Sparkles : a.type === 'meeting' ? Calendar : a.type === 'email' ? Mail : StickyNote;
+          return (
+            <div key={a.id} style={{ padding: '14px 16px', background: summary ? 'rgba(37,99,235,0.05)' : 'var(--surface)', border: `1px solid ${summary ? 'rgba(37,99,235,0.3)' : 'var(--border)'}`, borderRadius: 12, boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <Icon size={14} style={{ color: summary ? 'var(--orange)' : 'var(--muted)', flexShrink: 0 }} />
+                {a.tag && <span style={{ fontSize: 10.5, fontWeight: 700, color: NOTE_TAGS[a.tag] || 'var(--orange)', background: (NOTE_TAGS[a.tag] || 'var(--orange)') + '18', border: `1px solid ${(NOTE_TAGS[a.tag] || 'var(--orange)')}40`, borderRadius: 999, padding: '2px 9px' }}>{a.tag}</span>}
+                {a.title && !summary && <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{a.title}</span>}
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{a.author || 'Ray'} · {actTimeAgo(a.created_at)}</span>
+                <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
+              </div>
+              <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{a.body}</div>
+            </div>
+          );
+        })}
+
+      {summaryPrompt && (
+        <Modal title="Generate summary?" onClose={() => setSummaryPrompt(null)} onSubmit={runSummary} submitLabel={summarizing ? 'Generating…' : 'Yes, generate'}>
+          <p style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.5 }}>Have AI summarize this into a clean recap (key points + action items) and save it to <strong style={{ color: 'var(--text)' }}>{client.business_name}</strong>'s file?</p>
+        </Modal>
+      )}
     </div>
   );
 }
