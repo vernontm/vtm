@@ -36,16 +36,27 @@ async function loadContext(clientId) {
   const client = clients && clients[0];
   if (!client) throw new Error('Client not found');
   const projects = await supaFetch(`crm_projects?client_id=eq.${clientId}&select=name,scope,value,status&order=created_at.asc`);
-  return { client, projects: projects || [] };
+  // Discovery/call notes and AI summaries from the lead Overview timeline — this
+  // is where the discussed pricing (e.g. $5,000 total, payment plan) lives.
+  const activity = await supaFetch(`crm_client_activity?client_id=eq.${clientId}&type=eq.note&select=tag,body,created_at&order=created_at.desc&limit=40`).catch(() => []);
+  return { client, projects: projects || [], activity: activity || [] };
 }
 
-function contextBlock(client, projects) {
+function contextBlock(client, projects, activity = []) {
+  // Summaries first (most decision-dense), then the rest of the notes.
+  const notes = [...activity].sort((a, b) => (b.tag === 'Summary' ? 1 : 0) - (a.tag === 'Summary' ? 1 : 0));
+  const notesBlock = notes.length
+    ? notes.map(a => `- [${a.tag || 'note'}] ${(a.body || '').toString().slice(0, 1500)}`).join('\n').slice(0, 8000)
+    : 'none';
   return `CLIENT: ${client.business_name} (owner: ${client.owner_name}, ${client.contact_email || 'no email'}, ${client.contact_phone || 'no phone'}, ${[client.location_city, client.location_state].filter(Boolean).join(', ')})
 Service types: ${(client.client_type || []).join(', ') || 'unspecified'}
 Notes: ${client.notes || 'none'}
 
+DISCOVERY NOTES, CALL NOTES & AI SUMMARIES (contains the pricing / payment plan discussed with the client — use these to set the total and payment schedule):
+${notesBlock}
+
 PROJECTS / SCOPE:
-${projects.map((p, i) => `${i + 1}. ${p.name} — value $${p.value || 0}\n   ${p.scope || 'no scope yet'}`).join('\n')}`;
+${projects.length ? projects.map((p, i) => `${i + 1}. ${p.name} — value $${p.value || 0}\n   ${p.scope || 'no scope yet'}`).join('\n') : 'none logged'}`;
 }
 
 module.exports = async function handler(req, res) {
@@ -60,7 +71,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'POST' && action === 'analyze') {
       const { client_id } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
-      const { client, projects } = await loadContext(client_id);
+      const { client, projects, activity } = await loadContext(client_id);
 
       const system = `You are a deal strategist for Vernon Tech & Media (VTM), a Katy, Texas agency (Rayvaughn Vernon, dba Vernon Tech & Media). You prepare service agreements. Be sharp about what a founder might FORGET to charge for or specify. ${PLAYBOOK}
 Return ONLY JSON with this shape:
@@ -72,7 +83,7 @@ Return ONLY JSON with this shape:
   "questions": [ up to 6 concise questions to ask Ray about billing/timing ],
   "flags": [ up to 6 concrete gaps or add-ons Ray may be leaving out (e.g. missing monthly hosting on a website, no revision cap, no deposit, change-order terms, rush fees, third-party costs, maintenance) ]
 }`;
-      const user = `Analyze this deal and propose billing + flag anything missing.\n\n${contextBlock(client, projects)}`;
+      const user = `Analyze this deal and propose billing + flag anything missing. Base the total and payment schedule on the pricing actually discussed in the discovery notes/summaries below.\n\n${contextBlock(client, projects, activity)}`;
       const out = await callClaude(system, user, 2048);
       return res.json(parseJson(out));
     }
@@ -81,7 +92,7 @@ Return ONLY JSON with this shape:
     if (req.method === 'POST' && action === 'generate') {
       const { client_id, terms, base } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
-      const { client, projects } = await loadContext(client_id);
+      const { client, projects, activity } = await loadContext(client_id);
 
       // Revise-mode: an existing document is supplied. Apply ONLY the requested
       // change and keep everything else byte-for-byte, so regenerating tweaks the
@@ -115,7 +126,7 @@ CURRENT MUTUAL NDA (markdown):
       const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media (VTM) — Rayvaughn Vernon, dba Vernon Tech & Media, Katy, Texas, ray@vernontm.com. Governing law: Texas.
 Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law. Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. End with a one-line "not legal advice" note.
 Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance) — no refunds are issued. Section 9 Commitment: once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy). Note it is not legal advice.
-Use the billing terms Ray provides verbatim where given. Return ONLY JSON:
+Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives) — never default the total to 0. Return ONLY JSON:
 {
   "summary": "one line",
   "total": number,
