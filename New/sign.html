@@ -143,6 +143,27 @@
     // ── render current step ───────────────────────────────────────
     function render(){
       const hasNda=!!data.nda_markdown;
+
+      // Preview mode: read-only, with an Agreement/NDA toggle. No signing UI.
+      if (isPreview) {
+        const title = step==='nda' ? 'Non-Disclosure Agreement' : 'Service Agreement';
+        pill.textContent = 'Preview';
+        app.innerHTML =
+          '<div class="lead"><h1>'+title+'</h1>'
+          + (hasNda ? '<div id="pvtabs" style="display:flex;gap:8px;margin-top:14px">'
+              + '<button class="pvtab" data-s="agreement">Service Agreement</button>'
+              + '<button class="pvtab" data-s="nda">NDA</button></div>' : '')
+          + '</div>'
+          + '<div id="paper">'+paperHtml(step)+'</div>';
+        app.querySelectorAll('.pvtab').forEach(btn=>{
+          const on = btn.dataset.s===step;
+          btn.style.cssText='padding:8px 16px;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;'
+            +'border:1px solid '+(on?'var(--ink)':'var(--line)')+';background:'+(on?'var(--ink)':'#fff')+';color:'+(on?'#fff':'var(--body)');
+          btn.onclick=()=>{ step=btn.dataset.s; window.scrollTo(0,0); render(); };
+        });
+        return;
+      }
+
       const stepNum = step==='agreement'?1:2, total=hasNda?2:1;
       pill.textContent='Step '+stepNum+' of '+total;
       const title = step==='nda' ? 'Non-Disclosure Agreement' : 'Service Agreement';
