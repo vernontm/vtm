@@ -19,6 +19,20 @@ module.exports = async function handler(req, res) {
       return res.json({ agreements: agreements || [], payments: payments || [] });
     }
 
+    // POST action=preview-token -> mint (or reuse) a sign token WITHOUT sending
+    // or emailing, so the admin can open the real /sign screen in preview mode.
+    if (req.method === 'POST' && action === 'preview-token') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=id,sign_token`);
+      if (!ag) return res.status(404).json({ error: 'Agreement not found' });
+      let token = ag.sign_token;
+      if (!token) {
+        token = crypto.randomUUID();
+        await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ sign_token: token }) });
+      }
+      return res.json({ token });
+    }
+
     // POST action=approve -> lock the draft in: create the payment schedule
     // from the agreement's installments and a linked Deal, so it shows on the
     // pipeline. Idempotent — won't duplicate payments or the deal.

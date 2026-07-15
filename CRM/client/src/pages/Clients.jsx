@@ -17,7 +17,7 @@ import {
   getProjects,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, approveAgreement, approveAgreementRow,
+  analyzeDeal, generateAgreement, approveAgreement, approveAgreementRow, previewAgreementToken,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -1109,65 +1109,6 @@ function PaymentRows({ payments, onToggle }) {
   );
 }
 
-// Render agreement/NDA markdown as a formatted "paper" document — mirrors the
-// client-facing /sign page so Ray previews exactly what the client will see.
-function mdToDocHtml(md) {
-  const esc = s => (s == null ? '' : String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
-  const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/_(.+?)_/g, '<em>$1</em>');
-  const lines = (md || '').split('\n');
-  let html = '', firstH1 = true, inList = false;
-  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) { closeList(); continue; }
-    if (line.startsWith('# ')) { closeList(); if (firstH1) { html += '<div class="ag-title">' + inline(line.slice(2)) + '</div>'; firstH1 = false; } else html += '<h2>' + inline(line.slice(2)) + '</h2>'; continue; }
-    if (line.startsWith('## ')) { closeList(); html += '<h2>' + inline(line.slice(3)) + '</h2>'; continue; }
-    if (line.startsWith('- ')) { if (!inList) { html += '<ul>'; inList = true; } html += '<li>' + inline(line.slice(2)) + '</li>'; continue; }
-    closeList(); html += '<p>' + inline(line) + '</p>';
-  }
-  closeList();
-  return html;
-}
-
-function DocPreviewModal({ client, terms, initial = 'agreement', onClose }) {
-  const [doc, setDoc] = useState(initial);
-  const md = doc === 'nda' ? terms.nda_markdown : terms.agreement_markdown;
-  const hasNda = !!terms.nda_markdown;
-  const tab = (key, label) => (
-    <button onClick={() => setDoc(key)} style={{
-      padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, border: 'none',
-      background: doc === key ? '#fff' : 'rgba(255,255,255,0.15)', color: doc === key ? '#111' : '#fff',
-    }}>{label}</button>
-  );
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', zIndex: 1000 }} onClick={onClose}>
-      <style>{`
-        .ag-paper .ag-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #111; }
-        .ag-paper h2 { font-size: 15px; font-weight: 700; margin: 18px 0 6px; color: #111; }
-        .ag-paper p { margin: 0 0 9px; }
-        .ag-paper ul { margin: 0 0 10px 20px; }
-        .ag-paper li { margin: 2px 0; }
-        .ag-paper strong { font-weight: 700; }
-      `}</style>
-      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', height: '100%', maxWidth: 920, width: '100%', margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Preview — what {client.business_name || 'the client'} will see</span>
-          <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', alignItems: 'center' }}>
-            {tab('agreement', 'Agreement')}
-            {hasNda && tab('nda', 'NDA')}
-            <button onClick={onClose} title="Close" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', padding: 6 }}><X size={18} /></button>
-          </div>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 28px' }}>
-          <div className="ag-paper"
-            style={{ background: '#fff', color: '#1a1a1a', fontFamily: "Georgia,'Times New Roman',serif", lineHeight: 1.55, fontSize: 14, padding: '46px 52px', borderRadius: 10, boxShadow: '0 6px 30px rgba(0,0,0,0.3)', maxWidth: 840, margin: '0 auto' }}
-            dangerouslySetInnerHTML={{ __html: mdToDocHtml(md) }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AgreementTab({ client }) {
   const [loading, setLoading] = useState(true);
   const [agreements, setAgreements] = useState([]);
@@ -1177,7 +1118,6 @@ function AgreementTab({ client }) {
   const [terms, setTerms] = useState('');
   const [draft, setDraft] = useState(null);
   const [showText, setShowText] = useState('agreement');
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   const load = async () => {
     try { const d = await getAgreements(client.id); setAgreements(d.agreements || []); setPayments(d.payments || []); }
@@ -1250,8 +1190,12 @@ function AgreementTab({ client }) {
             </button>
           )}
           {ag.terms?.agreement_markdown && (
-            <button className="btn-ghost" onClick={() => setPreviewOpen(true)}>
-              <Eye size={14} /> Preview
+            <button className="btn-ghost" disabled={busy === 'preview'} onClick={async () => {
+              setBusy('preview');
+              try { const { token } = await previewAgreementToken(ag.id); window.open(`/sign?token=${token}&preview=1`, '_blank'); }
+              catch (e) { toast('error', e.message); } finally { setBusy(''); }
+            }}>
+              <Eye size={14} /> {busy === 'preview' ? 'Opening…' : 'Preview'}
             </button>
           )}
           {(ag.status === 'approved' || ag.status === 'sent') && (ag.terms?.agreement_markdown) && (
@@ -1289,7 +1233,6 @@ function AgreementTab({ client }) {
             </div>
           </div>
         )}
-        {previewOpen && <DocPreviewModal client={client} terms={md} onClose={() => setPreviewOpen(false)} />}
       </div>
     );
   }

@@ -137,6 +137,9 @@ module.exports = async function handler(req, res) {
     // POST — capture signatures, store PDF, email copies, provision account
     if (req.method === 'POST') {
       if (ag.signed_at) return res.json({ ok: true, already: true });
+      // Only an agreement the admin has actually sent can be signed. This blocks
+      // a preview token (minted before sending) from ever finalizing a signature.
+      if (ag.status !== 'sent') return res.status(400).json({ error: 'This agreement is not open for signing yet.' });
       const body = req.body || {};
       if (!body.consent) return res.status(400).json({ error: 'Consent required' });
 

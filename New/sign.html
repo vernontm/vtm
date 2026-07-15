@@ -86,7 +86,15 @@
   <main class="wrap" id="app"><div class="state">Loading your agreement…</div></main>
 
   <script>
-    const token = new URLSearchParams(location.search).get('token');
+    const _params = new URLSearchParams(location.search);
+    const token = _params.get('token');
+    const isPreview = _params.get('preview') === '1';
+    if (isPreview) {
+      const b = document.createElement('div');
+      b.textContent = 'PREVIEW — this is exactly what your client sees. Signing is disabled.';
+      b.style.cssText = 'position:sticky;top:0;z-index:60;background:#f5a623;color:#111;font-weight:800;font-size:12.5px;text-align:center;padding:9px 12px;letter-spacing:.02em';
+      document.body.prepend(b);
+    }
     const app = document.getElementById('app');
     const pill = document.getElementById('steppill');
     const esc = s => (s==null?'':String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
@@ -201,6 +209,7 @@
     function blobToBase64(blob){ return new Promise(res=>{ const r=new FileReader(); r.onloadend=()=>res(String(r.result).split(',')[1]); r.readAsDataURL(blob); }); }
 
     async function finish(){
+      if (isPreview) { app.innerHTML='<div class="state"><h2>Preview only</h2><p>This is how the signing page looks to your client. Nothing was submitted. Close this tab to go back.</p></div>'; window.scrollTo(0,0); return; }
       pill.textContent='';
       app.innerHTML='<div class="state"><h2>Finalizing…</h2><p>Saving your signed copy — one moment.</p></div>';
       try{
