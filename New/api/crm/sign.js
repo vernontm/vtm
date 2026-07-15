@@ -81,6 +81,59 @@ async function signedUrlFor(fileUrl, expiresIn = 604800) {
   return `${SUPABASE_URL}/storage/v1${signedURL}`;
 }
 
+// After the deposit is paid, set up the recurring plan on the SAME saved card:
+// a Stripe subscription schedule that bills the build installments monthly, a
+// one-month free gap, then the ongoing maintenance. Fully guarded + idempotent
+// (keyed on the deal's stripe_subscription_id) so it never breaks signing.
+async function setupPlanSubscription(ag, client, session) {
+  if (!process.env.STRIPE_SECRET_KEY || !ag.deal_id) return null;
+  const [deal] = await supaFetch(`crm_deals?id=eq.${ag.deal_id}&select=id,stripe_customer_id,stripe_subscription_id`);
+  if (!deal || deal.stripe_subscription_id) return null; // already set up
+
+  const terms = ag.terms || {};
+  const installments = Array.isArray(terms.installments) ? terms.installments : [];
+  const builds = installments.filter(i => !/deposit/i.test(i.label || ''));
+  const buildAmt = builds.length ? Math.round(Number(builds[0].amount) * 100) : 0;
+  const buildCount = builds.length;
+  const maint = (Array.isArray(terms.monthly) && terms.monthly[0]) ? Math.round(Number(terms.monthly[0].amount) * 100) : 0;
+  if (!buildAmt && !maint) return null;
+
+  // Customer + saved card (from the deposit checkout).
+  let customerId = deal.stripe_customer_id || (session && session.customer) || null;
+  let pmId = null;
+  if (session && session.payment_intent) {
+    const pi = await stripe.call('GET', `/payment_intents/${session.payment_intent}`);
+    pmId = pi.payment_method; if (!customerId) customerId = pi.customer;
+  }
+  if (!customerId) return null;
+  if (pmId) await stripe.call('POST', `/customers/${customerId}`, { invoice_settings: { default_payment_method: pmId } }).catch(() => {});
+
+  const mkPrice = async (amount, name) => {
+    const product = await stripe.call('POST', '/products', { name });
+    const price = await stripe.call('POST', '/prices', { product: product.id, currency: 'usd', unit_amount: amount, recurring: { interval: 'month' } });
+    return price.id;
+  };
+  const co = client.business_name || 'Client';
+  const phases = [];
+  if (buildAmt && buildCount) phases.push({ items: [{ price: await mkPrice(buildAmt, `${co} — build plan`), quantity: 1 }], iterations: buildCount });
+  if (maint) {
+    phases.push({ items: [{ price: await mkPrice(0, `${co} — maintenance (waived)`), quantity: 1 }], iterations: 1 }); // free gap month
+    phases.push({ items: [{ price: await mkPrice(maint, `${co} — maintenance`), quantity: 1 }] });                    // ongoing
+  }
+  if (!phases.length) return null;
+
+  const startTs = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // first build charge ~1 month after the deposit
+  const sched = await stripe.call('POST', '/subscription_schedules', {
+    customer: customerId,
+    start_date: startTs,
+    end_behavior: 'release',
+    phases,
+    metadata: { client_id: client.id, agreement_id: ag.id, deal_id: deal.id },
+  });
+  await supaFetch(`crm_deals?id=eq.${deal.id}`, { method: 'PATCH', body: JSON.stringify({ stripe_subscription_id: sched.subscription || sched.id }) }).catch(() => {});
+  return sched.id;
+}
+
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -108,6 +161,8 @@ module.exports = async function handler(req, res) {
             // Deposit paid → this lead is now an active client.
             await supaFetch(`crm_clients?id=eq.${client.id}`, { method: 'PATCH', body: JSON.stringify({ payment_received: true, initial_payment_at: new Date().toISOString(), stage: 'in_build' }) }).catch(() => {});
             await supaFetch('crm_client_alerts', { method: 'POST', body: JSON.stringify({ client_id: client.id, type: 'payment_received', message: `${client.business_name} paid their deposit` }) }).catch(() => {});
+            // Deposit's card is now saved → set up the recurring plan on it.
+            try { await setupPlanSubscription(ag, client, session); } catch (e) { console.error('plan setup failed:', e.message); }
           }
         }
         if (client.contact_email) {
@@ -203,14 +258,28 @@ module.exports = async function handler(req, res) {
           const pays = await supaFetch(`crm_payments?agreement_id=eq.${ag.id}&status=eq.pending&order=created_at.asc&limit=1`);
           const dep = pays && pays[0];
           if (dep && Number(dep.amount) > 0) {
+            // Ensure a Stripe customer so the deposit card can be reused for the
+            // recurring plan (saved via setup_future_usage below).
+            let customerId = null;
+            try {
+              const [dl] = ag.deal_id ? await supaFetch(`crm_deals?id=eq.${ag.deal_id}&select=stripe_customer_id`) : [];
+              customerId = dl && dl.stripe_customer_id;
+              if (!customerId) {
+                const cust = await stripe.call('POST', '/customers', { email: client.contact_email || undefined, name: client.business_name || undefined, metadata: { client_id: client.id, agreement_id: ag.id } });
+                customerId = cust.id;
+                if (ag.deal_id) await supaFetch(`crm_deals?id=eq.${ag.deal_id}`, { method: 'PATCH', body: JSON.stringify({ stripe_customer_id: customerId }) }).catch(() => {});
+              }
+            } catch (e) { console.error('customer ensure failed:', e.message); }
+
             const session = await stripe.createCheckoutSession({
               mode: 'payment',
-              customer_email: client.contact_email || undefined,
+              customer: customerId || undefined,
+              customer_email: customerId ? undefined : (client.contact_email || undefined),
               line_items: [{ price_data: { currency: 'usd', product_data: { name: `${dep.label} — ${client.business_name}` }, unit_amount: Math.round(Number(dep.amount) * 100) }, quantity: 1 }],
               success_url: `${origin}/api/crm/sign?action=paid&token=${token}&session_id={CHECKOUT_SESSION_ID}`,
               cancel_url: `${origin}/client`,
               metadata: { crm_payment_id: dep.id, client_id: client.id, agreement_id: ag.id },
-              payment_intent_data: { metadata: { crm_payment_id: dep.id, client_id: client.id } },
+              payment_intent_data: { setup_future_usage: 'off_session', metadata: { crm_payment_id: dep.id, client_id: client.id } },
             });
             checkoutUrl = session.url;
           }
