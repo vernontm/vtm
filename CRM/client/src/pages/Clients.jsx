@@ -18,7 +18,7 @@ import {
   getProjects, createProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent,
+  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent, startMaintenance,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -2604,6 +2604,27 @@ function AgreementTab({ client }) {
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Payment schedule</div>
             <PaymentRows payments={payments} onToggle={togglePay} />
+          </div>
+        )}
+
+        {/* Manual maintenance start — for pay-in-full / 50-50 plans that have no build schedule to trail. */}
+        {ag.status === 'signed' && Number(md.maintenance) > 0 && (md.plan_key === 'full' || md.plan_key === '50_50') && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12 }}>
+            <DollarSign size={18} style={{ color: ag.maintenance_started_at ? '#16a34a' : 'var(--orange)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 13.5 }}>Maintenance &amp; Support — {money(md.maintenance)}/mo</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                {ag.maintenance_started_at ? `Active since ${new Date(ag.maintenance_started_at).toLocaleDateString()}` : 'Start this when the project is delivered — it bills monthly on the card on file.'}
+              </div>
+            </div>
+            {!ag.maintenance_started_at && (
+              <button className="btn-primary" disabled={busy === 'maint'} onClick={async () => {
+                if (!window.confirm(`Start ${money(md.maintenance)}/mo maintenance now? The first charge posts today to the client's saved card.`)) return;
+                setBusy('maint');
+                try { await startMaintenance(ag.id); toast('success', 'Maintenance started.'); load(); }
+                catch (e) { toast('error', e.message); } finally { setBusy(''); }
+              }}>{busy === 'maint' ? 'Starting…' : 'Start maintenance'}</button>
+            )}
           </div>
         )}
 

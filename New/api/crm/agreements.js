@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { sendEmail } = require('../_lib/gmail.js');
+const stripe = require('../_lib/stripe.js');
 
 // Read a client's agreements + payment schedule, and mint short-lived signed
 // URLs to view the stored (private) signed PDF.
@@ -135,6 +136,41 @@ module.exports = async function handler(req, res) {
       if (!ag.sent_at) patch.sent_at = new Date().toISOString();
       await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
       return res.json({ ok: true, sign_token: signToken, link: `https://vernontm.com/sign?token=${signToken}` });
+    }
+
+    // POST action=start-maintenance -> begin the recurring maintenance subscription
+    // on the client's saved card (used for pay-in-full / 50-50 plans, where there's
+    // no build schedule to trail — Ray clicks this when the project is delivered).
+    if (req.method === 'POST' && action === 'start-maintenance') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      if (!stripe.configured()) return res.status(500).json({ error: 'Stripe is not configured.' });
+      const rows = await supaFetch(`crm_agreements?id=eq.${id}&select=*,client:crm_clients(id,business_name)`);
+      const ag = rows && rows[0];
+      if (!ag) return res.status(404).json({ error: 'Agreement not found' });
+      const maint = Number(ag.terms && ag.terms.maintenance) || 0;
+      if (!maint) return res.status(400).json({ error: 'No maintenance fee on this agreement.' });
+      if (ag.maintenance_subscription_id) return res.status(400).json({ error: 'Maintenance is already active.' });
+
+      // Find the client's Stripe customer (from the deposit checkout) + a saved card.
+      let dealId = ag.deal_id;
+      if (!dealId) { const [d] = await supaFetch(`crm_deals?client_id=eq.${ag.client_id}&order=created_at.desc&limit=1&select=id`); dealId = d && d.id; }
+      const [deal] = dealId ? await supaFetch(`crm_deals?id=eq.${dealId}&select=id,stripe_customer_id`) : [];
+      const customerId = deal && deal.stripe_customer_id;
+      if (!customerId) return res.status(400).json({ error: 'No card on file yet — the client must complete their deposit first.' });
+      const pms = await stripe.call('GET', `/payment_methods?customer=${customerId}&type=card`).catch(() => null);
+      const pmId = pms && pms.data && pms.data[0] && pms.data[0].id;
+
+      const co = (ag.client && ag.client.business_name) || 'Client';
+      const product = await stripe.call('POST', '/products', { name: `${co} — maintenance` });
+      const price = await stripe.call('POST', '/prices', { product: product.id, currency: 'usd', unit_amount: Math.round(maint * 100), recurring: { interval: 'month' } });
+      const sub = await stripe.call('POST', '/subscriptions', {
+        customer: customerId,
+        items: [{ price: price.id }],
+        ...(pmId ? { default_payment_method: pmId } : {}),
+        metadata: { client_id: ag.client_id, agreement_id: ag.id, kind: 'maintenance' },
+      });
+      await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ maintenance_subscription_id: sub.id, maintenance_started_at: new Date().toISOString() }) });
+      return res.json({ ok: true, subscription_id: sub.id });
     }
 
     // POST action=send -> mint a signing link, email + text it to the client

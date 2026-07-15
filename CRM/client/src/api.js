@@ -410,6 +410,7 @@ export const sendClientEmail  = (payload) => request('/client-email', { method: 
 export const setAgreementPlans = (id, plan_options) => request(`/agreements?id=${id}&action=set-plans`, { method: 'POST', body: JSON.stringify({ plan_options }) });
 export const setupCustomAgreement = (client_id, data) => request(`/agreements?action=custom-setup`, { method: 'POST', body: JSON.stringify({ client_id, ...data }) });
 export const markAgreementSent = (id) => request(`/agreements?id=${id}&action=mark-sent`, { method: 'POST' });
+export const startMaintenance  = (id) => request(`/agreements?id=${id}&action=start-maintenance`, { method: 'POST' });
 export const approveAgreement  = (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) });
 
 // Content Clients

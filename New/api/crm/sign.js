@@ -157,8 +157,10 @@ async function setupPlanSubscription(ag, client, session) {
   const co = client.business_name || 'Client';
   const phases = [];
   if (buildAmt && buildCount) phases.push({ items: [{ price: await mkPrice(buildAmt, `${co} — build plan`), quantity: 1 }], iterations: buildCount });
-  // Maintenance begins right after the build installments finish (no gap month).
-  if (maint) phases.push({ items: [{ price: await mkPrice(maint, `${co} — maintenance`), quantity: 1 }] });
+  // Maintenance auto-starts (right after the build installments) ONLY for plans
+  // with a scheduled build (monthly plans + fixed mode). Pay-in-full / 50-50 have
+  // no anchor, so Ray starts their maintenance manually when the project ships.
+  if (maint && autoBuild) phases.push({ items: [{ price: await mkPrice(maint, `${co} — maintenance`), quantity: 1 }] });
   if (!phases.length) return null;
 
   const startTs = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // first build charge ~1 month after the deposit
