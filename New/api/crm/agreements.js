@@ -19,6 +19,58 @@ module.exports = async function handler(req, res) {
       return res.json({ agreements: agreements || [], payments: payments || [] });
     }
 
+    // POST action=approve -> lock the draft in: create the payment schedule
+    // from the agreement's installments and a linked Deal, so it shows on the
+    // pipeline. Idempotent — won't duplicate payments or the deal.
+    if (req.method === 'POST' && action === 'approve') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=*`);
+      if (!ag) return res.status(404).json({ error: 'Agreement not found' });
+      if (ag.status === 'signed') return res.json({ ok: true, alreadySigned: true, deal_id: ag.deal_id });
+      const terms = ag.terms || {};
+
+      // 1) mark approved
+      await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
+
+      // 2) payment schedule from installments (only if none exist yet)
+      const existing = await supaFetch(`crm_payments?agreement_id=eq.${id}&select=id`);
+      if ((!existing || !existing.length) && Array.isArray(terms.installments) && terms.installments.length) {
+        const rows = terms.installments.map(i => ({
+          client_id: ag.client_id,
+          agreement_id: id,
+          label: i.label || null,
+          amount: Number(i.amount) || 0,
+          status: i.status === 'paid' ? 'paid' : 'pending',
+          due_condition: i.trigger || null,
+          source: 'agreement',
+        }));
+        await supaFetch('crm_payments', { method: 'POST', body: JSON.stringify(rows) });
+      }
+
+      // 3) linked Deal (only if not already linked)
+      let dealId = ag.deal_id || null;
+      if (!dealId) {
+        const monthly = Array.isArray(terms.monthly) && terms.monthly[0] ? terms.monthly[0] : null;
+        const [deal] = await supaFetch('crm_deals', {
+          method: 'POST', headers: { Prefer: 'return=representation' },
+          body: JSON.stringify({
+            client_id: ag.client_id,
+            name: ag.title || 'Service Agreement',
+            value: Number(ag.total_amount) || null,
+            stage: 'Proposal',
+            payment_status: 'unpaid',
+            amount_paid: 0,
+            agreement_id: id,
+            notes: monthly ? `Recurring: $${monthly.amount}/mo — ${monthly.item || ''}` : null,
+          }),
+        });
+        dealId = deal && deal.id;
+        if (dealId) await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ deal_id: dealId }) });
+      }
+
+      return res.json({ ok: true, status: 'approved', deal_id: dealId });
+    }
+
     // POST action=send -> mint a signing link, email + text it to the client
     if (req.method === 'POST' && action === 'send') {
       if (!id) return res.status(400).json({ error: 'id required' });

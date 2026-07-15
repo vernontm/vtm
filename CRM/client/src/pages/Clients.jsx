@@ -17,7 +17,7 @@ import {
   getProjects,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, approveAgreement,
+  analyzeDeal, generateAgreement, approveAgreement, approveAgreementRow,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -1180,7 +1180,16 @@ function AgreementTab({ client }) {
               {ag.signed_at ? ` · signed ${new Date(ag.signed_at).toLocaleDateString()} by ${ag.signer_name || 'client'}` : (ag.sent_at ? ` · sent ${new Date(ag.sent_at).toLocaleDateString()}` : '')}
             </div>
           </div>
-          {ag.status !== 'signed' && (ag.terms?.agreement_markdown) && (
+          {ag.status === 'draft' && (
+            <button className="btn-primary" disabled={busy === 'approve'} onClick={async () => {
+              setBusy('approve');
+              try { const r = await approveAgreementRow(ag.id); toast('success', 'Approved — deal & payment schedule created. Review the document, then Send.'); load(); }
+              catch (e) { toast('error', e.message); } finally { setBusy(''); }
+            }}>
+              <CheckCircle2 size={14} /> {busy === 'approve' ? 'Approving…' : 'Approve'}
+            </button>
+          )}
+          {(ag.status === 'approved' || ag.status === 'sent') && (ag.terms?.agreement_markdown) && (
             <button className="btn-primary" disabled={busy === 'send'} onClick={async () => {
               setBusy('send');
               try { await sendAgreementForSignature(ag.id); toast('success', ag.sent_at ? 'Re-sent to client' : 'Sent to client to sign'); load(); }
