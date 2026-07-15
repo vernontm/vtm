@@ -897,8 +897,8 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
               <label className="form-label">Build value ($)</label>
               <input className="form-input" type="number" min="0" step="100" value={total} onChange={e => { setTotal(e.target.value); setOffered(null); }} placeholder="e.g. 5000" />
             </div>
-            <button className="btn-ghost" style={{ justifySelf: 'start' }} disabled={busy === 'analyze'} onClick={runAnalyze}>
-              <Sparkles size={14} /> {busy === 'analyze' ? 'Estimating…' : 'Estimate from notes'}
+            <button className="btn-ghost" style={{ justifySelf: 'start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'analyze'} onClick={runAnalyze}>
+              {busy === 'analyze' ? <><Spinner /> Estimating…</> : <><Sparkles size={14} /> Estimate from notes</>}
             </button>
           </div>
 
@@ -953,8 +953,8 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {!analysis && (
-                  <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'analyze'} onClick={runAnalyze}>
-                    <Sparkles size={15} /> {busy === 'analyze' ? 'Analyzing…' : 'Analyze deal with AI'}
+                  <button className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'analyze'} onClick={runAnalyze}>
+                    {busy === 'analyze' ? <><Spinner /> Analyzing…</> : <><Sparkles size={15} /> Analyze deal with AI</>}
                   </button>
                 )}
                 {(analysis?.flags || []).length > 0 && (
@@ -969,8 +969,8 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
                   <label className="form-label">Billing terms</label>
                   <textarea className="form-input" rows={8} value={terms} onChange={e => setTerms(e.target.value)} placeholder="e.g. $1,000 up front to start, then $800/mo for 5 months. $199/mo maintenance begins month 7." style={{ resize: 'vertical' }} />
                 </div>
-                <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'generate'} onClick={() => runGenerate(false)}>
-                  <FileSignature size={15} /> {busy === 'generate' ? 'Drafting…' : 'Generate terms'}
+                <button className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'generate'} onClick={() => runGenerate(false)}>
+                  {busy === 'generate' ? <><Spinner /> Drafting…</> : <><FileSignature size={15} /> Generate terms</>}
                 </button>
               </div>
             )}
@@ -982,8 +982,8 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
                 <label className="form-label">Request changes</label>
                 <textarea className="form-input" rows={5} value={changes} onChange={e => setChanges(e.target.value)} placeholder="e.g. Add a $500 rush fee. Change maintenance to $249/mo. Include a 2-week revision window." style={{ resize: 'vertical' }} />
               </div>
-              <button className="btn-ghost" disabled={busy === 'generate'} onClick={() => runGenerate(true)}>
-                {busy === 'generate' ? 'Regenerating…' : 'Regenerate'}
+              <button className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'generate'} onClick={() => runGenerate(true)}>
+                {busy === 'generate' ? <><Spinner /> Regenerating…</> : 'Regenerate'}
               </button>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>Approve (bottom-right) locks these terms. The agreement is previewed and created at the Agreement step.</div>
               <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setDraft(null); setAnalysis(null); }}>Start terms over</button>
@@ -1128,11 +1128,11 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated, setFooter }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 8px' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Project line items</span>
-        {seeding && <span style={{ fontSize: 11.5, color: 'var(--orange)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Sparkles size={12} /> Building from the agreement…</span>}
+        {seeding && <span style={{ fontSize: 11.5, color: 'var(--orange)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Spinner /> Building from the agreement…</span>}
       </div>
 
       {seeding ? (
-        <div style={{ padding: '28px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 12 }}>Reading the agreement and drafting the line items…</div>
+        <div style={{ padding: '28px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Spinner /> Reading the agreement and drafting the line items…</div>
       ) : (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.map((it, idx) => (
@@ -1194,14 +1194,18 @@ function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
   };
 
   const onPreview = async () => {
+    // Open the tab synchronously (in the click gesture) so the browser doesn't
+    // block the popup after our awaits and hijack the current CRM tab.
+    const w = window.open('', '_blank');
     setBusy('preview');
     try {
       const row = await ensureAgreement();
-      if (!row) return;
+      if (!row) { if (w) w.close(); return; }
       const { token } = await previewAgreementToken(row.id);
-      window.open(`/sign?token=${token}&preview=1`, '_blank');
+      const url = `/sign?token=${token}&preview=1`;
+      if (w) w.location.href = url; else window.open(url, '_blank');
       setPreviewed(true);
-    } catch (e) { toast('error', e.message); }
+    } catch (e) { if (w) w.close(); toast('error', e.message); }
     finally { setBusy(''); }
   };
 
@@ -1492,7 +1496,7 @@ function AccessStep({ client, onDone, setFooter }) {
                 <input className="form-input" value={edit.title} onChange={e => setEdit(x => ({ ...x, title: e.target.value }))} placeholder="What access is needed" />
                 <textarea className="form-input" rows={4} value={edit.description} onChange={e => setEdit(x => ({ ...x, description: e.target.value }))} placeholder="Instructions for the client (edit, then Regenerate to have AI polish it)" style={{ resize: 'vertical', fontSize: 12.5, lineHeight: 1.6 }} />
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button className="btn-ghost" disabled={editBusy === 'regen'} onClick={regen}><Sparkles size={14} /> {editBusy === 'regen' ? 'Regenerating…' : 'Regenerate'}</button>
+                  <button className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={editBusy === 'regen'} onClick={regen}>{editBusy === 'regen' ? <><Spinner /> Regenerating…</> : <><Sparkles size={14} /> Regenerate</>}</button>
                   <button className="btn-primary" disabled={editBusy === 'save'} onClick={saveEdit}>{editBusy === 'save' ? 'Saving…' : 'Save'}</button>
                   <button className="btn-ghost" onClick={() => setEdit(null)}>Cancel</button>
                   {edit.description && <button className="btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => navigator.clipboard?.writeText(edit.description).then(() => toast('success', 'Copied'))}><Copy size={13} /> Copy</button>}
@@ -1566,23 +1570,32 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
     finally { setBusy(''); }
   };
 
+  // Auto-draft (gain-focused by default) as soon as we land here — no click needed.
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (ag?.sign_token && !emailDraft && !autoTried.current) { autoTried.current = true; gen(tone); }
+  }, [ag, emailDraft]);
+
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
       <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Proposal email</div>
       <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        A cover note letting {client.owner_name || 'them'} know what you're sending, with their personal link to review &amp; sign — drafted from your notes, terms, and the plan. Pick a style; you'll send it on the next step.
+        A cover note letting {client.owner_name || 'them'} know what you're sending, with their personal link to review &amp; sign — auto-drafted from your notes, terms, and the plan. Switch the style anytime.
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-        {[{ k: 'professional', label: 'Professional' }, { k: 'friendly', label: 'Friendly' }, { k: 'gain', label: 'Gain-focused' }].map(o => (
+        {[{ k: 'gain', label: 'Gain-focused' }, { k: 'professional', label: 'Professional' }, { k: 'friendly', label: 'Friendly' }].map(o => (
           <button key={o.k} onClick={() => { setTone(o.k); gen(o.k); }} disabled={busy === 'gen'}
             style={{ padding: '6px 14px', borderRadius: 999, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)', border: `1px solid ${tone === o.k ? 'var(--orange)' : 'var(--border)'}`, background: tone === o.k ? 'rgba(37,99,235,0.10)' : 'var(--surface)', color: tone === o.k ? 'var(--orange)' : 'var(--muted)' }}>
             {o.label}
           </button>
         ))}
-        {busy === 'gen' && <span style={{ fontSize: 12, color: 'var(--orange)', alignSelf: 'center', display: 'inline-flex', gap: 5, alignItems: 'center' }}><Sparkles size={12} /> Drafting…</span>}
+        {busy === 'gen' && <span style={{ fontSize: 12, color: 'var(--orange)', alignSelf: 'center', display: 'inline-flex', gap: 6, alignItems: 'center' }}><Spinner /> Drafting…</span>}
       </div>
 
+      {!emailDraft && busy === 'gen' && (
+        <div style={{ padding: '28px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Spinner /> Writing the proposal…</div>
+      )}
       {!emailDraft && busy !== 'gen' && (
         <button className="btn-primary" onClick={() => gen()}><Sparkles size={15} /> Draft the email</button>
       )}
@@ -1737,7 +1750,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [dealId, setDealId] = useState(null);
   const [agreementId, setAgreementId] = useState(null);
   const [emailDraft, setEmailDraft] = useState(null);
-  const [emailTone, setEmailTone] = useState('professional');
+  const [emailTone, setEmailTone] = useState('gain');
   const [paymentMode, setPaymentMode] = useState('fixed'); // 'fixed' | 'custom'
   const [footer, setFooter] = useState(null); // { label, onClick, disabled, busy } set by the active step
   const saveField = async (field, value) => {
@@ -1855,8 +1868,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}> · {cur.label}</span>
         </div>
         {footer ? (
-          <button className="btn-primary" disabled={footer.disabled || footer.busy} onClick={footer.onClick}>
-            {footer.busy ? '…' : footer.label} <ChevronRight size={15} />
+          <button className="btn-primary" disabled={footer.disabled || footer.busy} onClick={footer.onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            {footer.busy && <Spinner />}{footer.label} {!footer.busy && <ChevronRight size={15} />}
           </button>
         ) : (
           <button className="btn-primary" disabled={stepIdx === steps.length - 1} onClick={advance}>Next <ChevronRight size={15} /></button>
@@ -2445,6 +2458,7 @@ function VaultField({ label, value, onCopy, onToggle, revealed, mono }) {
 
 // ── Agreement tab (AI builder: analyze -> answer -> draft -> review -> approve) ──
 const money = (n) => `$${Number(n || 0).toLocaleString()}`;
+const Spinner = () => <span className="spinner" aria-label="loading" />;
 const PAY_BADGE = { paid: { label: 'Paid', color: '#22c55e' }, pending: { label: 'Pending', color: '#f5a623' } };
 
 function PaymentRows({ payments, onToggle }) {

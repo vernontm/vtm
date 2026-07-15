@@ -391,6 +391,8 @@ textarea:focus, select:focus {
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .animate-spin { animation: spin 1s linear infinite; }
 .spin { animation: spin 0.7s ease-out; }
+/* Inline loading spinner (inherits text color for the moving arc) */
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(130,140,155,0.30); border-top-color: currentColor; border-radius:50%; animation: spin 0.7s linear infinite; vertical-align:-2px; flex-shrink:0; }
 
 /* ── Privacy mode ───────────────────────────────────────────────────────────── */
 .privacy-mode .private-data,
