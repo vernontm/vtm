@@ -1177,12 +1177,15 @@ function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
     })();
   }, [client.id]);
 
-  // The document we render: an existing agreement's terms, else the fresh terms draft.
-  const doc = ag?.terms || termsDraft || {};
+  // The document we render: the saved agreement's terms if it actually has a
+  // document, otherwise the fresh terms draft (a stale/custom placeholder row
+  // has empty terms and should not blank out the preview).
+  const agHasDoc = !!ag?.terms?.agreement_markdown;
+  const doc = agHasDoc ? ag.terms : (termsDraft || ag?.terms || {});
 
   const ensureAgreement = async () => {
-    if (ag?.id) return ag;
-    if (!termsDraft) { toast('error', 'Approve the terms first (Terms step).'); return null; }
+    if (ag?.id && agHasDoc) return ag;
+    if (!termsDraft?.agreement_markdown) { toast('error', 'Approve the terms first (Terms step).'); return null; }
     const r = await approveAgreement(client.id, termsDraft);
     const d = await getAgreements(client.id);
     const row = (d.agreements || []).find(x => x.id === r.agreement_id) || (d.agreements || [])[0];

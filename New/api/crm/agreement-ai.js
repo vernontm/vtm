@@ -214,23 +214,35 @@ ${contextBlock(client, projects, activity)}`;
       const { client_id, draft } = req.body || {};
       if (!client_id || !draft) return res.status(400).json({ error: 'client_id and draft required' });
 
-      const agRows = await supaFetch('crm_agreements', {
-        method: 'POST',
-        body: JSON.stringify({
-          client_id,
-          title: `Service Agreement — Vernon Tech & Media`,
-          total_amount: draft.total || null,
-          status: 'approved',
-          terms: {
-            summary: draft.summary || null,
-            installments: draft.installments || [],
-            monthly: draft.monthly || [],
-            agreement_markdown: draft.agreement_markdown || '',
-            nda_markdown: draft.nda_markdown || '',
-          },
-        }),
-      });
-      const agreement = agRows[0];
+      const payload = {
+        client_id,
+        title: `Service Agreement — Vernon Tech & Media`,
+        total_amount: draft.total || null,
+        status: 'approved',
+        payment_mode: 'fixed',
+        plan_options: null,
+        terms: {
+          summary: draft.summary || null,
+          installments: draft.installments || [],
+          monthly: draft.monthly || [],
+          agreement_markdown: draft.agreement_markdown || '',
+          nda_markdown: draft.nda_markdown || '',
+        },
+      };
+
+      // Reuse a stale placeholder agreement (e.g. an empty custom-mode row left
+      // over from toggling the payment-plan option) instead of duplicating.
+      const priorRows = await supaFetch(`crm_agreements?client_id=eq.${client_id}&status=neq.signed&order=created_at.desc&limit=1&select=id,terms`).catch(() => []);
+      const prior = priorRows && priorRows[0];
+      let agreement;
+      if (prior && !(prior.terms && prior.terms.agreement_markdown)) {
+        await supaFetch(`crm_agreements?id=eq.${prior.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+        await supaFetch(`crm_payments?agreement_id=eq.${prior.id}`, { method: 'DELETE' }).catch(() => {});
+        agreement = { id: prior.id };
+      } else {
+        const agRows = await supaFetch('crm_agreements', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) });
+        agreement = agRows[0];
+      }
 
       // Build the payment schedule rows.
       const installments = Array.isArray(draft.installments) ? draft.installments : [];
