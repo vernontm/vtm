@@ -140,6 +140,34 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
       return res.json(parseJson(out));
     }
 
+    // ── suggest-projects: turn the agreement into billable project line items ──
+    if (req.method === 'POST' && action === 'suggest-projects') {
+      const { client_id } = req.body || {};
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      const { client, projects, activity } = await loadContext(client_id);
+      const agRows = await supaFetch(`crm_agreements?client_id=eq.${client_id}&select=total_amount,terms&order=created_at.desc&limit=1`).catch(() => []);
+      const ag = agRows && agRows[0];
+      const t = ag?.terms || {};
+
+      const system = `You turn a service agreement into the billable PROJECT LINE ITEMS for a CRM deal — the things that actually get invoiced.
+Rules:
+- Usually ONE one-time build project (value = the one-time build total) PLUS one recurring maintenance project (recurring = the monthly amount) if the agreement includes maintenance.
+- Only split the build into multiple one-time projects if the agreement EXPLICITLY prices them separately. If you split, the one-time values MUST sum to the build total exactly — never invent per-item prices.
+- Each project needs: a clear name, a 1–2 sentence scope taken from the agreement's Scope of Work (concrete, faithful — no invented deliverables), value (one-time dollars; 0 if none), recurring (dollars per month; 0 if none).
+Return ONLY JSON: { "projects": [ { "name": string, "scope": string, "value": number, "recurring": number } ] }`;
+      const user = `Build the project line items for this deal.
+AGREEMENT total: ${ag?.total_amount ?? 'n/a'}
+INSTALLMENTS: ${JSON.stringify(t.installments || [])}
+MONTHLY: ${JSON.stringify(t.monthly || [])}
+
+AGREEMENT (markdown):
+"""${(t.agreement_markdown || '').toString().slice(0, 10000)}"""
+
+${contextBlock(client, projects, activity)}`;
+      const out = await callClaude(system, user, 2048);
+      return res.json(parseJson(out));
+    }
+
     // ── approve: persist the agreement + payment schedule ──
     if (req.method === 'POST' && action === 'approve') {
       const { client_id, draft } = req.body || {};

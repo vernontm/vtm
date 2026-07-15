@@ -18,7 +18,7 @@ import {
   getProjects, createProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, approveAgreement, approveAgreementRow, previewAgreementToken,
+  analyzeDeal, generateAgreement, suggestProjects, approveAgreement, approveAgreementRow, previewAgreementToken,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -899,6 +899,8 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
   const [deal, setDeal] = useState(null); // an existing deal for this client, if any
   const [name, setName] = useState(`${client.business_name || 'Client'} — Service Agreement`);
   const [items, setItems] = useState([]);
+  const [seeding, setSeeding] = useState(false); // AI building the line items
+  const [seeded, setSeeded] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -911,26 +913,41 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
     })();
   }, [client.id]);
 
-  // Seed line items from the approved terms once the builder is showing (no deal,
-  // or an existing deal that has no projects yet — e.g. one created by the
-  // agreement approval as an empty shell).
-  useEffect(() => {
-    if (loading || items.length) return;
-    if (deal && (deal.projects || []).length > 0) return;
-    if (deal?.name) setName(deal.name);
+  // The crude fallback: one build line (sum of installments) + a maintenance line.
+  const fallbackSeed = () => {
     const seed = [];
     const buildTotal = Array.isArray(termsDraft?.installments)
       ? termsDraft.installments.reduce((s, i) => s + Number(i.amount || 0), 0)
       : (termsDraft?.total || 0);
-    if (buildTotal > 0) seed.push({ name: 'Custom CRM Build', value: buildTotal, recurring: 0 });
+    if (buildTotal > 0) seed.push({ name: 'Custom CRM Build', scope: '', value: buildTotal, recurring: 0 });
     const maint = Array.isArray(termsDraft?.monthly) ? termsDraft.monthly[0] : null;
-    if (maint?.amount) seed.push({ name: maint.item || 'Maintenance & Support', value: 0, recurring: Number(maint.amount) });
-    if (seed.length) setItems(seed);
-    else setItems([{ name: '', value: 0, recurring: 0 }]);
-  }, [loading, deal, termsDraft]);
+    if (maint?.amount) seed.push({ name: maint.item || 'Maintenance & Support', scope: '', value: 0, recurring: Number(maint.amount) });
+    return seed.length ? seed : [{ name: '', scope: '', value: 0, recurring: 0 }];
+  };
+
+  // Auto-fill the line items from the agreement (AI) once the builder is showing
+  // (no deal, or an existing deal that has no projects yet). Ray just reviews.
+  useEffect(() => {
+    if (loading || items.length || seeded) return;
+    if (deal && (deal.projects || []).length > 0) return;
+    if (deal?.name) setName(deal.name);
+    setSeeded(true);
+    setSeeding(true);
+    (async () => {
+      try {
+        const r = await suggestProjects(client.id);
+        const ps = (r.projects || []).filter(p => p.name).map(p => ({
+          name: p.name, scope: p.scope || '', value: Number(p.value) || 0, recurring: Number(p.recurring) || 0,
+        }));
+        setItems(ps.length ? ps : fallbackSeed());
+      } catch (e) {
+        setItems(fallbackSeed());
+      } finally { setSeeding(false); }
+    })();
+  }, [loading, deal]);
 
   const setItem = (idx, patch) => setItems(xs => xs.map((x, i) => i === idx ? { ...x, ...patch } : x));
-  const addItem = () => setItems(xs => [...xs, { name: '', value: 0, recurring: 0 }]);
+  const addItem = () => setItems(xs => [...xs, { name: '', scope: '', value: 0, recurring: 0 }]);
   const removeItem = (idx) => setItems(xs => xs.filter((_, i) => i !== idx));
 
   const oneTimeTotal = items.reduce((s, i) => s + Number(i.value || 0), 0);
@@ -948,7 +965,7 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
       const created = [];
       for (const it of valid) {
         const p = await createProject({
-          client_id: client.id, deal_id: dealId, name: it.name.trim(),
+          client_id: client.id, deal_id: dealId, name: it.name.trim(), scope: (it.scope || '').trim() || null,
           value: Number(it.value) || 0, recurring_amount: Number(it.recurring) || 0,
           billing_type: billingType(it), plan_status: 'none', status: 'active',
         });
@@ -994,7 +1011,7 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
       <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>{deal ? 'Add projects to the deal' : 'Create the deal & projects'}</div>
       <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        {deal ? 'This deal has no projects yet. Add the line items below — they attach to the existing deal.' : (termsDraft ? 'Pre-filled from the approved terms. Adjust the line items, then create.' : 'Add the project line items (one-time and/or monthly), then create the deal.')}
+        {deal ? 'These line items were built from the agreement and attach to the existing deal. Review and adjust, then save.' : 'These line items were built from the agreement. Review and adjust, then create the deal.'}
       </div>
 
       <div className="form-group">
@@ -1002,17 +1019,28 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
         <input className="form-input" value={name} onChange={e => setName(e.target.value)} />
       </div>
 
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '10px 0 8px' }}>Project line items</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 8px' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Project line items</span>
+        {seeding && <span style={{ fontSize: 11.5, color: 'var(--orange)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Sparkles size={12} /> Building from the agreement…</span>}
+      </div>
+
+      {seeding ? (
+        <div style={{ padding: '28px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 12 }}>Reading the agreement and drafting the line items…</div>
+      ) : (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.map((it, idx) => (
-          <div key={idx} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 120px 120px 32px', gap: 8, alignItems: 'center' }}>
-            <input className="form-input" placeholder="Project name" value={it.name} onChange={e => setItem(idx, { name: e.target.value })} />
-            <input className="form-input" type="number" min="0" step="100" placeholder="One-time $" value={it.value || ''} onChange={e => setItem(idx, { value: e.target.value })} />
-            <input className="form-input" type="number" min="0" step="10" placeholder="$/mo" value={it.recurring || ''} onChange={e => setItem(idx, { recurring: e.target.value })} />
-            <button className="btn-ghost" style={{ padding: '7px 8px', color: '#ff5c5c' }} onClick={() => removeItem(idx)} title="Remove"><X size={14} /></button>
+          <div key={idx} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 120px 120px 32px', gap: 8, alignItems: 'center' }}>
+              <input className="form-input" placeholder="Project name" value={it.name} onChange={e => setItem(idx, { name: e.target.value })} />
+              <input className="form-input" type="number" min="0" step="100" placeholder="One-time $" value={it.value || ''} onChange={e => setItem(idx, { value: e.target.value })} />
+              <input className="form-input" type="number" min="0" step="10" placeholder="$/mo" value={it.recurring || ''} onChange={e => setItem(idx, { recurring: e.target.value })} />
+              <button className="btn-ghost" style={{ padding: '7px 8px', color: '#ff5c5c' }} onClick={() => removeItem(idx)} title="Remove"><X size={14} /></button>
+            </div>
+            <textarea className="form-input" rows={2} placeholder="Scope / what's included" value={it.scope || ''} onChange={e => setItem(idx, { scope: e.target.value })} style={{ marginTop: 8, resize: 'vertical', fontSize: 12.5 }} />
           </div>
         ))}
       </div>
+      )}
       <button className="btn-ghost" style={{ marginTop: 8 }} onClick={addItem}><Plus size={14} /> Add line item</button>
 
       <div style={{ display: 'flex', gap: 20, margin: '18px 0', fontSize: 13, color: 'var(--text)' }}>
@@ -1020,7 +1048,7 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
         {monthlyTotal > 0 && <div><span style={{ color: 'var(--muted)' }}>Recurring: </span><strong>{money(monthlyTotal)}/mo</strong></div>}
       </div>
 
-      <button className="btn-primary" disabled={busy} onClick={create}>
+      <button className="btn-primary" disabled={busy || seeding} onClick={create}>
         <Briefcase size={15} /> {busy ? 'Saving…' : deal ? 'Add projects to deal' : 'Create deal & projects'}
       </button>
     </div>
