@@ -711,6 +711,7 @@ const LEAD_STEPS = [
 
 function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [step, setStep] = useState(0);
+  const [view, setView] = useState('pipeline'); // 'pipeline' | 'details'
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
@@ -738,6 +739,48 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
         </div>
       </div>
 
+      {/* Tabs: Pipeline | Business Details */}
+      <div style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+        {[{ k: 'pipeline', label: 'Onboarding Pipeline' }, { k: 'details', label: 'Business Details' }].map(t => (
+          <button key={t.k} onClick={() => setView(t.k)} style={{ padding: '11px 14px', background: 'none', border: 'none', borderBottom: view === t.k ? '2px solid var(--orange)' : '2px solid transparent', cursor: 'pointer', color: view === t.k ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{t.label}</button>
+        ))}
+      </div>
+
+      {view === 'details' ? (
+        <div style={{ flex: 1, padding: 24 }}>
+          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start', maxWidth: 940 }}>
+            <Card title="Business details">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                <Field label="Business Name" value={client.business_name} onSave={v => saveField('business_name', v)} placeholder="Business" />
+                <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
+                <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
+                <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
+                <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
+                <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
+                <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
+              </div>
+            </Card>
+            <Card title="Lead">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Temperature</span>
+                  <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Rank</span>
+                  <PillSelect value={client.lead_rank || 'medium'} options={RANKS} onChange={v => saveField('lead_rank', v)} />
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Potential revenue ($)</span>
+                  <input className="form-input" type="number" min="0" step="100" defaultValue={client.potential_value ?? ''}
+                    onBlur={e => saveField('potential_value', e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 5000" />
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Pipeline stepper */}
       <div style={{ display: 'flex', gap: 6, padding: '12px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
         {LEAD_STEPS.map((s, i) => {
@@ -754,37 +797,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
       {/* Step content */}
       <div style={{ flex: 1, padding: 24 }}>
         {step === 0 ? (
-          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 20, alignItems: 'start' }}>
+          <div style={{ maxWidth: 760 }}>
             <LeadActivity client={client} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <Card title="Business details">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
-                  <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
-                  <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
-                  <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
-                  <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
-                  <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
-                </div>
-              </Card>
-              <Card title="Lead">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Temperature</span>
-                    <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Rank</span>
-                    <PillSelect value={client.lead_rank || 'medium'} options={RANKS} onChange={v => saveField('lead_rank', v)} />
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Potential revenue ($)</span>
-                    <input className="form-input" type="number" min="0" step="100" defaultValue={client.potential_value ?? ''}
-                      onBlur={e => saveField('potential_value', e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 5000" />
-                  </div>
-                </div>
-              </Card>
-            </div>
           </div>
         ) : (
           <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
@@ -804,6 +818,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
         </div>
         <button className="btn-primary" disabled={step === LEAD_STEPS.length - 1} onClick={() => setStep(s => Math.min(LEAD_STEPS.length - 1, s + 1))}>Next <ChevronRight size={15} /></button>
       </div>
+      </>
+      )}
     </div>
   );
 }
