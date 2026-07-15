@@ -911,9 +911,13 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
     })();
   }, [client.id]);
 
-  // Seed line items from the approved terms once loaded (only if no deal exists).
+  // Seed line items from the approved terms once the builder is showing (no deal,
+  // or an existing deal that has no projects yet — e.g. one created by the
+  // agreement approval as an empty shell).
   useEffect(() => {
-    if (loading || deal || items.length) return;
+    if (loading || items.length) return;
+    if (deal && (deal.projects || []).length > 0) return;
+    if (deal?.name) setName(deal.name);
     const seed = [];
     const buildTotal = Array.isArray(termsDraft?.installments)
       ? termsDraft.installments.reduce((s, i) => s + Number(i.amount || 0), 0)
@@ -939,29 +943,30 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
     if (!valid.length) { toast('error', 'Add at least one project line with a name and an amount.'); return; }
     setBusy(true);
     try {
-      const d = await createDeal({ client_id: client.id, name: name.trim() });
+      // Reuse an existing (empty) deal if there is one; otherwise create it.
+      const dealId = deal?.id || (await createDeal({ client_id: client.id, name: name.trim() })).id;
       const created = [];
       for (const it of valid) {
         const p = await createProject({
-          client_id: client.id, deal_id: d.id, name: it.name.trim(),
+          client_id: client.id, deal_id: dealId, name: it.name.trim(),
           value: Number(it.value) || 0, recurring_amount: Number(it.recurring) || 0,
           billing_type: billingType(it), plan_status: 'none', status: 'active',
         });
         created.push(Array.isArray(p) ? p[0] : p);
       }
-      // Attach the new projects to the deal.
+      // Attach the new projects to the deal (and sync the name if it changed).
       const ids = created.map(p => p?.id).filter(Boolean);
-      if (ids.length) await updateDeal(d.id, { project_ids: ids }).catch(() => {});
-      toast('success', 'Deal & projects created.');
-      onCreated(d.id);
+      if (ids.length) await updateDeal(dealId, { project_ids: ids, ...(deal && name.trim() && name.trim() !== deal.name ? { name: name.trim() } : {}) }).catch(() => {});
+      toast('success', deal ? 'Projects added to the deal.' : 'Deal & projects created.');
+      onCreated(dealId);
     } catch (e) { toast('error', e.message); }
     finally { setBusy(false); }
   };
 
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
 
-  // Already created — show it and let Ray continue.
-  if (deal) {
+  // Already has projects — show it read-only and let Ray continue.
+  if (deal && (deal.projects || []).length > 0) {
     const ps = deal.projects || [];
     return (
       <div style={{ maxWidth: 820, margin: '0 auto' }}>
@@ -987,9 +992,9 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Create the deal &amp; projects</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>{deal ? 'Add projects to the deal' : 'Create the deal & projects'}</div>
       <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        {termsDraft ? 'Pre-filled from the approved terms. Adjust the line items, then create.' : 'Add the project line items (one-time and/or monthly), then create the deal.'}
+        {deal ? 'This deal has no projects yet. Add the line items below — they attach to the existing deal.' : (termsDraft ? 'Pre-filled from the approved terms. Adjust the line items, then create.' : 'Add the project line items (one-time and/or monthly), then create the deal.')}
       </div>
 
       <div className="form-group">
@@ -1016,7 +1021,7 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
       </div>
 
       <button className="btn-primary" disabled={busy} onClick={create}>
-        <Briefcase size={15} /> {busy ? 'Creating…' : 'Create deal & projects'}
+        <Briefcase size={15} /> {busy ? 'Saving…' : deal ? 'Add projects to deal' : 'Create deal & projects'}
       </button>
     </div>
   );
