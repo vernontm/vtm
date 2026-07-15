@@ -45,15 +45,29 @@ function escapeBareControls(s) {
   return out;
 }
 
+// Remove em/en dashes from any generated text (an "AI tell" Ray dislikes).
+// Em dash → ", " (clause break); en dash → "-" (ranges). Collapse doubled commas.
+function stripDashes(s) {
+  return s.replace(/\s*—\s*/g, ', ').replace(/\s*–\s*/g, '-').replace(/,\s*,/g, ',');
+}
+function stripDashesDeep(v) {
+  if (typeof v === 'string') return stripDashes(v);
+  if (Array.isArray(v)) return v.map(stripDashesDeep);
+  if (v && typeof v === 'object') { for (const k of Object.keys(v)) v[k] = stripDashesDeep(v[k]); return v; }
+  return v;
+}
+
 function parseJson(text) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('Model did not return JSON');
   const raw = m[0];
-  try { return JSON.parse(raw); }
+  let parsed;
+  try { parsed = JSON.parse(raw); }
   catch (e) {
-    try { return JSON.parse(escapeBareControls(raw)); }
+    try { parsed = JSON.parse(escapeBareControls(raw)); }
     catch (e2) { throw new Error('The AI returned a malformed response — please try again.'); }
   }
+  return stripDashesDeep(parsed);
 }
 
 async function loadContext(clientId) {
@@ -123,7 +137,7 @@ Return ONLY JSON with this shape:
       // change and keep everything else byte-for-byte, so regenerating tweaks the
       // doc instead of rewriting it in a new style.
       if (base && base.agreement_markdown) {
-        const system = `You revise an existing Service Agreement / Mutual NDA for Vernon Tech & Media. You are given the CURRENT documents and a change request. Apply ONLY the requested change. Preserve everything else EXACTLY — same headings, same section numbering and order, same wording, same bullet formatting, same "not legal advice" note. Do not re-style, re-order, re-title, or re-word any section the change does not touch. Never add signature blocks or date lines. If the change does not affect billing, keep total/installments/monthly identical to the current values.
+        const system = `You revise an existing Service Agreement / Mutual NDA for Vernon Tech & Media. You are given the CURRENT documents and a change request. Apply ONLY the requested change. NEVER use em dashes or en dashes ("—" or "–"); use commas, periods, or hyphens instead (also replace any existing dashes you come across). Preserve everything else EXACTLY — same headings, same section numbering and order, same wording, same bullet formatting, same "not legal advice" note. Do not re-style, re-order, re-title, or re-word any section the change does not touch. Never add signature blocks or date lines. If the change does not affect billing, keep total/installments/monthly identical to the current values.
 Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON with the FULL revised documents:
 {
   "summary": "one line",
@@ -151,7 +165,7 @@ CURRENT MUTUAL NDA (markdown):
       const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media (VTM) — Rayvaughn Vernon, dba Vernon Tech & Media, Katy, Texas, ray@vernontm.com. Governing law: Texas.
 Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law. Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. End with a one-line "not legal advice" note.
 Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance) — no refunds are issued. Section 9 Commitment: once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy). Note it is not legal advice.
-Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives) — never default the total to 0.$${mode === 'custom' ? ` CUSTOM PLAN MODE: The client chooses their payment plan later in their portal, so DO NOT list any amounts, installments, or dates anywhere. For section 3 (Total Price & Payment Schedule), write the heading and then a single line containing exactly the token {{PAYMENT_SCHEDULE}} and nothing else. Set "total" to the build value from the terms/notes, and return installments: [] and monthly: []. Also fill "recap": a warm, client-facing 2-4 sentence summary of everything included in this project, and EXPLICITLY call out (with enthusiasm) any bonus feature added at no additional cost or any goodwill on timeline mentioned in the notes.` : ''} Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
+Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives); never default the total to 0. NEVER use em dashes or en dashes ("—" or "–") anywhere; use commas, periods, hyphens, or the word "to" instead.$${mode === 'custom' ? ` CUSTOM PLAN MODE: The client chooses their payment plan later in their portal, so DO NOT list any amounts, installments, or dates anywhere. For section 3 (Total Price & Payment Schedule), write the heading and then a single line containing exactly the token {{PAYMENT_SCHEDULE}} and nothing else. Set "total" to the build value from the terms/notes, and return installments: [] and monthly: []. Also fill "recap": a warm, client-facing 2-4 sentence summary of everything included in this project, and EXPLICITLY call out (with enthusiasm) any bonus feature added at no additional cost or any goodwill on timeline mentioned in the notes.` : ''} Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
 {
   "summary": "one line",
   "recap": "client-facing 2-4 sentence recap of what's included (custom mode: highlight any no-cost bonus)",
@@ -172,25 +186,30 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
       const { client_id, tone, portal_url, sign_url } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
       const { client, projects, activity } = await loadContext(client_id);
-      const agRows = await supaFetch(`crm_agreements?client_id=eq.${client_id}&select=total_amount,terms&order=created_at.desc&limit=1`).catch(() => []);
+      const agRows = await supaFetch(`crm_agreements?client_id=eq.${client_id}&select=total_amount,terms,payment_mode&order=created_at.desc&limit=1`).catch(() => []);
       const ag = agRows && agRows[0];
       const t = ag?.terms || {};
+      const isCustom = ag?.payment_mode === 'custom';
 
       const toneGuide = {
         professional: 'Polished, businesslike, and concise. Courteous and clear, no slang.',
-        friendly: 'Warm, personable, and conversational — like a trusted partner. Upbeat but genuine, contractions are fine.',
+        friendly: 'Warm, personable, and conversational, like a trusted partner. Upbeat but genuine, contractions are fine.',
         gain: 'Value- and outcome-focused. Lead with what the client gains and the momentum ahead; call out any bonus/extra feature included at no cost and any goodwill on timeline as wins. Motivating but sincere.',
       }[tone] || 'Polished, businesslike, and concise.';
 
-      const system = `You are Ray (Rayvaughn Vernon) of Vernon Tech & Media, writing a short email to a client to send over their service agreement. First person, human, warm — never robotic. Reference what was actually agreed: use the discovery notes, agreement terms, and the payment plan below. If the notes mention a bonus feature added at no extra cost, or an adjusted/extended delivery timeline, weave it in as a positive. Keep it tight (roughly 120–180 words). Sign off as Ray, Vernon Tech & Media.
+      const cta = isCustom
+        ? `CALL TO ACTION: The client will CHOOSE their payment plan on the signing page. Say something like: "We put together a few payment options so you can choose the one that fits you best, and to get started you just sign the contract." The email's single link is the SIGNING LINK below. Present it as "Choose your plan and sign:" followed by the exact URL. Do NOT mention any deposit, installment, monthly, or dollar amounts anywhere, since the numbers depend on the plan they pick. Do NOT invent links.`
+        : `CALL TO ACTION: The email's single main link is the SIGNING LINK below, this client's personal link that opens their agreement so they can review the terms and sign it (no account or login needed). Present it as "Review and sign your agreement:" followed by the exact URL. Tell them that once they sign, they'll set up their client portal and complete the deposit. Do NOT include a separate generic portal URL, and do NOT invent links.`;
+
+      const system = `You are Ray (Rayvaughn Vernon) of Vernon Tech & Media, writing a short email to a client to send over their service agreement. First person, human, warm, never robotic. Reference what was actually agreed using the discovery notes below. If the notes mention a bonus feature added at no extra cost, or an adjusted/extended delivery timeline, weave it in as a positive. Keep it tight (roughly 120 to 180 words). Sign off as Ray, Vernon Tech & Media.
+NEVER use em dashes or en dashes ("—" or "–") anywhere. Use commas, periods, or the word "to" instead.
 TONE: ${toneGuide}
-CALL TO ACTION: The email's single main link is the SIGNING LINK below — it is this client's personal link that opens their agreement so they can review the terms and sign it (no account or login needed). Present it clearly as "Review & sign your agreement:" followed by the exact URL. Tell them that once they sign, they'll set up their client portal and complete the deposit. Do NOT invent any links and do NOT include a separate generic portal URL — the signing link is the only link. Return ONLY JSON: { "subject": string, "body": string }`;
+${cta}
+Return ONLY JSON: { "subject": string, "body": string }`;
       const user = `Draft the email.
-Client: ${client.business_name} — contact ${client.owner_name || 'there'}
-SIGNING LINK (their personal link — use this exact URL as the call to action): ${sign_url || '(will be added when you send)'}
-Agreement total: ${ag?.total_amount ?? 'n/a'}
-Installments: ${JSON.stringify(t.installments || [])}
-Monthly: ${JSON.stringify(t.monthly || [])}
+Client: ${client.business_name}, contact ${client.owner_name || 'there'}
+SIGNING LINK (their personal link, use this exact URL as the call to action): ${sign_url || '(will be added when you send)'}
+${isCustom ? 'This is a CUSTOM PLAN: the client picks their payment plan on the signing page. Do NOT state any amounts.' : `Agreement total: ${ag?.total_amount ?? 'n/a'}\nInstallments: ${JSON.stringify(t.installments || [])}\nMonthly: ${JSON.stringify(t.monthly || [])}`}
 
 ${contextBlock(client, projects, activity)}`;
       const out = await callClaude(system, user, 1200);

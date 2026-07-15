@@ -1,4 +1,5 @@
 const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { stripDashes } = require('../_lib/text.js');
 
 // Summarize a piece of client activity (call notes, meeting notes, etc.) with
 // Claude and store it on the client's file as a summary activity. Returns the
@@ -15,7 +16,7 @@ async function summarize(text, title) {
     body: JSON.stringify({
       model: 'claude-sonnet-4-5',
       max_tokens: 1200,
-      system: `You summarize sales/client interactions for a CRM. Be concrete and faithful — never invent details.
+      system: `You summarize sales/client interactions for a CRM. Be concrete and faithful; never invent details. Never use em dashes or en dashes; use commas or periods instead.
 Return ONLY JSON:
 {
   "summary": "3-5 sentence plain-English summary of what was discussed and decided",
@@ -46,6 +47,9 @@ module.exports = async function handler(req, res) {
     if (!text || !text.trim()) return res.status(400).json({ error: 'Nothing to summarize' });
 
     const a = await summarize(text.trim(), title);
+    a.summary = stripDashes(a.summary || '');
+    a.key_points = (a.key_points || []).map(stripDashes);
+    a.action_items = (a.action_items || []).map(stripDashes);
     const bodyLines = [
       a.summary || '',
       (a.key_points || []).length ? `\nKey points:\n- ${a.key_points.join('\n- ')}` : '',

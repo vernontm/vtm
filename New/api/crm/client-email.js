@@ -1,5 +1,6 @@
 import { setCors, requireAuth } from '../_lib/supabase.js';
 import { sendEmail, createDraft } from '../_lib/gmail.js';
+import { stripDashes } from '../_lib/text.js';
 
 // Turn a plain-text email body into tidy HTML: escape, hyperlink bare URLs,
 // and preserve line breaks. Keeps the wording; just makes links clickable.
@@ -21,10 +22,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
   try {
-    const { to, subject, body, mode } = req.body || {};
+    const { to, subject, body: rawBody, mode } = req.body || {};
     if (!to || !to.trim()) return res.status(400).json({ error: 'Recipient email required' });
-    if (!body || !body.trim()) return res.status(400).json({ error: 'Email body is empty' });
-    const subj = (subject || '').trim() || 'A note from Vernon Tech & Media';
+    if (!rawBody || !rawBody.trim()) return res.status(400).json({ error: 'Email body is empty' });
+    const body = stripDashes(rawBody);
+    const subj = stripDashes((subject || '').trim()) || 'A note from Vernon Tech & Media';
     const html = bodyToHtml(body);
 
     if (mode === 'draft') {
