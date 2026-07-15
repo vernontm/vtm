@@ -91,8 +91,14 @@
     const isPreview = _params.get('preview') === '1';
     if (isPreview) {
       const b = document.createElement('div');
-      b.textContent = 'PREVIEW — this is exactly what your client sees. Signing is disabled.';
-      b.style.cssText = 'position:sticky;top:0;z-index:60;background:#f5a623;color:#111;font-weight:800;font-size:12.5px;text-align:center;padding:9px 12px;letter-spacing:.02em';
+      b.style.cssText = 'position:sticky;top:0;z-index:60;background:#f5a623;color:#111;font-weight:800;font-size:12.5px;padding:8px 12px;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:12px';
+      const label = document.createElement('span');
+      label.textContent = 'PREVIEW — this is exactly what your client sees. Signing is disabled.';
+      const exit = document.createElement('button');
+      exit.textContent = '✕ Exit preview';
+      exit.style.cssText = 'background:#111;color:#fff;border:none;border-radius:999px;padding:5px 12px;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0';
+      exit.onclick = () => { window.close(); setTimeout(() => { if (history.length > 1) history.back(); else window.location.href = '/admin/'; }, 120); };
+      b.append(label, exit);
       document.body.prepend(b);
     }
     const app = document.getElementById('app');
