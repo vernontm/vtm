@@ -797,9 +797,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
       {/* Step content */}
       <div style={{ flex: 1, padding: 24 }}>
         {step === 0 ? (
-          <div style={{ maxWidth: 760 }}>
-            <LeadActivity client={client} />
-          </div>
+          <LeadActivity client={client} />
         ) : (
           <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>
