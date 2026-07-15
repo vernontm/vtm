@@ -7,19 +7,35 @@
   <title>Sign · Vernon Tech &amp; Media</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet" />
   <style>
-    :root{--bg:#eef0f3;--panel:#fff;--ink:#16191d;--body:#4b5563;--muted:#939aa6;--line:#e3e5ea;--line2:#cfd3da;--accent:#ee6a1f;--accent-tint:#fff4ec;--ok:#1f9d63;--ok-tint:#e9f7ef;--fdisp:'Plus Jakarta Sans',system-ui,sans-serif;--fbody:'Inter',system-ui,sans-serif;}
+    :root{--bg:#f3f4f6;--panel:#fff;--ink:#12151b;--body:#4b5563;--muted:#6b7280;--line:#e5e7eb;--line2:#d3d8e0;--accent:#2563eb;--accent-dark:#1d4ed8;--accent-tint:#eef3ff;--dark:#14171e;--ok:#16a34a;--ok-tint:#e9f7ef;--fdisp:'Plus Jakarta Sans',system-ui,sans-serif;--fbody:'DM Sans',system-ui,sans-serif;}
     *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--body);font-family:var(--fbody);-webkit-font-smoothing:antialiased}
     button{font-family:inherit;cursor:pointer}
-    header.nav{background:var(--panel);border-bottom:1px solid var(--line);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:20}
+    header.nav{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:20}
     .brand{font-family:var(--fdisp);font-weight:800;font-size:12.5px;letter-spacing:.14em}
-    .brand .b1{color:var(--accent)} .brand .b2{color:var(--muted);letter-spacing:.16em}
-    .step-pill{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-tint);border:1px solid #f6c9a6;border-radius:999px;padding:4px 12px}
-    .wrap{max-width:840px;margin:0 auto;padding:28px 20px 160px}
-    .lead{margin-bottom:16px}
-    .lead h1{font-family:var(--fdisp);font-weight:800;font-size:24px;color:var(--ink)}
-    .lead p{color:var(--muted);font-size:14.5px;margin-top:6px}
+    .brand .b1{color:var(--ink)} .brand .b2{color:var(--muted);letter-spacing:.16em}
+    .step-pill{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-tint);border:1px solid #cfe0ff;border-radius:999px;padding:4px 12px}
+    .wrap{max-width:820px;margin:0 auto;padding:34px 20px 160px}
+    .lead{margin-bottom:22px}
+    .lead h1{font-family:var(--fdisp);font-weight:800;font-size:30px;line-height:1.12;color:var(--ink);letter-spacing:-.01em}
+    .lead p{color:var(--muted);font-size:15px;margin-top:9px;line-height:1.5}
+    /* recap callout */
+    .recap{background:linear-gradient(135deg,#eef3ff,#f5f8ff);border:1px solid #d8e4ff;border-radius:16px;padding:18px 20px;margin-bottom:20px;color:#1a2b4a;font-size:15px;line-height:1.6}
+    /* dark "what's included" package card */
+    .pkg{background:linear-gradient(160deg,#1b1f27,#101318);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:26px 26px 24px;margin-bottom:26px;box-shadow:0 20px 50px -18px rgba(0,0,0,.5)}
+    .pkg-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:4px}
+    .pkg-h h3{font-family:var(--fdisp);font-weight:800;font-size:19px;color:#fff}
+    .pkg-h .val{font-family:var(--fdisp);font-weight:800;font-size:15px;color:#60a5fa;white-space:nowrap}
+    .pkg-sub{color:rgba(255,255,255,.55);font-size:13px;margin-bottom:18px}
+    .pkg-feats{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px}
+    .feat{display:flex;gap:11px;align-items:flex-start}
+    .feat .tick{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(37,99,235,.18);display:flex;align-items:center;justify-content:center;margin-top:1px}
+    .feat .tick svg{width:11px;height:11px;stroke:#60a5fa;stroke-width:3;fill:none}
+    .feat .ft{font-family:var(--fdisp);font-weight:700;font-size:14px;color:#fff;line-height:1.3}
+    .feat .fd{color:rgba(255,255,255,.62);font-size:12.5px;line-height:1.45;margin-top:2px}
+    .sec-label{font-family:var(--fdisp);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 12px}
+    @media(max-width:640px){.pkg-feats{grid-template-columns:1fr}.lead h1{font-size:24px}}
 
     /* paper / document */
     .paper{background:#fff;border:1px solid var(--line);border-radius:10px;padding:46px 52px;font-family:Georgia,'Times New Roman',serif;color:#1a1a1a;line-height:1.55;font-size:14px;box-shadow:0 6px 30px rgba(0,0,0,.06)}
@@ -30,16 +46,17 @@
     .paper strong{font-weight:700}
     /* plan chooser */
     .plans{display:flex;flex-direction:column;gap:14px;margin-top:8px}
-    .planc{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:0 4px 18px rgba(0,0,0,.04)}
+    .planc{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:0 8px 26px -14px rgba(16,24,40,.16);transition:transform .15s,box-shadow .15s,border-color .15s}
+    .planc:hover{transform:translateY(-2px);box-shadow:0 16px 40px -16px rgba(37,99,235,.28);border-color:#cfe0ff}
     .planhd{display:flex;align-items:flex-start;gap:14px}
-    .plname{font-weight:800;font-size:17px;color:var(--ink)}
+    .plname{font-family:var(--fdisp);font-weight:800;font-size:17.5px;color:var(--ink)}
     .plsum{color:var(--body);font-size:13.5px;margin-top:3px}
     .pltoday{margin-left:auto;text-align:right;white-space:nowrap}
-    .plamt{font-weight:800;font-size:20px;color:var(--ink)}
-    .pltd{font-size:12px;color:var(--muted)}
-    .plmeta{color:var(--muted);font-size:13px;margin-top:10px}
-    .plbtn{margin-top:14px;width:100%;background:var(--ink);color:#fff;border:none;border-radius:11px;padding:13px;font-weight:700;font-size:14.5px;cursor:pointer}
-    .plbtn:hover{background:#000}.plbtn:disabled{background:#9aa1ab}
+    .plamt{font-family:var(--fdisp);font-weight:800;font-size:22px;color:var(--ink)}
+    .pltd{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+    .plmeta{color:var(--body);font-size:13px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+    .plbtn{margin-top:14px;width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:12px;padding:14px;font-family:var(--fdisp);font-weight:700;font-size:14.5px;cursor:pointer;box-shadow:0 6px 16px -6px rgba(37,99,235,.5)}
+    .plbtn:hover{filter:brightness(1.06)}.plbtn:disabled{background:#9aa1ab;box-shadow:none;filter:none}
     .sigblock{display:flex;gap:44px;margin-top:38px;flex-wrap:wrap}
     .party{flex:1;min-width:230px}
     .sigline{min-height:48px;border-bottom:1px solid #333;display:flex;align-items:flex-end;font-family:'Dancing Script',cursive;font-size:31px;color:#16324a;padding-bottom:2px;line-height:1}
@@ -162,19 +179,25 @@
     function money(n){ return '$'+(Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:0}); }
 
     function renderPlanChooser(){
-      const plans=data.plan_options||[], maint=Number(data.maintenance)||0;
-      let h='<div class="lead"><h1>Your project with Vernon Tech &amp; Media</h1><p>Here\'s what\'s included, then choose the payment plan that works best for you and sign.</p></div>';
-      // Recap callout (highlights any no-cost bonus).
-      if(data.recap){ h+='<div style="background:#eef3ff;border:1px solid #cfe0ff;border-radius:12px;padding:16px 18px;margin-bottom:18px;color:#1a2b4a;font-size:14.5px;line-height:1.55">'+esc(data.recap)+'</div>'; }
-      // What's included — the agreement scope (schedule shown as "choose below").
-      if(data.agreement_markdown){ h+='<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px">What\'s included</div><div class="paper" style="margin-bottom:26px">'+mdToHtml(data.agreement_markdown)+'</div>'; }
-      h+='<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px">Choose your payment plan</div><div class="plans">';
+      const plans=data.plan_options||[], maint=Number(data.maintenance)||0, feats=data.features||[], total=Number(data.build_total)||0;
+      const TICK='<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+      const name=(data.owner_name||'').split(' ')[0];
+      let h='<div class="lead"><h1>'+(name?esc(name)+', here\'s ':'Here\'s ')+'your project with Vernon Tech &amp; Media</h1><p>A quick look at everything included, then choose the payment plan that fits you best and sign to get started.</p></div>';
+      if(data.recap){ h+='<div class="recap">'+esc(data.recap)+'</div>'; }
+      // Dark "what's included" package card with bold feature titles.
+      if(feats.length){
+        h+='<div class="pkg"><div class="pkg-h"><h3>What\'s included</h3>'+(total?'<span class="val">'+money(total)+' package</span>':'')+'</div>'
+          +'<div class="pkg-sub">Everything below is part of your build.</div><div class="pkg-feats">';
+        feats.forEach(f=>{ h+='<div class="feat"><span class="tick">'+TICK+'</span><div><div class="ft">'+esc(f.title||'')+'</div>'+(f.detail?'<div class="fd">'+esc(f.detail)+'</div>':'')+'</div></div>'; });
+        h+='</div></div>';
+      }
+      h+='<div class="sec-label">Choose your payment plan</div><div class="plans">';
       plans.forEach(p=>{
         const rest=(p.installments||[]).length ? ('then '+(p.installments.length===1 ? money(p.installments[0].amount) : (p.installments.length+' × '+money(p.installments[0].amount)))) : 'paid in full today';
         h+='<div class="planc"><div class="planhd"><div><div class="plname">'+esc(p.label)+'</div><div class="plsum">'+esc(p.summary||'')+'</div></div>'
           +'<div class="pltoday"><div class="plamt">'+money(p.deposit)+'</div><div class="pltd">due today</div></div></div>'
-          +'<div class="plmeta">'+rest+' · total '+money(p.grand_total)+(p.finance_charge?(' (incl. '+money(p.finance_charge)+' financing)'):'')+'</div>'
-          +(maint>0?'<div class="plmeta" style="margin-top:4px">+ '+money(maint)+'/mo maintenance (begins after the final payment)</div>':'')
+          +'<div class="plmeta">'+rest+' · total '+money(p.grand_total)+(p.finance_charge?(' (incl. '+money(p.finance_charge)+' financing)'):'')
+          +(maint>0?'<br>+ '+money(maint)+'/mo maintenance, begins after the final payment':'')+'</div>'
           +'<button class="plbtn" data-k="'+esc(p.key)+'">Choose this plan</button></div>';
       });
       h+='</div>';

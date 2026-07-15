@@ -262,6 +262,8 @@ module.exports = async function handler(req, res) {
           plan_options: ag.plan_options || [],
           maintenance: Number(terms.maintenance) || 0,
           recap: terms.recap || '',
+          features: Array.isArray(terms.features) ? terms.features : [],
+          build_total: Number(ag.total_amount) || 0,
           agreement_markdown: scope,
           business_name: client.business_name,
           owner_name: client.owner_name,

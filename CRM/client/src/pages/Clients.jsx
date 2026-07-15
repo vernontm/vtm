@@ -857,7 +857,7 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
       // MUST succeed — otherwise the client would get a doc with only a schedule.
       const doc = await generateAgreement(client.id, `Build value $${Number(total)}${Number(maint) ? `, plus $${Number(maint)}/mo maintenance` : ''}. The client selects a custom payment plan in their portal.`, null, 'custom');
       if (!doc?.agreement_markdown) { toast('error', 'Could not draft the agreement — please click Approve again.'); setBusy(''); return; }
-      await setupCustomAgreement(client.id, { total: Number(total), maintenance: Number(maint) || 0, plan_options: plans, agreement_markdown: doc.agreement_markdown, nda_markdown: doc.nda_markdown || null, recap: doc.recap || null });
+      await setupCustomAgreement(client.id, { total: Number(total), maintenance: Number(maint) || 0, plan_options: plans, agreement_markdown: doc.agreement_markdown, nda_markdown: doc.nda_markdown || null, recap: doc.recap || null, features: Array.isArray(doc.features) ? doc.features : null });
       onApprove({ total: Number(total), custom: true });
       toast('success', 'Payment-plan options saved — the client picks one in their portal.');
     } catch (e) { toast('error', e.message); }
