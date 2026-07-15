@@ -204,29 +204,47 @@ export default async function handler(req, res) {
         return res.status(201).json(result[0] || result);
       }
       if (action === 'summarize' && id) {
-        // Manual "Summarize now": fetch the Google Meet transcript for this
-        // meeting on demand, summarize with Claude, store on the meeting +
-        // matched client. Same logic the cron runs automatically.
+        // Manual "Summarize now": prefer the Google Meet transcript, but if
+        // that isn't available (no Meet link, transcription off, or still
+        // processing) fall back to the notes Ray typed on the meeting. Either
+        // way we run the same Claude summary → store on meeting + matched
+        // client flow, so the client file stays up to date.
         const [meeting] = await supaFetch(`crm_meetings?id=eq.${id}`);
         if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
-        if (!meeting.meet_link) return res.status(400).json({ error: 'This meeting has no Google Meet link.' });
+        const notes = (meeting.notes || '').trim();
         try {
-          const r = await fetchTranscriptForMeeting({ meetLink: meeting.meet_link, endTime: meeting.end_time });
-          if (r.status !== 'ready') {
-            const msg = r.status === 'pending'
-              ? 'Transcript is still processing on Google\'s side — try again in a few minutes.'
-              : 'No transcript found for this meeting. Make sure transcription was turned on during the call.';
-            await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ transcript_status: r.status === 'pending' ? 'pending' : 'none' }) }).catch(() => {});
-            return res.status(202).json({ ok: false, status: r.status, message: msg });
+          let text = null, source = null, transcriptDocId = null;
+
+          // 1) Try the Meet transcript when there's a Meet link.
+          if (meeting.meet_link) {
+            const r = await fetchTranscriptForMeeting({ meetLink: meeting.meet_link, endTime: meeting.end_time });
+            if (r.status === 'ready' && r.text) {
+              text = r.text; source = 'google_meet'; transcriptDocId = r.transcriptDocId;
+            } else if (!notes) {
+              // No transcript AND no notes to fall back on — report status.
+              const msg = r.status === 'pending'
+                ? 'Transcript is still processing on Google\'s side — try again in a few minutes, or add notes and Generate Summary to summarize from your notes.'
+                : 'No transcript found (make sure transcription was on during the call). You can also type notes on the meeting and Generate Summary from those.';
+              await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ transcript_status: r.status === 'pending' ? 'pending' : 'none' }) }).catch(() => {});
+              return res.status(202).json({ ok: false, status: r.status, message: msg });
+            }
           }
-          const stored = await summarizeAndStore(meeting, r.text, { source: 'google_meet', transcriptDocId: r.transcriptDocId });
+
+          // 2) Fall back to the manually-entered notes.
+          if (!text && notes) { text = notes; source = 'manual_notes'; }
+
+          if (!text) {
+            return res.status(202).json({ ok: false, message: 'Nothing to summarize yet — add notes on this meeting (or turn on Meet transcription), then Generate Summary.' });
+          }
+
+          const stored = await summarizeAndStore(meeting, text, { source, transcriptDocId });
           await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ transcript_status: 'ready' }) });
-          if (!stored) return res.json({ ok: false, message: 'Transcript found but had no substantive conversation to summarize.' });
-          return res.json({ ok: true, summary: stored.summary, matchedClientId: stored.matchedClientId });
+          if (!stored) return res.json({ ok: false, message: 'There wasn\'t enough substance to summarize.' });
+          return res.json({ ok: true, summary: stored.summary, matchedClientId: stored.matchedClientId, source });
         } catch (e) {
           console.error('Manual summarize failed:', e.message);
           const hint = /403|PERMISSION|not been used|disabled/i.test(e.message)
-            ? 'Google Meet API access is not set up yet — enable the Google Meet API in the Cloud project and reconnect Gmail in Settings.'
+            ? 'Google Meet API access is not set up yet — enable the Google Meet API in the Cloud project and reconnect Gmail in Settings. (You can still summarize from typed notes in the meantime.)'
             : e.message;
           return res.status(500).json({ error: hint });
         }
