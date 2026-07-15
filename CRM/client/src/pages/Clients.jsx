@@ -14,7 +14,7 @@ import {
   getClientPlatforms, createClientPlatform, updateClientPlatform, deleteClientPlatform,
   getClientTasks, createClientTask, updateClientTask, deleteClientTask,
   getClientCredentials, createClientCredential, updateClientCredential, deleteClientCredential,
-  getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity, generateClientSummary,
+  getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity, generateClientSummary, uploadFile,
   getProjects,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
@@ -690,14 +690,16 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
 }
 
 // ── Lead one-page view (business details + activity timeline) ───────────────
-const ACT_TYPES = [
-  { key: 'note',    label: 'Note',    icon: StickyNote },
-  { key: 'call',    label: 'Call',    icon: Phone },
-  { key: 'meeting', label: 'Meeting', icon: Calendar },
-  { key: 'email',   label: 'Email',   icon: Mail },
-  { key: 'task',    label: 'Task',    icon: CheckSquare },
+const ACT_CATS = [
+  { key: 'Call',    color: '#2563eb', icon: Phone },
+  { key: 'Meeting', color: '#7c3aed', icon: Calendar },
+  { key: 'Update',  color: '#16a34a', icon: StickyNote },
+  { key: 'Idea',    color: '#d97706', icon: Flag },
 ];
+const catOf = (k) => ACT_CATS.find(c => c.key === k);
 const isSummary = (a) => a.tag === 'Summary' || (a.body || '').startsWith('📝');
+const actDate = (iso) => { try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return ''; } };
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 const LEAD_STEPS = [
   { key: 'overview',  label: 'Overview',           blurb: 'Business details, activity, and AI summaries.' },
@@ -826,8 +828,13 @@ function LeadActivity({ client }) {
   const clientId = client.id;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [type, setType] = useState(null);        // null = not adding; else the type being added
-  const [draft, setDraft] = useState({});
+  const [adding, setAdding] = useState(false);
+  const [cat, setCat] = useState('Call');
+  const [body, setBody] = useState('');
+  const [date, setDate] = useState(todayStr());
+  const [file, setFile] = useState(null);        // { url, name } after upload
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [summaryPrompt, setSummaryPrompt] = useState(null); // { text, title }
   const [summarizing, setSummarizing] = useState(false);
   const [expanded, setExpanded] = useState({}); // activity id -> forced open/closed
@@ -839,24 +846,28 @@ function LeadActivity({ client }) {
   };
   useEffect(() => { load(); }, [clientId]);
 
-  const draftFor = (t) => t === 'call' ? { direction: 'outbound', outcome: 'Connected', body: '' }
-    : t === 'task' ? { title: '', priority: 'medium', assigned_to: 'Ray', due_date: '' }
-    : (t === 'meeting' || t === 'email') ? { title: '', body: '' }
-    : { tag: 'Important', body: '' };
-  const openAdd = (t = 'note') => { setType(t); setDraft(draftFor(t)); };
+  const resetForm = () => { setCat('Call'); setBody(''); setDate(todayStr()); setFile(null); };
+  const openAdd = () => { resetForm(); setAdding(true); };
+
+  const onPickFile = async (e) => {
+    const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+    setUploading(true);
+    try { const { url } = await uploadFile(f); setFile({ url, name: f.name }); }
+    catch (err) { toast('error', err.message || 'Upload failed'); }
+    finally { setUploading(false); }
+  };
 
   const save = async () => {
-    const ok = type === 'task' ? draft.title?.trim() : (draft.body?.trim() || draft.title?.trim());
-    if (!ok) return;
-    const src = [draft.title, draft.body].filter(Boolean).join('\n').trim();
-    const t = type;
+    if (!body.trim() && !file) return;
+    setSaving(true);
     try {
-      await createClientActivity({ client_id: clientId, type: t, ...draft, due_date: draft.due_date || null });
-      setType(null); setDraft({}); await load();
-      if (['note', 'call', 'meeting', 'email'].includes(t) && src.split(/\s+/).filter(Boolean).length >= 15) {
-        setSummaryPrompt({ text: src, title: draft.title || ACT_TYPES.find(x => x.key === t)?.label || 'Note' });
-      }
+      const created_at = new Date(`${date}T12:00:00`).toISOString();
+      await createClientActivity({ client_id: clientId, type: 'note', tag: cat, body: body.trim(), attachment_url: file?.url || null, attachment_name: file?.name || null, created_at });
+      const src = body.trim();
+      setAdding(false); resetForm(); await load();
+      if (src.split(/\s+/).filter(Boolean).length >= 15) setSummaryPrompt({ text: src, title: cat });
     } catch (e) { toast('error', e.message); }
+    finally { setSaving(false); }
   };
 
   const runSummary = async () => {
@@ -874,55 +885,49 @@ function LeadActivity({ client }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Activity</span>
-        {!type && <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={() => openAdd('note')}><Plus size={14} /> New</button>}
+        {!adding && <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={openAdd}><Plus size={14} /> New</button>}
       </div>
 
-      {type && (
-        <div style={{ padding: 16, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Type</span>
-            <select className="form-input" style={{ width: 'auto' }} value={type} onChange={e => openAdd(e.target.value)}>
-              {ACT_TYPES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-            </select>
+      {adding && (
+        <div style={{ padding: 16, background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Category */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {ACT_CATS.map(c => {
+              const on = cat === c.key;
+              return (
+                <button key={c.key} type="button" onClick={() => setCat(c.key)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${on ? c.color : 'var(--border)'}`, background: on ? c.color + '18' : 'var(--surface)', color: on ? c.color : 'var(--muted)' }}>
+                  <c.icon size={13} /> {c.key}
+                </button>
+              );
+            })}
           </div>
-          {type === 'note' && (
-            <>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {Object.keys(NOTE_TAGS).map(tg => (
-                  <button key={tg} type="button" onClick={() => setDraft(d => ({ ...d, tag: tg }))} style={{ padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${draft.tag === tg ? NOTE_TAGS[tg] : 'var(--border)'}`, background: draft.tag === tg ? NOTE_TAGS[tg] + '18' : 'var(--surface)', color: draft.tag === tg ? NOTE_TAGS[tg] : 'var(--muted)' }}>{tg}</button>
-                ))}
-              </div>
-              <textarea className="form-input" rows={3} autoFocus placeholder="Write a note…" value={draft.body || ''} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} style={{ resize: 'vertical' }} />
-            </>
-          )}
-          {type === 'call' && (
-            <>
-              <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <select className="form-input" value={draft.direction} onChange={e => setDraft(d => ({ ...d, direction: e.target.value }))}><option value="outbound">Outbound</option><option value="inbound">Inbound</option></select>
-                <select className="form-input" value={draft.outcome} onChange={e => setDraft(d => ({ ...d, outcome: e.target.value }))}>{CALL_OUTCOMES.map(o => <option key={o} value={o}>{o}</option>)}</select>
-              </div>
-              <textarea className="form-input" rows={3} autoFocus placeholder="Call notes…" value={draft.body || ''} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} style={{ resize: 'vertical' }} />
-            </>
-          )}
-          {(type === 'meeting' || type === 'email') && (
-            <>
-              <input className="form-input" autoFocus placeholder={type === 'email' ? 'Subject' : 'Meeting title'} value={draft.title || ''} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} />
-              <textarea className="form-input" rows={4} placeholder={type === 'email' ? 'Email content / notes…' : 'Meeting notes…'} value={draft.body || ''} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} style={{ resize: 'vertical' }} />
-            </>
-          )}
-          {type === 'task' && (
-            <>
-              <input className="form-input" autoFocus placeholder="Task title…" value={draft.title || ''} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} />
-              <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                <select className="form-input" value={draft.priority} onChange={e => setDraft(d => ({ ...d, priority: e.target.value }))}>{Object.keys(TASK_PRIORITY).map(p => <option key={p} value={p}>{p[0].toUpperCase() + p.slice(1)}</option>)}</select>
-                <input className="form-input" placeholder="Assignee" value={draft.assigned_to || ''} onChange={e => setDraft(d => ({ ...d, assigned_to: e.target.value }))} />
-                <input className="form-input" type="date" value={draft.due_date || ''} onChange={e => setDraft(d => ({ ...d, due_date: e.target.value }))} />
-              </div>
-            </>
-          )}
+          {/* Note */}
+          <textarea className="form-input" rows={3} autoFocus placeholder="What happened? Add details…" value={body} onChange={e => setBody(e.target.value)} style={{ resize: 'vertical' }} />
+          {/* Date + document */}
+          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Date</span>
+              <input className="form-input" type="date" value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Document</span>
+              {file ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                  <Download size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{file.name}</span>
+                  <button className="btn-ghost" style={{ padding: '2px 5px' }} onClick={() => setFile(null)}><X size={12} /></button>
+                </div>
+              ) : (
+                <label className="btn-ghost" style={{ cursor: uploading ? 'default' : 'pointer', width: '100%', justifyContent: 'center' }}>
+                  {uploading ? 'Uploading…' : <><Plus size={13} /> Upload document</>}
+                  <input type="file" hidden disabled={uploading} onChange={onPickFile} />
+                </label>
+              )}
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-primary" onClick={save}>Save</button>
-            <button className="btn-ghost" onClick={() => setType(null)}>Cancel</button>
+            <button className="btn-primary" onClick={save} disabled={saving || uploading}>{saving ? 'Saving…' : 'Save'}</button>
+            <button className="btn-ghost" onClick={() => setAdding(false)}>Cancel</button>
           </div>
         </div>
       )}
@@ -955,17 +960,19 @@ function LeadActivity({ client }) {
             </div>
           );
           const summary = isSummary(a);
-          const Icon = summary ? Sparkles : a.type === 'meeting' ? Calendar : a.type === 'email' ? Mail : StickyNote;
+          const c = catOf(a.tag);
+          const chipColor = summary ? 'var(--orange)' : (c?.color || NOTE_TAGS[a.tag] || 'var(--muted)');
+          const Icon = summary ? Sparkles : (c?.icon || (a.type === 'meeting' ? Calendar : a.type === 'email' ? Mail : StickyNote));
           // Long notes collapse by default; summaries always start expanded.
           const long = (a.body || '').length > 280;
           const open = expanded[a.id] ?? (summary || !long);
           return (
             <div key={a.id} style={{ padding: '14px 16px', background: summary ? 'rgba(37,99,235,0.05)' : 'var(--surface)', border: `1px solid ${summary ? 'rgba(37,99,235,0.3)' : 'var(--border)'}`, borderRadius: 12, boxShadow: 'var(--shadow-sm)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Icon size={14} style={{ color: summary ? 'var(--orange)' : 'var(--muted)', flexShrink: 0 }} />
-                {a.tag && <span style={{ fontSize: 10.5, fontWeight: 700, color: NOTE_TAGS[a.tag] || 'var(--orange)', background: (NOTE_TAGS[a.tag] || 'var(--orange)') + '18', border: `1px solid ${(NOTE_TAGS[a.tag] || 'var(--orange)')}40`, borderRadius: 999, padding: '2px 9px' }}>{a.tag}</span>}
+                <Icon size={14} style={{ color: chipColor, flexShrink: 0 }} />
+                {a.tag && <span style={{ fontSize: 10.5, fontWeight: 700, color: chipColor, background: chipColor === 'var(--muted)' ? 'var(--surface-2)' : chipColor + '18', border: `1px solid ${chipColor === 'var(--muted)' ? 'var(--border)' : chipColor + '40'}`, borderRadius: 999, padding: '2px 9px' }}>{a.tag}</span>}
                 {a.title && !summary && <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{a.title}</span>}
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{a.author || 'Ray'} · {actTimeAgo(a.created_at)}</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{actDate(a.created_at)} · {a.author || 'Ray'}</span>
                 {long && (
                   <button className="btn-ghost" style={{ padding: '3px 6px' }} title={open ? 'Collapse' : 'Expand'} onClick={() => setExpanded(e => ({ ...e, [a.id]: !open }))}>
                     <ChevronDown size={14} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
@@ -973,9 +980,14 @@ function LeadActivity({ client }) {
                 )}
                 <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
               </div>
-              <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5, ...(open ? {} : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>{a.body}</div>
+              {a.body && <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5, ...(open ? {} : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>{a.body}</div>}
               {long && !open && (
                 <button onClick={() => setExpanded(e => ({ ...e, [a.id]: true }))} style={{ marginTop: 6, background: 'none', border: 'none', color: 'var(--link)', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-display)' }}>Show more</button>
+              )}
+              {a.attachment_url && (
+                <a href={a.attachment_url} target="_blank" rel="noreferrer" style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--link)', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>
+                  <Download size={13} /> {a.attachment_name || 'Document'}
+                </a>
               )}
             </div>
           );
