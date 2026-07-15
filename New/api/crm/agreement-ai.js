@@ -1,7 +1,7 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-5';
 
 // VTM reference pricing so the AI can spot gaps (from the Partner Playbook).
 const PLAYBOOK = `VTM service lines & pricing (reference):

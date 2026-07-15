@@ -832,12 +832,7 @@ function TermsStep({ client, savedDraft, onApprove }) {
                   </div>
                 )}
               </div>
-              {docTab === 'agreement' && Array.isArray(draft.installments) && draft.installments.length > 0 && (
-                <div style={{ padding: '14px 18px 4px' }}>
-                  <PaymentRows payments={draft.installments.map((i, idx) => ({ id: 'd' + idx, amount: i.amount, due_condition: i.trigger, status: 'pending' }))} />
-                </div>
-              )}
-              <div style={{ padding: '10px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 520, overflow: 'auto' }}
+              <div style={{ padding: '14px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 560, overflow: 'auto' }}
                 dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? draft.nda_markdown : draft.agreement_markdown) }} />
             </div>
           ) : (
