@@ -124,7 +124,7 @@ Return ONLY JSON with this shape:
       // doc instead of rewriting it in a new style.
       if (base && base.agreement_markdown) {
         const system = `You revise an existing Service Agreement / Mutual NDA for Vernon Tech & Media. You are given the CURRENT documents and a change request. Apply ONLY the requested change. Preserve everything else EXACTLY — same headings, same section numbering and order, same wording, same bullet formatting, same "not legal advice" note. Do not re-style, re-order, re-title, or re-word any section the change does not touch. Never add signature blocks or date lines. If the change does not affect billing, keep total/installments/monthly identical to the current values.
-Return ONLY JSON with the FULL revised documents:
+Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON with the FULL revised documents:
 {
   "summary": "one line",
   "total": number,
@@ -151,7 +151,7 @@ CURRENT MUTUAL NDA (markdown):
       const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media (VTM) — Rayvaughn Vernon, dba Vernon Tech & Media, Katy, Texas, ray@vernontm.com. Governing law: Texas.
 Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law. Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. End with a one-line "not legal advice" note.
 Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance) — no refunds are issued. Section 9 Commitment: once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy). Note it is not legal advice.
-Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives) — never default the total to 0. Return ONLY JSON:
+Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives) — never default the total to 0. Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
 {
   "summary": "one line",
   "total": number,
