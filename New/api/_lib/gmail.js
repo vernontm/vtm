@@ -281,6 +281,29 @@ async function listLabels() {
   return (res.labels || []).filter(l => l.type === 'user');
 }
 
+// Gmail's built-in labels worth showing as pills (read-only) alongside user
+// labels. Maps the raw Gmail id -> a friendly display name + color.
+const SYSTEM_LABELS = {
+  IMPORTANT:           { name: 'Important',  color: '#d97706' },
+  STARRED:             { name: 'Starred',    color: '#eab308' },
+  CATEGORY_PROMOTIONS: { name: 'Promotions', color: '#16a34a' },
+  CATEGORY_SOCIAL:     { name: 'Social',     color: '#2563eb' },
+  CATEGORY_UPDATES:    { name: 'Updates',    color: '#0891b2' },
+  CATEGORY_FORUMS:     { name: 'Forums',     color: '#7c3aed' },
+  CATEGORY_PERSONAL:   { name: 'Personal',   color: '#6b7280' },
+};
+
+// User labels + the whitelisted built-in categories, for display on message
+// rows. System labels are flagged so the UI keeps them read-only.
+async function listDisplayLabels() {
+  const { accessToken } = await getGmailAuth();
+  const res = await gmailFetch('/labels', accessToken);
+  const all = res.labels || [];
+  const user = all.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, system: false }));
+  const system = all.filter(l => SYSTEM_LABELS[l.id]).map(l => ({ id: l.id, name: SYSTEM_LABELS[l.id].name, color: SYSTEM_LABELS[l.id].color, system: true }));
+  return [...system, ...user];
+}
+
 async function deleteLabel(labelId) {
   const { accessToken } = await getGmailAuth();
   await gmailFetch(`/labels/${labelId}`, accessToken, { method: 'DELETE' });
@@ -419,6 +442,6 @@ async function disconnectGmail() {
 module.exports = {
   getAuthUrl, exchangeCode, getGmailAuth, getSetting, setSetting,
   sendEmail, createDraft, getInboxThreads, getGmailStatus, disconnectGmail,
-  getOrCreateLabel, listLabels, deleteLabel, modifyMessageLabels,
+  getOrCreateLabel, listLabels, listDisplayLabels, deleteLabel, modifyMessageLabels,
   GOOGLE_REDIRECT_URI,
 };

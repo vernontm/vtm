@@ -1,5 +1,5 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
-import { getGmailAuth, getOrCreateLabel, listLabels, deleteLabel, modifyMessageLabels } from '../_lib/gmail.js';
+import { getGmailAuth, getOrCreateLabel, listLabels, listDisplayLabels, deleteLabel, modifyMessageLabels } from '../_lib/gmail.js';
 
 // Real Gmail label sync. Custom labels created here are created in Gmail
 // itself (not a CRM-only concept), and this always reads the live Gmail
@@ -16,14 +16,14 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const [gmailLabels, colorDefs] = await Promise.all([
-        listLabels(),
+        listDisplayLabels(),
         supaFetch('crm_label_defs?select=gmail_label_id,color').catch(() => []),
       ]);
       const colorMap = {};
       (colorDefs || []).forEach(d => { if (d.gmail_label_id) colorMap[d.gmail_label_id] = d.color; });
       const labels = gmailLabels
-        .map(l => ({ id: l.id, name: l.name, color: colorMap[l.id] || '#4a6cf7' }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .map(l => ({ id: l.id, name: l.name, system: !!l.system, color: colorMap[l.id] || l.color || '#4a6cf7' }))
+        .sort((a, b) => (a.system === b.system ? a.name.localeCompare(b.name) : (a.system ? 1 : -1)));
       return res.json(labels);
     }
 

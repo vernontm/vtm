@@ -748,7 +748,7 @@ export default function EmailPage() {
             </div>
           )}
           <div style={{ display:'flex', flexDirection:'column', gap:2, maxHeight:120, overflow:'auto' }}>
-            {customLabels.map(l => {
+            {customLabels.filter(l => !l.system).map(l => {
               const hasSelection = selectedIds.size > 0;
               const applied = !hasSelection && selected && asArray(selected.labelIds).includes(l.id);
               const clickable = hasSelection || !!selected;
@@ -945,9 +945,9 @@ export default function EmailPage() {
                   </button>
                   {labelMenuOpen && (
                     <div onMouseDown={e => e.preventDefault()} style={{ position:'absolute', top:'calc(100% + 4px)', left:0, zIndex:40, background:'var(--surface)', border:'1px solid var(--border-light)', borderRadius:10, boxShadow:'var(--shadow-lg)', minWidth:180, padding:5, maxHeight:260, overflow:'auto' }}>
-                      {customLabels.length === 0 ? (
+                      {customLabels.filter(l => !l.system).length === 0 ? (
                         <div style={{ fontSize:12, color:'var(--muted)', padding:'8px 10px' }}>No labels yet — create one in the sidebar.</div>
-                      ) : customLabels.map(l => (
+                      ) : customLabels.filter(l => !l.system).map(l => (
                         <button key={l.id} onClick={() => { setLabelMenuOpen(false); applyLabelToSelected(l); }}
                           style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'8px 10px', borderRadius:6, border:'none', background:'transparent', color:'var(--text)', cursor:'pointer', fontSize:12.5, textAlign:'left' }}
                           onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
