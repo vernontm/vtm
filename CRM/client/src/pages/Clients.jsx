@@ -1019,11 +1019,120 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
   );
 }
 
+// Step 3 — Agreement: persist the approved terms into a real agreement doc,
+// preview it exactly as the client will see it (gate), then approve to lock.
+function AgreementStep({ client, termsDraft, onApproved }) {
+  const [loading, setLoading] = useState(true);
+  const [ag, setAg] = useState(null);       // persisted agreement row (or {id})
+  const [previewed, setPreviewed] = useState(false);
+  const [docTab, setDocTab] = useState('agreement');
+  const [busy, setBusy] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const d = await getAgreements(client.id);
+        if (d.agreements && d.agreements.length) { setAg(d.agreements[0]); }
+      } catch (e) { /* none yet */ }
+      finally { setLoading(false); }
+    })();
+  }, [client.id]);
+
+  // The document we render: an existing agreement's terms, else the fresh terms draft.
+  const doc = ag?.terms || termsDraft || {};
+
+  const ensureAgreement = async () => {
+    if (ag?.id) return ag;
+    if (!termsDraft) { toast('error', 'Approve the terms first (Terms step).'); return null; }
+    const r = await approveAgreement(client.id, termsDraft);
+    const d = await getAgreements(client.id);
+    const row = (d.agreements || []).find(x => x.id === r.agreement_id) || (d.agreements || [])[0];
+    setAg(row);
+    return row;
+  };
+
+  const onPreview = async () => {
+    setBusy('preview');
+    try {
+      const row = await ensureAgreement();
+      if (!row) return;
+      const { token } = await previewAgreementToken(row.id);
+      window.open(`/sign?token=${token}&preview=1`, '_blank');
+      setPreviewed(true);
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  const onApprove = async () => {
+    setBusy('approve');
+    try {
+      const row = await ensureAgreement();
+      if (!row) return;
+      toast('success', 'Agreement approved.');
+      onApproved(row.id);
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
+
+  if (!termsDraft && !ag) {
+    return (
+      <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', color: 'var(--muted)' }}>
+        <FileSignature size={28} style={{ opacity: 0.4 }} />
+        <div style={{ marginTop: 12, fontSize: 14 }}>Approve the terms first — head back to the <strong>Terms</strong> step.</div>
+      </div>
+    );
+  }
+
+  const alreadyApproved = ag && (ag.status === 'approved' || ag.status === 'sent' || ag.status === 'signed');
+  const canApprove = previewed || alreadyApproved;
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Review the agreement</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>This is the document {client.business_name || 'the client'} will sign. Preview it in the signing view, then approve.</div>
+        </div>
+        {alreadyApproved && (
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: '#16a34a', background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)', padding: '4px 12px', borderRadius: 999, textTransform: 'capitalize' }}>{ag.status}</span>
+        )}
+      </div>
+
+      <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Service Agreement · total {money(doc.total || ag?.total_amount)}</div>
+          {doc.nda_markdown && (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'agreement' ? 800 : 500 }} onClick={() => setDocTab('agreement')}>Agreement</button>
+              <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'nda' ? 800 : 500 }} onClick={() => setDocTab('nda')}>NDA</button>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '14px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 540, overflow: 'auto' }}
+          dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? doc.nda_markdown : doc.agreement_markdown) }} />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+        <button className="btn-ghost" disabled={busy === 'preview'} onClick={onPreview}>
+          <Eye size={15} /> {busy === 'preview' ? 'Opening…' : previewed ? 'Preview again' : 'Preview in signing view'}
+        </button>
+        <button className="btn-primary" disabled={!canApprove || busy === 'approve'} onClick={onApprove} title={canApprove ? '' : 'Preview the signing view first'}>
+          <CheckCircle2 size={15} /> {busy === 'approve' ? 'Approving…' : 'Approve & continue'}
+        </button>
+        {!canApprove && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Preview the signing view to unlock approve.</span>}
+      </div>
+    </div>
+  );
+}
+
 function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [step, setStep] = useState(0);
   const [view, setView] = useState('pipeline'); // 'pipeline' | 'details'
   const [termsDraft, setTermsDraft] = useState(null);
   const [dealId, setDealId] = useState(null);
+  const [agreementId, setAgreementId] = useState(null);
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
@@ -1114,6 +1223,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <TermsStep client={client} savedDraft={termsDraft} onApprove={(d) => { setTermsDraft(d); setStep(2); }} />
         ) : cur.key === 'deals' ? (
           <DealsStep client={client} termsDraft={termsDraft} savedDealId={dealId} onCreated={(id) => { setDealId(id); setStep(3); }} />
+        ) : cur.key === 'agreement' ? (
+          <AgreementStep client={client} termsDraft={termsDraft} onApproved={(id) => { setAgreementId(id); setStep(4); }} />
         ) : (
           <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>
