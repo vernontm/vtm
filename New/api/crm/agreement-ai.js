@@ -161,7 +161,7 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
   "agreement_markdown": "full service agreement in markdown",
   "nda_markdown": "full mutual NDA in markdown"
 }`;
-      const user = `Draft the agreement using these billing terms from Ray:\n"""${(terms || '').toString().slice(0, 4000)}"""\n\n${contextBlock(client, projects)}`;
+      const user = `Draft the agreement using these billing terms from Ray:\n"""${(terms || '').toString().slice(0, 4000)}"""\n\n${contextBlock(client, projects, activity)}`;
       const out = await callClaude(system, user, 8192);
       return res.json(parseJson(out));
     }
