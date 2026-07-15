@@ -47,13 +47,14 @@ module.exports = async function handler(req, res) {
     // that holds the offered plans. The client picks one in the portal, which
     // then builds the real schedule + finalizes the document to sign.
     if (req.method === 'POST' && action === 'custom-setup') {
-      const { client_id, total, maintenance, plan_options, agreement_markdown, nda_markdown } = req.body || {};
+      const { client_id, total, maintenance, plan_options, agreement_markdown, nda_markdown, recap } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
       const existing = await supaFetch(`crm_agreements?client_id=eq.${client_id}&order=created_at.desc&limit=1&select=id,terms`);
       const row = existing && existing[0];
       const terms = {
         ...(row?.terms || {}),
         maintenance: Number(maintenance) || 0,
+        recap: recap || (row?.terms?.recap) || '',
         agreement_markdown: agreement_markdown || (row?.terms?.agreement_markdown) || '',
         nda_markdown: nda_markdown || (row?.terms?.nda_markdown) || '',
       };

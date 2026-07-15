@@ -163,7 +163,12 @@
 
     function renderPlanChooser(){
       const plans=data.plan_options||[], maint=Number(data.maintenance)||0;
-      let h='<div class="lead"><h1>Choose your payment plan</h1><p>Pick the option that works best for you — you\'ll review and sign your agreement next.</p></div><div class="plans">';
+      let h='<div class="lead"><h1>Your project with Vernon Tech &amp; Media</h1><p>Here\'s what\'s included, then choose the payment plan that works best for you and sign.</p></div>';
+      // Recap callout (highlights any no-cost bonus).
+      if(data.recap){ h+='<div style="background:#eef3ff;border:1px solid #cfe0ff;border-radius:12px;padding:16px 18px;margin-bottom:18px;color:#1a2b4a;font-size:14.5px;line-height:1.55">'+esc(data.recap)+'</div>'; }
+      // What's included — the agreement scope (schedule shown as "choose below").
+      if(data.agreement_markdown){ h+='<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px">What\'s included</div><div class="paper" style="margin-bottom:26px">'+mdToHtml(data.agreement_markdown)+'</div>'; }
+      h+='<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px">Choose your payment plan</div><div class="plans">';
       plans.forEach(p=>{
         const rest=(p.installments||[]).length ? ('then '+(p.installments.length===1 ? money(p.installments[0].amount) : (p.installments.length+' × '+money(p.installments[0].amount)))) : 'paid in full today';
         h+='<div class="planc"><div class="planhd"><div><div class="plname">'+esc(p.label)+'</div><div class="plsum">'+esc(p.summary||'')+'</div></div>'

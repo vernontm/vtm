@@ -252,13 +252,17 @@ module.exports = async function handler(req, res) {
       if (req.query.preview !== '1' && ag.sent_at && !ag.opened_at) {
         await supaFetch(`crm_agreements?id=eq.${ag.id}`, { method: 'PATCH', body: JSON.stringify({ opened_at: new Date().toISOString() }) }).catch(() => {});
       }
-      // Custom plan not chosen yet → the page shows the plan chooser first.
+      // Custom plan not chosen yet → the page shows a recap + the plan chooser.
       if (ag.payment_mode === 'custom' && !ag.selected_plan) {
+        // Strip the schedule placeholder from the recap-facing agreement text.
+        const scope = (terms.agreement_markdown || '').replace('{{PAYMENT_SCHEDULE}}', '_(you choose your plan below)_');
         return res.json({
           status: ag.signed_at ? 'signed' : 'sent',
           needs_plan: true,
           plan_options: ag.plan_options || [],
           maintenance: Number(terms.maintenance) || 0,
+          recap: terms.recap || '',
+          agreement_markdown: scope,
           business_name: client.business_name,
           owner_name: client.owner_name,
         });
