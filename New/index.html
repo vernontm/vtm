@@ -2,6 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>
+      // Supabase recovery/magic-link redirects can fall back to the Site URL
+      // (this home page) when the portal path isn't in the allowed list. If we
+      // land here with an auth token in the hash, forward it to the client
+      // portal (preserving the hash) so the set-password flow can run.
+      (function () {
+        try {
+          var h = window.location.hash || '';
+          if (h.indexOf('access_token=') !== -1 && /type=(recovery|magiclink|signup|invite)/.test(h)) {
+            window.location.replace('/client' + h);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>vernontm. - Build & Automate Without Limits</title>
