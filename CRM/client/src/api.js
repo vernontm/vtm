@@ -404,6 +404,7 @@ export const updatePayment       = (id, status) => request(`/agreements?id=${id}
 export const analyzeDeal      = (client_id)        => request('/agreement-ai?action=analyze', { method: 'POST', body: JSON.stringify({ client_id }) });
 export const generateAgreement = (client_id, terms, base) => request('/agreement-ai?action=generate', { method: 'POST', body: JSON.stringify({ client_id, terms, base }) });
 export const suggestProjects   = (client_id) => request('/agreement-ai?action=suggest-projects', { method: 'POST', body: JSON.stringify({ client_id }) });
+export const generateAccessInstructions = (title, notes) => request('/agreement-ai?action=access-instructions', { method: 'POST', body: JSON.stringify({ title, notes }) });
 export const approveAgreement  = (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) });
 
 // Content Clients

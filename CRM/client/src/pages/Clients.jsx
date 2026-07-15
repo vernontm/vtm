@@ -18,7 +18,7 @@ import {
   getProjects, createProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, suggestProjects, approveAgreement, approveAgreementRow, previewAgreementToken,
+  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, approveAgreement, approveAgreementRow, previewAgreementToken,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -1257,7 +1257,11 @@ const ACCESS_SEED = [
 function AccessStep({ client, onDone }) {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
-  const [open, setOpen] = useState(null);
+  const [edit, setEdit] = useState(null);   // { id, title, description } currently being edited
+  const [editBusy, setEditBusy] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ title: '', description: '' });
+  const [addBusy, setAddBusy] = useState('');
 
   const load = async () => {
     try {
@@ -1277,12 +1281,44 @@ function AccessStep({ client, onDone }) {
     setItems(xs => xs.map(x => x.id === t.id ? { ...x, status } : x));
     try { await updateClientTask(t.id, { status }); } catch (e) { toast('error', e.message); }
   };
-  const remove = async (t) => { setItems(xs => xs.filter(x => x.id !== t.id)); try { await deleteClientTask(t.id); } catch (e) { toast('error', e.message); } };
-  const addCustom = async () => {
-    const title = prompt('What access do you need? (e.g. "Instagram login")');
-    if (!title || !title.trim()) return;
-    try { const t = await createClientTask({ client_id: client.id, category: 'access', title: title.trim(), status: 'todo', assigned_to: 'Client' }); setItems(xs => [...xs, t]); }
+  const remove = async (t) => { setItems(xs => xs.filter(x => x.id !== t.id)); if (edit?.id === t.id) setEdit(null); try { await deleteClientTask(t.id); } catch (e) { toast('error', e.message); } };
+
+  // Regenerate the instructions for the item being edited — the AI picks up
+  // whatever Ray has typed in the box and rewrites from it.
+  const regen = async () => {
+    if (!edit) return;
+    setEditBusy('regen');
+    try {
+      const r = await generateAccessInstructions(edit.title, edit.description);
+      setEdit(e => ({ ...e, description: r.description || e.description }));
+    } catch (e) { toast('error', e.message); }
+    finally { setEditBusy(''); }
+  };
+  const saveEdit = async () => {
+    if (!edit) return;
+    setEditBusy('save');
+    try {
+      await updateClientTask(edit.id, { title: edit.title.trim() || 'Access item', description: edit.description });
+      setItems(xs => xs.map(x => x.id === edit.id ? { ...x, title: edit.title.trim() || x.title, description: edit.description } : x));
+      setEdit(null);
+    } catch (e) { toast('error', e.message); }
+    finally { setEditBusy(''); }
+  };
+
+  const genForDraft = async () => {
+    if (!draft.title.trim()) { toast('error', 'Enter what you need access to first.'); return; }
+    setAddBusy('gen');
+    try { const r = await generateAccessInstructions(draft.title, draft.description); setDraft(d => ({ ...d, description: r.description || d.description })); }
     catch (e) { toast('error', e.message); }
+    finally { setAddBusy(''); }
+  };
+  const addItem = async () => {
+    if (!draft.title.trim()) { toast('error', 'Enter what you need access to.'); return; }
+    try {
+      const t = await createClientTask({ client_id: client.id, category: 'access', title: draft.title.trim(), description: draft.description || null, status: 'todo', assigned_to: 'Client' });
+      setItems(xs => [...xs, t]);
+      setAdding(false); setDraft({ title: '', description: '' });
+    } catch (e) { toast('error', e.message); }
   };
 
   const copyRequest = () => {
@@ -1309,31 +1345,62 @@ function AccessStep({ client, onDone }) {
       <button className="btn-ghost" style={{ marginBottom: 12 }} onClick={copyRequest}><Copy size={14} /> Copy access request for client</button>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {items.map(t => (
-          <div key={t.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+        {items.map(t => {
+          const editing = edit?.id === t.id;
+          return (
+          <div key={t.id} style={{ background: 'var(--surface)', border: `1px solid ${editing ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 10, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
               <button onClick={() => toggle(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: t.status === 'done' ? '#16a34a' : 'var(--muted)' }}>
                 {t.status === 'done' ? <CheckCircle2 size={18} /> : <Circle size={18} />}
               </button>
-              <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: 'var(--text)', textDecoration: t.status === 'done' ? 'line-through' : 'none', opacity: t.status === 'done' ? 0.6 : 1 }}>{t.title}</span>
-              {t.description && <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setOpen(open === t.id ? null : t.id)}>{open === t.id ? 'Hide' : 'Instructions'}</button>}
+              <button onClick={() => editing ? setEdit(null) : setEdit({ id: t.id, title: t.title, description: t.description || '' })}
+                style={{ flex: 1, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: 'var(--text)', textDecoration: t.status === 'done' ? 'line-through' : 'none', opacity: t.status === 'done' ? 0.6 : 1 }} title="Click to edit">
+                {t.title}
+              </button>
+              <button className="btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => editing ? setEdit(null) : setEdit({ id: t.id, title: t.title, description: t.description || '' })}>
+                <Pencil size={13} /> {editing ? 'Close' : 'Edit'}
+              </button>
               <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => remove(t)} title="Remove"><X size={14} /></button>
             </div>
-            {open === t.id && t.description && (
-              <div style={{ padding: '0 14px 12px 42px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <span style={{ flex: 1 }}>{t.description}</span>
-                <button className="btn-ghost" style={{ padding: '3px 8px', fontSize: 11.5, flexShrink: 0 }} onClick={() => navigator.clipboard?.writeText(t.description).then(() => toast('success', 'Copied'))}>Copy</button>
+
+            {editing ? (
+              <div style={{ padding: '0 14px 14px 42px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input className="form-input" value={edit.title} onChange={e => setEdit(x => ({ ...x, title: e.target.value }))} placeholder="What access is needed" />
+                <textarea className="form-input" rows={4} value={edit.description} onChange={e => setEdit(x => ({ ...x, description: e.target.value }))} placeholder="Instructions for the client (edit, then Regenerate to have AI polish it)" style={{ resize: 'vertical', fontSize: 12.5, lineHeight: 1.6 }} />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn-ghost" disabled={editBusy === 'regen'} onClick={regen}><Sparkles size={14} /> {editBusy === 'regen' ? 'Regenerating…' : 'Regenerate'}</button>
+                  <button className="btn-primary" disabled={editBusy === 'save'} onClick={saveEdit}>{editBusy === 'save' ? 'Saving…' : 'Save'}</button>
+                  <button className="btn-ghost" onClick={() => setEdit(null)}>Cancel</button>
+                  {edit.description && <button className="btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => navigator.clipboard?.writeText(edit.description).then(() => toast('success', 'Copied'))}><Copy size={13} /> Copy</button>}
+                </div>
               </div>
-            )}
+            ) : t.description ? (
+              <div style={{ padding: '0 14px 12px 42px', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>{t.description}</div>
+            ) : null}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button className="btn-ghost" onClick={addCustom}><Plus size={14} /> Add access item</button>
+        <button className="btn-ghost" onClick={() => { setDraft({ title: '', description: '' }); setAdding(true); }}><Plus size={14} /> Add access item</button>
       </div>
 
       <button className="btn-primary" style={{ marginTop: 18 }} onClick={onDone}>Continue <ChevronRight size={15} /></button>
+
+      {adding && (
+        <Modal title="Add access item" onClose={() => setAdding(false)} onSubmit={addItem} submitLabel="Add item" disabled={!draft.title.trim()}>
+          <div className="form-group">
+            <label className="form-label">What do you need access to?</label>
+            <input className="form-input" autoFocus value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} placeholder='e.g. "Instagram login"' />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Instructions for the client (optional)</label>
+            <textarea className="form-input" rows={4} value={draft.description} onChange={e => setDraft(d => ({ ...d, description: e.target.value }))} placeholder="Write it yourself, or let AI draft it from the name above." style={{ resize: 'vertical', fontSize: 12.5, lineHeight: 1.6 }} />
+          </div>
+          <button type="button" className="btn-ghost" disabled={addBusy === 'gen'} onClick={genForDraft}><Sparkles size={14} /> {addBusy === 'gen' ? 'Drafting…' : 'Generate instructions with AI'}</button>
+        </Modal>
+      )}
     </div>
   );
 }

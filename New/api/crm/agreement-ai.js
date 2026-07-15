@@ -140,6 +140,16 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
       return res.json(parseJson(out));
     }
 
+    // ── access-instructions: write/refine client-facing access instructions ──
+    if (req.method === 'POST' && action === 'access-instructions') {
+      const { title, notes } = req.body || {};
+      if (!title) return res.status(400).json({ error: 'title required' });
+      const system = `You write concise, client-facing instructions for granting Vernon Tech & Media (VTM) access to a specific platform or tool. The invite/admin email to use is ray@vernontm.com. Rules: 2–4 sentences, concrete (name the actual menu path where you can, e.g. "Settings → Team → Invite"), friendly and plain, no fluff or preamble. If Ray provides notes or an edited draft, follow them and incorporate what he wrote. Return ONLY JSON: { "description": string }`;
+      const user = `Platform / tool: ${title}\n\nRay's notes or edited draft to incorporate (may be blank):\n"""${(notes || '').toString().slice(0, 2000)}"""`;
+      const out = await callClaude(system, user, 700);
+      return res.json(parseJson(out));
+    }
+
     // ── suggest-projects: turn the agreement into billable project line items ──
     if (req.method === 'POST' && action === 'suggest-projects') {
       const { client_id } = req.body || {};
