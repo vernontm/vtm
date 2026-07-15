@@ -88,6 +88,8 @@
     { "source": "/meetup", "destination": "/meetup.html" },
     { "source": "/workshop", "destination": "/workshop.html" },
     { "source": "/workshop-admin", "destination": "/workshop-admin.html" },
+    { "source": "/workshop-slides", "destination": "/workshop-slides.html" },
+    { "source": "/present", "destination": "/workshop-slides.html" },
     { "source": "/in-person", "destination": "/meetup.html" },
     { "source": "/portal", "destination": "/portal.html" },
     { "source": "/sign", "destination": "/sign.html" },
