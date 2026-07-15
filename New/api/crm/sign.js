@@ -116,10 +116,8 @@ async function setupPlanSubscription(ag, client, session) {
   const co = client.business_name || 'Client';
   const phases = [];
   if (buildAmt && buildCount) phases.push({ items: [{ price: await mkPrice(buildAmt, `${co} — build plan`), quantity: 1 }], iterations: buildCount });
-  if (maint) {
-    phases.push({ items: [{ price: await mkPrice(0, `${co} — maintenance (waived)`), quantity: 1 }], iterations: 1 }); // free gap month
-    phases.push({ items: [{ price: await mkPrice(maint, `${co} — maintenance`), quantity: 1 }] });                    // ongoing
-  }
+  // Maintenance begins right after the build installments finish (no gap month).
+  if (maint) phases.push({ items: [{ price: await mkPrice(maint, `${co} — maintenance`), quantity: 1 }] });
   if (!phases.length) return null;
 
   const startTs = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // first build charge ~1 month after the deposit
