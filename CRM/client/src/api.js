@@ -408,6 +408,7 @@ export const generateAccessInstructions = (title, notes) => request('/agreement-
 export const draftClientEmail = (client_id, tone, portal_url, sign_url) => request('/agreement-ai?action=client-email', { method: 'POST', body: JSON.stringify({ client_id, tone, portal_url, sign_url }) });
 export const sendClientEmail  = (payload) => request('/client-email', { method: 'POST', body: JSON.stringify(payload) });
 export const setAgreementPlans = (id, plan_options) => request(`/agreements?id=${id}&action=set-plans`, { method: 'POST', body: JSON.stringify({ plan_options }) });
+export const setupCustomAgreement = (client_id, data) => request(`/agreements?action=custom-setup`, { method: 'POST', body: JSON.stringify({ client_id, ...data }) });
 export const approveAgreement  = (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) });
 
 // Content Clients

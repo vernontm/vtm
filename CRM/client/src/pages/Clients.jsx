@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Plus, Search, Trash2, ArrowLeft, Building2, Calendar,
@@ -18,7 +18,7 @@ import {
   getProjects, createProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken,
+  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -712,6 +712,24 @@ const LEAD_STEPS = [
   { key: 'send',      label: 'Send',               blurb: 'Send the agreement to sign and the proposal email, then track it.' },
 ];
 
+// In custom-payment-plan mode the client picks a plan (and signs) in their
+// portal, so the admin pipeline skips the fixed Agreement + Payment steps.
+function stepsFor(mode) {
+  return mode === 'custom' ? LEAD_STEPS.filter(s => s.key !== 'agreement' && s.key !== 'payment') : LEAD_STEPS;
+}
+
+// Register a step's primary action into the pipeline's sticky footer button, so
+// approving the step and advancing are one click. onClick is kept in a ref so the
+// footer object stays stable (only re-set when label/disabled/busy change).
+function useStepFooter(setFooter, { label, disabled, busy, onClick }) {
+  const ref = useRef(onClick);
+  ref.current = onClick;
+  useEffect(() => {
+    setFooter({ label, disabled: !!disabled, busy: !!busy, onClick: () => ref.current && ref.current() });
+    return () => setFooter(null);
+  }, [label, disabled, busy, setFooter]);
+}
+
 // Lightweight markdown → styled document HTML (headings, bold, bullets, rules).
 function mdToDocHtml(md) {
   if (!md) return '';
@@ -742,17 +760,22 @@ function mdToDocHtml(md) {
   return html;
 }
 
-// Step 1 — Terms: pull AI-proposed terms into an editable preview, let Ray type
-// changes / additions, regenerate, then approve to lock them in for the pipeline.
-function TermsStep({ client, savedDraft, onApprove }) {
+// Step 1 — Terms: structure the agreement. Two modes:
+//  • Fixed — AI drafts the real contract from the notes; Ray edits/approves it.
+//  • Custom payment plan — Ray sets the deal value + which plans to offer; the
+//    client picks one (and signs) in their portal, so no fixed contract here.
+function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setPaymentMode }) {
   const [loading, setLoading] = useState(true);
-  const [existing, setExisting] = useState(null); // an already-approved/sent agreement, if any
   const [analysis, setAnalysis] = useState(null);
   const [terms, setTerms] = useState('');
   const [changes, setChanges] = useState('');
   const [draft, setDraft] = useState(savedDraft || null);
   const [docTab, setDocTab] = useState('agreement');
   const [busy, setBusy] = useState('');
+  // Custom-plan state
+  const allow = paymentMode === 'custom';
+  const [total, setTotal] = useState('');
+  const [offered, setOffered] = useState(null); // { planKey: bool }
 
   useEffect(() => {
     (async () => {
@@ -760,8 +783,13 @@ function TermsStep({ client, savedDraft, onApprove }) {
         const d = await getAgreements(client.id);
         const ag = (d.agreements || [])[0];
         if (ag) {
-          setExisting(ag);
-          if (!savedDraft && ag.terms) {
+          if (ag.payment_mode === 'custom') {
+            setPaymentMode('custom');
+            if (ag.total_amount) setTotal(String(ag.total_amount));
+            if (Array.isArray(ag.plan_options) && ag.plan_options.length) {
+              setOffered(Object.fromEntries(computePlans(ag.total_amount).map(p => [p.key, ag.plan_options.some(o => o.key === p.key)])));
+            }
+          } else if (!savedDraft && ag.terms) {
             setDraft({
               total: ag.total_amount,
               installments: (d.payments || []).filter(p => p.kind !== 'recurring').map(p => ({ amount: p.amount, trigger: p.due_condition })),
@@ -776,11 +804,19 @@ function TermsStep({ client, savedDraft, onApprove }) {
     })();
   }, [client.id]);
 
+  // Default all plans "on" once a value is present in custom mode.
+  useEffect(() => {
+    if (allow && Number(total) > 0 && !offered) {
+      setOffered(Object.fromEntries(computePlans(Number(total)).map(p => [p.key, true])));
+    }
+  }, [allow, total]);
+
   const runAnalyze = async () => {
     setBusy('analyze');
     try {
       const a = await analyzeDeal(client.id);
       setAnalysis(a);
+      if (a.suggested_total && !total) setTotal(String(a.suggested_total));
       const seed = (a.suggested_installments || []).map(i => `- ${money(i.amount)} ${i.trigger ? '(' + i.trigger + ')' : ''}`).join('\n');
       const monthly = (a.suggested_monthly || []).map(m => `- ${money(m.amount)}/mo ${m.item}`).join('\n');
       setTerms(`${a.suggested_structure || ''}\n\nInstallments:\n${seed}${monthly ? '\n\nMonthly:\n' + monthly : ''}`.trim());
@@ -793,7 +829,6 @@ function TermsStep({ client, savedDraft, onApprove }) {
     try {
       let d;
       if (withChanges && draft && changes.trim()) {
-        // Revise the existing document: apply only this change, keep its format.
         d = await generateAgreement(client.id, changes.trim(), {
           agreement_markdown: draft.agreement_markdown, nda_markdown: draft.nda_markdown,
           total: draft.total, installments: draft.installments, monthly: draft.monthly,
@@ -809,93 +844,160 @@ function TermsStep({ client, savedDraft, onApprove }) {
     finally { setBusy(''); }
   };
 
+  const approveFixed = () => { onApprove(draft); toast('success', 'Terms approved — on to Deals & Projects.'); };
+  const approveCustom = async () => {
+    setBusy('approve');
+    try {
+      const plans = computePlans(Number(total)).filter(p => offered?.[p.key]);
+      await setupCustomAgreement(client.id, { total: Number(total), plan_options: plans });
+      onApprove({ total: Number(total), custom: true });
+      toast('success', 'Payment-plan options saved — the client picks one in their portal.');
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  const offeredCount = offered ? Object.values(offered).filter(Boolean).length : 0;
+  const canApprove = allow ? (Number(total) > 0 && offeredCount > 0) : !!draft;
+  useStepFooter(setFooter, {
+    label: busy === 'approve' ? 'Approving…' : 'Approve',
+    disabled: !canApprove || busy === 'approve',
+    busy: busy === 'approve',
+    onClick: allow ? approveCustom : approveFixed,
+  });
+
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading terms…</div>;
+
+  const plans = allow && Number(total) > 0 ? computePlans(Number(total)) : [];
+  const maint = (draft?.monthly || [])[0];
 
   return (
     <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Review the terms</div>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>AI proposes the billing from this client's notes and projects. Edit freely, request changes, then approve to lock it in.</div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Structure the terms</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Priced from this client's notes. Choose whether to let them pick a payment plan, then approve.</div>
       </div>
 
-      {existing && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 16, background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.28)', borderRadius: 10 }}>
-          <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
-          <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
-            An agreement already exists for this client — <strong>{money(existing.total_amount)}</strong>, <span style={{ textTransform: 'capitalize' }}>{existing.status}</span>. The current terms are shown below. Regenerate to change them, or approve to continue.
-          </div>
+      {/* Payment-plan toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', marginBottom: 16, background: allow ? 'rgba(37,99,235,0.06)' : 'var(--surface)', border: `1px solid ${allow ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 10 }}>
+        <button onClick={() => setPaymentMode(allow ? 'fixed' : 'custom')} title="Toggle payment-plan mode"
+          style={{ width: 40, height: 22, borderRadius: 999, border: 'none', cursor: 'pointer', background: allow ? 'var(--orange)' : 'var(--border)', position: 'relative', flexShrink: 0 }}>
+          <span style={{ position: 'absolute', top: 2, left: allow ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Allow the client to choose a payment plan</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{allow ? 'They pick from the plans you offer, then sign in their portal. Agreement + Stripe steps move to the portal.' : 'Off — you set a fixed contract here, review it, and send it to sign.'}</div>
         </div>
-      )}
+      </div>
 
-      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: draft ? 'minmax(0,1fr) 340px' : '1fr', gap: 20, alignItems: 'start' }}>
-        {/* Left: preview (or seed if nothing yet) */}
-        <div>
-          {draft ? (
-            <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Proposed agreement · total {money(draft.total)}</div>
-                {draft.nda_markdown && (
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'agreement' ? 800 : 500 }} onClick={() => setDocTab('agreement')}>Agreement</button>
-                    <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'nda' ? 800 : 500 }} onClick={() => setDocTab('nda')}>NDA</button>
-                  </div>
-                )}
+      {allow ? (
+        /* ── Custom payment-plan mode ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0,1fr)', gap: 16, alignItems: 'end' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Build value ($)</label>
+              <input className="form-input" type="number" min="0" step="100" value={total} onChange={e => { setTotal(e.target.value); setOffered(null); }} placeholder="e.g. 5000" />
+            </div>
+            <button className="btn-ghost" style={{ justifySelf: 'start' }} disabled={busy === 'analyze'} onClick={runAnalyze}>
+              <Sparkles size={14} /> {busy === 'analyze' ? 'Estimating…' : 'Estimate from notes'}
+            </button>
+          </div>
+
+          {plans.length > 0 ? (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Plans to offer the client</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {plans.map(p => {
+                  const on = !!offered?.[p.key];
+                  return (
+                    <div key={p.key} onClick={() => setOffered(o => ({ ...o, [p.key]: !o?.[p.key] }))}
+                      style={{ cursor: 'pointer', background: 'var(--surface)', border: `1px solid ${on ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 12, padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {on ? <CheckCircle2 size={18} style={{ color: 'var(--orange)' }} /> : <Circle size={18} style={{ color: 'var(--muted)' }} />}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{p.label}</div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{p.summary}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{money(p.deposit)} <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 12 }}>today</span></div>
+                          {p.installments.length > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>then {p.installments.length === 1 ? money(p.installments[0].amount) : `${p.installments.length} × ${money(p.installments[0].amount)}`}</div>}
+                        </div>
+                      </div>
+                      {p.finance_charge ? <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, paddingLeft: 28 }}>Includes {money(p.finance_charge)} financing · total {money(p.grand_total)}</div> : null}
+                    </div>
+                  );
+                })}
               </div>
-              <div style={{ padding: '14px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 560, overflow: 'auto' }}
-                dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? draft.nda_markdown : draft.agreement_markdown) }} />
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {!analysis && (
-                <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'analyze'} onClick={runAnalyze}>
-                  <Sparkles size={15} /> {busy === 'analyze' ? 'Analyzing…' : 'Analyze deal with AI'}
-                </button>
-              )}
-              {(analysis?.flags || []).length > 0 && (
-                <div style={{ padding: '14px 16px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f5a623', marginBottom: 8 }}>Worth a look before you price it</div>
-                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text)', fontSize: 13, lineHeight: 1.7 }}>
-                    {analysis.flags.map((f, i) => <li key={i}>{f}</li>)}
-                  </ul>
+            <div style={{ color: 'var(--muted)', fontSize: 13, padding: '8px 0' }}>Set the build value above (or estimate it) to see the plans you can offer.</div>
+          )}
+        </div>
+      ) : (
+        /* ── Fixed contract mode ── */
+        <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: draft ? 'minmax(0,1fr) 340px' : '1fr', gap: 20, alignItems: 'start' }}>
+          <div>
+            {draft ? (
+              <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Proposed agreement · total {money(draft.total)}</div>
+                  {draft.nda_markdown && (
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'agreement' ? 800 : 500 }} onClick={() => setDocTab('agreement')}>Agreement</button>
+                      <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'nda' ? 800 : 500 }} onClick={() => setDocTab('nda')}>NDA</button>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div className="form-group">
-                <label className="form-label">Billing terms</label>
-                <textarea className="form-input" rows={8} value={terms} onChange={e => setTerms(e.target.value)} placeholder="e.g. $1,000 up front to start, then $800/mo for 5 months. $199/mo maintenance begins month 7." style={{ resize: 'vertical' }} />
+                <div style={{ padding: '14px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 560, overflow: 'auto' }}
+                  dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? draft.nda_markdown : draft.agreement_markdown) }} />
               </div>
-              <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'generate'} onClick={() => runGenerate(false)}>
-                <FileSignature size={15} /> {busy === 'generate' ? 'Drafting…' : 'Generate terms'}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {!analysis && (
+                  <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'analyze'} onClick={runAnalyze}>
+                    <Sparkles size={15} /> {busy === 'analyze' ? 'Analyzing…' : 'Analyze deal with AI'}
+                  </button>
+                )}
+                {(analysis?.flags || []).length > 0 && (
+                  <div style={{ padding: '14px 16px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#f5a623', marginBottom: 8 }}>Worth a look before you price it</div>
+                    <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text)', fontSize: 13, lineHeight: 1.7 }}>
+                      {analysis.flags.map((f, i) => <li key={i}>{f}</li>)}
+                    </ul>
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Billing terms</label>
+                  <textarea className="form-input" rows={8} value={terms} onChange={e => setTerms(e.target.value)} placeholder="e.g. $1,000 up front to start, then $800/mo for 5 months. $199/mo maintenance begins month 7." style={{ resize: 'vertical' }} />
+                </div>
+                <button className="btn-primary" style={{ alignSelf: 'flex-start' }} disabled={busy === 'generate'} onClick={() => runGenerate(false)}>
+                  <FileSignature size={15} /> {busy === 'generate' ? 'Drafting…' : 'Generate terms'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {draft && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 12 }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Request changes</label>
+                <textarea className="form-input" rows={5} value={changes} onChange={e => setChanges(e.target.value)} placeholder="e.g. Add a $500 rush fee. Change maintenance to $249/mo. Include a 2-week revision window." style={{ resize: 'vertical' }} />
+              </div>
+              <button className="btn-ghost" disabled={busy === 'generate'} onClick={() => runGenerate(true)}>
+                {busy === 'generate' ? 'Regenerating…' : 'Regenerate'}
               </button>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>Approve (bottom-right) locks these terms. The agreement is previewed and created at the Agreement step.</div>
+              <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setDraft(null); setAnalysis(null); }}>Start terms over</button>
             </div>
           )}
         </div>
-
-        {/* Right: request changes + approve */}
-        {draft && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 12 }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Request changes</label>
-              <textarea className="form-input" rows={5} value={changes} onChange={e => setChanges(e.target.value)} placeholder="e.g. Add a $500 rush fee. Change maintenance to $249/mo. Include a 2-week revision window." style={{ resize: 'vertical' }} />
-            </div>
-            <button className="btn-ghost" disabled={busy === 'generate'} onClick={() => runGenerate(true)}>
-              {busy === 'generate' ? 'Regenerating…' : 'Regenerate'}
-            </button>
-            <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-            <button className="btn-primary" onClick={() => { onApprove(draft); toast('success', 'Terms approved — on to Deals & Projects.'); }}>
-              <CheckCircle2 size={15} /> Approve terms &amp; continue
-            </button>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>Approving locks these terms for the pipeline. The agreement document is created and previewed at the Agreement step.</div>
-            <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setDraft(null); setAnalysis(null); }}>Start terms over</button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
 
 // Step 2 — Deals & Projects: turn the approved terms into a billable deal +
 // project line items (one-time and monthly), so invoicing/Stripe can bill them.
-function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
+function DealsStep({ client, termsDraft, savedDealId, onCreated, setFooter }) {
   const [loading, setLoading] = useState(true);
   const [deal, setDeal] = useState(null); // an existing deal for this client, if any
   const [name, setName] = useState(`${client.business_name || 'Client'} — Service Agreement`);
@@ -981,10 +1083,15 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
     finally { setBusy(false); }
   };
 
+  const hasProjects = deal && (deal.projects || []).length > 0;
+  useStepFooter(setFooter, hasProjects
+    ? { label: 'Continue', onClick: () => onCreated(deal.id) }
+    : { label: deal ? 'Add projects to deal' : 'Create deal & projects', disabled: loading || busy || seeding, busy, onClick: create });
+
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
 
   // Already has projects — show it read-only and let Ray continue.
-  if (deal && (deal.projects || []).length > 0) {
+  if (hasProjects) {
     const ps = deal.projects || [];
     return (
       <div style={{ maxWidth: 820, margin: '0 auto' }}>
@@ -1003,7 +1110,6 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
             </div>
           ))}
         </div>
-        <button className="btn-primary" style={{ marginTop: 16 }} onClick={() => { onCreated(deal.id); }}>Continue <ChevronRight size={15} /></button>
       </div>
     );
   }
@@ -1048,17 +1154,13 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated }) {
         <div><span style={{ color: 'var(--muted)' }}>One-time total: </span><strong>{money(oneTimeTotal)}</strong></div>
         {monthlyTotal > 0 && <div><span style={{ color: 'var(--muted)' }}>Recurring: </span><strong>{money(monthlyTotal)}/mo</strong></div>}
       </div>
-
-      <button className="btn-primary" disabled={busy || seeding} onClick={create}>
-        <Briefcase size={15} /> {busy ? 'Saving…' : deal ? 'Add projects to deal' : 'Create deal & projects'}
-      </button>
     </div>
   );
 }
 
 // Step 3 — Agreement: persist the approved terms into a real agreement doc,
 // preview it exactly as the client will see it (gate), then approve to lock.
-function AgreementStep({ client, termsDraft, onApproved }) {
+function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
   const [loading, setLoading] = useState(true);
   const [ag, setAg] = useState(null);       // persisted agreement row (or {id})
   const [previewed, setPreviewed] = useState(false);
@@ -1111,6 +1213,15 @@ function AgreementStep({ client, termsDraft, onApproved }) {
     finally { setBusy(''); }
   };
 
+  const alreadyApproved = ag && (ag.status === 'approved' || ag.status === 'sent' || ag.status === 'signed');
+  const canApprove = previewed || alreadyApproved;
+  useStepFooter(setFooter, {
+    label: busy === 'approve' ? 'Approving…' : 'Approve',
+    disabled: loading || (!termsDraft && !ag) || !canApprove || busy === 'approve',
+    busy: busy === 'approve',
+    onClick: onApprove,
+  });
+
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
 
   if (!termsDraft && !ag) {
@@ -1121,9 +1232,6 @@ function AgreementStep({ client, termsDraft, onApproved }) {
       </div>
     );
   }
-
-  const alreadyApproved = ag && (ag.status === 'approved' || ag.status === 'sent' || ag.status === 'signed');
-  const canApprove = previewed || alreadyApproved;
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -1155,10 +1263,7 @@ function AgreementStep({ client, termsDraft, onApproved }) {
         <button className="btn-ghost" disabled={busy === 'preview'} onClick={onPreview}>
           <Eye size={15} /> {busy === 'preview' ? 'Opening…' : previewed ? 'Preview again' : 'Preview in signing view'}
         </button>
-        <button className="btn-primary" disabled={!canApprove || busy === 'approve'} onClick={onApprove} title={canApprove ? '' : 'Preview the signing view first'}>
-          <CheckCircle2 size={15} /> {busy === 'approve' ? 'Approving…' : 'Approve & continue'}
-        </button>
-        {!canApprove && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Preview the signing view to unlock approve.</span>}
+        {!canApprove && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Preview the signing view to unlock Approve (bottom-right).</span>}
       </div>
     </div>
   );
@@ -1188,27 +1293,21 @@ function computePlans(total, financePct = 10) {
 }
 
 // Step 5 — Payment: choose which of the standard plans to offer this client.
-// Saved on the agreement; the client picks one in their portal.
-function PaymentStep({ client, onDone }) {
+// Step (fixed mode only) — Payment: confirm the fixed billing schedule that
+// auto-sets-up on signing. (Custom-plan clients skip this — they pick in portal.)
+function PaymentStep({ client, onDone, setFooter }) {
   const [loading, setLoading] = useState(true);
   const [ag, setAg] = useState(null);
-  const [chosen, setChosen] = useState({});   // { planKey: true }
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
-      try {
-        const d = await getAgreements(client.id);
-        const a = (d.agreements || [])[0] || null;
-        setAg(a);
-        const saved = Array.isArray(a?.plan_options) ? a.plan_options.map(p => p.key) : null;
-        const plans = computePlans(a?.total_amount);
-        // Default: everything on (or the previously-saved set).
-        setChosen(Object.fromEntries(plans.map(p => [p.key, saved ? saved.includes(p.key) : true])));
-      } catch (e) { toast('error', e.message); }
+      try { const d = await getAgreements(client.id); setAg((d.agreements || [])[0] || null); }
+      catch (e) { toast('error', e.message); }
       finally { setLoading(false); }
     })();
   }, [client.id]);
+
+  useStepFooter(setFooter, { label: 'Confirm plan', disabled: loading || !ag, onClick: onDone });
 
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
   if (!ag) return (
@@ -1218,66 +1317,46 @@ function PaymentStep({ client, onDone }) {
     </div>
   );
 
-  const plans = computePlans(ag.total_amount);
-  const monthly = (ag.terms?.monthly || [])[0];
-  const offeredCount = Object.values(chosen).filter(Boolean).length;
+  const terms = ag.terms || {};
+  const installments = Array.isArray(terms.installments) ? terms.installments : [];
+  const monthly = Array.isArray(terms.monthly) ? terms.monthly : [];
+  const deposit = installments[0];
+  const buildRest = installments.slice(1);
+  const maint = monthly[0];
 
-  const save = async () => {
-    const offered = plans.filter(p => chosen[p.key]);
-    if (!offered.length) { toast('error', 'Offer at least one plan.'); return; }
-    setBusy(true);
-    try {
-      await setAgreementPlans(ag.id, offered);
-      toast('success', `${offered.length} plan${offered.length > 1 ? 's' : ''} offered — the client picks one in their portal.`);
-      onDone();
-    } catch (e) { toast('error', e.message); }
-    finally { setBusy(false); }
-  };
+  const Line = ({ label, value, sub }) => (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '10px 0', borderTop: '1px solid var(--border)' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 600 }}>{label}</div>
+        {sub && <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>{sub}</div>}
+      </div>
+      <div style={{ color: 'var(--text)', fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{value}</div>
+    </div>
+  );
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Payment plans to offer</div>
-      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        Build total <strong>{money(ag.total_amount)}</strong>. Pick which plans {client.business_name || 'the client'} can choose from in their portal — every option here is one you're happy to accept.{monthly?.amount ? ` Maintenance (${money(monthly.amount)}/mo) is separate and applies to every plan.` : ''}
-      </div>
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Billing plan</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>This is what Stripe sets up automatically the moment {client.business_name || 'the client'} signs. Nothing is charged until then.</div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {plans.map(p => {
-          const on = !!chosen[p.key];
-          return (
-            <div key={p.key} onClick={() => setChosen(c => ({ ...c, [p.key]: !c[p.key] }))}
-              style={{ cursor: 'pointer', background: 'var(--surface)', border: `1px solid ${on ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 12, padding: '14px 16px', boxShadow: on ? '0 0 0 1px var(--orange) inset' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {on ? <CheckCircle2 size={18} style={{ color: 'var(--orange)' }} /> : <Circle size={18} style={{ color: 'var(--muted)' }} />}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{p.label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{p.summary}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{money(p.deposit)} <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 12 }}>today</span></div>
-                  {p.installments.length > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>then {p.installments.length === 1 ? money(p.installments[0].amount) : `${p.installments.length} × ${money(p.installments[0].amount)}`}</div>}
-                </div>
-              </div>
-              {(p.finance_charge || p.grand_total !== ag.total_amount) && (
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, paddingLeft: 28 }}>
-                  {p.finance_charge ? `Includes ${money(p.finance_charge)} financing. ` : ''}Total {money(p.grand_total)}{monthly?.amount ? ` + ${money(monthly.amount)}/mo maintenance` : ''}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 18px 14px' }}>
+        {deposit && <Line label="Deposit — charged at signing" sub="Stripe Checkout on the card the client enters" value={money(deposit.amount)} />}
+        {buildRest.length > 0 && (
+          <Line label={`Build installments — ${buildRest.length} × ${money(buildRest[0].amount)}`} sub="Auto-charged monthly on the same card, starting the month after the deposit" value={money(buildRest.reduce((s, i) => s + Number(i.amount || 0), 0))} />
+        )}
+        {maint?.amount && <Line label={maint.item || 'Maintenance & Support'} sub="Recurring subscription, begins right after the build" value={`${money(maint.amount)}/mo`} />}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '12px 0 2px', borderTop: '2px solid var(--border)', marginTop: 4 }}>
+          <div style={{ flex: 1, color: 'var(--text)', fontSize: 13.5, fontWeight: 800 }}>Build total</div>
+          <div style={{ color: 'var(--text)', fontSize: 15, fontWeight: 800 }}>{money(ag.total_amount)}</div>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14, padding: '12px 14px', background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 10 }}>
         <ShieldCheck size={16} style={{ color: 'var(--orange)', flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.55 }}>
-          The client picks one of these in their portal. Their choice fills in the agreement's payment schedule, and on signing Stripe charges the deposit and sets up the rest automatically on the same card.
+          On signing, VTM charges the deposit via Stripe Checkout and sets the recurring plan up on that same card automatically. No separate invoice needed — it's wired into the signature.
         </div>
       </div>
-
-      <button className="btn-primary" style={{ marginTop: 18 }} disabled={busy || !offeredCount} onClick={save}>
-        {busy ? 'Saving…' : `Offer ${offeredCount} plan${offeredCount === 1 ? '' : 's'} & continue`} <ChevronRight size={15} />
-      </button>
     </div>
   );
 }
@@ -1294,7 +1373,7 @@ const ACCESS_SEED = [
   { title: 'Social & ad accounts', description: 'Add VTM as a partner/admin on Meta Business Suite and any ad accounts, so we can set up retargeting and lower your lead cost.' },
 ];
 
-function AccessStep({ client, onDone }) {
+function AccessStep({ client, onDone, setFooter }) {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [edit, setEdit] = useState(null);   // { id, title, description } currently being edited
@@ -1368,6 +1447,8 @@ function AccessStep({ client, onDone }) {
     navigator.clipboard?.writeText(msg).then(() => toast('success', 'Access request copied — paste into an email or text.'), () => toast('error', 'Could not copy'));
   };
 
+  useStepFooter(setFooter, { label: 'Continue', disabled: loading, onClick: onDone });
+
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
 
   const doneCount = items.filter(i => i.status === 'done').length;
@@ -1426,8 +1507,6 @@ function AccessStep({ client, onDone }) {
         <button className="btn-ghost" onClick={() => { setDraft({ title: '', description: '' }); setAdding(true); }}><Plus size={14} /> Add access item</button>
       </div>
 
-      <button className="btn-primary" style={{ marginTop: 18 }} onClick={onDone}>Continue <ChevronRight size={15} /></button>
-
       {adding && (
         <Modal title="Add access item" onClose={() => setAdding(false)} onSubmit={addItem} submitLabel="Add item" disabled={!draft.title.trim()}>
           <div className="form-group">
@@ -1447,9 +1526,10 @@ function AccessStep({ client, onDone }) {
 
 // Step 7 — Proposal: draft the cover email to the client (what was sent + their
 // portal link), in a chosen style. Held in the pipeline for the Send step to fire.
-function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone }) {
+function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone, setFooter }) {
   const [ag, setAg] = useState(null);
   const [busy, setBusy] = useState('');
+  useStepFooter(setFooter, { label: 'Continue to send', disabled: !emailDraft, onClick: onDone });
 
   useEffect(() => {
     (async () => { try { const d = await getAgreements(client.id); setAg((d.agreements || [])[0] || null); } catch (e) { /* ok */ } })();
@@ -1511,7 +1591,6 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
             <button className="btn-ghost" onClick={() => navigator.clipboard?.writeText(`${emailDraft.subject}\n\n${emailDraft.body}`).then(() => toast('success', 'Copied'))}><Copy size={13} /> Copy</button>
             <button className="btn-ghost" disabled={busy === 'gen'} onClick={() => gen()}><Sparkles size={13} /> Regenerate</button>
           </div>
-          <button className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: 6 }} onClick={onDone}>Continue to send <ChevronRight size={15} /></button>
         </div>
       )}
     </div>
@@ -1520,7 +1599,8 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
 
 // Step 8 — Send: final gate. Sends the agreement to sign + the proposal email,
 // then shows live status (sent → opened → signed).
-function SendStep({ client, emailDraft, onSent }) {
+function SendStep({ client, emailDraft, onSent, paymentMode }) {
+  const custom = paymentMode === 'custom';
   const [loading, setLoading] = useState(true);
   const [ag, setAg] = useState(null);
   const [deals, setDeals] = useState([]);
@@ -1565,10 +1645,11 @@ function SendStep({ client, emailDraft, onSent }) {
   if (!ag) return (
     <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', color: 'var(--muted)' }}>
       <FileSignature size={28} style={{ opacity: 0.4 }} />
-      <div style={{ marginTop: 12, fontSize: 14 }}>No agreement yet — complete the <strong>Agreement</strong> step first.</div>
+      <div style={{ marginTop: 12, fontSize: 14 }}>Nothing to send yet — complete the <strong>Terms</strong> step first.</div>
     </div>
   );
 
+  const plansOffered = Array.isArray(ag.plan_options) && ag.plan_options.length > 0;
   const approved = ag.status === 'approved' || ag.status === 'sent' || ag.status === 'signed';
   const signLink = ag.sign_token ? `${window.location.origin}/sign?token=${ag.sign_token}` : null;
   const Check = ({ ok, label }) => (
@@ -1579,25 +1660,31 @@ function SendStep({ client, emailDraft, onSent }) {
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Send for signature</div>
-      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>Nothing goes out until you send. On signing, the deposit is charged and the plan is set up automatically.</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>{custom ? 'Send to the client' : 'Send for signature'}</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>
+        {custom
+          ? 'The client opens their portal, picks a payment plan, then signs and pays there — the agreement and Stripe checkout are built from their choice.'
+          : 'Nothing goes out until you send. On signing, the deposit is charged and the plan is set up automatically.'}
+      </div>
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ready to send</div>
-        <Check ok={approved} label="Agreement approved" />
+        {custom
+          ? <Check ok={plansOffered} label={`Payment plans offered${plansOffered ? ` — ${ag.plan_options.length}` : ''}`} />
+          : <Check ok={approved} label="Agreement approved" />}
         <Check ok={deals.length > 0} label="Deal & projects created" />
-        <Check ok={!!ag.total_amount} label={`Billing plan set — ${money(ag.total_amount)}`} />
+        <Check ok={!!ag.total_amount} label={`Build value set — ${money(ag.total_amount)}`} />
         <Check ok={!!emailDraft?.body} label="Proposal email drafted" />
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {ag.status !== 'signed' && (
+        {!custom && ag.status !== 'signed' && (
           <button className="btn-primary" disabled={!approved || busy === 'send'} onClick={send}>
             <FileSignature size={15} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend to client' : 'Send agreement to sign'}
           </button>
         )}
-        <button className="btn-ghost" disabled={busy === 'email' || !client.contact_email || !emailDraft?.body} onClick={sendProposal}>
-          <Mail size={15} /> {busy === 'email' ? 'Sending…' : emailSent ? 'Resend proposal email' : 'Send proposal email'}
+        <button className={custom ? 'btn-primary' : 'btn-ghost'} disabled={busy === 'email' || !client.contact_email || !emailDraft?.body} onClick={sendProposal}>
+          <Mail size={15} /> {busy === 'email' ? 'Sending…' : emailSent ? 'Resend proposal email' : custom ? 'Send portal invite email' : 'Send proposal email'}
         </button>
       </div>
       {!emailDraft?.body && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Draft the proposal on the previous step to enable the email send.</div>}
@@ -1633,12 +1720,17 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [agreementId, setAgreementId] = useState(null);
   const [emailDraft, setEmailDraft] = useState(null);
   const [emailTone, setEmailTone] = useState('professional');
+  const [paymentMode, setPaymentMode] = useState('fixed'); // 'fixed' | 'custom'
+  const [footer, setFooter] = useState(null); // { label, onClick, disabled, busy } set by the active step
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
   };
   const stage = stageOf(client.stage);
-  const cur = LEAD_STEPS[step];
+  const steps = useMemo(() => stepsFor(paymentMode), [paymentMode]);
+  const stepIdx = Math.min(step, steps.length - 1);
+  const cur = steps[stepIdx];
+  const advance = () => setStep(() => Math.min(steps.length - 1, stepIdx + 1));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', background: 'var(--bg)' }}>
       {/* Header */}
@@ -1704,8 +1796,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
       <>
       {/* Pipeline stepper */}
       <div style={{ display: 'flex', gap: 6, padding: '12px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
-        {LEAD_STEPS.map((s, i) => {
-          const done = i < step, on = i === step;
+        {steps.map((s, i) => {
+          const done = i < stepIdx, on = i === stepIdx;
           return (
             <button key={s.key} onClick={() => setStep(i)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)', border: `1px solid ${on ? 'var(--orange)' : 'var(--border)'}`, background: on ? 'rgba(37,99,235,0.10)' : (done ? 'rgba(22,163,74,0.08)' : 'var(--surface)'), color: on ? 'var(--orange)' : (done ? '#16a34a' : 'var(--muted)') }}>
               <span style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, background: on ? 'var(--orange)' : (done ? '#16a34a' : 'var(--surface-2)'), color: (on || done) ? '#fff' : 'var(--muted)' }}>{done ? '✓' : i + 1}</span>
@@ -1720,35 +1812,37 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
         {cur.key === 'overview' ? (
           <LeadActivity client={client} />
         ) : cur.key === 'terms' ? (
-          <TermsStep client={client} savedDraft={termsDraft} onApprove={(d) => { setTermsDraft(d); setStep(2); }} />
+          <TermsStep client={client} savedDraft={termsDraft} setFooter={setFooter} paymentMode={paymentMode} setPaymentMode={setPaymentMode}
+            onApprove={(d) => { setTermsDraft(d); advance(); }} />
         ) : cur.key === 'deals' ? (
-          <DealsStep client={client} termsDraft={termsDraft} savedDealId={dealId} onCreated={(id) => { setDealId(id); setStep(3); }} />
+          <DealsStep client={client} termsDraft={termsDraft} savedDealId={dealId} setFooter={setFooter} onCreated={(id) => { setDealId(id); advance(); }} />
         ) : cur.key === 'agreement' ? (
-          <AgreementStep client={client} termsDraft={termsDraft} onApproved={(id) => { setAgreementId(id); setStep(4); }} />
+          <AgreementStep client={client} termsDraft={termsDraft} setFooter={setFooter} onApproved={(id) => { setAgreementId(id); advance(); }} />
         ) : cur.key === 'payment' ? (
-          <PaymentStep client={client} onDone={() => setStep(5)} />
+          <PaymentStep client={client} setFooter={setFooter} onDone={advance} />
         ) : cur.key === 'access' ? (
-          <AccessStep client={client} onDone={() => setStep(6)} />
+          <AccessStep client={client} setFooter={setFooter} onDone={advance} />
         ) : cur.key === 'proposal' ? (
-          <ProposalStep client={client} emailDraft={emailDraft} setEmailDraft={setEmailDraft} tone={emailTone} setTone={setEmailTone} onDone={() => setStep(7)} />
+          <ProposalStep client={client} emailDraft={emailDraft} setEmailDraft={setEmailDraft} tone={emailTone} setTone={setEmailTone} setFooter={setFooter} onDone={advance} />
         ) : cur.key === 'send' ? (
-          <SendStep client={client} emailDraft={emailDraft} />
-        ) : (
-          <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>
-            <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>{cur.blurb}</div>
-          </div>
-        )}
+          <SendStep client={client} emailDraft={emailDraft} paymentMode={paymentMode} />
+        ) : null}
       </div>
 
-      {/* Sticky bottom nav */}
+      {/* Sticky bottom nav — the active step's approve/commit action lives here */}
       <div style={{ position: 'sticky', bottom: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 -4px 16px rgba(0,0,0,0.06)', zIndex: 20 }}>
-        <button className="btn-ghost" disabled={step === 0} onClick={() => setStep(s => Math.max(0, s - 1))}><ChevronLeft size={15} /> Previous</button>
+        <button className="btn-ghost" disabled={stepIdx === 0} onClick={() => setStep(s => Math.max(0, s - 1))}><ChevronLeft size={15} /> Previous</button>
         <div style={{ flex: 1, textAlign: 'center' }}>
-          <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>Step {step + 1} of {LEAD_STEPS.length}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>Step {stepIdx + 1} of {steps.length}</span>
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}> · {cur.label}</span>
         </div>
-        <button className="btn-primary" disabled={step === LEAD_STEPS.length - 1} onClick={() => setStep(s => Math.min(LEAD_STEPS.length - 1, s + 1))}>Next <ChevronRight size={15} /></button>
+        {footer ? (
+          <button className="btn-primary" disabled={footer.disabled || footer.busy} onClick={footer.onClick}>
+            {footer.busy ? '…' : footer.label} <ChevronRight size={15} />
+          </button>
+        ) : (
+          <button className="btn-primary" disabled={stepIdx === steps.length - 1} onClick={advance}>Next <ChevronRight size={15} /></button>
+        )}
       </div>
       </>
       )}

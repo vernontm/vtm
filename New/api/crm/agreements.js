@@ -42,6 +42,26 @@ module.exports = async function handler(req, res) {
       return res.json({ ok: true });
     }
 
+    // POST action=custom-setup -> create/update a custom-payment-plan agreement
+    // that holds the offered plans. The client picks one in the portal, which
+    // then builds the real schedule + finalizes the document to sign.
+    if (req.method === 'POST' && action === 'custom-setup') {
+      const { client_id, total, plan_options } = req.body || {};
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      const existing = await supaFetch(`crm_agreements?client_id=eq.${client_id}&order=created_at.desc&limit=1&select=id`);
+      const row = existing && existing[0];
+      const patch = { total_amount: total || null, payment_mode: 'custom', plan_options: plan_options || [] };
+      if (row) {
+        await supaFetch(`crm_agreements?id=eq.${row.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+        return res.json({ ok: true, agreement_id: row.id });
+      }
+      const created = await supaFetch('crm_agreements', {
+        method: 'POST', headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ client_id, title: 'Service Agreement — Vernon Tech & Media', status: 'draft', terms: {}, ...patch }),
+      });
+      return res.json({ ok: true, agreement_id: created[0]?.id });
+    }
+
     // POST action=approve -> lock the draft in: create the payment schedule
     // from the agreement's installments and a linked Deal, so it shows on the
     // pipeline. Idempotent — won't duplicate payments or the deal.
