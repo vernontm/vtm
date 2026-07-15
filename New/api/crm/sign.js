@@ -398,12 +398,17 @@ module.exports = async function handler(req, res) {
         catch (e) { console.error('client email failed:', e.message); }
       }
 
-      // Email Ray his copy.
+      // Email Ray his copy (hyperlinked signed copy, plain-text fallback).
       try {
         await sendEmail({
           to: RAY_EMAIL,
           subject: `Signed: ${client.business_name} — service agreement`,
           body: `${client.business_name} (${signerName}) just signed the service agreement.\n\nIP: ${ip}\nTime: ${nowIso}\n${pdfLink ? 'Signed copy: ' + pdfLink : '(PDF not generated)'}`,
+          html: emailHtml([
+            `<strong>${client.business_name}</strong> (${signerName}) just signed the service agreement.`,
+            pdfLink ? `<a href="${pdfLink}" style="color:#2563eb;font-weight:600">View the signed copy (PDF)</a>` : '(PDF not generated)',
+            `<span style="color:#6b7280;font-size:13px">IP ${ip} · ${nowIso}</span>`,
+          ]),
         });
       } catch (e) { console.error('ray email failed:', e.message); }
 
