@@ -877,7 +877,7 @@ function TermsStep({ client, savedDraft, onApprove }) {
               <textarea className="form-input" rows={5} value={changes} onChange={e => setChanges(e.target.value)} placeholder="e.g. Add a $500 rush fee. Change maintenance to $249/mo. Include a 2-week revision window." style={{ resize: 'vertical' }} />
             </div>
             <button className="btn-ghost" disabled={busy === 'generate'} onClick={() => runGenerate(true)}>
-              <Sparkles size={14} /> {busy === 'generate' ? 'Regenerating…' : 'Regenerate with changes'}
+              {busy === 'generate' ? 'Regenerating…' : 'Regenerate'}
             </button>
             <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
             <button className="btn-primary" onClick={() => { onApprove(draft); toast('success', 'Terms approved — on to Deals & Projects.'); }}>
