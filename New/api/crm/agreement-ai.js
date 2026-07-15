@@ -25,10 +25,35 @@ async function callClaude(system, user, maxTokens = 4096) {
   return (data.content || []).find(c => c.type === 'text')?.text || '';
 }
 
+// Escape bare control characters (raw newlines/tabs/returns) that appear INSIDE
+// string values — LLMs sometimes emit these unescaped in long markdown fields,
+// which breaks JSON.parse. Tracks string vs. structure so we only touch strings.
+function escapeBareControls(s) {
+  let out = '', inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (esc) { out += ch; esc = false; continue; }
+    if (ch === '\\') { out += ch; esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; out += ch; continue; }
+    if (inStr) {
+      if (ch === '\n') { out += '\\n'; continue; }
+      if (ch === '\r') { out += '\\r'; continue; }
+      if (ch === '\t') { out += '\\t'; continue; }
+    }
+    out += ch;
+  }
+  return out;
+}
+
 function parseJson(text) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('Model did not return JSON');
-  return JSON.parse(m[0]);
+  const raw = m[0];
+  try { return JSON.parse(raw); }
+  catch (e) {
+    try { return JSON.parse(escapeBareControls(raw)); }
+    catch (e2) { throw new Error('The AI returned a malformed response — please try again.'); }
+  }
 }
 
 async function loadContext(clientId) {
