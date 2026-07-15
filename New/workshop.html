@@ -89,6 +89,8 @@
     }
 
     function boot(){
+      // Admin preview: jump straight to the attendee resources view, no check-in.
+      if(params.get('preview')==='1'||params.get('resources')==='1'){ showResources(); return; }
       if(localStorage.getItem('vtm_workshop_reg')==='1'){ showResources(); }
       else { showForm(); }
     }
