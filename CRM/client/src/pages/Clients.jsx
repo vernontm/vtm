@@ -130,21 +130,21 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
             onDragLeave={() => setOverCol(o => o === col.key ? null : o)}
             onDrop={e => { e.preventDefault(); if (dragId) onTempChange(dragId, col.key); setDragId(null); setOverCol(null); }}
             style={{
-              background: isOver ? `${col.color}0f` : 'var(--surface-2)',
-              border: `1px solid ${isOver ? col.color : 'var(--border)'}`, borderRadius: 14, minHeight: 200,
+              background: isOver ? '#2a2f3a' : '#1e222b',
+              border: `1px solid ${isOver ? col.color : 'rgba(255,255,255,0.10)'}`, borderRadius: 14, minHeight: 200,
               transition: 'background 0.12s, border-color 0.12s',
             }}
           >
-            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: col.color }} />
-                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{col.label}</span>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: col.color, boxShadow: `0 0 8px ${col.color}` }} />
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', fontFamily: 'var(--font-display)' }}>{col.label}</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: col.color, borderRadius: 999, padding: '0 8px', marginLeft: 'auto' }}>{colLeads.length}</span>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#16a34a', marginTop: 6 }}>{fmtUsd(colTotal)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#4ade80', marginTop: 6 }}>{fmtUsd(colTotal)}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, minHeight: 60 }}>
-              {colLeads.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '16px 0' }}>Drop a lead here</div>}
+              {colLeads.length === 0 && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', padding: '16px 0' }}>Drop a lead here</div>}
               {colLeads.map(l => {
                 const rk = rankOf(l.lead_rank || 'medium');
                 const desc = (l.notes || l.industry || (l.client_type || []).join(', ') || '').trim();
