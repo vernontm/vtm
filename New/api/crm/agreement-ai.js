@@ -79,9 +79,38 @@ Return ONLY JSON with this shape:
 
     // ── generate: draft the full agreement + NDA as reviewable text ──
     if (req.method === 'POST' && action === 'generate') {
-      const { client_id, terms } = req.body || {};
+      const { client_id, terms, base } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
       const { client, projects } = await loadContext(client_id);
+
+      // Revise-mode: an existing document is supplied. Apply ONLY the requested
+      // change and keep everything else byte-for-byte, so regenerating tweaks the
+      // doc instead of rewriting it in a new style.
+      if (base && base.agreement_markdown) {
+        const system = `You revise an existing Service Agreement / Mutual NDA for Vernon Tech & Media. You are given the CURRENT documents and a change request. Apply ONLY the requested change. Preserve everything else EXACTLY — same headings, same section numbering and order, same wording, same bullet formatting, same "not legal advice" note. Do not re-style, re-order, re-title, or re-word any section the change does not touch. Never add signature blocks or date lines. If the change does not affect billing, keep total/installments/monthly identical to the current values.
+Return ONLY JSON with the FULL revised documents:
+{
+  "summary": "one line",
+  "total": number,
+  "installments": [{"label": string, "amount": number, "trigger": string, "status": "pending"}],
+  "monthly": [{"item": string, "amount": number}],
+  "agreement_markdown": "full revised service agreement in markdown",
+  "nda_markdown": "full revised mutual NDA in markdown"
+}`;
+        const user = `CHANGE REQUEST (apply only this, preserve all other formatting and wording):\n"""${(terms || '').toString().slice(0, 4000)}"""
+
+CURRENT total: ${base.total ?? 'n/a'}
+CURRENT installments: ${JSON.stringify(base.installments || [])}
+CURRENT monthly: ${JSON.stringify(base.monthly || [])}
+
+CURRENT SERVICE AGREEMENT (markdown):
+"""${(base.agreement_markdown || '').toString().slice(0, 12000)}"""
+
+CURRENT MUTUAL NDA (markdown):
+"""${(base.nda_markdown || '').toString().slice(0, 8000)}"""`;
+        const out = await callClaude(system, user, 8192);
+        return res.json(parseJson(out));
+      }
 
       const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media (VTM) — Rayvaughn Vernon, dba Vernon Tech & Media, Katy, Texas, ray@vernontm.com. Governing law: Texas.
 Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law. Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. End with a one-line "not legal advice" note.

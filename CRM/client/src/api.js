@@ -402,7 +402,7 @@ export const sendAgreementForSignature = (id)  => request(`/agreements?id=${id}&
 export const updatePayment       = (id, status) => request(`/agreements?id=${id}&action=payment`, { method: 'PATCH', body: JSON.stringify({ status }) });
 // AI agreement builder
 export const analyzeDeal      = (client_id)        => request('/agreement-ai?action=analyze', { method: 'POST', body: JSON.stringify({ client_id }) });
-export const generateAgreement = (client_id, terms) => request('/agreement-ai?action=generate', { method: 'POST', body: JSON.stringify({ client_id, terms }) });
+export const generateAgreement = (client_id, terms, base) => request('/agreement-ai?action=generate', { method: 'POST', body: JSON.stringify({ client_id, terms, base }) });
 export const approveAgreement  = (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) });
 
 // Content Clients

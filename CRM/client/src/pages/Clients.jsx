@@ -788,13 +788,21 @@ function TermsStep({ client, savedDraft, onApprove }) {
   };
 
   const runGenerate = async (withChanges) => {
-    const prompt = withChanges && changes.trim() ? `${terms}\n\nAdditional changes / additions:\n${changes.trim()}` : terms;
-    if (!prompt.trim()) { toast('error', 'Add some terms first (or run Analyze).'); return; }
     setBusy('generate');
     try {
-      const d = await generateAgreement(client.id, prompt);
+      let d;
+      if (withChanges && draft && changes.trim()) {
+        // Revise the existing document: apply only this change, keep its format.
+        d = await generateAgreement(client.id, changes.trim(), {
+          agreement_markdown: draft.agreement_markdown, nda_markdown: draft.nda_markdown,
+          total: draft.total, installments: draft.installments, monthly: draft.monthly,
+        });
+      } else {
+        if (!terms.trim()) { toast('error', 'Add some terms first (or run Analyze).'); setBusy(''); return; }
+        d = await generateAgreement(client.id, terms);
+      }
       setDraft(d);
-      if (withChanges && changes.trim()) { setTerms(prompt); setChanges(''); }
+      if (withChanges && changes.trim()) setChanges('');
       setDocTab('agreement');
     } catch (e) { toast('error', e.message); }
     finally { setBusy(''); }
