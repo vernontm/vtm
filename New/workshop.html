@@ -45,9 +45,20 @@
     .rez .note{color:var(--muted);font-size:14px;line-height:1.6;white-space:pre-wrap}
     .codewrap{position:relative;background:#0b0e13;border:1px solid var(--line);border-radius:12px;overflow:hidden}
     .codewrap .lang{position:absolute;top:8px;left:12px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-    .copy{position:absolute;top:8px;right:8px;background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:11.5px;font-weight:600;border-radius:8px;padding:6px 11px;cursor:pointer}
+    .codebtns{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2}
+    .copy{background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:11.5px;font-weight:600;border-radius:8px;padding:6px 11px;cursor:pointer}
     .copy:hover{border-color:var(--gold);color:var(--gold)}
-    pre{margin:0;padding:34px 14px 14px;overflow-x:auto;font-family:var(--fmono);font-size:13px;line-height:1.6;color:#dbe3ee;white-space:pre}
+    pre{margin:0;padding:38px 14px 14px;font-family:var(--fmono);font-size:13px;line-height:1.6;color:#dbe3ee;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}
+    .codewrap pre{max-height:230px;overflow-y:auto}
+    .note a,.note a:visited{color:var(--gold);text-decoration:underline;text-underline-offset:2px;word-break:break-word}
+    /* expand modal */
+    .modal-ov{position:fixed;inset:0;background:rgba(6,9,14,.82);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+    .modal{background:#0b0e13;border:1px solid var(--line2);border-radius:16px;max-width:840px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 90px -20px rgba(0,0,0,.8)}
+    .modal-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+    .modal-h h3{font-family:var(--fdisp);font-weight:700;font-size:15px;flex:1;color:var(--text)}
+    .modal pre{flex:1;overflow:auto;max-height:none;padding:18px 16px;font-size:13.5px}
+    .mbtn{background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:12.5px;font-weight:600;border-radius:8px;padding:8px 13px;cursor:pointer}
+    .mbtn.gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d1016;border:none;font-weight:700}
     .dl{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d1016;border-radius:12px;padding:14px 16px;font-family:var(--fdisp);font-weight:700;font-size:15px}
     .dl .ico{width:20px;height:20px}
     .state{text-align:center;padding:70px 20px;color:var(--muted)}
@@ -72,6 +83,13 @@
     var app=document.getElementById('app');
     var params=new URLSearchParams(location.search);
     var esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+    // Escape, then turn URLs and bare site domains into clickable links. Only
+    // real site TLDs (com/org/io…) so filenames like db.ts or vercel.json stay text.
+    function linkify(s){
+      return esc(s).replace(/(^|[\s(>])((https?:\/\/)?(?:[a-z0-9-]+\.)+(?:com|org|io|net|co|dev|app|ai|gg|me)(?:\/[^\s<]*)?)/gi,
+        function(m,pre,full,proto){ var trail=''; var mt=full.match(/[)\].,;:!?]+$/); if(mt){ trail=mt[0]; full=full.slice(0,-trail.length); }
+          var href=proto?full:'https://'+full; return pre+'<a href="'+href+'" target="_blank" rel="noopener">'+full+'</a>'+trail; });
+    }
     var baseUrl=location.origin+'/workshop';
 
     // ── TV / QR screen mode ──
@@ -160,19 +178,35 @@
         h+='<div class="rez"><div class="rez-t">'+(r.kind==='code'?CODE:(r.kind==='link'?DOC:DOC))+'<h3>'+esc(r.title)+'</h3></div>';
         if(r.kind==='code'){
           h+='<div class="codewrap">'+(r.language?'<span class="lang">'+esc(r.language)+'</span>':'')
-            +'<button class="copy" data-c="'+i+'">Copy</button><pre id="code'+i+'">'+esc(r.body||'')+'</pre></div>';
+            +'<div class="codebtns"><button class="copy" data-x="'+i+'">Expand</button><button class="copy" data-c="'+i+'">Copy</button></div>'
+            +'<pre id="code'+i+'">'+esc(r.body||'')+'</pre></div>';
         } else if(r.kind==='link'){
           h+='<a class="dl" href="'+esc(r.url||'#')+'" target="_blank" rel="noopener">'+DL+' '+(esc(r.body)||'Download / open')+'</a>';
         } else {
-          h+='<div class="note">'+esc(r.body||'')+'</div>';
+          h+='<div class="note">'+linkify(r.body||'')+'</div>';
         }
         h+='</div>';
       });
       el.innerHTML=h;
-      el.querySelectorAll('.copy').forEach(function(b){ b.onclick=function(){
+      el.querySelectorAll('[data-c]').forEach(function(b){ b.onclick=function(){
         var code=document.getElementById('code'+b.dataset.c).innerText;
         navigator.clipboard.writeText(code).then(function(){ var o=b.textContent; b.textContent='Copied ✓'; setTimeout(function(){b.textContent=o;},1600); });
       };});
+      el.querySelectorAll('[data-x]').forEach(function(b){ b.onclick=function(){ openCode(list[b.dataset.x]); };});
+    }
+
+    function openCode(r){
+      var ov=document.createElement('div'); ov.className='modal-ov';
+      ov.innerHTML='<div class="modal"><div class="modal-h"><h3>'+esc(r.title)+'</h3>'
+        +'<button class="mbtn gold" id="mcopy">Copy</button><button class="mbtn" id="mclose">Close</button></div>'
+        +'<pre>'+esc(r.body||'')+'</pre></div>';
+      document.body.appendChild(ov);
+      function close(){ ov.remove(); document.removeEventListener('keydown',onKey); }
+      function onKey(e){ if(e.key==='Escape') close(); }
+      ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+      ov.querySelector('#mclose').onclick=close;
+      ov.querySelector('#mcopy').onclick=function(){ var b=ov.querySelector('#mcopy'); navigator.clipboard.writeText(r.body||'').then(function(){ b.textContent='Copied ✓'; setTimeout(function(){b.textContent='Copy';},1500); }); };
+      document.addEventListener('keydown',onKey);
     }
   </script>
 </body>
