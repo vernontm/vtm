@@ -182,22 +182,45 @@ function rfc2047(str) {
   return `=?UTF-8?B?${Buffer.from(str, 'utf-8').toString('base64')}?=`;
 }
 
-function buildRawEmail({ to, from, subject, body, inReplyTo, references }) {
-  const encodedBody = Buffer.from(body, 'utf-8').toString('base64');
-  const lines = [
+function buildRawEmail({ to, from, subject, body, html, inReplyTo, references }) {
+  const headers = [
     `From: ${from}`,
     `To: ${to}`,
     `Subject: ${rfc2047(subject)}`,
   ];
-  if (inReplyTo)  lines.push(`In-Reply-To: ${inReplyTo}`);
-  if (references) lines.push(`References: ${references}`);
-  lines.push(
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: base64',
-    '',
-    encodedBody,
-  );
+  if (inReplyTo)  headers.push(`In-Reply-To: ${inReplyTo}`);
+  if (references) headers.push(`References: ${references}`);
+  headers.push('MIME-Version: 1.0');
+
+  let lines;
+  if (html) {
+    // multipart/alternative: plain-text fallback + the HTML (hyperlinked) part.
+    const boundary = 'bnd_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    lines = [
+      ...headers,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      Buffer.from(body || '', 'utf-8').toString('base64'),
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      Buffer.from(html, 'utf-8').toString('base64'),
+      `--${boundary}--`,
+    ];
+  } else {
+    lines = [
+      ...headers,
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      Buffer.from(body, 'utf-8').toString('base64'),
+    ];
+  }
   return Buffer.from(lines.join('\r\n')).toString('base64url');
 }
 
@@ -274,10 +297,10 @@ async function modifyMessageLabels(messageId, { addLabelIds = [], removeLabelIds
 
 // ── Send + Draft ─────────────────────────────────────────────────────────────
 
-async function sendEmail({ to, from: fromOverride, subject, body, threadId, inReplyTo, references, labelName }) {
+async function sendEmail({ to, from: fromOverride, subject, body, html, threadId, inReplyTo, references, labelName }) {
   const { accessToken, email: defaultFrom } = await getGmailAuth();
   const from = fromOverride || defaultFrom;
-  const raw = buildRawEmail({ to, from, subject, body, inReplyTo, references });
+  const raw = buildRawEmail({ to, from, subject, body, html, inReplyTo, references });
   const requestBody = { raw };
   if (threadId) requestBody.threadId = threadId;
 
@@ -303,9 +326,9 @@ async function sendEmail({ to, from: fromOverride, subject, body, threadId, inRe
   return result; // { id, threadId, labelIds }
 }
 
-async function createDraft({ to, subject, body, threadId, inReplyTo, references }) {
+async function createDraft({ to, subject, body, html, threadId, inReplyTo, references }) {
   const { accessToken, email: from } = await getGmailAuth();
-  const raw = buildRawEmail({ to, from, subject, body, inReplyTo, references });
+  const raw = buildRawEmail({ to, from, subject, body, html, inReplyTo, references });
   const message = { raw };
   if (threadId) message.threadId = threadId;
 

@@ -93,6 +93,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
+    // Capture the recovery flag BEFORE supabase-js parses & clears the URL hash,
+    // so we always show the set-password screen (and never auto-load the portal)
+    // when the client arrives from a set-password / recovery link.
+    const WAS_RECOVERY = /type=recovery/.test(window.location.hash) || /type=recovery/.test(window.location.search);
     const SB_URL='https://ssllepovajmohdhvhzsa.supabase.co';
     const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzbGxlcG92YWptb2hkaHZoenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTYwMTcsImV4cCI6MjA5MTA3MjAxN30.qFTsGzZsN5XVX_xgxpdclWmeEtCs1ZfmmLzOsmcN_0k';
     const sb=window.supabase.createClient(SB_URL,SB_ANON);
@@ -106,8 +110,8 @@
     sb.auth.onAuthStateChange((event)=>{ if(event==='PASSWORD_RECOVERY'){recovering=true;renderSetPassword();} });
 
     async function boot(){
+      if(WAS_RECOVERY || recovering){ renderSetPassword(); return; }
       const {data:{session}}=await sb.auth.getSession();
-      if(recovering){renderSetPassword();return;}
       if(session){loadPortal();} else {renderLogin();}
     }
     function renderLogin(){

@@ -18,6 +18,13 @@ const adminHeaders = {
   'Content-Type': 'application/json',
 };
 
+// Wrap paragraph strings (may contain <a> tags already) into a clean HTML email.
+function emailHtml(paragraphs) {
+  const body = (paragraphs || []).filter(Boolean)
+    .map(p => `<p style="margin:0 0 14px;font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a1d21">${p}</p>`).join('');
+  return `<div style="max-width:520px;margin:0 auto;padding:10px 4px">${body}</div>`;
+}
+
 async function agreementForToken(token) {
   if (!token || !UUID_RE.test(token)) return null;
   const rows = await supaFetch(`crm_agreements?sign_token=eq.${token}&select=*,client:crm_clients(id,business_name,owner_name,contact_email,contact_phone,portal_user_id)`);
@@ -292,11 +299,19 @@ module.exports = async function handler(req, res) {
       // Email the client their signed copy + portal pointer (NO one-time link —
       // email scanners pre-consume them; portal setup happens in-browser).
       if (client.contact_email) {
+        const portalUrl = `${origin}/client`;
+        // Plain-text fallback (full URLs) + a hyperlinked HTML version.
         const parts = [`Hi ${first},`, '', 'Thanks for signing your agreement with Vernon Tech & Media.'];
         if (pdfLink) parts.push('', `Your signed copy (PDF): ${pdfLink}`);
-        parts.push('', `Your client portal: ${origin}/client`);
-        parts.push('', 'Talk soon,', 'Ray', 'Vernon Tech & Media');
-        try { await sendEmail({ to: client.contact_email, subject: 'Your signed Vernon Tech & Media agreement', body: parts.join('\n') }); }
+        parts.push('', `Your client portal: ${portalUrl}`, '', 'Talk soon,', 'Ray', 'Vernon Tech & Media');
+        const html = emailHtml([
+          `Hi ${first},`,
+          'Thanks for signing your agreement with Vernon Tech &amp; Media.',
+          pdfLink ? `<a href="${pdfLink}" style="color:#2563eb;font-weight:600">View your signed copy (PDF)</a>` : '',
+          `<a href="${portalUrl}" style="color:#2563eb;font-weight:600">Go to your client portal</a>`,
+          'Talk soon,<br>Ray<br>Vernon Tech &amp; Media',
+        ]);
+        try { await sendEmail({ to: client.contact_email, subject: 'Your signed Vernon Tech & Media agreement', body: parts.join('\n'), html }); }
         catch (e) { console.error('client email failed:', e.message); }
       }
 
