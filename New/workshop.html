@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent Workshop · Vernon Tech &amp; Media</title>
+  <meta name="description" content="Join the live AI Agent Workshop in Katy. Check in for the prompts, code, and resources." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#0d1016;--panel:#161b23;--panel2:#1c222c;--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.14);--text:#eef1f5;--muted:#98a2b0;--gold:#e9b84c;--gold2:#f2cf74;--blue:#4f8cff;--ok:#38d18a;--fdisp:'Plus Jakarta Sans',system-ui,sans-serif;--fbody:'DM Sans',system-ui,sans-serif;--fmono:'JetBrains Mono',ui-monospace,monospace}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:radial-gradient(1200px 600px at 50% -10%,#1a2130,#0d1016 60%);color:var(--text);font-family:var(--fbody);-webkit-font-smoothing:antialiased;min-height:100vh}
+    button,input{font-family:inherit}
+    a{color:var(--gold);text-decoration:none}
+    .wrap{max-width:680px;margin:0 auto;padding:40px 20px 90px}
+    .brand{text-align:center;font-family:var(--fdisp);font-weight:800;font-size:12px;letter-spacing:.22em;color:var(--muted);margin-bottom:26px}
+    .brand b{color:var(--text)}
+    .hero{text-align:center;margin-bottom:28px}
+    .kicker{display:inline-block;font-family:var(--fdisp);font-weight:700;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#0d1016;background:linear-gradient(135deg,var(--gold),var(--gold2));padding:6px 14px;border-radius:999px;margin-bottom:16px}
+    h1{font-family:var(--fdisp);font-weight:800;font-size:34px;line-height:1.08;letter-spacing:-.01em}
+    h1 .g{background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .sub{color:var(--muted);font-size:16px;margin-top:12px;line-height:1.5}
+    .meta{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:18px}
+    .chip{font-size:12.5px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-weight:500}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 24px;box-shadow:0 24px 60px -24px rgba(0,0,0,.6)}
+    .fl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:16px 0 7px}
+    .fl:first-child{margin-top:0}
+    .inp{width:100%;background:var(--panel2);border:1.5px solid var(--line2);border-radius:12px;padding:14px 15px;font-size:16px;color:var(--text)}
+    .inp:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,184,76,.16)}
+    .inp::placeholder{color:#67707c}
+    .btn{width:100%;margin-top:20px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d1016;border:none;border-radius:12px;padding:16px;font-family:var(--fdisp);font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 10px 26px -10px rgba(233,184,76,.6)}
+    .btn:hover{filter:brightness(1.05)}.btn:disabled{opacity:.55;cursor:default;filter:none}
+    .err{color:#ff8080;font-size:13.5px;margin-top:12px;min-height:1px}
+    .fine{color:var(--muted);font-size:12px;text-align:center;margin-top:14px;line-height:1.5}
+    /* resources */
+    .rez-h{text-align:center;margin-bottom:22px}
+    .rez-h .ok{display:inline-flex;align-items:center;gap:8px;color:var(--ok);font-weight:700;font-size:14px;margin-bottom:8px}
+    .sec-label{font-family:var(--fdisp);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 12px}
+    .rez{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:14px}
+    .rez-t{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .rez-t .ico{width:22px;height:22px;flex-shrink:0;color:var(--gold)}
+    .rez-t h3{font-family:var(--fdisp);font-weight:700;font-size:16px;color:var(--text);flex:1}
+    .rez .note{color:var(--muted);font-size:14px;line-height:1.6;white-space:pre-wrap}
+    .codewrap{position:relative;background:#0b0e13;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .codewrap .lang{position:absolute;top:8px;left:12px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .copy{position:absolute;top:8px;right:8px;background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:11.5px;font-weight:600;border-radius:8px;padding:6px 11px;cursor:pointer}
+    .copy:hover{border-color:var(--gold);color:var(--gold)}
+    pre{margin:0;padding:34px 14px 14px;overflow-x:auto;font-family:var(--fmono);font-size:13px;line-height:1.6;color:#dbe3ee;white-space:pre}
+    .dl{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d1016;border-radius:12px;padding:14px 16px;font-family:var(--fdisp);font-weight:700;font-size:15px}
+    .dl .ico{width:20px;height:20px}
+    .state{text-align:center;padding:70px 20px;color:var(--muted)}
+    /* TV screen / QR mode */
+    body.screen{display:flex;align-items:center;justify-content:center}
+    .screen-wrap{text-align:center;padding:30px}
+    .screen-wrap .kicker{font-size:15px;padding:8px 20px}
+    .screen-wrap h1{font-size:clamp(40px,7vw,86px);margin:18px 0 10px}
+    .screen-wrap .sub{font-size:clamp(16px,2.4vw,26px)}
+    .qrbox{background:#fff;border-radius:24px;padding:26px;display:inline-block;margin:34px 0 18px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+    .qrbox img,.qrbox canvas{display:block;width:min(46vh,380px);height:min(46vh,380px)}
+    .scan{font-family:var(--fdisp);font-weight:800;font-size:clamp(18px,2.6vw,30px);color:var(--gold)}
+    .scan .u{color:var(--muted);font-weight:600;font-size:.7em;display:block;margin-top:6px}
+  </style>
+</head>
+<body>
+  <div id="app"><div class="state">Loading…</div></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    var SLUG='katy-ai-workshop', EVENT_NAME='Katy AI Agent Workshop';
+    var app=document.getElementById('app');
+    var params=new URLSearchParams(location.search);
+    var esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+    var baseUrl=location.origin+'/workshop';
+
+    // ── TV / QR screen mode ──
+    if(params.get('screen')==='1'||params.get('qr')==='1'){
+      document.body.classList.add('screen');
+      app.innerHTML=''
+        +'<div class="screen-wrap"><div class="kicker">Live Workshop</div>'
+        +'<h1>Building an <span class="g">AI Agent</span> Live</h1>'
+        +'<div class="sub">Scan to check in and unlock tonight\'s prompts, code, and resources.</div>'
+        +'<div class="qrbox"><div id="qr"></div></div>'
+        +'<div class="scan">vernontm.com/workshop<span class="u">Point your camera at the code</span></div></div>';
+      try{ new QRCode(document.getElementById('qr'),{text:baseUrl,width:380,height:380,colorDark:'#0d1016',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
+    } else {
+      boot();
+    }
+
+    function boot(){
+      if(localStorage.getItem('vtm_workshop_reg')==='1'){ showResources(); }
+      else { showForm(); }
+    }
+
+    function showForm(){
+      app.innerHTML=''
+        +'<div class="wrap">'
+        +'<div class="brand"><b>VERNON TECH &amp; MEDIA</b> · KATY</div>'
+        +'<div class="hero"><div class="kicker">Live Workshop</div>'
+        +'<h1>Building an <span class="g">AI Agent</span>, Live</h1>'
+        +'<div class="sub">Check in to get tonight\'s prompts, copy-paste code, and resources as we build.</div>'
+        +'<div class="meta"><span class="chip">📍 Katy, TX</span><span class="chip">🤖 AI Agent Workshop</span><span class="chip">🎁 Free resources</span></div></div>'
+        +'<div class="card">'
+        +'<label class="fl">Full name</label><input class="inp" id="name" placeholder="Your name" autocomplete="name" />'
+        +'<label class="fl">Email</label><input class="inp" id="email" type="email" placeholder="you@email.com" autocomplete="email" />'
+        +'<label class="fl">Phone</label><input class="inp" id="phone" type="tel" placeholder="(555) 555-5555" autocomplete="tel" />'
+        +'<button class="btn" id="go">Check in &amp; get the resources</button>'
+        +'<div class="err" id="err"></div>'
+        +'<div class="fine">We\'ll only use this to share event resources and occasional updates. No spam.</div>'
+        +'</div></div>';
+      var go=document.getElementById('go');
+      ['name','email','phone'].forEach(function(id){ document.getElementById(id).addEventListener('keydown',function(e){ if(e.key==='Enter') go.click(); }); });
+      go.onclick=submit;
+    }
+
+    async function submit(){
+      var err=document.getElementById('err'); err.textContent='';
+      var name=document.getElementById('name').value.trim();
+      var email=document.getElementById('email').value.trim();
+      var phone=document.getElementById('phone').value.trim();
+      if(!name){err.textContent='Please add your name.';return;}
+      if(!email||email.indexOf('@')<0){err.textContent='Please add a valid email.';return;}
+      if(phone.replace(/\D/g,'').length<7){err.textContent='Please add a valid phone number.';return;}
+      var go=document.getElementById('go'); go.disabled=true; go.textContent='Checking you in…';
+      try{
+        var r=await fetch('/api/checkin',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({stage:'checkin',name:name,email:email,phone:phone,event:EVENT_NAME,source:'katy-ai-workshop'})});
+        if(!r.ok) throw new Error();
+        localStorage.setItem('vtm_workshop_reg','1');
+        localStorage.setItem('vtm_workshop_name',name);
+        showResources();
+      }catch(e){ go.disabled=false; go.textContent='Check in & get the resources'; err.textContent='Something went wrong. Please try again.'; }
+    }
+
+    async function showResources(){
+      var first=(localStorage.getItem('vtm_workshop_name')||'').split(' ')[0];
+      app.innerHTML='<div class="wrap"><div class="brand"><b>VERNON TECH &amp; MEDIA</b> · KATY</div>'
+        +'<div class="rez-h"><div class="ok">✓ You\'re checked in</div>'
+        +'<h1 style="font-size:26px">'+(first?esc(first)+'\'s ':'')+'Workshop Resources</h1>'
+        +'<div class="sub" style="font-size:14.5px">Everything from tonight\'s build. New resources appear here as we add them, just refresh.</div></div>'
+        +'<div class="sec-label">Resources</div><div id="rez"><div class="state">Loading resources…</div></div></div>';
+      try{
+        var res=await fetch('/api/event-resources?slug='+encodeURIComponent(SLUG));
+        var data=await res.json();
+        renderResources(data.resources||[]);
+      }catch(e){ document.getElementById('rez').innerHTML='<div class="state">Could not load resources. Please refresh.</div>'; }
+    }
+
+    function renderResources(list){
+      var el=document.getElementById('rez');
+      if(!list.length){ el.innerHTML='<div class="state">Resources will appear here shortly. Keep this page open and refresh.</div>'; return; }
+      var DL='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>';
+      var DOC='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+      var CODE='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+      var h='';
+      list.forEach(function(r,i){
+        h+='<div class="rez"><div class="rez-t">'+(r.kind==='code'?CODE:(r.kind==='link'?DOC:DOC))+'<h3>'+esc(r.title)+'</h3></div>';
+        if(r.kind==='code'){
+          h+='<div class="codewrap">'+(r.language?'<span class="lang">'+esc(r.language)+'</span>':'')
+            +'<button class="copy" data-c="'+i+'">Copy</button><pre id="code'+i+'">'+esc(r.body||'')+'</pre></div>';
+        } else if(r.kind==='link'){
+          h+='<a class="dl" href="'+esc(r.url||'#')+'" target="_blank" rel="noopener">'+DL+' '+(esc(r.body)||'Download / open')+'</a>';
+        } else {
+          h+='<div class="note">'+esc(r.body||'')+'</div>';
+        }
+        h+='</div>';
+      });
+      el.innerHTML=h;
+      el.querySelectorAll('.copy').forEach(function(b){ b.onclick=function(){
+        var code=document.getElementById('code'+b.dataset.c).innerText;
+        navigator.clipboard.writeText(code).then(function(){ var o=b.textContent; b.textContent='Copied ✓'; setTimeout(function(){b.textContent=o;},1600); });
+      };});
+    }
+  </script>
+</body>
+</html>

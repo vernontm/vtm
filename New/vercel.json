@@ -86,6 +86,8 @@
     { "source": "/ai-quiz", "destination": "/ai-quiz.html" },
     { "source": "/webinar", "destination": "/webinar.html" },
     { "source": "/meetup", "destination": "/meetup.html" },
+    { "source": "/workshop", "destination": "/workshop.html" },
+    { "source": "/workshop-admin", "destination": "/workshop-admin.html" },
     { "source": "/in-person", "destination": "/meetup.html" },
     { "source": "/portal", "destination": "/portal.html" },
     { "source": "/sign", "destination": "/sign.html" },

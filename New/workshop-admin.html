@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Workshop Resources · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#0d1016;--panel:#161b23;--panel2:#1c222c;--line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.14);--text:#eef1f5;--muted:#98a2b0;--gold:#e9b84c;--red:#ff7676;--fdisp:'Plus Jakarta Sans',system-ui,sans-serif;--fbody:'DM Sans',system-ui,sans-serif}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--fbody);-webkit-font-smoothing:antialiased}
+    button,input,select,textarea{font-family:inherit}
+    .wrap{max-width:640px;margin:0 auto;padding:34px 18px 90px}
+    h1{font-family:var(--fdisp);font-weight:800;font-size:22px}
+    .sub{color:var(--muted);font-size:14px;margin-top:5px;margin-bottom:20px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px}
+    .fl{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:14px 0 6px}
+    .fl:first-child{margin-top:0}
+    .inp{width:100%;background:var(--panel2);border:1.5px solid var(--line2);border-radius:10px;padding:11px 13px;font-size:15px;color:var(--text)}
+    .inp:focus{outline:none;border-color:var(--gold)}
+    textarea.inp{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.5;min-height:150px;resize:vertical}
+    .btn{background:var(--gold);color:#0d1016;border:none;border-radius:10px;padding:12px 16px;font-family:var(--fdisp);font-weight:700;font-size:14px;cursor:pointer}
+    .btn.block{width:100%;margin-top:16px}
+    .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line2)}
+    .btn:disabled{opacity:.5;cursor:default}
+    .err{color:var(--red);font-size:13px;margin-top:10px;min-height:1px}
+    .ok{color:#38d18a;font-size:13px}
+    .sec{font-family:var(--fdisp);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:26px 0 12px}
+    .rez{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+    .rez .k{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);background:rgba(233,184,76,.12);border-radius:6px;padding:2px 8px}
+    .rez .t{flex:1;font-weight:600;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .del{background:none;border:none;color:var(--red);font-size:12.5px;font-weight:600;cursor:pointer}
+    .row{display:flex;gap:10px;align-items:center}
+    .muted{color:var(--muted);font-size:13px}
+    a{color:var(--gold)}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app"><div class="muted">Loading…</div></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    var SB_URL='https://ssllepovajmohdhvhzsa.supabase.co';
+    var SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzbGxlcG92YWptb2hkaHZoenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTYwMTcsImV4cCI6MjA5MTA3MjAxN30.qFTsGzZsN5XVX_xgxpdclWmeEtCs1ZfmmLzOsmcN_0k';
+    var sb=window.supabase.createClient(SB_URL,SB_ANON);
+    var SLUG='katy-ai-workshop';
+    var app=document.getElementById('app');
+    var esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+
+    async function tok(){ var s=await sb.auth.getSession(); return s.data.session?s.data.session.access_token:''; }
+    async function api(path,opts){ opts=opts||{}; var t=await tok();
+      var r=await fetch('/api'+path,Object.assign({},opts,{headers:Object.assign({'Content-Type':'application/json','Authorization':'Bearer '+t},opts.headers||{})}));
+      if(!r.ok) throw new Error((await r.json().catch(function(){return{};})).error||'error'); return r.json(); }
+
+    async function boot(){ var s=await sb.auth.getSession(); if(s.data.session) dash(); else login(); }
+
+    function login(){
+      app.innerHTML='<h1>Workshop admin</h1><div class="sub">Sign in with your CRM account.</div>'
+        +'<div class="card"><label class="fl">Email</label><input class="inp" id="em" type="email" />'
+        +'<label class="fl">Password</label><input class="inp" id="pw" type="password" />'
+        +'<button class="btn block" id="go">Log in</button><div class="err" id="er"></div></div>';
+      document.getElementById('go').onclick=async function(){
+        var er=document.getElementById('er'); er.textContent='';
+        var e=await sb.auth.signInWithPassword({email:document.getElementById('em').value.trim(),password:document.getElementById('pw').value});
+        if(e.error){er.textContent=e.error.message;return;} dash();
+      };
+    }
+
+    async function dash(){
+      app.innerHTML='<div class="row"><h1 style="flex:1">Workshop resources</h1><button class="btn ghost" id="out">Sign out</button></div>'
+        +'<div class="sub">These show on <a href="/workshop" target="_blank">vernontm.com/workshop</a> after attendees check in.</div>'
+        +'<div class="card"><label class="fl">Type</label>'
+        +'<select class="inp" id="kind"><option value="code">Copiable code / prompt</option><option value="link">PDF / download link</option><option value="note">Text note</option></select>'
+        +'<label class="fl">Title</label><input class="inp" id="title" placeholder="e.g. Agent system prompt" />'
+        +'<div id="dyn"></div>'
+        +'<button class="btn block" id="add">Add resource</button><div class="err" id="er"></div></div>'
+        +'<div class="sec">Live resources</div><div id="list"><div class="muted">Loading…</div></div>';
+      document.getElementById('out').onclick=async function(){ await sb.auth.signOut(); login(); };
+      document.getElementById('kind').onchange=renderDyn; renderDyn();
+      document.getElementById('add').onclick=add;
+      loadList();
+    }
+
+    function renderDyn(){
+      var k=document.getElementById('kind').value, d=document.getElementById('dyn');
+      if(k==='code'){ d.innerHTML='<label class="fl">Language (optional)</label><input class="inp" id="lang" placeholder="python, bash, json…" /><label class="fl">Code / prompt</label><textarea class="inp" id="body" placeholder="Paste the code or prompt here"></textarea>'; }
+      else if(k==='link'){ d.innerHTML='<label class="fl">Upload a PDF</label><input class="inp" id="file" type="file" accept="application/pdf,image/*" /><div class="muted" style="margin-top:6px" id="upst"></div><label class="fl">…or paste a URL</label><input class="inp" id="url" placeholder="https://…" /><label class="fl">Button label (optional)</label><input class="inp" id="body" placeholder="Download the prompt pack (PDF)" />';
+        document.getElementById('file').onchange=upload; }
+      else { d.innerHTML='<label class="fl">Note</label><textarea class="inp" id="body" style="font-family:var(--fbody)" placeholder="Any text you want attendees to see"></textarea>'; }
+    }
+
+    async function upload(e){
+      var f=e.target.files[0]; if(!f) return;
+      var st=document.getElementById('upst'); st.textContent='Uploading…';
+      try{
+        var t=await tok();
+        var r=await fetch('/api/crm/upload',{method:'POST',headers:{'x-file-name':f.name,'Authorization':'Bearer '+t},body:f});
+        var d=await r.json(); if(!r.ok) throw new Error(d.error||'upload failed');
+        document.getElementById('url').value=d.url; st.innerHTML='<span class="ok">Uploaded ✓</span>';
+      }catch(err){ st.innerHTML='<span class="err">'+esc(err.message)+'</span>'; }
+    }
+
+    async function add(){
+      var er=document.getElementById('er'); er.textContent='';
+      var kind=document.getElementById('kind').value;
+      var title=document.getElementById('title').value.trim();
+      if(!title){er.textContent='Add a title.';return;}
+      var payload={event_slug:SLUG,kind:kind,title:title};
+      if(kind==='code'){ payload.language=(document.getElementById('lang')||{}).value||''; payload.body=document.getElementById('body').value; if(!payload.body.trim()){er.textContent='Paste the code/prompt.';return;} }
+      else if(kind==='link'){ payload.url=document.getElementById('url').value.trim(); payload.body=document.getElementById('body').value.trim(); if(!payload.url){er.textContent='Upload a file or paste a URL.';return;} }
+      else { payload.body=document.getElementById('body').value; if(!payload.body.trim()){er.textContent='Add the note text.';return;} }
+      var btn=document.getElementById('add'); btn.disabled=true;
+      try{ await api('/event-resources',{method:'POST',body:JSON.stringify(payload)});
+        document.getElementById('title').value=''; renderDyn(); loadList();
+      }catch(e){ er.textContent=e.message; } finally{ btn.disabled=false; }
+    }
+
+    async function loadList(){
+      var el=document.getElementById('list');
+      try{ var d=await (await fetch('/api/event-resources?slug='+SLUG)).json(); var list=d.resources||[];
+        if(!list.length){ el.innerHTML='<div class="muted">No resources yet. Add one above.</div>'; return; }
+        el.innerHTML=list.map(function(r){ return '<div class="rez"><span class="k">'+esc(r.kind)+'</span><span class="t">'+esc(r.title)+'</span><button class="del" data-id="'+r.id+'">Remove</button></div>'; }).join('');
+        el.querySelectorAll('.del').forEach(function(b){ b.onclick=async function(){ if(!confirm('Remove this resource?'))return; await api('/event-resources?id='+b.dataset.id,{method:'DELETE'}); loadList(); }; });
+      }catch(e){ el.innerHTML='<div class="err">Could not load.</div>'; }
+    }
+    boot();
+  </script>
+</body>
+</html>
