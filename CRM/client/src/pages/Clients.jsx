@@ -708,7 +708,8 @@ const LEAD_STEPS = [
   { key: 'agreement', label: 'Agreement',          blurb: 'Preview the agreement and approve it.' },
   { key: 'stripe',    label: 'Stripe',             blurb: 'Set up the live invoicing and subscription.' },
   { key: 'access',    label: 'Platforms & Access', blurb: 'A task list of the tools you need access to, with instructions.' },
-  { key: 'send',      label: 'Send',               blurb: 'Send the agreement to the client to sign.' },
+  { key: 'proposal',  label: 'Proposal',           blurb: 'Draft the cover email to the client, with their portal link.' },
+  { key: 'send',      label: 'Send',               blurb: 'Send the agreement to sign and the proposal email, then track it.' },
 ];
 
 // Lightweight markdown → styled document HTML (headings, bold, bullets, rules).
@@ -1405,16 +1406,87 @@ function AccessStep({ client, onDone }) {
   );
 }
 
-// Step 6 — Send: final gate. Confirms readiness, sends the agreement to sign,
+// Step 7 — Proposal: draft the cover email to the client (what was sent + their
+// portal link), in a chosen style. Held in the pipeline for the Send step to fire.
+function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone }) {
+  const [ag, setAg] = useState(null);
+  const [busy, setBusy] = useState('');
+
+  useEffect(() => {
+    (async () => { try { const d = await getAgreements(client.id); setAg((d.agreements || [])[0] || null); } catch (e) { /* ok */ } })();
+  }, [client.id]);
+
+  const portalUrl = `${window.location.origin}/client`;
+  const signUrl = ag?.sign_token ? `${window.location.origin}/sign?token=${ag.sign_token}` : null;
+
+  const gen = async (nextTone) => {
+    const useTone = nextTone || tone;
+    setBusy('gen');
+    try { const r = await draftClientEmail(client.id, useTone, portalUrl, signUrl); setEmailDraft({ subject: r.subject || '', body: r.body || '' }); }
+    catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+  const saveGmailDraft = async () => {
+    if (!client.contact_email) { toast('error', 'No email on file (add it in Business Details).'); return; }
+    if (!emailDraft?.body?.trim()) { toast('error', 'Draft the email first.'); return; }
+    setBusy('draft');
+    try { await sendClientEmail({ to: client.contact_email, subject: emailDraft.subject, body: emailDraft.body, mode: 'draft' }); toast('success', 'Saved as a Gmail draft.'); }
+    catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
+  return (
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Proposal email</div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+        A cover note letting {client.owner_name || 'them'} know what you're sending, with their portal link — drafted from your notes, terms, and the plan. Pick a style; you'll send it on the next step.
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        {[{ k: 'professional', label: 'Professional' }, { k: 'friendly', label: 'Friendly' }, { k: 'gain', label: 'Gain-focused' }].map(o => (
+          <button key={o.k} onClick={() => { setTone(o.k); gen(o.k); }} disabled={busy === 'gen'}
+            style={{ padding: '6px 14px', borderRadius: 999, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)', border: `1px solid ${tone === o.k ? 'var(--orange)' : 'var(--border)'}`, background: tone === o.k ? 'rgba(37,99,235,0.10)' : 'var(--surface)', color: tone === o.k ? 'var(--orange)' : 'var(--muted)' }}>
+            {o.label}
+          </button>
+        ))}
+        {busy === 'gen' && <span style={{ fontSize: 12, color: 'var(--orange)', alignSelf: 'center', display: 'inline-flex', gap: 5, alignItems: 'center' }}><Sparkles size={12} /> Drafting…</span>}
+      </div>
+
+      {!emailDraft && busy !== 'gen' && (
+        <button className="btn-primary" onClick={() => gen()}><Sparkles size={15} /> Draft the email</button>
+      )}
+
+      {emailDraft && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <label className="form-label">Subject</label>
+            <input className="form-input" value={emailDraft.subject} onChange={e => setEmailDraft(m => ({ ...m, subject: e.target.value }))} />
+          </div>
+          <div>
+            <label className="form-label">Message</label>
+            <textarea className="form-input" rows={13} value={emailDraft.body} onChange={e => setEmailDraft(m => ({ ...m, body: e.target.value }))} style={{ resize: 'vertical', fontSize: 13, lineHeight: 1.6 }} />
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>To: {client.contact_email || <span style={{ color: '#ff5c5c' }}>no email on file — add one in Business Details</span>}</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn-ghost" disabled={busy === 'draft' || !client.contact_email} onClick={saveGmailDraft}>{busy === 'draft' ? 'Saving…' : 'Save as Gmail draft'}</button>
+            <button className="btn-ghost" onClick={() => navigator.clipboard?.writeText(`${emailDraft.subject}\n\n${emailDraft.body}`).then(() => toast('success', 'Copied'))}><Copy size={13} /> Copy</button>
+            <button className="btn-ghost" disabled={busy === 'gen'} onClick={() => gen()}><Sparkles size={13} /> Regenerate</button>
+          </div>
+          <button className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: 6 }} onClick={onDone}>Continue to send <ChevronRight size={15} /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Step 8 — Send: final gate. Sends the agreement to sign + the proposal email,
 // then shows live status (sent → opened → signed).
-function SendStep({ client, onSent }) {
+function SendStep({ client, emailDraft, onSent }) {
   const [loading, setLoading] = useState(true);
   const [ag, setAg] = useState(null);
   const [deals, setDeals] = useState([]);
   const [busy, setBusy] = useState('');
-  const [tone, setTone] = useState('professional');
-  const [email, setEmail] = useState(null); // { subject, body }
-  const [emailBusy, setEmailBusy] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
 
   const load = async () => {
     try {
@@ -1438,28 +1510,16 @@ function SendStep({ client, onSent }) {
     finally { setBusy(''); }
   };
 
-  const portalUrl = `${window.location.origin}/client`;
-  const signUrl = ag?.sign_token ? `${window.location.origin}/sign?token=${ag.sign_token}` : null;
-
-  const genEmail = async (nextTone) => {
-    const useTone = nextTone || tone;
-    setEmailBusy('gen');
+  const sendProposal = async () => {
+    if (!client.contact_email) { toast('error', 'No email on file (add it in Business Details).'); return; }
+    if (!emailDraft?.body?.trim()) { toast('error', 'Draft the proposal on the previous step first.'); return; }
+    setBusy('email');
     try {
-      const r = await draftClientEmail(client.id, useTone, portalUrl, signUrl);
-      setEmail({ subject: r.subject || '', body: r.body || '' });
+      await sendClientEmail({ to: client.contact_email, subject: emailDraft.subject, body: emailDraft.body, mode: 'send' });
+      setEmailSent(true);
+      toast('success', `Proposal email sent to ${client.contact_email}.`);
     } catch (e) { toast('error', e.message); }
-    finally { setEmailBusy(''); }
-  };
-  const doSendEmail = async (mode) => {
-    const to = client.contact_email;
-    if (!to) { toast('error', 'This client has no email on file (add it in Business Details).'); return; }
-    if (!email?.body?.trim()) { toast('error', 'Generate or write the email first.'); return; }
-    setEmailBusy(mode);
-    try {
-      await sendClientEmail({ to, subject: email.subject, body: email.body, mode });
-      toast('success', mode === 'draft' ? 'Saved as a Gmail draft.' : `Email sent to ${to}.`);
-    } catch (e) { toast('error', e.message); }
-    finally { setEmailBusy(''); }
+    finally { setBusy(''); }
   };
 
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
@@ -1488,13 +1548,20 @@ function SendStep({ client, onSent }) {
         <Check ok={approved} label="Agreement approved" />
         <Check ok={deals.length > 0} label="Deal & projects created" />
         <Check ok={!!ag.total_amount} label={`Billing plan set — ${money(ag.total_amount)}`} />
+        <Check ok={!!emailDraft?.body} label="Proposal email drafted" />
       </div>
 
-      {ag.status !== 'signed' && (
-        <button className="btn-primary" disabled={!approved || busy === 'send'} onClick={send}>
-          <FileSignature size={15} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend to client' : 'Send to client to sign'}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {ag.status !== 'signed' && (
+          <button className="btn-primary" disabled={!approved || busy === 'send'} onClick={send}>
+            <FileSignature size={15} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend to client' : 'Send agreement to sign'}
+          </button>
+        )}
+        <button className="btn-ghost" disabled={busy === 'email' || !client.contact_email || !emailDraft?.body} onClick={sendProposal}>
+          <Mail size={15} /> {busy === 'email' ? 'Sending…' : emailSent ? 'Resend proposal email' : 'Send proposal email'}
         </button>
-      )}
+      </div>
+      {!emailDraft?.body && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Draft the proposal on the previous step to enable the email send.</div>}
 
       {ag.sent_at && (
         <div style={{ marginTop: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
@@ -1515,55 +1582,6 @@ function SendStep({ client, onSent }) {
           )}
         </div>
       )}
-
-      {/* Cover email to the client */}
-      <div style={{ marginTop: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <Mail size={16} style={{ color: 'var(--orange)' }} />
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Email the client</div>
-        </div>
-        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
-          A cover note letting {client.owner_name || 'them'} know what you sent, with their portal link — drafted from your notes, terms, and the plan. Pick a style:
-        </div>
-
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-          {[{ k: 'professional', label: 'Professional' }, { k: 'friendly', label: 'Friendly' }, { k: 'gain', label: 'Gain-focused' }].map(o => (
-            <button key={o.k} onClick={() => { setTone(o.k); genEmail(o.k); }} disabled={emailBusy === 'gen'}
-              style={{ padding: '6px 14px', borderRadius: 999, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)', border: `1px solid ${tone === o.k ? 'var(--orange)' : 'var(--border)'}`, background: tone === o.k ? 'rgba(37,99,235,0.10)' : 'var(--surface)', color: tone === o.k ? 'var(--orange)' : 'var(--muted)' }}>
-              {o.label}
-            </button>
-          ))}
-          {emailBusy === 'gen' && <span style={{ fontSize: 12, color: 'var(--orange)', alignSelf: 'center', display: 'inline-flex', gap: 5, alignItems: 'center' }}><Sparkles size={12} /> Drafting…</span>}
-        </div>
-
-        {!email && emailBusy !== 'gen' && (
-          <button className="btn-primary" onClick={() => genEmail()}><Sparkles size={15} /> Draft the email</button>
-        )}
-
-        {email && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div>
-              <label className="form-label">Subject</label>
-              <input className="form-input" value={email.subject} onChange={e => setEmail(m => ({ ...m, subject: e.target.value }))} />
-            </div>
-            <div>
-              <label className="form-label">Message</label>
-              <textarea className="form-input" rows={12} value={email.body} onChange={e => setEmail(m => ({ ...m, body: e.target.value }))} style={{ resize: 'vertical', fontSize: 13, lineHeight: 1.6 }} />
-            </div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>To: {client.contact_email || <span style={{ color: '#ff5c5c' }}>no email on file — add one in Business Details</span>}</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn-primary" disabled={emailBusy === 'send' || !client.contact_email} onClick={() => doSendEmail('send')}>
-                <Mail size={15} /> {emailBusy === 'send' ? 'Sending…' : 'Send email'}
-              </button>
-              <button className="btn-ghost" disabled={emailBusy === 'draft' || !client.contact_email} onClick={() => doSendEmail('draft')}>
-                {emailBusy === 'draft' ? 'Saving…' : 'Save as Gmail draft'}
-              </button>
-              <button className="btn-ghost" onClick={() => navigator.clipboard?.writeText(`${email.subject}\n\n${email.body}`).then(() => toast('success', 'Copied'))}><Copy size={13} /> Copy</button>
-              <button className="btn-ghost" style={{ marginLeft: 'auto' }} disabled={emailBusy === 'gen'} onClick={() => genEmail()}><Sparkles size={13} /> Regenerate</button>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -1574,6 +1592,8 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
   const [termsDraft, setTermsDraft] = useState(null);
   const [dealId, setDealId] = useState(null);
   const [agreementId, setAgreementId] = useState(null);
+  const [emailDraft, setEmailDraft] = useState(null);
+  const [emailTone, setEmailTone] = useState('professional');
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
@@ -1670,8 +1690,10 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <StripeStep client={client} onDone={() => setStep(5)} />
         ) : cur.key === 'access' ? (
           <AccessStep client={client} onDone={() => setStep(6)} />
+        ) : cur.key === 'proposal' ? (
+          <ProposalStep client={client} emailDraft={emailDraft} setEmailDraft={setEmailDraft} tone={emailTone} setTone={setEmailTone} onDone={() => setStep(7)} />
         ) : cur.key === 'send' ? (
-          <SendStep client={client} />
+          <SendStep client={client} emailDraft={emailDraft} />
         ) : (
           <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>
