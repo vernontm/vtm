@@ -6,6 +6,7 @@ import {
   Briefcase, Lock, Eye, EyeOff, Copy, Pencil, ExternalLink,
   FileSignature, Sparkles, DollarSign, Download,
   StickyNote, Phone, CheckSquare, PhoneIncoming, PhoneOutgoing, Flag, Activity, X, Mail,
+  ChevronLeft, ChevronRight, ChevronDown,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import {
@@ -698,14 +699,26 @@ const ACT_TYPES = [
 ];
 const isSummary = (a) => a.tag === 'Summary' || (a.body || '').startsWith('📝');
 
+const LEAD_STEPS = [
+  { key: 'overview',  label: 'Overview',           blurb: 'Business details, activity, and AI summaries.' },
+  { key: 'terms',     label: 'Terms',              blurb: 'Review and edit the agreement terms, then approve.' },
+  { key: 'deals',     label: 'Deals & Projects',   blurb: 'Create the deal and projects with pricing.' },
+  { key: 'agreement', label: 'Agreement',          blurb: 'Preview the agreement and approve it.' },
+  { key: 'stripe',    label: 'Stripe',             blurb: 'Set up the live invoicing and subscription.' },
+  { key: 'access',    label: 'Platforms & Access', blurb: 'A task list of the tools you need access to, with instructions.' },
+  { key: 'send',      label: 'Send',               blurb: 'Send the agreement to the client to sign.' },
+];
+
 function LeadDetail({ client, onBack, onDelete, onPatch }) {
+  const [step, setStep] = useState(0);
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
   };
   const stage = stageOf(client.stage);
+  const cur = LEAD_STEPS[step];
   return (
-    <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%', background: 'var(--bg)' }}>
       {/* Header */}
       <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 16 }}>
         <button className="btn-ghost" onClick={onBack} style={{ padding: '7px 9px', flexShrink: 0 }}><ArrowLeft size={16} /></button>
@@ -725,38 +738,71 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
         </div>
       </div>
 
-      {/* One page: activity timeline + business details */}
-      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 20, padding: 24, alignItems: 'start' }}>
-        <LeadActivity client={client} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Card title="Business details">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
-              <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
-              <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
-              <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
-              <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
-              <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
+      {/* Pipeline stepper */}
+      <div style={{ display: 'flex', gap: 6, padding: '12px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', overflowX: 'auto' }}>
+        {LEAD_STEPS.map((s, i) => {
+          const done = i < step, on = i === step;
+          return (
+            <button key={s.key} onClick={() => setStep(i)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)', border: `1px solid ${on ? 'var(--orange)' : 'var(--border)'}`, background: on ? 'rgba(37,99,235,0.10)' : (done ? 'rgba(22,163,74,0.08)' : 'var(--surface)'), color: on ? 'var(--orange)' : (done ? '#16a34a' : 'var(--muted)') }}>
+              <span style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, background: on ? 'var(--orange)' : (done ? '#16a34a' : 'var(--surface-2)'), color: (on || done) ? '#fff' : 'var(--muted)' }}>{done ? '✓' : i + 1}</span>
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Step content */}
+      <div style={{ flex: 1, padding: 24 }}>
+        {step === 0 ? (
+          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 20, alignItems: 'start' }}>
+            <LeadActivity client={client} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Card title="Business details">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
+                  <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
+                  <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
+                  <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
+                  <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
+                  <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
+                </div>
+              </Card>
+              <Card title="Lead">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Temperature</span>
+                    <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Rank</span>
+                    <PillSelect value={client.lead_rank || 'medium'} options={RANKS} onChange={v => saveField('lead_rank', v)} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Potential revenue ($)</span>
+                    <input className="form-input" type="number" min="0" step="100" defaultValue={client.potential_value ?? ''}
+                      onBlur={e => saveField('potential_value', e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 5000" />
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
-          <Card title="Lead">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Temperature</span>
-                <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />
-              </div>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Rank</span>
-                <PillSelect value={client.lead_rank || 'medium'} options={RANKS} onChange={v => saveField('lead_rank', v)} />
-              </div>
-              <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Potential revenue ($)</span>
-                <input className="form-input" type="number" min="0" step="100" defaultValue={client.potential_value ?? ''}
-                  onBlur={e => saveField('potential_value', e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 5000" />
-              </div>
-            </div>
-          </Card>
+          </div>
+        ) : (
+          <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 28px', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{cur.label}</div>
+            <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>{cur.blurb}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 16, fontStyle: 'italic' }}>This step is being built next.</div>
+          </div>
+        )}
+      </div>
+
+      {/* Sticky bottom nav */}
+      <div style={{ position: 'sticky', bottom: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 -4px 16px rgba(0,0,0,0.06)', zIndex: 20 }}>
+        <button className="btn-ghost" disabled={step === 0} onClick={() => setStep(s => Math.max(0, s - 1))}><ChevronLeft size={15} /> Previous</button>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>Step {step + 1} of {LEAD_STEPS.length}</span>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}> · {cur.label}</span>
         </div>
+        <button className="btn-primary" disabled={step === LEAD_STEPS.length - 1} onClick={() => setStep(s => Math.min(LEAD_STEPS.length - 1, s + 1))}>Next <ChevronRight size={15} /></button>
       </div>
     </div>
   );
@@ -770,6 +816,7 @@ function LeadActivity({ client }) {
   const [draft, setDraft] = useState({});
   const [summaryPrompt, setSummaryPrompt] = useState(null); // { text, title }
   const [summarizing, setSummarizing] = useState(false);
+  const [expanded, setExpanded] = useState({}); // activity id -> forced open/closed
 
   const load = async () => {
     try { const rows = await getClientActivity(clientId); setItems((rows || []).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))); }
@@ -895,6 +942,9 @@ function LeadActivity({ client }) {
           );
           const summary = isSummary(a);
           const Icon = summary ? Sparkles : a.type === 'meeting' ? Calendar : a.type === 'email' ? Mail : StickyNote;
+          // Long notes collapse by default; summaries always start expanded.
+          const long = (a.body || '').length > 280;
+          const open = expanded[a.id] ?? (summary || !long);
           return (
             <div key={a.id} style={{ padding: '14px 16px', background: summary ? 'rgba(37,99,235,0.05)' : 'var(--surface)', border: `1px solid ${summary ? 'rgba(37,99,235,0.3)' : 'var(--border)'}`, borderRadius: 12, boxShadow: 'var(--shadow-sm)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -902,9 +952,17 @@ function LeadActivity({ client }) {
                 {a.tag && <span style={{ fontSize: 10.5, fontWeight: 700, color: NOTE_TAGS[a.tag] || 'var(--orange)', background: (NOTE_TAGS[a.tag] || 'var(--orange)') + '18', border: `1px solid ${(NOTE_TAGS[a.tag] || 'var(--orange)')}40`, borderRadius: 999, padding: '2px 9px' }}>{a.tag}</span>}
                 {a.title && !summary && <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{a.title}</span>}
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{a.author || 'Ray'} · {actTimeAgo(a.created_at)}</span>
+                {long && (
+                  <button className="btn-ghost" style={{ padding: '3px 6px' }} title={open ? 'Collapse' : 'Expand'} onClick={() => setExpanded(e => ({ ...e, [a.id]: !open }))}>
+                    <ChevronDown size={14} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                  </button>
+                )}
                 <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
               </div>
-              <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{a.body}</div>
+              <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5, ...(open ? {} : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>{a.body}</div>
+              {long && !open && (
+                <button onClick={() => setExpanded(e => ({ ...e, [a.id]: true }))} style={{ marginTop: 6, background: 'none', border: 'none', color: 'var(--link)', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-display)' }}>Show more</button>
+              )}
             </div>
           );
         })}
