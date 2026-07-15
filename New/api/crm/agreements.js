@@ -46,18 +46,25 @@ module.exports = async function handler(req, res) {
     // that holds the offered plans. The client picks one in the portal, which
     // then builds the real schedule + finalizes the document to sign.
     if (req.method === 'POST' && action === 'custom-setup') {
-      const { client_id, total, plan_options } = req.body || {};
+      const { client_id, total, plan_options, agreement_markdown, nda_markdown } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
-      const existing = await supaFetch(`crm_agreements?client_id=eq.${client_id}&order=created_at.desc&limit=1&select=id`);
+      const existing = await supaFetch(`crm_agreements?client_id=eq.${client_id}&order=created_at.desc&limit=1&select=id,terms`);
       const row = existing && existing[0];
-      const patch = { total_amount: total || null, payment_mode: 'custom', plan_options: plan_options || [] };
+      const terms = {
+        ...(row?.terms || {}),
+        agreement_markdown: agreement_markdown || (row?.terms?.agreement_markdown) || '',
+        nda_markdown: nda_markdown || (row?.terms?.nda_markdown) || '',
+      };
+      const patch = { total_amount: total || null, payment_mode: 'custom', plan_options: plan_options || [], selected_plan: null, terms };
       if (row) {
+        // Reselecting plans → clear any previously-built schedule so the client re-picks.
+        await supaFetch(`crm_payments?agreement_id=eq.${row.id}`, { method: 'DELETE' }).catch(() => {});
         await supaFetch(`crm_agreements?id=eq.${row.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
         return res.json({ ok: true, agreement_id: row.id });
       }
       const created = await supaFetch('crm_agreements', {
         method: 'POST', headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ client_id, title: 'Service Agreement — Vernon Tech & Media', status: 'draft', terms: {}, ...patch }),
+        body: JSON.stringify({ client_id, title: 'Service Agreement — Vernon Tech & Media', status: 'draft', ...patch }),
       });
       return res.json({ ok: true, agreement_id: created[0]?.id });
     }

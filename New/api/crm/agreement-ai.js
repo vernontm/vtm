@@ -115,7 +115,7 @@ Return ONLY JSON with this shape:
 
     // ── generate: draft the full agreement + NDA as reviewable text ──
     if (req.method === 'POST' && action === 'generate') {
-      const { client_id, terms, base } = req.body || {};
+      const { client_id, terms, base, mode } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
       const { client, projects, activity } = await loadContext(client_id);
 
@@ -151,7 +151,7 @@ CURRENT MUTUAL NDA (markdown):
       const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media (VTM) — Rayvaughn Vernon, dba Vernon Tech & Media, Katy, Texas, ray@vernontm.com. Governing law: Texas.
 Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law. Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. End with a one-line "not legal advice" note.
 Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance) — no refunds are issued. Section 9 Commitment: once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy). Note it is not legal advice.
-Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives) — never default the total to 0. Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
+Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives) — never default the total to 0.${mode === 'custom' ? ` CUSTOM PLAN MODE: The client chooses their payment plan later in their portal, so DO NOT list any amounts, installments, or dates anywhere. For section 3 (Total Price & Payment Schedule), write the heading and then a single line containing exactly the token {{PAYMENT_SCHEDULE}} and nothing else. Set "total" to the build value from the terms/notes, and return installments: [] and monthly: [].` : ''} Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
 {
   "summary": "one line",
   "total": number,

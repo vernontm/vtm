@@ -28,6 +28,18 @@
     .paper h2{font-size:14.5px;font-weight:700;color:#1c3f63;margin:20px 0 6px}
     .paper p{margin:0 0 10px} .paper ul{margin:0 0 10px 22px} .paper li{margin:2px 0}
     .paper strong{font-weight:700}
+    /* plan chooser */
+    .plans{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+    .planc{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:0 4px 18px rgba(0,0,0,.04)}
+    .planhd{display:flex;align-items:flex-start;gap:14px}
+    .plname{font-weight:800;font-size:17px;color:var(--ink)}
+    .plsum{color:var(--body);font-size:13.5px;margin-top:3px}
+    .pltoday{margin-left:auto;text-align:right;white-space:nowrap}
+    .plamt{font-weight:800;font-size:20px;color:var(--ink)}
+    .pltd{font-size:12px;color:var(--muted)}
+    .plmeta{color:var(--muted);font-size:13px;margin-top:10px}
+    .plbtn{margin-top:14px;width:100%;background:var(--ink);color:#fff;border:none;border-radius:11px;padding:13px;font-weight:700;font-size:14.5px;cursor:pointer}
+    .plbtn:hover{background:#000}.plbtn:disabled{background:#9aa1ab}
     .sigblock{display:flex;gap:44px;margin-top:38px;flex-wrap:wrap}
     .party{flex:1;min-width:230px}
     .sigline{min-height:48px;border-bottom:1px solid #333;display:flex;align-items:flex-end;font-family:'Dancing Script',cursive;font-size:31px;color:#16324a;padding-bottom:2px;line-height:1}
@@ -147,7 +159,35 @@
     }
 
     // ── render current step ───────────────────────────────────────
+    function money(n){ return '$'+(Number(n)||0).toLocaleString('en-US',{maximumFractionDigits:0}); }
+
+    function renderPlanChooser(){
+      const plans=data.plan_options||[];
+      let h='<div class="lead"><h1>Choose your payment plan</h1><p>Pick the option that works best for you — you\'ll review and sign your agreement next.</p></div><div class="plans">';
+      plans.forEach(p=>{
+        const rest=(p.installments||[]).length ? ('then '+(p.installments.length===1 ? money(p.installments[0].amount) : (p.installments.length+' × '+money(p.installments[0].amount)))) : 'paid in full today';
+        h+='<div class="planc"><div class="planhd"><div><div class="plname">'+esc(p.label)+'</div><div class="plsum">'+esc(p.summary||'')+'</div></div>'
+          +'<div class="pltoday"><div class="plamt">'+money(p.deposit)+'</div><div class="pltd">due today</div></div></div>'
+          +'<div class="plmeta">'+rest+' · total '+money(p.grand_total)+(p.finance_charge?(' (incl. '+money(p.finance_charge)+' financing)'):'')+'</div>'
+          +'<button class="plbtn" data-k="'+esc(p.key)+'">Choose this plan</button></div>';
+      });
+      h+='</div>';
+      app.innerHTML=h;
+      app.querySelectorAll('.plbtn').forEach(b=>b.onclick=()=>choosePlan(b.dataset.k,b));
+    }
+    async function choosePlan(key,btn){
+      if(btn){btn.disabled=true;btn.textContent='Preparing your agreement…';}
+      try{
+        const r=await fetch('/api/crm/sign?token='+encodeURIComponent(token)+'&action=choose-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan_key:key})});
+        if(!r.ok)throw new Error();
+        const d=await r.json();
+        data.needs_plan=false; data.agreement_markdown=d.agreement_markdown; data.nda_markdown=d.nda_markdown; data.total=d.total; data.installments=d.installments;
+        step='agreement'; window.scrollTo(0,0); render();
+      }catch(e){ if(btn){btn.disabled=false;btn.textContent='Choose this plan';} alert('Could not select the plan. Please try again.'); }
+    }
+
     function render(){
+      if (!isPreview && data.needs_plan) { pill.textContent=''; renderPlanChooser(); return; }
       const hasNda=!!data.nda_markdown;
 
       // Preview mode: read-only, with an Agreement/NDA toggle. No signing UI.

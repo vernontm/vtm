@@ -18,6 +18,27 @@ const adminHeaders = {
   'Content-Type': 'application/json',
 };
 
+const money = (n) => '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+// Build the concrete payment-schedule markdown for a chosen plan, to fill the
+// {{PAYMENT_SCHEDULE}} placeholder in a custom agreement.
+function scheduleMarkdown(plan) {
+  const lines = [`**Total: ${money(plan.grand_total)}**`, ''];
+  lines.push(`- **Deposit (due upon signing):** ${money(plan.deposit)}`);
+  (plan.installments || []).forEach(i => lines.push(`- **${i.label || i.trigger || 'Payment'}:** ${money(i.amount)}`));
+  if (plan.finance_charge) lines.push('', `_Includes ${money(plan.finance_charge)} financing charge._`);
+  lines.push('', 'The deposit is charged upon signing. Remaining payments are billed automatically to the card on file per the schedule above. All payments are authorized by the Client\'s signature and recurring-billing consent.');
+  return lines.join('\n');
+}
+
+// Turn a chosen plan into the payment rows we bill: the deposit first (labeled so
+// the subscription logic excludes it), then the remaining installments.
+function planToInstallments(plan) {
+  const rows = [{ label: 'Deposit', amount: plan.deposit, trigger: 'Due upon signing', status: 'pending' }];
+  (plan.installments || []).forEach(i => rows.push({ label: i.label || 'Payment', amount: i.amount, trigger: i.trigger || i.label, status: 'pending' }));
+  return rows;
+}
+
 // Wrap paragraph strings (may contain <a> tags already) into a clean HTML email.
 function emailHtml(paragraphs) {
   const body = (paragraphs || []).filter(Boolean)
@@ -93,11 +114,21 @@ async function signedUrlFor(fileUrl, expiresIn = 604800) {
 // one-month free gap, then the ongoing maintenance. Fully guarded + idempotent
 // (keyed on the deal's stripe_subscription_id) so it never breaks signing.
 async function setupPlanSubscription(ag, client, session) {
-  if (!stripe.configured() || !ag.deal_id) return null;
-  const [deal] = await supaFetch(`crm_deals?id=eq.${ag.deal_id}&select=id,stripe_customer_id,stripe_subscription_id`);
+  if (!stripe.configured()) return null;
+  const terms = ag.terms || {};
+  // Custom pay-in-full / 50-50 plans: deposit only at signing; any remainder is a
+  // pending payment (settled via the portal), not an auto-charging subscription.
+  const planKey = terms.plan_key || null;
+  if (planKey && planKey !== '20_3' && planKey !== '20_6') return null;
+
+  // Resolve the deal (custom agreements aren't always linked — fall back to the
+  // client's most recent deal) for storing the Stripe customer/subscription ids.
+  let dealId = ag.deal_id;
+  if (!dealId) { const [d] = await supaFetch(`crm_deals?client_id=eq.${client.id}&order=created_at.desc&limit=1&select=id`); dealId = d && d.id; }
+  if (!dealId) return null;
+  const [deal] = await supaFetch(`crm_deals?id=eq.${dealId}&select=id,stripe_customer_id,stripe_subscription_id`);
   if (!deal || deal.stripe_subscription_id) return null; // already set up
 
-  const terms = ag.terms || {};
   const installments = Array.isArray(terms.installments) ? terms.installments : [];
   const builds = installments.filter(i => !/deposit/i.test(i.label || ''));
   const buildAmt = builds.length ? Math.round(Number(builds[0].amount) * 100) : 0;
@@ -179,12 +210,50 @@ module.exports = async function handler(req, res) {
       return res.status(302).end();
     }
 
+    // POST action=choose-plan — the client picks a payment plan (custom mode).
+    // Builds the concrete schedule into the agreement, so they can then sign.
+    if (req.method === 'POST' && req.query.action === 'choose-plan') {
+      if (ag.payment_mode !== 'custom') return res.status(400).json({ error: 'This agreement has a fixed plan.' });
+      const planKey = req.body && req.body.plan_key;
+      const plan = (ag.plan_options || []).find(p => p.key === planKey);
+      if (!plan) return res.status(400).json({ error: 'Pick a valid plan.' });
+
+      const schedMd = scheduleMarkdown(plan);
+      let md = terms.agreement_markdown || '';
+      md = md.includes('{{PAYMENT_SCHEDULE}}')
+        ? md.replace('{{PAYMENT_SCHEDULE}}', schedMd)
+        : `${md}\n\n## Payment Schedule\n${schedMd}`;
+      const installments = planToInstallments(plan);
+      const newTerms = { ...terms, agreement_markdown: md, installments, monthly: [], plan_key: plan.key };
+
+      await supaFetch(`crm_agreements?id=eq.${ag.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ terms: newTerms, total_amount: plan.grand_total, selected_plan: plan, plan_selected_at: new Date().toISOString() }),
+      });
+      // Rebuild the payment schedule rows for the chosen plan.
+      await supaFetch(`crm_payments?agreement_id=eq.${ag.id}`, { method: 'DELETE' }).catch(() => {});
+      await supaFetch('crm_payments', { method: 'POST', body: JSON.stringify(installments.map(i => ({ client_id: client.id, agreement_id: ag.id, label: i.label, amount: i.amount, status: 'pending', due_condition: i.trigger, source: 'agreement' }))) }).catch(() => {});
+      await supaFetch('crm_client_alerts', { method: 'POST', body: JSON.stringify({ client_id: client.id, type: 'plan_selected', message: `${client.business_name} chose the "${plan.label}" plan` }) }).catch(() => {});
+
+      return res.json({ ok: true, agreement_markdown: md, nda_markdown: terms.nda_markdown || '', total: plan.grand_total, installments });
+    }
+
     // GET — load the documents for signing
     if (req.method === 'GET') {
       // Track the first time the client actually opens the signing page (not a
       // preview, and only once it's been sent). Ray sees this on the Send step.
       if (req.query.preview !== '1' && ag.sent_at && !ag.opened_at) {
         await supaFetch(`crm_agreements?id=eq.${ag.id}`, { method: 'PATCH', body: JSON.stringify({ opened_at: new Date().toISOString() }) }).catch(() => {});
+      }
+      // Custom plan not chosen yet → the page shows the plan chooser first.
+      if (ag.payment_mode === 'custom' && !ag.selected_plan) {
+        return res.json({
+          status: ag.signed_at ? 'signed' : 'sent',
+          needs_plan: true,
+          plan_options: ag.plan_options || [],
+          business_name: client.business_name,
+          owner_name: client.owner_name,
+        });
       }
       return res.json({
         status: ag.signed_at ? 'signed' : 'sent',

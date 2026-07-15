@@ -849,7 +849,12 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
     setBusy('approve');
     try {
       const plans = computePlans(Number(total)).filter(p => offered?.[p.key]);
-      await setupCustomAgreement(client.id, { total: Number(total), plan_options: plans });
+      // Generate the base agreement + NDA now (with a payment-schedule placeholder);
+      // the client's plan choice fills in the concrete schedule at signing.
+      let doc = {};
+      try { doc = await generateAgreement(client.id, `Build value $${Number(total)}. The client selects a custom payment plan in their portal.`, null, 'custom'); }
+      catch (e) { /* still save the plan options; doc can be regenerated */ }
+      await setupCustomAgreement(client.id, { total: Number(total), plan_options: plans, agreement_markdown: doc.agreement_markdown || null, nda_markdown: doc.nda_markdown || null });
       onApprove({ total: Number(total), custom: true });
       toast('success', 'Payment-plan options saved — the client picks one in their portal.');
     } catch (e) { toast('error', e.message); }
