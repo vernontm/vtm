@@ -1,4 +1,5 @@
 import { setCors, requireClientScope, supaFetch } from '../_lib/supabase.js';
+import { secretKey } from '../_lib/stripe.js';
 
 export default async function handler(req, res) {
   setCors(res, req);
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
     // the global admin view. When scoped to a specific client, skip it
     // until per-client Stripe accounts are supported.
     let stripeRevenue = null;
-    const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
+    const STRIPE_KEY = secretKey(); // follows STRIPE_MODE (test/live)
     // Stripe is Ray's account-level money data — show it to any admin
     // regardless of client scope (the CRM is single-account now).
     if (user.is_admin && STRIPE_KEY && !STRIPE_KEY.includes('REPLACE')) {

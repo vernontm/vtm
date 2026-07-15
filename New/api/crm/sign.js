@@ -86,7 +86,7 @@ async function signedUrlFor(fileUrl, expiresIn = 604800) {
 // one-month free gap, then the ongoing maintenance. Fully guarded + idempotent
 // (keyed on the deal's stripe_subscription_id) so it never breaks signing.
 async function setupPlanSubscription(ag, client, session) {
-  if (!process.env.STRIPE_SECRET_KEY || !ag.deal_id) return null;
+  if (!stripe.configured() || !ag.deal_id) return null;
   const [deal] = await supaFetch(`crm_deals?id=eq.${ag.deal_id}&select=id,stripe_customer_id,stripe_subscription_id`);
   if (!deal || deal.stripe_subscription_id) return null; // already set up
 
@@ -257,7 +257,7 @@ module.exports = async function handler(req, res) {
       // First pending payment → Stripe Checkout for the deposit.
       let checkoutUrl = null;
       try {
-        if (process.env.STRIPE_SECRET_KEY) {
+        if (stripe.configured()) {
           const pays = await supaFetch(`crm_payments?agreement_id=eq.${ag.id}&status=eq.pending&order=created_at.asc&limit=1`);
           const dep = pays && pays[0];
           if (dep && Number(dep.amount) > 0) {

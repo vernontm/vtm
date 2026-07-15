@@ -3,11 +3,27 @@
 // through this shared wrapper. Form-encodes nested params the way Stripe wants
 // (line_items[0][price_data][product_data][name]=...) and supports idempotency.
 //
-// Required env:
-//   STRIPE_SECRET_KEY   — sk_live_… or sk_test_…
+// Env / mode switch:
+//   STRIPE_MODE            — 'test' or 'live' (default 'live')
+//   STRIPE_SECRET_KEY_TEST — sk_test_… (used when STRIPE_MODE=test)
+//   STRIPE_SECRET_KEY_LIVE — sk_live_… (used when STRIPE_MODE=live)
+//   STRIPE_SECRET_KEY      — legacy fallback for live (kept so nothing breaks)
 
 const STRIPE_API = 'https://api.stripe.com/v1';
 const STRIPE_VERSION = '2024-06-20';
+
+// Which mode Stripe runs in for this request.
+function mode() {
+  return (process.env.STRIPE_MODE || 'live').toLowerCase() === 'test' ? 'test' : 'live';
+}
+// Resolve the secret key for the active mode. Live falls back to the legacy
+// STRIPE_SECRET_KEY so existing live billing keeps working untouched.
+function secretKey() {
+  return mode() === 'test'
+    ? (process.env.STRIPE_SECRET_KEY_TEST || '')
+    : (process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY || '');
+}
+function configured() { return !!secretKey(); }
 
 // Recursively flatten an object/array into Stripe's bracketed form encoding.
 function toForm(obj, prefix, out) {
@@ -36,9 +52,9 @@ function toForm(obj, prefix, out) {
 // Core call. method: 'GET' | 'POST'. path begins with '/'. body is an object
 // (POST) and gets form-encoded. opts.idempotencyKey sets the header.
 async function call(method, path, body, opts = {}) {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = secretKey();
   if (!key) {
-    const e = new Error('Stripe is not configured (STRIPE_SECRET_KEY missing).');
+    const e = new Error(`Stripe is not configured (no ${mode() === 'test' ? 'STRIPE_SECRET_KEY_TEST' : 'live'} key set for STRIPE_MODE=${mode()}).`);
     e.status = 500;
     throw e;
   }
@@ -76,4 +92,4 @@ function retrieveSession(sessionId, expand = []) {
   return call('GET', `/checkout/sessions/${encodeURIComponent(sessionId)}${qs ? `?${qs}` : ''}`);
 }
 
-module.exports = { call, createCheckoutSession, retrieveSession, toForm };
+module.exports = { call, createCheckoutSession, retrieveSession, toForm, mode, secretKey, configured };
