@@ -2,6 +2,8 @@
 
 Vernon Tech & Media's main site and eCRM (vernontm.com). CRM client changes require running `bash build-crm.sh` and committing the `New/admin/` bundle, or the deploy ships a stale admin app.
 
+The eCRM holds real client and lead data (Supabase project ssllepovajmohdhvhzsa): read-only probes in sessions, no customer data in commits or PR bodies, schema changes propose-only. The engineer agent's queue and log live in `docs/engineer/`. Known test records to ignore in data work: the "Jason Barber" demo account and any "(Test)" rows.
+
 ## How sessions must finish
 
 Any session that changes code in this repo finishes the job itself before ending:

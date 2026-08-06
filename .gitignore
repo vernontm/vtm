@@ -1,6 +1,8 @@
 .env
 *.env
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 node_modules/
 .DS_Store
 serve.py
