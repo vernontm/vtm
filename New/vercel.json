@@ -41,6 +41,7 @@
     "api/crm/email-campaigns.js": { "maxDuration": 60 },
     "api/crm/email-cron.js": { "maxDuration": 60 },
     "api/mcp.js": { "maxDuration": 60 },
+    "api/crm/delivery-board.js": { "maxDuration": 60 },
     "api/crm/email-queue-cron.js": { "maxDuration": 60 },
     "api/crm/uploadpost.js": { "maxDuration": 60 },
     "api/crm/publish-cron.js": { "maxDuration": 60 },
@@ -50,7 +51,8 @@
     "api/crm/mailerlite-groups.js": { "maxDuration": 30 },
     "api/funnel/checkout.js": { "maxDuration": 30 },
     "api/funnel/oto.js": { "maxDuration": 30 },
-    "api/funnel/stripe-webhook.js": { "maxDuration": 30 }
+    "api/funnel/stripe-webhook.js": { "maxDuration": 30 },
+    "api/crm/client-revenue.js": { "maxDuration": 60 }
   },
   "crons": [
     { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" },
@@ -67,7 +69,9 @@
     { "source": "/ig",         "destination": "/claude-guide?utm_source=instagram&utm_medium=bio&utm_campaign=claude-guide", "permanent": false },
     { "source": "/yt",         "destination": "/claude-guide?utm_source=youtube&utm_medium=description&utm_campaign=claude-guide", "permanent": false },
     { "source": "/threads",    "destination": "/claude-guide?utm_source=threads&utm_medium=bio&utm_campaign=claude-guide", "permanent": false },
-    { "source": "/email",      "destination": "/claude-guide?utm_source=email&utm_medium=newsletter&utm_campaign=claude-guide", "permanent": false }
+    { "source": "/email",      "destination": "/claude-guide?utm_source=email&utm_medium=newsletter&utm_campaign=claude-guide", "permanent": false },
+    { "source": "/workshop",   "destination": "/ai-meetup", "permanent": false },
+    { "source": "/AI-meetup",  "destination": "/ai-meetup", "permanent": false }
   ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
@@ -92,7 +96,7 @@
     { "source": "/webinar", "destination": "/webinar.html" },
     { "source": "/meetup", "destination": "/meetup.html" },
     { "source": "/ai-meetup", "destination": "/ai-meetup.html" },
-    { "source": "/workshop", "destination": "/workshop.html" },
+    { "source": "/ai-meetup", "destination": "/ai-meetup.html" },
     { "source": "/workshop-admin", "destination": "/workshop-admin.html" },
     { "source": "/workshop-slides", "destination": "/workshop-slides.html" },
     { "source": "/present", "destination": "/workshop-slides.html" },
@@ -109,6 +113,8 @@
     { "source": "/crm-blueprint-guide", "destination": "/crm-blueprint-guide.html" },
     { "source": "/claude-guide", "destination": "/claude-guide.html" },
     { "source": "/services", "destination": "/services.html" },
+    { "source": "/ai-automation-katy-tx", "destination": "/ai-automation-katy-tx.html" },
+    { "source": "/done-for-you-crm", "destination": "/done-for-you-crm.html" },
     { "source": "/resources", "destination": "/resources/index.html" },
     { "source": "/resources/:slug", "destination": "/resources/category.html" },
     { "source": "/(.*)", "destination": "/index.html" }
