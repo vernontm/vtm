@@ -140,6 +140,7 @@
     let formOpen=false;                   // has the signer opened the pad for this step
     let mode='type', drawn=false, ctx=null, last=null;
     const sigs = { agreement:null, nda:null };  // {method, value, name}
+    let aiConsented = false;                    // the AI and synthetic media tick
 
     // ── tiny markdown -> document HTML ─────────────────────────────
     function inline(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\_(.+?)\_/g,'<em>$1</em>'); }
@@ -221,7 +222,8 @@
 
       // Preview mode: read-only, with an Agreement/NDA toggle. No signing UI.
       if (isPreview) {
-        const title = step==='nda' ? 'Non-Disclosure Agreement' : 'Service Agreement';
+        const isContractor = data.kind==='contractor';
+      const title = step==='nda' ? 'Non-Disclosure Agreement' : (isContractor ? (data.doc_title||'Independent Contractor Agreement') : 'Service Agreement');
         pill.textContent = 'Preview';
         app.innerHTML =
           '<div class="lead"><h1>'+title+'</h1>'
@@ -255,7 +257,12 @@
         +   '<div class="moderow"><button class="mode'+(mode==='type'?' on':'')+'" data-m="type">Type</button><button class="mode'+(mode==='draw'?' on':'')+'" data-m="draw">Draw</button></div>'
         +   (mode==='draw' ? '<canvas id="pad"></canvas><button class="clearbtn" id="clr">Clear</button>'
                            : '<input class="typed" id="typed" placeholder="Your full name" value="'+esc((sigs[step]&&sigs[step].method==='type'&&sigs[step].value)||data.owner_name||'')+'" />')
-        +   '<label class="agree"><input type="checkbox" id="ack" '+(sigs[step]?'checked':'')+' /> <span>I agree that signing electronically is legally binding, and I authorize the payment terms in this agreement. I will contact Vernon Tech &amp; Media directly to resolve any billing question before disputing a charge.</span></label>'
+        +   '<label class="agree"><input type="checkbox" id="ack" '+(sigs[step]?'checked':'')+' /> <span>'+(isContractor
+              ? 'I agree that signing electronically is legally binding, and I confirm I have read this agreement in full.'
+              : 'I agree that signing electronically is legally binding, and I authorize the payment terms in this agreement. I will contact Vernon Tech &amp; Media directly to resolve any billing question before disputing a charge.')+'</span></label>'
+        +   ((data.requires_ai_consent && step==='agreement')
+              ? '<label class="agree"><input type="checkbox" id="aiack" '+(aiConsented?'checked':'')+' /> <span>I have read the section on AI and synthetic media, and I agree that Vernon Tech &amp; Media may create and use AI generated or AI assisted material from my likeness and voice for the marketing purposes described there, within the limits that section sets.</span></label>'
+              : '')
         +   '<div class="meta">Signed electronically. Your name, IP address, and a timestamp are recorded for verification.</div>'
         + '</div>'
         + '<div class="actionbar"><button class="cta'+(started?'':' pulse')+'" id="cta">'+ctaLabel+'</button></div>';
@@ -279,13 +286,16 @@
         const n=(document.getElementById('typed').value||'').trim();
         return n.length>1 ? {method:'type', value:n, name:n} : null;
       };
-      const preview=()=>{ sigs[step]=currentSig(); updatePaper(); cta.disabled = !(ack.checked && sigs[step]); };
+      const aiAck=document.getElementById('aiack');
+      const ready=()=> ack.checked && !!sigs[step] && (!aiAck || aiAck.checked);
+      const preview=()=>{ sigs[step]=currentSig(); if(aiAck) aiConsented=aiAck.checked; updatePaper(); cta.disabled = !ready(); };
       ack.onchange=preview;
+      if(aiAck) aiAck.onchange=preview;
       const t=document.getElementById('typed'); if(t) t.addEventListener('input',preview);
       if(mode==='draw'){ initPad(preview); const clr=document.getElementById('clr'); if(clr) clr.onclick=()=>{ctx&&ctx.clearRect(0,0,99999,99999);drawn=false;preview();}; }
       preview();
       cta.onclick=()=>{
-        sigs[step]=currentSig(); if(!sigs[step]||!ack.checked) return;
+        sigs[step]=currentSig(); if(!ready()) return;
         if(step==='agreement' && data.nda_markdown){ step='nda'; formOpen=false; window.scrollTo(0,0); render(); }
         else finish();
       };
@@ -307,7 +317,7 @@
     async function finish(){
       if (isPreview) { app.innerHTML='<div class="state"><h2>Preview only</h2><p>This is how the signing page looks to your client. Nothing was submitted. Close this tab to go back.</p></div>'; window.scrollTo(0,0); return; }
       pill.textContent='';
-      app.innerHTML='<div class="state"><h2>Finalizing…</h2><p>Saving your signed copy — one moment.</p></div>';
+      app.innerHTML='<div class="state"><h2>Finalizing…</h2><p>Saving your signed copy, one moment.</p></div>';
       try{
         const r=await fetch('/api/crm/sign?token='+encodeURIComponent(token),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
           consent:true,
@@ -315,7 +325,8 @@
           nda_signature:sigs.nda,
           typed_name:(sigs.agreement&&sigs.agreement.name)||data.owner_name||'',
           signature_method:(sigs.agreement&&sigs.agreement.method)||'type',
-          signature_value:(sigs.agreement&&sigs.agreement.value)||''
+          signature_value:(sigs.agreement&&sigs.agreement.value)||'',
+          ai_consent:aiConsented
         })});
         if(!r.ok) throw new Error();
         const res=await r.json().catch(()=>({}));
@@ -332,10 +343,10 @@
       }else if(dest){
         const msg=isPayment?'Taking you to secure checkout to complete your deposit…':'Taking you to your client portal…';
         const label=isPayment?'Continue to payment &rarr;':'Go to my portal &rarr;';
-        body='<h2>All signed — thank you!</h2><p>'+msg+'</p>'
+        body='<h2>All signed, thank you!</h2><p>'+msg+'</p>'
           +'<a class="cta" style="display:inline-block;width:auto;max-width:320px;margin-top:18px;text-decoration:none" href="'+dest+'">'+label+'</a>';
       }else{
-        body='<h2>All signed — thank you!</h2><p>A copy of your signed agreement is on its way to your email.</p>';
+        body='<h2>All signed, thank you!</h2><p>A copy of your signed agreement is on its way to your email.</p>';
       }
       app.innerHTML='<div class="state">'+badge+body+'</div>';
       if(!already && dest){ setTimeout(function(){ location.href=dest; }, isPayment?1400:2000); }

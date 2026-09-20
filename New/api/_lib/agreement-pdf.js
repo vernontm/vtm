@@ -8,13 +8,53 @@ const INK = rgb(0.1, 0.1, 0.1);
 const GREY = rgb(0.34, 0.34, 0.34);
 const SIGCOL = rgb(0.09, 0.19, 0.29);
 
+// Documents written in the house contract dialect (the same one
+// Team/_build_agreement_from_md.js renders to DOCX) opt in to the richer block
+// types: tables, (a) sub-clauses, exhibits, and signature blocks. Plain client
+// agreements contain none of these markers and keep their original rendering
+// exactly, so nothing that already exists changes shape.
+const DIALECT_RE = /^\s*(@(?:sig|exhibit|initial|witness|execute|subtitle|pagebreak|meta|footer)\b|\|)/m;
+
 function parseBlocks(md) {
   const lines = (md || '').split('\n');
+  const dialect = DIALECT_RE.test(md || '');
   const blocks = [];
   let firstH1 = true;
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) continue;
+
+    if (dialect) {
+      // Table rows accumulate into a single block; the |---|---| rule is dropped.
+      if (line.startsWith('|')) {
+        const cells = line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+        if (line.includes('-') && /^\|[\s:|-]+\|?$/.test(line)) continue;
+        const prev = blocks[blocks.length - 1];
+        if (prev && prev.type === 'table') prev.rows.push(cells);
+        else blocks.push({ type: 'table', rows: [cells] });
+        continue;
+      }
+      // DOCX-only directives carry no meaning in the PDF.
+      if (line.startsWith('@meta ') || line.startsWith('@footer ')) continue;
+      if (line === '@pagebreak') { blocks.push({ type: 'pagebreak' }); continue; }
+      if (line.startsWith('@subtitle ')) { blocks.push({ type: 'subtitle', text: line.slice(10) }); continue; }
+      if (line.startsWith('@exhibit ')) {
+        const [title, sub] = line.slice(9).split('|');
+        blocks.push({ type: 'exhibit', title: (title || '').trim(), subtitle: (sub || '').trim() });
+        continue;
+      }
+      if (line.startsWith('@witness ')) { blocks.push({ type: 'witness', text: line.slice(9) }); continue; }
+      if (line.startsWith('@execute')) { blocks.push({ type: 'execute', name: line.slice(8).trim() }); continue; }
+      if (line.startsWith('@initial ')) { blocks.push({ type: 'initial', text: line.slice(9) }); continue; }
+      if (line.startsWith('@sig ')) {
+        const [label, printed] = line.slice(5).split('|');
+        blocks.push({ type: 'sigform', label: (label || '').trim(), printed: (printed || '').trim() });
+        continue;
+      }
+      if (line.startsWith('> ')) { blocks.push({ type: 'deep', text: line.slice(2) }); continue; }
+      if (/^\([a-z]\)\s/.test(line)) { blocks.push({ type: 'sub', text: line }); continue; }
+    }
+
     if (line.startsWith('# ')) {
       if (firstH1) { blocks.push({ type: 'title', text: line.slice(2) }); firstH1 = false; }
       else blocks.push({ type: 'heading', text: line.slice(2) });
@@ -31,19 +71,31 @@ function parseBlocks(md) {
   return blocks;
 }
 
-// Split a line into runs by **bold** and _italic_ markers.
+// Split a line into runs by **bold**, _italic_, and {{fill-in}} markers. A
+// {{fill-in}} is a blank the author has not filled yet; it renders bold without
+// the braces so a stray one is visible but not disfiguring.
 function tokenize(text) {
   const parts = [];
-  const re = /(\*\*(.+?)\*\*)|(_(.+?)_)/g;
+  const re = /(\*\*(.+?)\*\*)|(_(.+?)_)|(\{\{(.+?)\}\})/g;
   let last = 0, m;
   while ((m = re.exec(text))) {
     if (m.index > last) parts.push({ t: text.slice(last, m.index), bold: false, ital: false });
     if (m[2] !== undefined) parts.push({ t: m[2], bold: true, ital: false });
-    else parts.push({ t: m[4], bold: false, ital: true });
+    else if (m[4] !== undefined) parts.push({ t: m[4], bold: false, ital: true });
+    else parts.push({ t: m[6], bold: true, ital: false });
     last = re.lastIndex;
   }
   if (last < text.length) parts.push({ t: text.slice(last), bold: false, ital: false });
   return parts.length ? parts : [{ t: text, bold: false, ital: false }];
+}
+
+// Plain text of a line, markers removed. Used for table cells, which render in a
+// single style per cell rather than mixed runs.
+function plain(text) {
+  return String(text || '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\{\{(.+?)\}\}/g, '$1')
+    .replace(/_(.+?)_/g, '$1');
 }
 // sanitize chars WinAnsi (StandardFonts) can't encode
 function clean(s) {
@@ -69,6 +121,18 @@ async function buildAgreementPdf(opts) {
   let y = PAGE_H - M;
 
   const wOf = (t, f, s) => f.widthOfTextAtSize(t, s);
+  // pdf-lib measures a string with kerning applied but draws the glyphs without
+  // it, so widthOfTextAtSize under-reports the advance of anything containing a
+  // kerning pair ("Ta", "Wh", ...). Summing per-character widths matches what is
+  // actually drawn. Using the kerned width to advance x made the run after a
+  // bold run-in label start up to 1.7pt early, which ate the space after it and
+  // produced "2.4 Taxes.Contractor". Only x advancement needs this; wOf stays
+  // fine for deciding where to wrap.
+  const advOf = (t, f, s) => {
+    let w = 0;
+    for (const ch of t) w += f.widthOfTextAtSize(ch, s);
+    return w;
+  };
   const newPage = () => { page = doc.addPage([PAGE_W, PAGE_H]); y = PAGE_H - M; };
   const ensure = (h) => { if (y - h < M) newPage(); };
 
@@ -98,7 +162,7 @@ async function buildAgreementPdf(opts) {
         while (j < line.length && line[j].bold === b && line[j].ital === it) { str += line[j].w; j++; }
         const f = b ? bold : (it ? ital : font);
         page.drawText(str, { x, y: y - size, size, font: f, color });
-        x += wOf(str, f, size);
+        x += advOf(str, f, size);
         i = j;
       }
       y -= size + gap; line = []; lineW = 0;
@@ -112,7 +176,112 @@ async function buildAgreementPdf(opts) {
     if (line.length) flush();
   }
 
+  // Wrap one table cell's plain text to a pixel width.
+  function wrapCell(text, f, size, maxW) {
+    const words = clean(plain(text)).split(/\s+/).filter(Boolean);
+    if (!words.length) return [''];
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const next = line ? line + ' ' + w : w;
+      if (wOf(next, f, size) > maxW && line) { lines.push(line); line = w; }
+      else line = next;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  // Grid table. Column widths are proportional to the widest cell in each
+  // column, normalised to the content width. The header row repeats after a
+  // page break so a long table stays readable.
+  function drawTable(rows) {
+    if (!rows || !rows.length) return;
+    const size = 8.5, lineH = 11, padX = 5, padY = 5;
+    const contentW = PAGE_W - 2 * M;
+    const cols = rows[0].length;
+    const natural = new Array(cols).fill(0);
+    rows.forEach(r => r.forEach((c, i) => {
+      if (i < cols) natural[i] = Math.max(natural[i], wOf(clean(plain(c)), font, size));
+    }));
+    const totalNatural = natural.reduce((a, b) => a + b, 0) || 1;
+    let widths = natural.map(n => Math.max(52, (n / totalNatural) * contentW));
+    const sum = widths.reduce((a, b) => a + b, 0);
+    widths = widths.map(w => (w * contentW) / sum);
+
+    const drawRow = (cells, isHeader) => {
+      const f = isHeader ? bold : font;
+      const cellLines = cells.map((c, i) => wrapCell(c, f, size, widths[i] - 2 * padX));
+      const rowH = Math.max(...cellLines.map(l => l.length)) * lineH + 2 * padY;
+      if (y - rowH < M) {
+        newPage();
+        if (!isHeader) drawRow(rows[0], true);
+      }
+      const top = y;
+      if (isHeader) {
+        page.drawRectangle({ x: M, y: top - rowH, width: contentW, height: rowH, color: rgb(0.91, 0.91, 0.92) });
+      }
+      let x = M;
+      cellLines.forEach((lines, i) => {
+        lines.forEach((ln, k) => {
+          page.drawText(ln, { x: x + padX, y: top - padY - size - k * lineH, size, font: f, color: INK });
+        });
+        x += widths[i];
+      });
+      // grid
+      page.drawRectangle({
+        x: M, y: top - rowH, width: contentW, height: rowH,
+        borderColor: rgb(0.72, 0.72, 0.74), borderWidth: 0.6, opacity: 0,
+      });
+      let gx = M;
+      for (let i = 0; i < cols - 1; i++) {
+        gx += widths[i];
+        page.drawLine({ start: { x: gx, y: top }, end: { x: gx, y: top - rowH }, thickness: 0.6, color: rgb(0.72, 0.72, 0.74) });
+      }
+      y = top - rowH;
+    };
+
+    ensure(40);
+    rows.forEach((r, i) => drawRow(r, i === 0));
+    y -= 10;
+  }
+
+  // A clause that needs its own acknowledgment (e.g. the AI and synthetic media
+  // consent). When the signer ticked it, we print their initials with the same
+  // audit trail as the signature; otherwise it stays a blank line to fill.
+  function drawInitialBlock(text) {
+    ensure(52);
+    y -= 6;
+    drawWrapped(text, 10.5, { gap: 4, indent: 14 });
+    const c = opts.aiConsent;
+    if (c && c.initials) {
+      page.drawText(clean(c.initials), { x: M + 14, y: y - 14, size: 14, font: ital, color: SIGCOL });
+      const w = wOf(clean(c.initials), ital, 14);
+      page.drawLine({ start: { x: M + 14, y: y - 18 }, end: { x: M + 14 + Math.max(w, 46), y: y - 18 }, thickness: 0.7, color: rgb(0.2, 0.2, 0.2) });
+      const stamp = 'Acknowledged ' + (c.at || '') + (c.ip ? '  -  IP ' + c.ip : '');
+      page.drawText(clean(stamp), { x: M + 14, y: y - 30, size: 7.5, font, color: GREY });
+      y -= 40;
+    } else {
+      page.drawText('Initials: ______________', { x: M + 14, y: y - 14, size: 9.5, font, color: GREY });
+      y -= 26;
+    }
+  }
+
+  // A blank signature line, for a form the signer fills by hand (Exhibit B).
+  function drawSigForm(label, printed) {
+    ensure(70);
+    y -= 12;
+    drawWrapped(label, 10.5, { gap: 4, heading: true });
+    y -= 22;
+    page.drawLine({ start: { x: M, y }, end: { x: M + 300, y }, thickness: 0.8, color: rgb(0.2, 0.2, 0.2) });
+    y -= 13;
+    if (printed) { page.drawText(clean(plain(printed)), { x: M, y: y - 8, size: 9, font, color: GREY }); y -= 13; }
+    page.drawText('Date: ______________________', { x: M, y: y - 8, size: 9, font, color: GREY });
+    y -= 20;
+  }
+
+  let executedInDoc = false;
   async function drawDoc(md) {
+    executedInDoc = false;
     for (const b of parseBlocks(md)) {
       if (b.type === 'title') { y -= 6; drawCentered(b.text, 16, bold, INK); }
       else if (b.type === 'subtitle') { drawCentered(b.text, 10.5, ital, GREY); y -= 8; }
@@ -122,11 +291,30 @@ async function buildAgreementPdf(opts) {
         page.drawText('-', { x: M + 6, y: y - 10.5, size: 10.5, font, color: INK });
         drawWrapped(b.text, 10.5, { indent: 18, gap: 4 });
       }
+      else if (b.type === 'pagebreak') { newPage(); }
+      else if (b.type === 'exhibit') {
+        newPage();
+        drawCentered(b.title, 13, bold, INK);
+        if (b.subtitle) drawCentered(b.subtitle, 10.5, ital, GREY);
+        y -= 10;
+      }
+      else if (b.type === 'table') { drawTable(b.rows); }
+      else if (b.type === 'sub') { drawWrapped(b.text, 10.5, { indent: 22, gap: 4 }); y -= 4; }
+      else if (b.type === 'deep') { drawWrapped(b.text, 10.5, { indent: 44, gap: 4 }); y -= 4; }
+      else if (b.type === 'initial') { drawInitialBlock(b.text); }
+      else if (b.type === 'witness') { y -= 8; drawWrapped(b.text, 10.5, { gap: 4, heading: true }); y -= 4; }
+      else if (b.type === 'execute') {
+        y -= 8;
+        drawWrapped('IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.', 10.5, { gap: 4, heading: true });
+        await drawSignatureBlock(signatureMethod, signatureValue, audit, b.name || signerName, 'Contractor');
+        executedInDoc = true;
+      }
+      else if (b.type === 'sigform') { drawSigForm(b.label, b.printed); }
       else { drawWrapped(b.text, 10.5, { gap: 4 }); y -= 5; }
     }
   }
 
-  async function drawSignatureBlock(clientMethod, clientValue, audit) {
+  async function drawSignatureBlock(clientMethod, clientValue, audit, partyName, partyRole) {
     y -= 26;
     ensure(120);
     const colW = (PAGE_W - 2 * M - 40) / 2;
@@ -156,8 +344,8 @@ async function buildAgreementPdf(opts) {
       }
     }
 
-    await party(leftX, 'type', 'Rayvaughn Vernon', 'Rayvaughn Vernon', 'Vernon Tech & Media', null);
-    await party(rightX, clientMethod, clientValue, ownerName || 'Client', 'Client', audit);
+    await party(leftX, 'type', 'Rayvaughn Vernon', 'Rayvaughn Vernon', 'Vernon Tech & Media LLC', null);
+    await party(rightX, clientMethod, clientValue, partyName || ownerName || 'Client', partyRole || 'Client', audit);
     y = lineY - 62;
   }
 
@@ -187,13 +375,13 @@ async function buildAgreementPdf(opts) {
 
   // ── Agreement ──
   await drawDoc(agreementMarkdown);
-  await drawSignatureBlock(signatureMethod, signatureValue, audit);
+  if (!executedInDoc) await drawSignatureBlock(signatureMethod, signatureValue, audit);
 
   // ── NDA (own page) ──
   if (ndaMarkdown) {
     newPage();
     await drawDoc(ndaMarkdown);
-    await drawSignatureBlock(ndaSignatureMethod || signatureMethod, ndaSignatureValue || signatureValue, audit);
+    if (!executedInDoc) await drawSignatureBlock(ndaSignatureMethod || signatureMethod, ndaSignatureValue || signatureValue, audit);
   }
 
   drawCertificate(audit, signerName || ownerName || 'Client');

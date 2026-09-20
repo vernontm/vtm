@@ -1,7 +1,9 @@
 const { setCors, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { sendEmail } = require('../_lib/gmail.js');
+const { buildDepositReminder } = require('../_lib/deposit-reminders.js');
 const { buildAgreementPdf } = require('../_lib/agreement-pdf.js');
 const stripe = require('../_lib/stripe.js');
+const { pushEvent } = require('../_lib/push.js');
 
 // Frictionless, token-based e-signature. No login required to sign (protects
 // conversion). On finish we record both signatures + IP + timestamp, store the
@@ -46,6 +48,16 @@ function emailHtml(paragraphs) {
     .map(p => `<p style="margin:0 0 14px;font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a1d21">${p}</p>`).join('');
   return `<div style="max-width:520px;margin:0 auto;padding:10px 4px">${body}</div>`;
 }
+
+// A contractor agreement carries no client record: the signer lives in
+// terms.signer instead. Everything downstream of signing that presumes a client
+// (portal account, payment rows, deposit reminders, pipeline stage, Stripe)
+// must be skipped for these, which is what the branch in POST does.
+function isContractor(ag) {
+  return !ag.client_id && !!(ag.terms && ag.terms.signer && ag.terms.signer.kind === 'contractor');
+}
+
+const initialsOf = (n) => String(n || '').trim().split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 4);
 
 async function agreementForToken(token) {
   if (!token || !UUID_RE.test(token)) return null;
@@ -185,11 +197,13 @@ module.exports = async function handler(req, res) {
     if (!ag) return res.status(404).json({ error: 'Agreement not found' });
     const client = ag.client || {};
     const terms = ag.terms || {};
+    const contractor = isContractor(ag) ? (terms.signer || {}) : null;
 
     // GET action=paid — Stripe success return: mark the deposit paid, then
     // hand off to the portal with a FRESH single-use link (minted here, used
     // immediately, never emailed → no scanner/expiry issues).
     if (req.method === 'GET' && req.query.action === 'paid') {
+      if (contractor) return res.status(400).json({ error: 'Not applicable to a contractor agreement.' });
       const origin = (req.headers.origin || ('https://' + (req.headers.host || 'vernontm.com'))).replace(/\/+$/, '');
       let dest = origin + '/client';
       try {
@@ -199,9 +213,21 @@ module.exports = async function handler(req, res) {
           if (session && session.payment_status === 'paid') {
             const pid = session.metadata && session.metadata.crm_payment_id;
             if (pid) await supaFetch(`crm_payments?id=eq.${pid}`, { method: 'PATCH', body: JSON.stringify({ status: 'paid', paid_at: new Date().toISOString(), stripe_invoice_id: session.payment_intent || session.id }) }).catch(() => {});
+            pushEvent('paid', { title: 'Payment received 💰', body: `${client?.business_name || 'A client'} paid their deposit`, data: { type: 'paid', client_id: client?.id } }).catch(() => {});
             // Deposit paid → this lead is now an active client.
             await supaFetch(`crm_clients?id=eq.${client.id}`, { method: 'PATCH', body: JSON.stringify({ payment_received: true, initial_payment_at: new Date().toISOString(), stage: 'in_build' }) }).catch(() => {});
             await supaFetch('crm_client_alerts', { method: 'POST', body: JSON.stringify({ client_id: client.id, type: 'payment_received', message: `${client.business_name} paid their deposit` }) }).catch(() => {});
+            await supaFetch('crm_client_activity', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ client_id: client.id, type: 'note', tag: 'Payment', title: ag.selected_plan?.label ? `Deposit paid, on the ${ag.selected_plan.label} plan` : 'Deposit paid', body: 'Client paid the deposit and onboarding has started.', author: 'System' }) }).catch(() => {});
+            // Deposit paid → the project starts. Stamp the start date (= pay date)
+            // on this client's projects that don't have one yet.
+            try {
+              const today = new Date().toISOString().slice(0, 10);
+              const paidAt = new Date().toISOString();
+              if (ag.deal_id) {
+                await supaFetch(`crm_projects?deal_id=eq.${ag.deal_id}&start_date=is.null`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ start_date: today, paid_at: paidAt }) }).catch(() => {});
+              }
+              await supaFetch(`crm_projects?client_id=eq.${client.id}&start_date=is.null`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ start_date: today, paid_at: paidAt }) }).catch(() => {});
+            } catch (e) { console.error('project start-date stamp failed:', e.message); }
             // Deposit's card is now saved → set up the recurring plan on it.
             try { await setupPlanSubscription(ag, client, session); } catch (e) { console.error('plan setup failed:', e.message); }
           }
@@ -218,6 +244,7 @@ module.exports = async function handler(req, res) {
     // POST action=choose-plan — the client picks a payment plan (custom mode).
     // Builds the concrete schedule into the agreement, so they can then sign.
     if (req.method === 'POST' && req.query.action === 'choose-plan') {
+      if (contractor) return res.status(400).json({ error: 'Not applicable to a contractor agreement.' });
       if (ag.payment_mode !== 'custom') return res.status(400).json({ error: 'This agreement has a fixed plan.' });
       const planKey = req.body && req.body.plan_key;
       const plan = (ag.plan_options || []).find(p => p.key === planKey);
@@ -241,6 +268,20 @@ module.exports = async function handler(req, res) {
       await supaFetch(`crm_payments?agreement_id=eq.${ag.id}`, { method: 'DELETE' }).catch(() => {});
       await supaFetch('crm_payments', { method: 'POST', body: JSON.stringify(installments.map(i => ({ client_id: client.id, agreement_id: ag.id, label: i.label, amount: i.amount, status: 'pending', due_condition: i.trigger, source: 'agreement' }))) }).catch(() => {});
       await supaFetch('crm_client_alerts', { method: 'POST', body: JSON.stringify({ client_id: client.id, type: 'plan_selected', message: `${client.business_name} chose the "${plan.label}" plan` }) }).catch(() => {});
+      // Log the chosen plan to the timeline so Ray can see which plan they picked.
+      {
+        const fmt = n => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+        const inst = plan.installments || [];
+        await supaFetch('crm_client_activity', {
+          method: 'POST', headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            client_id: client.id, type: 'note', tag: 'Payment',
+            title: `Chose the ${plan.label} plan`,
+            body: `Deposit ${fmt(plan.deposit)} today${inst.length ? `, then ${inst.length} x ${fmt(inst[0].amount)}` : ''}. Total ${fmt(plan.grand_total)}.`,
+            author: 'System',
+          }),
+        }).catch(() => {});
+      }
 
       return res.json({ ok: true, agreement_markdown: md, nda_markdown: terms.nda_markdown || '', total: plan.grand_total, installments });
     }
@@ -271,12 +312,15 @@ module.exports = async function handler(req, res) {
       }
       return res.json({
         status: ag.signed_at ? 'signed' : 'sent',
-        business_name: client.business_name,
-        owner_name: client.owner_name,
+        kind: contractor ? 'contractor' : 'client',
+        doc_title: ag.title || '',
+        requires_ai_consent: !!terms.requires_ai_consent,
+        business_name: contractor ? '' : client.business_name,
+        owner_name: contractor ? (contractor.name || '') : client.owner_name,
         agreement_markdown: terms.agreement_markdown || '',
         nda_markdown: terms.nda_markdown || '',
-        total: ag.total_amount,
-        installments: terms.installments || [],
+        total: contractor ? null : ag.total_amount,
+        installments: contractor ? [] : (terms.installments || []),
         signed_at: ag.signed_at,
         signer_name: ag.signer_name,
       });
@@ -290,34 +334,44 @@ module.exports = async function handler(req, res) {
       if (ag.status !== 'sent') return res.status(400).json({ error: 'This agreement is not open for signing yet.' });
       const body = req.body || {};
       if (!body.consent) return res.status(400).json({ error: 'Consent required' });
+      // A clause that needs its own acknowledgment (the AI and synthetic media
+      // section) cannot be signed around.
+      if (terms.requires_ai_consent && !body.ai_consent) {
+        return res.status(400).json({ error: 'Please acknowledge the AI and synthetic media section to continue.' });
+      }
 
       const ip = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '').toString().split(',')[0].trim();
       const ua = (req.headers['user-agent'] || '').toString().slice(0, 400);
       const nowIso = new Date().toISOString();
       const aSig = body.agreement_signature || { method: body.signature_method, value: body.signature_value, name: body.typed_name };
       const nSig = body.nda_signature || null;
-      const signerName = (aSig && aSig.name) || body.typed_name || client.owner_name || '';
+      const signerName = (aSig && aSig.name) || body.typed_name || (contractor ? contractor.name : client.owner_name) || '';
 
-      const newTerms = { ...terms, signatures: { agreement: aSig ? { ...aSig, at: nowIso } : null, nda: nSig ? { ...nSig, at: nowIso } : null, ip, user_agent: ua } };
+      const newTerms = { ...terms, signatures: { agreement: aSig ? { ...aSig, at: nowIso } : null, nda: nSig ? { ...nSig, at: nowIso } : null, ip, user_agent: ua, ai_consent: terms.requires_ai_consent ? { at: nowIso, ip, initials: initialsOf(signerName) } : null } };
 
       // Generate the signed PDF server-side (deterministic) and store it.
+      const signedDateLabel = new Date(nowIso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const signedTimeLabel = new Date(nowIso).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+
       let fileUrl = ag.file_url || null;
       try {
         const pdfBytes = await buildAgreementPdf({
           agreementMarkdown: terms.agreement_markdown,
           ndaMarkdown: terms.nda_markdown,
-          ownerName: client.owner_name,
+          ownerName: contractor ? (contractor.name || signerName) : client.owner_name,
           signerName,
           signatureMethod: aSig && aSig.method,
           signatureValue: aSig && aSig.value,
           ndaSignatureMethod: nSig && nSig.method,
           ndaSignatureValue: nSig && nSig.value,
-          signedDateLabel: new Date(nowIso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-          signedTimeLabel: new Date(nowIso).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }),
+          signedDateLabel,
+          signedTimeLabel,
           signerIp: ip,
           documentId: ag.id,
+          aiConsent: terms.requires_ai_consent ? { initials: initialsOf(signerName), at: signedTimeLabel, ip } : null,
         });
-        const up = await uploadSignedPdf(client.id, ag.id, pdfBytes);
+        // Contractor PDFs have no client folder to live under.
+        const up = await uploadSignedPdf(contractor ? 'contractors' : client.id, ag.id, pdfBytes);
         if (up) fileUrl = up;
       } catch (e) { console.error('pdf build failed:', e.message); }
 
@@ -333,6 +387,100 @@ module.exports = async function handler(req, res) {
         }),
       });
 
+      // ── Contractor agreements finish here ────────────────────────────────
+      // There is no client record, so none of the client pipeline below applies:
+      // no stage change, no payment rows, no deposit reminder drip, no portal
+      // account, no Stripe checkout, and no client alert. Signature, audit trail,
+      // stored PDF, and both email copies still happen.
+      if (contractor) {
+        pushEvent('signed', {
+          title: 'Contractor agreement signed 🎉',
+          body: `${signerName || 'A contractor'} signed ${ag.title || 'their agreement'}`,
+          data: { type: 'signed', agreement_id: ag.id },
+        }).catch(() => {});
+
+        const pdfLink = fileUrl ? await signedUrlFor(fileUrl).catch(() => null) : null;
+        const first = (signerName || 'there').split(' ')[0];
+
+        if (contractor.email) {
+          const parts = [`Hi ${first},`, '', 'Thanks for signing your agreement with Vernon Tech & Media.'];
+          if (pdfLink) parts.push('', `Your signed copy (PDF): ${pdfLink}`);
+          parts.push('', 'Keep this for your records. We will be in touch about scheduling.', '', 'Ray', 'Vernon Tech & Media');
+          const html = emailHtml([
+            `Hi ${first},`,
+            'Thanks for signing your agreement with Vernon Tech &amp; Media.',
+            pdfLink ? `<a href="${pdfLink}" style="color:#2563eb;font-weight:600">View your signed copy (PDF)</a>` : '',
+            'Keep this for your records. We will be in touch about scheduling.',
+            'Ray<br>Vernon Tech &amp; Media',
+          ]);
+          try { await sendEmail({ to: contractor.email, subject: 'Your signed Vernon Tech & Media agreement', body: parts.join('\n'), html }); }
+          catch (e) { console.error('contractor email failed:', e.message); }
+        }
+
+        try {
+          await sendEmail({
+            to: RAY_EMAIL,
+            subject: `Signed: ${signerName}, ${ag.title || 'contractor agreement'}`,
+            body: `${signerName} just signed ${ag.title || 'their contractor agreement'}.\n\nIP: ${ip}\nTime: ${nowIso}\n${pdfLink ? 'Signed copy: ' + pdfLink : '(PDF not generated)'}`,
+            html: emailHtml([
+              `<strong>${signerName}</strong> just signed ${ag.title || 'their contractor agreement'}.`,
+              pdfLink ? `<a href="${pdfLink}" style="color:#2563eb;font-weight:600">View the signed copy (PDF)</a>` : '(PDF not generated)',
+              `<span style="color:#6b7280;font-size:13px">IP ${ip} \u00b7 ${nowIso}</span>`,
+            ]),
+          });
+        } catch (e) { console.error('ray email failed:', e.message); }
+
+        return res.json({ ok: true, pdf: !!pdfLink });
+      }
+
+      pushEvent('signed', { title: 'Agreement signed 🎉', body: `${client?.business_name || signerName || 'A client'} just signed${ag.total_amount ? ` · $${Number(ag.total_amount).toLocaleString()}` : ''}`, data: { type: 'signed', client_id: client?.id } }).catch(() => {});
+
+      // Signed → they're now a Client (Onboarding). Marks the deal Won, stops the
+      // follow-up drip, and moves them off the Leads board into Clients. Paying
+      // the deposit later advances them to In Progress.
+      await supaFetch(`crm_clients?id=eq.${client.id}`, {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ lead_temperature: 'won', follow_up_status: 'none', stage: 'onboarding' }),
+      }).catch(() => {});
+
+      // Schedule the first "pay your deposit" reminder for later the same day.
+      // The cron will keep reminding every 2-3 days and stop once they pay.
+      if (client.contact_email && ag.sign_token) {
+        try {
+          const { subject, body } = buildDepositReminder(client, ag.sign_token, 1);
+          const remindAt = new Date(Date.now() + 3 * 3600 * 1000).toISOString(); // +3h, same day
+          await supaFetch('crm_email_queue', {
+            method: 'POST', headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              lead_id: client.id, lead_name: client.owner_name || '',
+              to_email: client.contact_email, email_type: 'deposit_reminder', followup_seq: 1,
+              subject, body, status: 'scheduled', scheduled_for: remindAt,
+              approved_at: nowIso, auto_generated: true,
+            }),
+          });
+        } catch (e) { console.error('deposit reminder enqueue failed:', e.message); }
+      }
+
+      // Save a copy of the signed agreement to the client's Documents. Use the
+      // durable token-gated file endpoint (not an expiring signed URL) so the
+      // link keeps working from the Documents tab indefinitely.
+      if (fileUrl && ag.sign_token) {
+        try {
+          const base = (req.headers.origin || ('https://' + (req.headers.host || 'vernontm.com'))).replace(/\/+$/, '');
+          await supaFetch('crm_client_activity', {
+            method: 'POST', headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              client_id: client.id, type: 'note', tag: 'Agreement',
+              title: 'Signed agreement',
+              body: `${signerName || 'The client'} signed the service agreement.`,
+              attachment_url: `${base}/api/crm/agreement-file?token=${ag.sign_token}`,
+              attachment_name: 'Signed Agreement.pdf',
+              author: 'System', created_at: nowIso,
+            }),
+          });
+        } catch (e) { console.error('doc log failed:', e.message); }
+      }
+
       // Copy of the signed agreement (link) for client + Ray.
       let pdfLink = null;
       if (fileUrl) pdfLink = await signedUrlFor(fileUrl).catch(() => null);
@@ -345,9 +493,17 @@ module.exports = async function handler(req, res) {
       const first = (signerName || 'there').split(' ')[0];
 
       // First pending payment → Stripe Checkout for the deposit.
+      // If the agreement carries an explicit payment_link in its terms (e.g. a
+      // Stripe Payment Link that lives on a DIFFERENT Stripe account), send the
+      // client straight there and skip creating a Checkout Session on the VTM
+      // account. Note: payments made this way are not auto-reconciled by our
+      // webhook, so the payment row stays pending until marked paid.
       let checkoutUrl = null;
+      const customPayLink = (ag.terms && typeof ag.terms.payment_link === 'string' && /^https:\/\//.test(ag.terms.payment_link))
+        ? ag.terms.payment_link : null;
+      if (customPayLink) checkoutUrl = customPayLink;
       try {
-        if (stripe.configured()) {
+        if (!customPayLink && stripe.configured()) {
           const pays = await supaFetch(`crm_payments?agreement_id=eq.${ag.id}&status=eq.pending&order=created_at.asc&limit=1`);
           const dep = pays && pays[0];
           if (dep && Number(dep.amount) > 0) {
@@ -402,7 +558,7 @@ module.exports = async function handler(req, res) {
       try {
         await sendEmail({
           to: RAY_EMAIL,
-          subject: `Signed: ${client.business_name} — service agreement`,
+          subject: `Signed: ${client.business_name}, service agreement`,
           body: `${client.business_name} (${signerName}) just signed the service agreement.\n\nIP: ${ip}\nTime: ${nowIso}\n${pdfLink ? 'Signed copy: ' + pdfLink : '(PDF not generated)'}`,
           html: emailHtml([
             `<strong>${client.business_name}</strong> (${signerName}) just signed the service agreement.`,
