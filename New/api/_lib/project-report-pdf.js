@@ -112,6 +112,20 @@ async function buildProjectReportPdf(opts) {
     y -= 15;
   }
 
+  // Phase heading, with its target or completion date right-aligned. Dates are
+  // what a client actually wants off a progress report.
+  function phaseHeading(ph) {
+    ensure(20);
+    page.drawText(clean(ph.name), { x: M, y: y - 11, size: 10.5, font: bold, color: INK });
+    const done = ph.status === 'done';
+    const when = ph.due_date ? `${done ? 'Completed' : 'Target'} ${fmtDate(ph.due_date)}` : (done ? 'Completed' : '');
+    if (when) {
+      const w = wOf(clean(when), font, 8.5);
+      page.drawText(clean(when), { x: PAGE_W - M - w, y: y - 11, size: 8.5, font, color: done ? GREEN : GREY });
+    }
+    y -= 17;
+  }
+
   // ── Cover block ──
   centered(clientName || 'Project report', 17, bold, INK);
   if (projectName) centered(projectName, 12, font, GREY);
@@ -134,9 +148,11 @@ async function buildProjectReportPdf(opts) {
     const d = ph.steps.filter(s => s.status === 'done');
     const g = ph.steps.filter(s => s.status === 'doing');
     const t = ph.steps.filter(s => s.status !== 'done' && s.status !== 'doing');
-    if (d.length) done.push({ name: ph.name, steps: d });
-    if (g.length) doing.push({ name: ph.name, steps: g });
-    if (t.length) todo.push({ name: ph.name, steps: t });
+    // Spread the phase, do not rebuild it: the heading needs its due_date and
+    // status, and picking out only `name` silently dropped both.
+    if (d.length) done.push({ ...ph, steps: d });
+    if (g.length) doing.push({ ...ph, steps: g });
+    if (t.length) todo.push({ ...ph, steps: t });
   }
 
   const totalSteps = visiblePhases.reduce((n, ph) => n + ph.steps.length, 0);
@@ -151,9 +167,7 @@ async function buildProjectReportPdf(opts) {
     text('Nothing was marked complete in this period.', { size: 10, f: ital, color: GREY });
   } else {
     for (const ph of done) {
-      ensure(18);
-      page.drawText(clean(ph.name), { x: M, y: y - 11, size: 10.5, font: bold, color: INK });
-      y -= 17;
+      phaseHeading(ph);
       ph.steps.forEach(s => stepLine(s, 'x', GREEN));
       y -= 4;
     }
@@ -163,9 +177,7 @@ async function buildProjectReportPdf(opts) {
   if (doing.length) {
     sectionHeading('In progress');
     for (const ph of doing) {
-      ensure(18);
-      page.drawText(clean(ph.name), { x: M, y: y - 11, size: 10.5, font: bold, color: INK });
-      y -= 17;
+      phaseHeading(ph);
       ph.steps.forEach(s => stepLine(s, '>', AMBER));
       y -= 4;
     }
@@ -175,9 +187,7 @@ async function buildProjectReportPdf(opts) {
   if (todo.length) {
     sectionHeading('Coming up next');
     for (const ph of todo) {
-      ensure(18);
-      page.drawText(clean(ph.name), { x: M, y: y - 11, size: 10.5, font: bold, color: INK });
-      y -= 17;
+      phaseHeading(ph);
       ph.steps.forEach(s => stepLine(s, '-', GREY));
       y -= 4;
     }

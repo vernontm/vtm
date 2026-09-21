@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Eye, EyeOff, MessageSquare, FileText, Loader, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Eye, EyeOff, MessageSquare, FileText, Loader, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import {
   getProjectBoard, seedProjectBoard, addProjectItem, updateProjectItem,
   deleteProjectItem, addProjectComment, buildProjectReport,
@@ -35,6 +35,18 @@ const STATUS_MARK = {
 const STATUS_ORDER = ['todo', 'doing', 'done'];
 
 const lbl = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 };
+
+const pad = (n) => String(n).padStart(2, '0');
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+// A bare YYYY-MM-DD parses as UTC midnight, which shows as the day before in a
+// western timezone. Pin it to local midnight, same as the report PDF does.
+const niceDate = (d) => {
+  if (!d) return '';
+  try { return new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+  catch { return d; }
+};
+// A phase is finishable once it has steps and every one of them is done.
+const phaseComplete = (ph) => (ph.steps || []).length > 0 && ph.steps.every(st => st.status === 'done');
 
 export default function ProjectBoard({ project }) {
   const [data, setData] = useState(null);
@@ -116,6 +128,10 @@ export default function ProjectBoard({ project }) {
     if (!name || name === item.name) return;
     await patchItem(item.id, { name });
   };
+  const setPhaseDate = (ph, value) => patchItem(ph.id, { due_date: value || null });
+  const markPhaseDone = (ph) => patchItem(ph.id, { status: 'done' });
+  const reopenPhase = (ph) => patchItem(ph.id, { status: 'todo' });
+
   const removeItem = (item, isPhase) => {
     if (!window.confirm(isPhase ? `Delete "${item.name}" and every step inside it?` : `Delete "${item.name}"?`)) return;
     guard(() => deleteProjectItem(item.id));
@@ -228,6 +244,9 @@ export default function ProjectBoard({ project }) {
             const steps = ph.steps || [];
             const doneN = steps.filter(s => s.status === 'done').length;
             const expanded = open[ph.id] !== false;
+            const isDone = ph.status === 'done';
+            const ready = phaseComplete(ph) && !isDone;
+            const overdue = !isDone && ph.due_date && ph.due_date < todayStr();
             return (
               <div key={ph.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, marginBottom: 10, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', cursor: 'pointer' }}
@@ -245,6 +264,30 @@ export default function ProjectBoard({ project }) {
                       style={{ fontWeight: 800, fontSize: 13.5, flex: 1, cursor: 'text' }}>{ph.name}</div>
                   )}
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>{doneN}/{steps.length}</div>
+
+                  {/* Target completion date. Clients see it, they cannot set it. */}
+                  {clientView ? (
+                    ph.due_date ? (
+                      <span style={{ fontSize: 11.5, color: isDone ? '#15803d' : 'var(--muted)' }}>
+                        {isDone ? 'Completed' : 'Target'} {niceDate(ph.due_date)}
+                      </span>
+                    ) : null
+                  ) : (
+                    <input type="date" value={ph.due_date || ''}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => { e.stopPropagation(); setPhaseDate(ph, e.target.value); }}
+                      title={ph.due_date ? 'Target completion date' : 'Set a target completion date'}
+                      style={{ background: 'transparent', border: `1px solid ${overdue ? '#ef4444' : 'var(--border)'}`, borderRadius: 7, color: overdue ? '#ef4444' : 'var(--muted)', fontSize: 11.5, padding: '3px 6px', colorScheme: 'dark' }} />
+                  )}
+
+                  {isDone && (
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#15803d', background: '#dcfce7', border: '1px solid #16a34a', borderRadius: 99, padding: '2px 9px' }}>
+                      Completed
+                    </span>
+                  )}
+                  {overdue && !ready && (
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#b91c1c' }}>Overdue</span>
+                  )}
                   {!clientView && <button className="btn-ghost" title="Delete phase" onClick={e => { e.stopPropagation(); removeItem(ph, true); }} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={13} /></button>}
                 </div>
 
@@ -314,6 +357,25 @@ export default function ProjectBoard({ project }) {
                         </div>
                       );
                     })}
+
+                    {/* Everything is ticked, so offer to close the phase out. */}
+                    {ready && !clientView && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10, padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
+                        <span style={{ fontSize: 12.5, color: '#15803d' }}>
+                          All {steps.length} step{steps.length === 1 ? '' : 's'} in this phase are done.
+                        </span>
+                        <button className="btn-primary" onClick={() => markPhaseDone(ph)} disabled={busy}
+                          style={{ padding: '6px 12px', marginLeft: 'auto' }}>
+                          <Check size={13} /> Mark this phase as completed
+                        </button>
+                      </div>
+                    )}
+                    {isDone && !clientView && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>
+                        This phase is marked completed.
+                        <button className="btn-ghost" onClick={() => reopenPhase(ph)} style={{ padding: '4px 10px' }}>Reopen</button>
+                      </div>
+                    )}
 
                     {!clientView && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
