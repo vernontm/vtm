@@ -53,6 +53,12 @@ export default function ProjectBoard({ project }) {
   const [to, setTo] = useState('');
   const [clientFacing, setClientFacing] = useState(true);
   const [reporting, setReporting] = useState(false);
+  // Preview of what a client would see. Same two rules the client-safe report
+  // applies: a step hidden from the client disappears, and an internal comment
+  // disappears. Editing controls go too, because a client cannot change
+  // anything. This filters data the admin already has; it does not expose
+  // anything, and the client portal itself is a separate change.
+  const [clientView, setClientView] = useState(false);
 
   // silent refreshes leave the board on screen. Only the very first load is
   // allowed to show a spinner, because blanking the board on every checkbox
@@ -145,17 +151,38 @@ export default function ProjectBoard({ project }) {
     finally { setReporting(false); }
   };
 
-  const commentsFor = (itemId) => (data?.comments || []).filter(c => c.item_id === itemId);
+  const commentsFor = (itemId) => (data?.comments || [])
+    .filter(c => c.item_id === itemId)
+    .filter(c => !clientView || c.internal !== true);
 
   if (loading) return <div style={{ padding: 20, color: 'var(--muted)', fontSize: 13 }}>Loading board…</div>;
 
-  const phases = data?.phases || [];
-  const progress = data?.progress || { total: 0, done: 0, pct: 0 };
+  const allPhases = data?.phases || [];
+  const phases = clientView
+    ? allPhases
+        .map(ph => ({ ...ph, steps: (ph.steps || []).filter(st => st.client_visible !== false) }))
+        .filter(ph => ph.steps.length)
+    : allPhases;
+  // In client view the counts have to reflect only what the client can see,
+  // otherwise the total gives away that something is being withheld.
+  const visibleSteps = phases.flatMap(ph => ph.steps || []);
+  const visibleDone = visibleSteps.filter(st => st.status === 'done').length;
+  const progress = clientView
+    ? { total: visibleSteps.length, done: visibleDone, pct: visibleSteps.length ? Math.round((visibleDone / visibleSteps.length) * 100) : 0 }
+    : (data?.progress || { total: 0, done: 0, pct: 0 });
+  const hiddenCount = clientView
+    ? allPhases.flatMap(ph => ph.steps || []).filter(st => st.client_visible === false).length
+    : 0;
 
   return (
     <div style={{ marginTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ fontSize: 15, fontWeight: 800 }}>Delivery board</div>
+        <button className="btn-ghost" onClick={() => { setClientView(v => !v); cancelEdit(); setCommentFor(null); }}
+          title="Preview exactly what this client would see"
+          style={{ padding: '5px 11px', fontSize: 12, borderColor: clientView ? '#2563eb' : 'var(--border)', color: clientView ? '#2563eb' : 'var(--muted)' }}>
+          {clientView ? <Eye size={13} /> : <EyeOff size={13} />} {clientView ? 'Client view' : 'Your view'}
+        </button>
         {progress.total > 0 && (
           <>
             <div style={{ flex: 1, minWidth: 120, height: 7, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden', maxWidth: 260 }}>
@@ -176,6 +203,14 @@ export default function ProjectBoard({ project }) {
           </>
         )}
       </div>
+
+      {clientView && (
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 12.5, color: '#1e40af', lineHeight: 1.5 }}>
+          <strong>Client view.</strong> This is what {project.client?.business_name || 'the client'} would see: read only, with hidden steps and internal notes removed
+          {hiddenCount > 0 ? `, ${hiddenCount} step${hiddenCount === 1 ? '' : 's'} hidden` : ''}.
+          {' '}Clients cannot open this yet, so nothing here is live to them.
+        </div>
+      )}
 
       {!phases.length ? (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 22, textAlign: 'center' }}>
@@ -206,11 +241,11 @@ export default function ProjectBoard({ project }) {
                       onKeyDown={e => { if (e.key === 'Enter') saveEdit(ph); if (e.key === 'Escape') cancelEdit(); }}
                       style={{ flex: 1, fontWeight: 700, fontSize: 13.5, padding: '4px 8px' }} />
                   ) : (
-                    <div onClick={e => { e.stopPropagation(); startEdit(ph); }} title="Click to rename"
+                    <div onClick={e => { e.stopPropagation(); if (!clientView) startEdit(ph); }} title={clientView ? undefined : 'Click to rename'}
                       style={{ fontWeight: 800, fontSize: 13.5, flex: 1, cursor: 'text' }}>{ph.name}</div>
                   )}
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>{doneN}/{steps.length}</div>
-                  <button className="btn-ghost" title="Delete phase" onClick={e => { e.stopPropagation(); removeItem(ph, true); }} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={13} /></button>
+                  {!clientView && <button className="btn-ghost" title="Delete phase" onClick={e => { e.stopPropagation(); removeItem(ph, true); }} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={13} /></button>}
                 </div>
 
                 {expanded && (
@@ -221,9 +256,11 @@ export default function ProjectBoard({ project }) {
                       return (
                         <div key={st.id} style={{ padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <button onClick={() => cycle(st)}
-                              title={`${(STATUS_MARK[st.status] || STATUS_MARK.todo).label}. Click to mark ${(STATUS_MARK[STATUS_NEXT[st.status] || 'doing']).label.toLowerCase()}.`}
-                              style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${mk.bd}`, background: mk.bg, color: mk.fg, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <button onClick={() => { if (!clientView) cycle(st); }}
+                              title={clientView
+                                ? (STATUS_MARK[st.status] || STATUS_MARK.todo).label
+                                : `${(STATUS_MARK[st.status] || STATUS_MARK.todo).label}. Click to mark ${(STATUS_MARK[STATUS_NEXT[st.status] || 'doing']).label.toLowerCase()}.`}
+                              style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${mk.bd}`, background: mk.bg, color: mk.fg, fontSize: 12, fontWeight: 800, cursor: clientView ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {mk.ch}
                             </button>
                             {editingId === st.id ? (
@@ -233,21 +270,23 @@ export default function ProjectBoard({ project }) {
                                 onKeyDown={e => { if (e.key === 'Enter') saveEdit(st); if (e.key === 'Escape') cancelEdit(); }}
                                 style={{ flex: 1, minWidth: 0, fontSize: 13, padding: '4px 8px' }} />
                             ) : (
-                              <div onClick={() => startEdit(st)} title="Click to rename"
+                              <div onClick={() => { if (!clientView) startEdit(st); }} title={clientView ? undefined : 'Click to rename'}
                                 style={{ flex: 1, minWidth: 0, fontSize: 13, cursor: 'text', textDecoration: st.status === 'done' ? 'line-through' : 'none', color: st.status === 'done' ? 'var(--muted)' : 'var(--text)' }}>
                                 {st.name}
                               </div>
                             )}
                             {st.due_date && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>due {st.due_date}</span>}
-                            <button className="btn-ghost" title={st.client_visible ? 'Client can see this' : 'Hidden from the client'} onClick={() => toggleVisible(st)}
-                              style={{ padding: '4px 6px', color: st.client_visible ? 'var(--muted)' : '#b45309' }}>
-                              {st.client_visible ? <Eye size={13} /> : <EyeOff size={13} />}
-                            </button>
-                            <button className="btn-ghost" title="Comments" onClick={() => { setCommentFor(commentFor === st.id ? null : st.id); setCommentText(''); setCommentShared(false); }}
+                            {!clientView && (
+                              <button className="btn-ghost" title={st.client_visible ? 'Client can see this' : 'Hidden from the client'} onClick={() => toggleVisible(st)}
+                                style={{ padding: '4px 6px', color: st.client_visible ? 'var(--muted)' : '#b45309' }}>
+                                {st.client_visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                              </button>
+                            )}
+                            {!clientView && <button className="btn-ghost" title="Comments" onClick={() => { setCommentFor(commentFor === st.id ? null : st.id); setCommentText(''); setCommentShared(false); }}
                               style={{ padding: '4px 6px', color: notes.length ? 'var(--accent)' : 'var(--muted)' }}>
                               <MessageSquare size={13} />{notes.length ? <span style={{ fontSize: 10, marginLeft: 3 }}>{notes.length}</span> : null}
-                            </button>
-                            <button className="btn-ghost" title="Delete step" onClick={() => removeItem(st, false)} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={12} /></button>
+                            </button>}
+                            {!clientView && <button className="btn-ghost" title="Delete step" onClick={() => removeItem(st, false)} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={12} /></button>}
                           </div>
 
                           {(commentFor === st.id || notes.length > 0) && (
@@ -259,7 +298,7 @@ export default function ProjectBoard({ project }) {
                                   <div style={{ color: 'var(--text)' }}>{c.body}</div>
                                 </div>
                               ))}
-                              {commentFor === st.id && (
+                              {commentFor === st.id && !clientView && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                                   <input className="form-input" value={commentText} onChange={e => setCommentText(e.target.value)}
                                     onKeyDown={e => { if (e.key === 'Enter') saveComment(); }}
@@ -276,27 +315,32 @@ export default function ProjectBoard({ project }) {
                       );
                     })}
 
+                    {!clientView && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                       <input className="form-input" value={newStep[ph.id] || ''} onChange={e => setNewStep(s => ({ ...s, [ph.id]: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter') addStep(ph.id); }}
                         placeholder="Add a step" style={{ flex: 1 }} />
                       <button className="btn-ghost" onClick={() => addStep(ph.id)} disabled={busy} style={{ padding: '7px 12px' }}><Plus size={13} /></button>
                     </div>
+                    )}
                   </div>
                 )}
               </div>
             );
           })}
 
+          {!clientView && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
             <input className="form-input" value={newPhase} onChange={e => setNewPhase(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addPhase(); }} placeholder="Add a phase" style={{ flex: 1, maxWidth: 320 }} />
             <button className="btn-ghost" onClick={addPhase} disabled={busy} style={{ padding: '8px 14px' }}><Plus size={13} /> Phase</button>
           </div>
+          )}
         </>
       )}
 
-      {/* Period report */}
+      {/* Period report. Hidden in client view: it is your tool, not theirs. */}
+      {!clientView && (
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <FileText size={15} style={{ color: 'var(--accent)' }} />
@@ -330,6 +374,7 @@ export default function ProjectBoard({ project }) {
           {' '}The PDF is also filed on the client’s Documents.
         </div>
       </div>
+      )}
     </div>
   );
 }
