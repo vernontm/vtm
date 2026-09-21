@@ -84,6 +84,14 @@ export const payTimeRange     = (data) => request('/time-entries?action=pay-rang
 export const setEmployeeRate  = (data) => request('/time-entries?action=set-rate', { method: 'POST', body: JSON.stringify(data) });
 export const updateTimeEntry  = (id, data) => request(`/time-entries?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTimeEntry  = (id) => request(`/time-entries?id=${id}`, { method: 'DELETE' });
+// Influencer shoots and per-shoot invoicing. The server owns the money math
+// (minimum, quarter-hour rounding, mileage); these just carry what happened.
+export const addShoot         = (data) => request('/time-entries?action=add-shoot', { method: 'POST', body: JSON.stringify(data) });
+export const submitStatement  = (data) => request('/time-entries?action=submit-statement', { method: 'POST', body: JSON.stringify(data) });
+export const approveStatement = (data) => request('/time-entries?action=approve-statement', { method: 'POST', body: JSON.stringify(data) });
+export const disputeStatement = (data) => request('/time-entries?action=dispute-statement', { method: 'POST', body: JSON.stringify(data) });
+export const payStatement     = (data) => request('/time-entries?action=pay-statement', { method: 'POST', body: JSON.stringify(data) });
+export const inviteUser       = (data) => request('/admin-users?action=invite', { method: 'POST', body: JSON.stringify(data) });
 
 // Employee resources — internal team hub (SOPs, guides, links). Admin edits.
 export const getEmployeeResources    = () => request('/employee-resources');

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Clock, Play, Square, Plus, Trash2, Check, DollarSign } from 'lucide-react';
+import { Clock, Play, Square, Plus, Trash2, Check, DollarSign, Camera, Send, ThumbsUp, AlertCircle } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import {
   getAdminUsers, getTimeEntries, clockIn, clockOut, addTimeEntry,
   markTimePaid, setEmployeeRate, deleteTimeEntry, payTimeRange,
+  addShoot, submitStatement, approveStatement, disputeStatement, payStatement,
 } from '../api';
 import { toast } from '../components/Toast';
 
@@ -14,6 +15,25 @@ const fmtHM = (min) => { const m = Math.max(0, Math.round(min)); const h = Math.
 const fmtElapsed = (ms) => { const s = Math.floor(ms / 1000); return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`; };
 const fmtDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch { return d; } };
 const money = (v) => `$${Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Mirrors New/api/_lib/shoot-billing.js so the form can show what a shoot is
+// worth before it is saved. ADVISORY ONLY: the server recomputes on save and
+// its answer is the one that gets paid, so a drift here can mislead but can
+// never mispay. Keep the two in step.
+const previewBillableMinutes = (raw) => {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  const withMin = Math.max(Math.round(n), 60);
+  const rem = withMin % 15;
+  if (rem === 0) return withMin;
+  return rem <= 7 ? withMin - rem : withMin + (15 - rem);
+};
+const minutesBetween = (date, call, wrap) => {
+  if (!date || !call || !wrap) return 0;
+  const a = new Date(`${date}T${call}`), b = new Date(`${date}T${wrap}`);
+  if (isNaN(a) || isNaN(b) || b <= a) return 0;
+  return Math.round((b - a) / 60000);
+};
 
 export default function Time() {
   const { user, isAdmin } = useClient();
@@ -33,6 +53,13 @@ export default function Time() {
   const [payFrom, setPayFrom] = useState(weekAgo());
   const [payTo, setPayTo] = useState(localToday());
   const [payPreview, setPayPreview] = useState(null);   // { minutes, entry_count, suggested_amount }
+  // Shoot logging (influencer contractors): call/wrap + location + miles.
+  const [shDate, setShDate] = useState(localToday());
+  const [shLocation, setShLocation] = useState('');
+  const [shCall, setShCall] = useState('');
+  const [shWrap, setShWrap] = useState('');
+  const [shMiles, setShMiles] = useState('');
+  const [shSaving, setShSaving] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [paying, setPaying] = useState(false);
 
@@ -106,6 +133,51 @@ export default function Time() {
   const payOne = async (id) => { try { await markTimePaid({ ids: [id] }); await load(); } catch (e) { toast('error', e.message); } };
   const payAll = async () => { if (!window.confirm(`Mark all ${fmtHM(totals.unpaidMin)} as paid?`)) return; try { await markTimePaid({ user_id: userId }); await load(); } catch (e) { toast('error', e.message); } };
   const saveRate = async () => { try { await setEmployeeRate({ user_id: userId, hourly_rate: parseFloat(rateInput) || 0 }); toast('success', 'Rate saved'); await load(); } catch (e) { toast('error', e.message); } };
+
+  // ── Shoots and per-shoot invoices ──────────────────────────────────────
+  const shMinutes = minutesBetween(shDate, shCall, shWrap);
+  const shBillable = previewBillableMinutes(shMinutes);
+  const shMileage = (Number(shMiles) || 0) * (data.mileage_rate || 0);
+  const shTotal = (shBillable / 60) * (data.hourly_rate || 0) + shMileage;
+
+  const doAddShoot = async () => {
+    if (!shMinutes) { toast('error', 'Enter a call time and a wrap time.'); return; }
+    setShSaving(true);
+    try {
+      await addShoot({
+        work_date: shDate, location: shLocation.trim(),
+        call_at: `${shDate}T${shCall}`, wrap_at: `${shDate}T${shWrap}`,
+        miles: Number(shMiles) || 0,
+      });
+      setShLocation(''); setShCall(''); setShWrap(''); setShMiles('');
+      toast('success', 'Shoot logged.');
+      await load();
+    } catch (e) { toast('error', e.message); }
+    finally { setShSaving(false); }
+  };
+
+  const doSubmitInvoice = async (entryId) => {
+    try {
+      const r = await submitStatement({ entry_ids: [entryId] });
+      toast('success', `Invoice sent for ${money(r.statement?.total_amount)}.`);
+      await load();
+    } catch (e) { toast('error', e.message); }
+  };
+  const doApprove = async (id) => { try { await approveStatement({ statement_id: id }); toast('success', 'Invoice approved.'); await load(); } catch (e) { toast('error', e.message); } };
+  const doDispute = async (id) => {
+    const note = window.prompt('What is wrong with this invoice? She will see this note.');
+    if (note == null) return;
+    try { await disputeStatement({ statement_id: id, note }); toast('success', 'Invoice disputed.'); await load(); } catch (e) { toast('error', e.message); }
+  };
+  const doPayStatement = async (st) => {
+    if (!window.confirm(`Pay ${money(st.total_amount)}? This marks the shoot paid and records the payment.`)) return;
+    try { await payStatement({ statement_id: st.id }); toast('success', `Paid ${money(st.total_amount)}.`); await load(); } catch (e) { toast('error', e.message); }
+  };
+
+  const shoots = (data.entries || []).filter(e => e.kind === 'shoot');
+  const uninvoiced = shoots.filter(e => !e.statement_id);
+  const statements = data.statements || [];
+  const stLabel = { submitted: ['Awaiting approval', '#b45309'], approved: ['Approved, awaiting payment', '#1d4ed8'], disputed: ['Disputed', '#b91c1c'], paid: ['Paid', '#16a34a'], draft: ['Draft', 'var(--muted)'] };
 
   const empLabel = (e) => e.email + (e.is_admin ? ' (admin)' : '');
 
@@ -217,6 +289,86 @@ export default function Time() {
           <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Minutes</div><input className="form-input" type="number" min="1" value={addMin} onChange={e => setAddMin(e.target.value)} placeholder="e.g. 48" style={{ width: 110 }} /></div>
           <div style={{ flex: 1, minWidth: 160 }}><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Note (optional)</div><input className="form-input" value={addNote} onChange={e => setAddNote(e.target.value)} placeholder="What you worked on" /></div>
           <button className="btn-primary" onClick={doAdd} disabled={!addMin} style={{ padding: '9px 16px' }}><Plus size={14} /> Add</button>
+        </div>
+      )}
+
+      {/* Log a shoot. The rate, the one hour minimum, the quarter-hour rounding
+          and the mileage rate all come from the contract; the preview below is
+          advisory and the server recomputes on save. */}
+      {viewingSelf && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', marginBottom: 16, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <Camera size={15} style={{ color: 'var(--accent)' }} />
+            <div style={{ fontSize: 13, fontWeight: 800 }}>Log a shoot</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+            <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Date</div><input className="form-input" type="date" value={shDate} onChange={e => setShDate(e.target.value)} style={{ width: 150 }} /></div>
+            <div style={{ flex: 1, minWidth: 150 }}><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Location</div><input className="form-input" value={shLocation} onChange={e => setShLocation(e.target.value)} placeholder="Where the shoot was" /></div>
+            <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Call time</div><input className="form-input" type="time" value={shCall} onChange={e => setShCall(e.target.value)} style={{ width: 120 }} /></div>
+            <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Wrap time</div><input className="form-input" type="time" value={shWrap} onChange={e => setShWrap(e.target.value)} style={{ width: 120 }} /></div>
+            <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Miles driven</div><input className="form-input" type="number" min="0" step="0.1" value={shMiles} onChange={e => setShMiles(e.target.value)} placeholder="0" style={{ width: 110 }} /></div>
+            <button className="btn-primary" onClick={doAddShoot} disabled={!shMinutes || shSaving} style={{ padding: '9px 16px' }}><Plus size={14} /> {shSaving ? 'Saving...' : 'Log shoot'}</button>
+          </div>
+          {shMinutes > 0 && (
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 12.5 }}>
+              <span style={{ color: 'var(--muted)' }}>On set <strong style={{ color: 'var(--text)' }}>{fmtHM(shMinutes)}</strong></span>
+              <span style={{ color: 'var(--muted)' }}>Billed <strong style={{ color: 'var(--text)' }}>{(shBillable / 60).toFixed(2)} hrs</strong>{shBillable !== shMinutes && <span style={{ color: 'var(--muted)' }}> (minimum and rounding applied)</span>}</span>
+              {Number(shMiles) > 0 && <span style={{ color: 'var(--muted)' }}>Mileage <strong style={{ color: 'var(--text)' }}>{money(shMileage)}</strong> at {money(data.mileage_rate)}/mi</span>}
+              <span style={{ marginLeft: 'auto', fontWeight: 800 }}>{money(shTotal)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Shoots not yet invoiced. Per-shoot invoicing, so each one submits on its own. */}
+      {viewingSelf && uninvoiced.length > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', marginBottom: 16, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>Ready to invoice</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {uninvoiced.map(e => (
+              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 12.5, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                <span style={{ fontWeight: 700, minWidth: 130 }}>{fmtDate(e.work_date)}</span>
+                <span style={{ color: 'var(--muted)', flex: 1, minWidth: 120 }}>{e.location || 'No location'}</span>
+                <span style={{ color: 'var(--muted)' }}>{((e.billable_minutes || e.minutes) / 60).toFixed(2)} hrs</span>
+                {Number(e.miles) > 0 && <span style={{ color: 'var(--muted)' }}>{e.miles} mi</span>}
+                <button className="btn-primary" onClick={() => doSubmitInvoice(e.id)} style={{ padding: '6px 12px' }}><Send size={13} /> Submit invoice</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Invoices. She sees her own status; an admin gets the buttons. */}
+      {statements.length > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', marginBottom: 16, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>Invoices</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {statements.map(st => {
+              const [text, colour] = stLabel[st.status] || [st.status, 'var(--muted)'];
+              return (
+                <div key={st.id} style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 12.5 }}>
+                    <span style={{ fontWeight: 700, minWidth: 130 }}>{fmtDate(st.period_start)}</span>
+                    <span style={{ color: 'var(--muted)' }}>{((st.billable_minutes || 0) / 60).toFixed(2)} hrs{Number(st.miles) > 0 ? ` · ${st.miles} mi` : ''}</span>
+                    <span style={{ color: colour, fontWeight: 700 }}>{text}</span>
+                    <span style={{ marginLeft: 'auto', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{money(st.total_amount)}</span>
+                    {isAdmin && st.status === 'submitted' && (
+                      <>
+                        <button className="btn-ghost" onClick={() => doApprove(st.id)} style={{ padding: '5px 10px', color: '#16a34a' }}><ThumbsUp size={13} /> Approve</button>
+                        <button className="btn-ghost" onClick={() => doDispute(st.id)} style={{ padding: '5px 10px', color: '#b91c1c' }}><AlertCircle size={13} /> Dispute</button>
+                      </>
+                    )}
+                    {isAdmin && (st.status === 'approved' || st.status === 'submitted') && (
+                      <button className="btn-primary" onClick={() => doPayStatement(st)} style={{ padding: '6px 12px' }}><DollarSign size={13} /> Pay</button>
+                    )}
+                  </div>
+                  {st.status === 'disputed' && st.dispute_note && (
+                    <div style={{ marginTop: 6, fontSize: 12, color: '#b91c1c' }}>{st.dispute_note}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

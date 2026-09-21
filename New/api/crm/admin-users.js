@@ -97,6 +97,51 @@ module.exports = async function handler(req, res) {
       return res.json(out);
     }
 
+    // ── Invite: create the user WITHOUT a password and mail them a link to set
+    // their own. Preferred over POST-with-password for onboarding a real person,
+    // because nobody (not Ray, not a text message, not a log) ever handles their
+    // password. Same generate_link mechanism the client portal already uses.
+    if (action === 'invite' && req.method === 'POST') {
+      const { email, is_admin = false, allowed_pages_global = null, hourly_rate = null } = req.body || {};
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'A valid email is required.' });
+
+      const meta = {};
+      if (is_admin) meta.is_admin = true;
+      if (Array.isArray(allowed_pages_global) && allowed_pages_global.length) meta.allowed_pages_global = allowed_pages_global;
+
+      // Idempotent: reuse the account if this address already has one.
+      let uid = null;
+      try {
+        const created = await adminFetch('users', {
+          method: 'POST',
+          body: JSON.stringify({ email, email_confirm: true, user_metadata: meta }),
+        });
+        uid = created?.id;
+      } catch (e) {
+        const existing = await adminFetch(`users?per_page=200`).catch(() => null);
+        const found = (existing?.users || []).find(u => (u.email || '').toLowerCase() === email.toLowerCase());
+        if (!found) throw e;
+        uid = found.id;
+        await adminFetch(`users/${uid}`, { method: 'PUT', body: JSON.stringify({ user_metadata: { ...(found.user_metadata || {}), ...meta } }) }).catch(() => {});
+      }
+
+      if (uid && hourly_rate != null && hourly_rate !== '') {
+        await supaFetch('crm_employee_rates?on_conflict=user_id', {
+          method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' },
+          body: JSON.stringify({ user_id: uid, hourly_rate: Number(hourly_rate) || 0, updated_at: new Date().toISOString() }),
+        }).catch(() => {});
+      }
+
+      const origin = (req.headers.origin || ('https://' + (req.headers.host || 'vernontm.com'))).replace(/\/+$/, '');
+      const link = await adminFetch('generate_link', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'recovery', email, options: { redirect_to: origin + '/admin' } }),
+      }).catch(() => null);
+      const action_link = link?.action_link || link?.properties?.action_link || null;
+
+      return res.status(201).json({ id: uid, email, action_link });
+    }
+
     if (req.method === 'POST') {
       const { email, password, is_admin = false, allowed_pages_global = null, grants = [] } = req.body || {};
       if (!email || !password) return res.status(400).json({ error: 'email and password required' });
