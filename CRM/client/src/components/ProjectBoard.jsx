@@ -42,28 +42,70 @@ export default function ProjectBoard({ project }) {
   const [commentFor, setCommentFor] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [commentShared, setCommentShared] = useState(false);
+  const [editingId, setEditingId] = useState(null);   // item being renamed
+  const [editText, setEditText] = useState('');
   const [range, setRange] = useState('this-month');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [clientFacing, setClientFacing] = useState(true);
   const [reporting, setReporting] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // silent refreshes leave the board on screen. Only the very first load is
+  // allowed to show a spinner, because blanking the board on every checkbox
+  // click reads as the whole page reloading.
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const r = await getProjectBoard(project.id);
       setData(r);
       setOpen(o => Object.keys(o).length ? o : Object.fromEntries((r.phases || []).map(p => [p.id, true])));
     } catch (e) { toast('error', e.message); }
-    finally { setLoading(false); }
+    finally { if (!silent) setLoading(false); }
   }, [project.id]);
   useEffect(() => { load(); }, [load]);
 
-  const guard = async (fn) => { setBusy(true); try { await fn(); await load(); } catch (e) { toast('error', e.message); } finally { setBusy(false); } };
+  // Structural changes (add, delete, seed) still refetch, but silently.
+  const guard = async (fn) => { setBusy(true); try { await fn(); await load({ silent: true }); } catch (e) { toast('error', e.message); } finally { setBusy(false); } };
+
+  // Field changes on a single step apply locally first and never refetch, so
+  // ticking a checkbox is instant and the board never flickers.
+  const patchLocal = (id, patch) => setData(d => !d ? d : ({
+    ...d,
+    phases: d.phases.map(ph => ph.id === id
+      ? { ...ph, ...patch }
+      : { ...ph, steps: (ph.steps || []).map(st => st.id === id ? { ...st, ...patch } : st) }),
+  }));
+
+  const recount = (d) => {
+    const steps = (d.phases || []).flatMap(ph => ph.steps || []);
+    const done = steps.filter(s => s.status === 'done').length;
+    return { ...d, progress: { total: steps.length, done, pct: steps.length ? Math.round((done / steps.length) * 100) : 0 } };
+  };
+
+  const patchItem = async (id, patch) => {
+    const before = data;
+    patchLocal(id, patch);
+    setData(d => d ? recount(d) : d);
+    try { await updateProjectItem(id, patch); }
+    catch (e) { toast('error', e.message); setData(before); }   // put it back
+  };
 
   const seed = () => guard(async () => { const r = await seedProjectBoard(project.id); toast('success', r.already ? 'Board already set up' : `Seeded the ${r.template} template`); });
-  const cycle = (step) => guard(() => updateProjectItem(step.id, { status: STATUS_NEXT[step.status] || 'doing' }));
-  const toggleVisible = (step) => guard(() => updateProjectItem(step.id, { client_visible: !step.client_visible }));
+  const cycle = (step) => patchItem(step.id, { status: STATUS_NEXT[step.status] || 'doing' });
+  const toggleVisible = (step) => patchItem(step.id, { client_visible: !step.client_visible });
+
+  // Rename a phase or a step in place.
+  const startEdit = (item) => { setEditingId(item.id); setEditText(item.name || ''); };
+  const cancelEdit = () => { setEditingId(null); setEditText(''); };
+  const saveEdit = async (item) => {
+    // Enter closes the input, which fires onBlur, which calls this again. Bail
+    // if this item is no longer the one being edited so the save happens once.
+    if (editingId !== item.id) return;
+    const name = editText.trim();
+    setEditingId(null);
+    if (!name || name === item.name) return;
+    await patchItem(item.id, { name });
+  };
   const removeItem = (item, isPhase) => {
     if (!window.confirm(isPhase ? `Delete "${item.name}" and every step inside it?` : `Delete "${item.name}"?`)) return;
     guard(() => deleteProjectItem(item.id));
@@ -94,7 +136,7 @@ export default function ProjectBoard({ project }) {
       const r = await buildProjectReport(project.id, { range, from, to, client_facing: clientFacing });
       toast('success', `Report ready for ${r.range?.label || 'the period'}`);
       if (r.url) window.open(r.url, '_blank', 'noopener');
-      await load();
+      await load({ silent: true });
     } catch (e) { toast('error', e.message); }
     finally { setReporting(false); }
   };
@@ -141,7 +183,17 @@ export default function ProjectBoard({ project }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', cursor: 'pointer' }}
                      onClick={() => setOpen(o => ({ ...o, [ph.id]: !expanded }))}>
                   {expanded ? <ChevronDown size={15} style={{ color: 'var(--muted)' }} /> : <ChevronRight size={15} style={{ color: 'var(--muted)' }} />}
-                  <div style={{ fontWeight: 800, fontSize: 13.5, flex: 1 }}>{ph.name}</div>
+                  {editingId === ph.id ? (
+                    <input className="form-input" value={editText} autoFocus
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => setEditText(e.target.value)}
+                      onBlur={() => saveEdit(ph)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveEdit(ph); if (e.key === 'Escape') cancelEdit(); }}
+                      style={{ flex: 1, fontWeight: 700, fontSize: 13.5, padding: '4px 8px' }} />
+                  ) : (
+                    <div onClick={e => { e.stopPropagation(); startEdit(ph); }} title="Click to rename"
+                      style={{ fontWeight: 800, fontSize: 13.5, flex: 1, cursor: 'text' }}>{ph.name}</div>
+                  )}
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>{doneN}/{steps.length}</div>
                   <button className="btn-ghost" title="Delete phase" onClick={e => { e.stopPropagation(); removeItem(ph, true); }} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={13} /></button>
                 </div>
@@ -158,9 +210,18 @@ export default function ProjectBoard({ project }) {
                               style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${mk.bd}`, background: mk.bg, color: mk.fg, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {mk.ch}
                             </button>
-                            <div style={{ flex: 1, minWidth: 0, fontSize: 13, textDecoration: st.status === 'done' ? 'line-through' : 'none', color: st.status === 'done' ? 'var(--muted)' : 'var(--text)' }}>
-                              {st.name}
-                            </div>
+                            {editingId === st.id ? (
+                              <input className="form-input" value={editText} autoFocus
+                                onChange={e => setEditText(e.target.value)}
+                                onBlur={() => saveEdit(st)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveEdit(st); if (e.key === 'Escape') cancelEdit(); }}
+                                style={{ flex: 1, minWidth: 0, fontSize: 13, padding: '4px 8px' }} />
+                            ) : (
+                              <div onClick={() => startEdit(st)} title="Click to rename"
+                                style={{ flex: 1, minWidth: 0, fontSize: 13, cursor: 'text', textDecoration: st.status === 'done' ? 'line-through' : 'none', color: st.status === 'done' ? 'var(--muted)' : 'var(--text)' }}>
+                                {st.name}
+                              </div>
+                            )}
                             {st.due_date && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>due {st.due_date}</span>}
                             <button className="btn-ghost" title={st.client_visible ? 'Client can see this' : 'Hidden from the client'} onClick={() => toggleVisible(st)}
                               style={{ padding: '4px 6px', color: st.client_visible ? 'var(--muted)' : '#b45309' }}>
