@@ -337,13 +337,28 @@ export default function Clients({ kind = 'client' }) {
   };
   useEffect(() => { load(); }, []);
   // Reset the open detail view + selection when switching between /leads and /clients.
-  useEffect(() => { setSelected(null); clearSelection(); setTempFilter('all'); setView('board'); }, [kind]);
+  useEffect(() => { setSelected(null); clearSelection(); setTempFilter('all'); setView(kind === 'lead' ? 'board' : 'list'); }, [kind]);
 
   // Live revenue snapshot for the Clients view (last 30 days + MRR from Stripe).
   const [revStats, setRevStats] = useState(null);
+  // Money and project counts per client, so the list answers "how is this
+  // relationship doing" without opening anyone.
+  const [projByClient, setProjByClient] = useState({});
   useEffect(() => {
     if (isLeadView) return;
     getDashboardStats().then(d => setRevStats(d?.stripeRevenue || null)).catch(() => {});
+    getProjects().then(ps => {
+      const by = {};
+      for (const p of ps || []) {
+        if (!p.client_id || p.archived) continue;
+        const b = by[p.client_id] || (by[p.client_id] = { count: 0, value: 0, paid: 0, names: [] });
+        b.count += 1;
+        b.value += Number(p.value) || 0;
+        b.paid += Number(p.amount_paid) || 0;
+        if (p.name) b.names.push(p.name);
+      }
+      setProjByClient(by);
+    }).catch(() => {});
   }, [isLeadView]);
 
   // URL persistence: /leads?open=<id>&step=<idx>&view=<pipeline|details>
@@ -489,8 +504,9 @@ export default function Clients({ kind = 'client' }) {
             })}
           </div>
         )}
-        {/* Board / List toggle (leads AND clients: clients get the delivery board) */}
-        {(
+        {/* Leads work as a pipeline, so they keep a board. Clients are a list of
+            relationships, not a pipeline, so they no longer have one. */}
+        {isLeadView && (
           <div style={{ display: 'inline-flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, gap: 2, marginLeft: 'auto' }}>
             {[{ key: 'board', label: 'Board' }, { key: 'list', label: 'List' }].map(v => {
               const on = view === v.key;
@@ -593,9 +609,20 @@ export default function Clients({ kind = 'client' }) {
               {isLeadView
                 ? <th style={{ minWidth: 130 }}>Status</th>
                 : <th style={{ minWidth: 150 }}>Status</th>}
-              <th style={{ minWidth: 130 }}>Source</th>
-              <th style={{ minWidth: 150 }}>Type</th>
-              <th style={{ minWidth: 120 }}>Added</th>
+              {isLeadView ? (
+                <>
+                  <th style={{ minWidth: 130 }}>Source</th>
+                  <th style={{ minWidth: 150 }}>Type</th>
+                  <th style={{ minWidth: 120 }}>Added</th>
+                </>
+              ) : (
+                <>
+                  <th style={{ minWidth: 150 }}>Projects</th>
+                  <th style={{ minWidth: 110 }}>Value</th>
+                  <th style={{ minWidth: 120 }}>Outstanding</th>
+                  <th style={{ minWidth: 110 }}>Client since</th>
+                </>
+              )}
               <th style={{ width: 40 }} />
             </tr>
           </thead>
@@ -625,9 +652,34 @@ export default function Clients({ kind = 'client' }) {
                 ) : (
                   <td><StageBadge stage={c.stage} /></td>
                 )}
-                <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.source || '—'}</td>
-                <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(c.client_type || []).join(', ') || '—'}</td>
-                <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                {isLeadView ? (
+                  <>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.source || '—'}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(c.client_type || []).join(', ') || '—'}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                  </>
+                ) : (() => {
+                  const b = projByClient[c.id];
+                  const outstanding = b ? Math.max(0, b.value - b.paid) : 0;
+                  return (
+                    <>
+                      <td style={{ fontSize: 12.5 }}>
+                        {b ? (
+                          <span title={b.names.join(', ')} style={{ color: 'var(--text)' }}>
+                            {b.count} project{b.count === 1 ? '' : 's'}
+                          </span>
+                        ) : <span style={{ color: 'var(--muted)' }}>None</span>}
+                      </td>
+                      <td style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', color: b && b.value ? 'var(--text)' : 'var(--muted)' }}>
+                        {b && b.value ? fmtUsd(b.value) : '—'}
+                      </td>
+                      <td style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', fontWeight: outstanding > 0 ? 700 : 400, color: outstanding > 0 ? '#b45309' : 'var(--muted)' }}>
+                        {b && b.value ? (outstanding > 0 ? fmtUsd(outstanding) : 'Paid up') : '—'}
+                      </td>
+                      <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                    </>
+                  );
+                })()}
                 <td onClick={e => e.stopPropagation()}>
                   <button className="btn-ghost" style={{ padding: '5px 7px', color: '#ff5c5c' }} onClick={() => setDeleteTarget(c)} title={`Delete ${noun.toLowerCase()}`}><Trash2 size={14} /></button>
                 </td>
