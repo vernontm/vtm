@@ -72,7 +72,7 @@ function ToastViewport({ toasts, onDismiss }) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: 20,
+      top: 20,
       right: 20,
       zIndex: 10000,
       display: 'flex',
@@ -91,7 +91,7 @@ function ToastItem({ toast, onDismiss }) {
   const palette = kind === 'success'
     ? { bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.35)', icon: <CheckCircle2 size={16} color="#22c55e" /> }
     : kind === 'error'
-      ? { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', icon: <AlertCircle size={16} color="#ef4444" /> }
+      ? { bg: 'rgba(37,99,235,0.12)', border: 'rgba(37,99,235,0.35)', icon: <AlertCircle size={16} color="#2563eb" /> }
       : { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)', icon: <Info size={16} color="#3b82f6" /> };
 
   return (
@@ -125,7 +125,7 @@ function ToastItem({ toast, onDismiss }) {
       </button>
       <style>{`
         @keyframes vtmToastIn {
-          from { opacity: 0; transform: translateY(8px); }
+          from { opacity: 0; transform: translateY(-8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>

@@ -2,14 +2,15 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Calendar, Video, Sparkles, Users, FileText,
-  Send, Loader, Check, X, Link as LinkIcon,
+  Send, Loader, Check, X, Link as LinkIcon, Pencil,
   ChevronRight, MessageSquare, Trash2, Search, ExternalLink,
-  AlertCircle,
+  AlertCircle, Copy,
 } from 'lucide-react';
 import {
   getMeetingDetail, saveMeetingNotes, findMeetingRecording,
   summarizeMeeting, askMeetingSidekick, clearMeetingChat,
   getLeads, createMeetingLeadLink,
+  updateMeeting, deleteMeeting,
 } from '../api';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -86,6 +87,14 @@ export default function MeetingDetail() {
   const [allLeads,      setAllLeads]      = useState([]);
   const [leadSearch,    setLeadSearch]    = useState('');
   const [linkingLeadId, setLinkingLeadId] = useState('');
+
+  // Edit + delete state — a light inline modal (avoids importing the full
+  // Schedule Meeting composer) that syncs changes both to the CRM row AND the
+  // underlying Google Calendar event.
+  const [editOpen,      setEditOpen]      = useState(false);
+  const [editDraft,     setEditDraft]     = useState({ title: '', start: '', end: '', attendees: '', notes: '' });
+  const [savingEdit,    setSavingEdit]    = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
 
   // Toast
   const [toast, setToast] = useState('');
@@ -227,6 +236,68 @@ export default function MeetingDetail() {
     }
   }
 
+  // ── Edit meeting (title / date / time / attendees / notes) ────────────────
+  // Values feed a lightweight modal. Attendee list is edited as a comma-
+  // separated string for simplicity — same shape the server accepts.
+  const toLocalInput = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const openEdit = () => {
+    if (!meeting) return;
+    setEditDraft({
+      title: meeting.title || '',
+      start: toLocalInput(meeting.start_time),
+      end:   toLocalInput(meeting.end_time),
+      attendees: (meeting.participants || []).map(p => p.email).filter(Boolean).join(', '),
+      notes: notes || '',
+    });
+    setEditOpen(true);
+  };
+  async function handleSaveEdit() {
+    if (!editDraft.title.trim() || !editDraft.start || !editDraft.end) {
+      showToast('Title, start, and end are required');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const patch = {
+        title: editDraft.title.trim(),
+        start_time: new Date(editDraft.start).toISOString(),
+        end_time:   new Date(editDraft.end).toISOString(),
+        attendees:  editDraft.attendees.split(',').map(s => s.trim()).filter(Boolean),
+        notes:      editDraft.notes,
+      };
+      await updateMeeting(eventId, patch);
+      showToast('Meeting updated on Google Calendar and CRM');
+      setEditOpen(false);
+      // Reload the fresh meeting to pick up server-side normalisation.
+      const data = await getMeetingDetail(eventId);
+      setMeeting(data.meeting);
+      setNotes(data.meeting.notes || '');
+    } catch (e) {
+      showToast('Update failed: ' + e.message);
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+  async function handleDeleteMeeting() {
+    if (!meeting) return;
+    if (!window.confirm(`Delete "${meeting.title}"? This removes it from Google Calendar and notifies attendees.`)) return;
+    setDeleting(true);
+    try {
+      await deleteMeeting(eventId);
+      showToast('Meeting deleted');
+      navigate('/meetings');
+    } catch (e) {
+      showToast('Delete failed: ' + e.message);
+      setDeleting(false);
+    }
+  }
+
   // ── Link to Lead ──────────────────────────────────────────────────────────
   async function handleLinkLead(lead) {
     if (!meeting) return;
@@ -339,6 +410,23 @@ export default function MeetingDetail() {
               </a>
             )}
             <button
+              onClick={async () => {
+                const url = window.location.href;
+                try {
+                  if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
+                  else { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); }
+                  setToast('Meeting link copied'); setTimeout(() => setToast(''), 3500);
+                } catch {
+                  setToast('Could not copy — copy it from the address bar'); setTimeout(() => setToast(''), 3500);
+                }
+              }}
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 5 }}
+              title="Copy a shareable link to this meeting page"
+            >
+              <Copy size={13} /> Copy link
+            </button>
+            <button
               onClick={() => { setShowLinkModal(true); setLeadSearch(''); }}
               className="btn-ghost"
               style={{ fontSize: 12, padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 5 }}
@@ -369,9 +457,78 @@ export default function MeetingDetail() {
                 ? <><Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Summarizing…</>
                 : <><Sparkles size={13} /> {summary ? 'Re-summarize' : 'Generate Summary'}</>}
             </button>
+            <button
+              onClick={openEdit}
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 5 }}
+              title="Edit meeting (syncs to Google Calendar)"
+            >
+              <Pencil size={13} /> Edit
+            </button>
+            <button
+              onClick={handleDeleteMeeting}
+              disabled={deleting}
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 5, color: '#2563eb' }}
+              title="Delete meeting (removes from Google Calendar)"
+            >
+              {deleting ? <Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Trash2 size={13} />}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* ── Edit modal ─────────────────────────────────────────────────────── */}
+      {editOpen && (
+        <div onClick={() => setEditOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, width: 520, maxWidth: '94vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Pencil size={15} style={{ color: 'var(--orange)' }} />
+                <span style={{ fontSize: 14.5, fontWeight: 800 }}>Edit meeting</span>
+              </div>
+              <button onClick={() => setEditOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex' }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Title</span>
+                <input value={editDraft.title} onChange={e => setEditDraft(d => ({ ...d, title: e.target.value }))}
+                  style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Start</span>
+                  <input type="datetime-local" value={editDraft.start} onChange={e => setEditDraft(d => ({ ...d, start: e.target.value }))}
+                    style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>End</span>
+                  <input type="datetime-local" value={editDraft.end} onChange={e => setEditDraft(d => ({ ...d, end: e.target.value }))}
+                    style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} />
+                </label>
+              </div>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Attendees (comma-separated emails)</span>
+                <input value={editDraft.attendees} onChange={e => setEditDraft(d => ({ ...d, attendees: e.target.value }))}
+                  placeholder="ray@vernontm.com, other@example.com"
+                  style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private notes / agenda 🔒</span>
+                <textarea value={editDraft.notes} onChange={e => setEditDraft(d => ({ ...d, notes: e.target.value }))} rows={5}
+                  style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit' }} />
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Not shared with attendees — stays in the CRM.</span>
+              </label>
+            </div>
+            <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn-ghost" onClick={() => setEditOpen(false)}>Cancel</button>
+              <button className="btn-primary" onClick={handleSaveEdit} disabled={savingEdit} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {savingEdit ? <><Loader size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</> : <><Check size={13} /> Save & sync</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Body: Left tabs + Right Sidekick ──────────────────────────────── */}
       <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
@@ -404,6 +561,20 @@ export default function MeetingDetail() {
             {/* ── OVERVIEW TAB ── */}
             {activeTab === 'overview' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Private notes preview — the agenda / notes typed at scheduling time,
+                    kept internal to the CRM (never on the Google Calendar event). */}
+                {notes.trim() && (
+                  <div style={{ background: 'rgba(255,155,38,0.05)', border: '1px solid rgba(255,155,38,0.25)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <FileText size={13} style={{ color: 'var(--orange)' }} />
+                      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Private notes</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--muted)' }}>🔒 CRM only</span>
+                      <button onClick={() => setActiveTab('notes')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)', fontSize: 11, fontWeight: 600, padding: 0 }}>Edit →</button>
+                    </div>
+                    <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{notes}</div>
+                  </div>
+                )}
 
                 {/* Recording section */}
                 <div>

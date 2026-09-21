@@ -19,10 +19,19 @@ const STATUS_COLORS = {
   'Pending':      { bg: '#f9c74f', text: '#0a0a08' },
   'Partial Paid': { bg: '#fdab3d', text: '#fff' },
   'Paid':         { bg: '#2563eb', text: '#fff' },
-  // Project statuses
-  'Active':     { bg: '#2563eb', text: '#fff' },
-  'In Progress':{ bg: '#fdab3d', text: '#fff' },
-  'Completed':  { bg: '#2563eb', text: '#fff' },
+  // Project lifecycle statuses
+  'Onboarding':      { bg: '#f5a623', text: '#0a0a08' },
+  'Awaiting Access': { bg: '#2563eb', text: '#fff' },
+  'In Progress':     { bg: '#3b82f6', text: '#fff' },
+  'Live':            { bg: '#16a34a', text: '#fff' },
+  'Completed':       { bg: '#6b7280', text: '#fff' },
+  'Paused':          { bg: '#ff5c5c', text: '#fff' },
+  // Project payment badge
+  'Unpaid':       { bg: 'rgba(245,166,35,0.15)', text: '#f5a623' },
+  'Deposit paid': { bg: 'rgba(37,99,235,0.15)',  text: '#60a5fa' },
+  'Paid in full': { bg: 'rgba(22,163,74,0.15)',  text: '#22c55e' },
+  // Legacy project statuses (still colored if any old rows remain)
+  'Active':     { bg: '#3b82f6', text: '#fff' },
   'On Hold':    { bg: '#4a4845', text: '#fff' },
   'Cancelled':  { bg: '#ff5c5c', text: '#fff' },
 };

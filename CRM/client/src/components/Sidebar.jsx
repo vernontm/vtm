@@ -13,25 +13,31 @@ import { useMobile } from '../App';
 import { getGmailInbox } from '../api';
 
 // ── Nav definitions ───────────────────────────────────────────────────────────
+// Naming rewrite (audit item #9): trimmed to a mental model that reads as a
+// customer journey — Home → People → Pipeline → Inbox → Calendar → Marketing
+// → Work → Team → Workspace. Old paths kept intact so no route breaks.
 const nav = [
-  { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard',    slug: 'dashboard' },
+  { to: '/dashboard',    icon: LayoutDashboard, label: 'Home',         slug: 'dashboard' },
   { to: '/leads',        icon: UserPlus,        label: 'Leads',        slug: 'leads' },
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
-  { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
-  { to: '/appointments', icon: Calendar,        label: 'Appointments', slug: 'appointments' },
-  { to: '/todos',        icon: CheckSquare,     label: 'To-Do',        slug: 'todos' },
-  { to: '/routines',     icon: RotateCcw,       label: 'Routines',     slug: 'routines' },
-  { to: '/email',        icon: Mail,            label: 'Email',        slug: 'email' },
+  { to: '/projects',     icon: Briefcase,       label: 'Pipeline',     slug: 'projects' },
+  { to: '/email',        icon: Mail,            label: 'Inbox',        slug: 'email' },
+  { to: '/appointments', icon: Calendar,        label: 'Calendar',     slug: 'appointments' },
 ];
 
-const navTeam = [
-  { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees' },
-  { to: '/time',         icon: Clock,           label: 'Time',         slug: 'time' },
-  { to: '/employee-resources', icon: BookOpen,  label: 'Resources',    slug: 'employee-resources' },
+const navWork = [
+  { to: '/todos',        icon: CheckSquare,     label: 'To-Do',        slug: 'todos' },
+  { to: '/routines',     icon: RotateCcw,       label: 'Routines',     slug: 'routines' },
 ];
 
 const navMarketing = [
   { to: '/contacts',      icon: Users,      label: 'Contacts',      slug: 'contacts' },
+];
+
+const navTeam = [
+  { to: '/employees',    icon: UserCog,         label: 'Team',         slug: 'employees' },
+  { to: '/time',         icon: Clock,           label: 'Time',         slug: 'time' },
+  { to: '/employee-resources', icon: BookOpen,  label: 'Library',      slug: 'employee-resources' },
 ];
 
 const navTools = [
@@ -91,6 +97,7 @@ export default function Sidebar() {
   const { sidebarOpen } = useMobile();
 
   const visibleNav          = nav.filter(item => canSee(item.slug));
+  const visibleNavWork      = navWork.filter(item => canSee(item.slug));
   const visibleNavTeam      = navTeam.filter(item => canSee(item.slug));
   const visibleNavMarketing = navMarketing.filter(item => canSee(item.slug));
   const visibleNavTools     = navTools.filter(item => canSee(item.slug));
@@ -100,7 +107,7 @@ export default function Sidebar() {
       <aside
         style={{
           width: 230, minWidth: 230,
-          background: 'var(--side-bg)',
+          background: 'transparent',
           borderRight: '1px solid var(--side-border)',
           display: 'flex', flexDirection: 'column',
         }}
@@ -168,6 +175,18 @@ export default function Sidebar() {
                       {emailCount}
                     </span>
                   )}
+                </NavLink>
+              ))}
+            </>
+          )}
+
+          {visibleNavWork.length > 0 && (
+            <>
+              <div style={{ ...NAV_LABEL_STYLE, marginTop: 14 }}>Work</div>
+              {visibleNavWork.map(({ to, icon: Icon, label }) => (
+                <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                  <Icon size={15} />
+                  <span>{label}</span>
                 </NavLink>
               ))}
             </>

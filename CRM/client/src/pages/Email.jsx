@@ -3,26 +3,34 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Mail, Send, FileText, Inbox, Search, RefreshCw, Trash2,
   ChevronLeft, ChevronRight, Clock, Check, X, Edit3, Sparkles, Calendar,
-  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap, Loader, Menu,
+  Star, Users, Ban, Flag, Reply, AlertTriangle, ChevronDown, Minimize2, Maximize2, Plus, Tag, Zap, Loader, Menu, Paperclip, Filter,
 } from 'lucide-react';
 import { toast } from '../components/Toast';
+import { useClient } from '../context/ClientContext';
+import { useCompose } from '../context/ComposeContext';
 import {
   getEmailQueue, updateQueueItem, deleteQueueItem, sendQueueItem,
   createQueueItem, getGmailInbox, getContacts, getLeads,
   addEmailLabel, removeEmailLabel, getGmailContacts, getGmailThread,
   getGmailLabels, createGmailLabel, deleteGmailLabel, applyGmailLabel, removeGmailLabel,
-  getAIFollowups, trashGmailMessage,
+  getAIFollowups, trashGmailMessage, uploadEmailAttachment, gmailSync, gmailRefreshLabels,
 } from '../api';
 
 const TABS = [
   { key: 'inbox',   label: 'Inbox',   icon: Inbox },
   { key: 'sent',    label: 'Sent',    icon: Send },
   { key: 'drafts',  label: 'Drafts',  icon: FileText },
+  { key: 'scheduled', label: 'Scheduled', icon: Clock },
   { key: 'starred', label: 'Starred', icon: Star },
   { key: 'spam',    label: 'Spam',    icon: Ban },
 ];
 
 const AVATAR_COLORS = ['var(--orange)','#784bd1','#22c55e','#f5a623','#ff5c5c','#00b8d4','#e91e8c','#2563eb'];
+
+// Gmail system labels that are meaningful for filtering but noisy when rendered
+// as pills on every message. Kept in customLabels so the sidebar can still show
+// them and use them for the show/hide + filter controls; excluded from pills.
+const HIDDEN_PILL_LABELS = new Set(['IMPORTANT', 'CATEGORY_PERSONAL']);
 
 const LABEL_CONFIG = {
   favorite:    { icon: Star,          color: '#f5a623', label: 'Favorite' },
@@ -40,38 +48,51 @@ function getYouTubeId(url) {
   return m ? m[1] : null;
 }
 
+function renderUrl(part, key) {
+  // YouTube embed
+  const ytId = getYouTubeId(part);
+  if (ytId) return (
+    <div key={key} style={{ margin:'12px 0', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', maxWidth:480 }}>
+      <iframe src={`https://www.youtube.com/embed/${ytId}`} style={{ width:'100%', aspectRatio:'16/9', border:'none', display:'block' }} allowFullScreen />
+    </div>
+  );
+  // Image
+  if (isImageUrl(part)) return (
+    <div key={key} style={{ margin:'12px 0' }}>
+      <a href={part} target="_blank" rel="noopener noreferrer">
+        <img src={part} alt="" style={{ maxWidth:'100%', maxHeight:400, borderRadius:10, border:'1px solid var(--border)', display:'block' }}
+          onError={e => { e.target.style.display='none'; e.target.parentElement.innerHTML=`<a href="${part}" target="_blank" rel="noopener noreferrer" style="color:var(--orange);word-break:break-all">${part}</a>`; }} />
+      </a>
+    </div>
+  );
+  // Video
+  if (isVideoUrl(part)) return (
+    <div key={key} style={{ margin:'12px 0', maxWidth:480 }}>
+      <video src={part} controls style={{ width:'100%', borderRadius:10, border:'1px solid var(--border)', display:'block' }} />
+    </div>
+  );
+  // Regular link
+  return <a key={key} href={part} target="_blank" rel="noopener noreferrer" style={{ color:'var(--orange)', wordBreak:'break-all' }}>{part}</a>;
+}
+
 function Linkify({ text }) {
   if (!text) return null;
-  const urlRegex = /(https?:\/\/[^\s<>"')\]]+)/g;
-  const parts = text.split(urlRegex);
-  const isUrl = /^https?:\/\//;
-  return parts.map((part, i) => {
-    if (!isUrl.test(part)) return part;
-    // YouTube embed
-    const ytId = getYouTubeId(part);
-    if (ytId) return (
-      <div key={i} style={{ margin:'12px 0', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', maxWidth:480 }}>
-        <iframe src={`https://www.youtube.com/embed/${ytId}`} style={{ width:'100%', aspectRatio:'16/9', border:'none', display:'block' }} allowFullScreen />
-      </div>
-    );
-    // Image
-    if (isImageUrl(part)) return (
-      <div key={i} style={{ margin:'12px 0' }}>
-        <a href={part} target="_blank" rel="noopener noreferrer">
-          <img src={part} alt="" style={{ maxWidth:'100%', maxHeight:400, borderRadius:10, border:'1px solid var(--border)', display:'block' }}
-            onError={e => { e.target.style.display='none'; e.target.parentElement.innerHTML=`<a href="${part}" target="_blank" rel="noopener noreferrer" style="color:var(--orange);word-break:break-all">${part}</a>`; }} />
-        </a>
-      </div>
-    );
-    // Video
-    if (isVideoUrl(part)) return (
-      <div key={i} style={{ margin:'12px 0', maxWidth:480 }}>
-        <video src={part} controls style={{ width:'100%', borderRadius:10, border:'1px solid var(--border)', display:'block' }} />
-      </div>
-    );
-    // Regular link
-    return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color:'var(--orange)', wordBreak:'break-all' }}>{part}</a>;
-  });
+  // Match a markdown link [text](url) OR a bare URL. Markdown links render with
+  // their anchor text (e.g. "log into your portal here"); bare URLs render as-is.
+  const tokenRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>"')\]]+)/g;
+  const out = [];
+  let last = 0, m, i = 0;
+  while ((m = tokenRegex.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m[1] && m[2]) {
+      out.push(<a key={`md${i++}`} href={m[2]} target="_blank" rel="noopener noreferrer" style={{ color:'var(--orange)', wordBreak:'break-word' }}>{m[1]}</a>);
+    } else {
+      out.push(renderUrl(m[3], `u${i++}`));
+    }
+    last = tokenRegex.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
 }
 
 /* ── HTML email renderer (sandboxed iframe) ──────────────────────────────── */
@@ -127,14 +148,15 @@ function HtmlEmail({ html }) {
 }
 
 /* Helper: render body as HTML iframe or plain text with Linkify.
-   Prefer the plain-text part — it renders inline with no iframe and no dead
-   whitespace (the common cause of huge blank gaps). Fall back to the HTML part
-   only for emails that are HTML-only (marketing / newsletters). */
+   Prefer the HTML part whenever the message ships one — that's the version
+   the sender formatted (newsletters, receipts, threaded replies with quoting,
+   anything with images / buttons / links). Plain-text is the fallback for
+   messages that only ship a text part (simple hand-typed notes). */
 function EmailBody({ msg, fallbackText }) {
-  const html = msg?.bodyHtml || '';
+  const html = (msg?.bodyHtml || '').trim();
   const text = (msg?.body || '').trim();
-  if (text && !looksLikeHtml(text)) return <Linkify text={text} />;
   if (html) return <HtmlEmail html={html} />;
+  if (text && !looksLikeHtml(text)) return <Linkify text={text} />;
   const fb = (fallbackText || '').trim();
   if (looksLikeHtml(fb)) return <HtmlEmail html={fb} />;
   return <Linkify text={fb || text || '(empty)'} />;
@@ -280,48 +302,100 @@ function LabelButton({ labelKey, active, onClick, size = 14 }) {
 
 /* ── Floating Compose Popup ──────────────────────────────────────────────── */
 
-function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, onSaveDraft, onClose, sending, labelDefs = [] }) {
-  const [to, setTo] = useState(replyTo?.from?.email || replyTo?.to_email || '');
-  const [subject, setSubject] = useState(replyTo ? `Re: ${(replyTo.subject||'').replace(/^Re:\s*/i,'')}` : '');
-  const [body, setBody] = useState('');
-  const [minimized, setMinimized] = useState(false);
+function ComposePopup({ replyTo, draft, onDraftChange, contacts, gmailContacts, onSend, onSchedule, onSaveDraft, onClose, onMinimize, sending, labelDefs = [], clientId, uploadAttachment }) {
+  // Hydrate from persisted draft when available so the composer restores
+  // fully after a minimize + navigation trip. Falls back to sensible defaults.
+  const initialTo      = draft?.to ?? (replyTo?.from?.email || replyTo?.to_email || '');
+  const initialSubject = draft?.subject ?? (replyTo ? `Re: ${(replyTo.subject||'').replace(/^Re:\s*/i,'')}` : '');
+  const initialBody    = draft?.body ?? '';
+  const initialLabels  = Array.isArray(draft?.labels) && draft.labels.length
+    ? draft.labels
+    : (labelDefs.some(l => l.name === 'Leads') ? ['Leads'] : []);
+  const initialAttach  = Array.isArray(draft?.attachments) ? draft.attachments : [];
+
+  const [to, setToState] = useState(initialTo);
+  const [subject, setSubjectState] = useState(initialSubject);
+  const [body, setBodyState] = useState(initialBody);
   const [showSchedule, setShowSchedule] = useState(false);
   const [customSchedule, setCustomSchedule] = useState('');
   const [showCustomPicker, setShowCustomPicker] = useState(false);
-  const [selectedLabels, setSelectedLabels] = useState(() => labelDefs.some(l => l.name === 'Leads') ? ['Leads'] : []);
+  const [selectedLabels, setSelectedLabelsState] = useState(initialLabels);
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
+  const [attachments, setAttachmentsState] = useState(initialAttach);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const bodyRef = useRef(null);
-  useEffect(() => { if (bodyRef.current && !minimized) bodyRef.current.focus(); }, [minimized]);
+  useEffect(() => { if (bodyRef.current) bodyRef.current.focus(); }, []);
 
-  const handleSend = () => { if (!to || !subject) return; onSend({ to, subject, body, labels: selectedLabels }); };
-  const handleScheduleSelect = (iso) => { if (!to || !subject) return; onSchedule({ to, subject, body, scheduleDate: iso, labels: selectedLabels }); };
-  const handleCustomSchedule = () => { if (!to || !subject || !customSchedule) return; onSchedule({ to, subject, body, scheduleDate: new Date(customSchedule).toISOString(), labels: selectedLabels }); };
+  // Sync each field change back to the persistent draft store so leaving the
+  // page and coming back restores exactly what you were typing.
+  const sync = (patch) => { onDraftChange?.(patch); };
+  const setTo = (v)      => { setToState(v);      sync({ to: v }); };
+  const setSubject = (v) => { setSubjectState(v); sync({ subject: v }); };
+  const setBody = (v)    => { setBodyState(v);    sync({ body: v }); };
+  const setSelectedLabels = (updater) => {
+    setSelectedLabelsState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      sync({ labels: next });
+      return next;
+    });
+  };
+  const setAttachments = (updater) => {
+    setAttachmentsState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      sync({ attachments: next });
+      return next;
+    });
+  };
+
+  const handlePickFiles = async (files) => {
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      for (const f of files) {
+        try {
+          const meta = await uploadAttachment(clientId, f);
+          setAttachments(a => [...a, meta]);
+        } catch (e) { toast('error', `Upload failed: ${e.message}`); }
+      }
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+  const removeAttachment = (url) => setAttachments(a => a.filter(x => x.url !== url));
+  const fmtSize = (n) => n < 1024 ? `${n}B` : n < 1048576 ? `${(n/1024).toFixed(1)}KB` : `${(n/1048576).toFixed(1)}MB`;
+
+  const handleSend = () => { if (!to || !subject) return; onSend({ to, subject, body, labels: selectedLabels, attachments }); };
+  const handleScheduleSelect = (iso) => { if (!to || !subject) return; onSchedule({ to, subject, body, scheduleDate: iso, labels: selectedLabels, attachments }); };
+  const handleCustomSchedule = () => { if (!to || !subject || !customSchedule) return; onSchedule({ to, subject, body, scheduleDate: new Date(customSchedule).toISOString(), labels: selectedLabels, attachments }); };
 
   return (
     <div className="compose-popup" style={{
       position:'fixed', bottom:0, right:80, width:480, maxWidth:'100vw', zIndex:8000,
       background:'var(--surface)', borderRadius:'12px 12px 0 0', boxShadow:'0 -4px 32px rgba(0,0,0,0.15)',
       border:'1px solid var(--border)', borderBottom:'none', display:'flex', flexDirection:'column',
-      maxHeight: minimized ? 44 : '70vh', transition:'max-height 0.2s ease',
+      maxHeight: '70vh',
     }}>
       {/* Title bar */}
-      <div onClick={() => minimized && setMinimized(false)} style={{
+      <div style={{
         display:'flex', alignItems:'center', padding:'10px 16px', background:'var(--surface-3)', borderRadius:'12px 12px 0 0',
-        cursor:'pointer', flexShrink:0,
+        flexShrink:0,
       }}>
         <span style={{ fontSize:13, fontWeight:600, color:'#fff', flex:1 }}>
           {replyTo ? 'Reply' : 'New Message'}
         </span>
-        <button onClick={e => { e.stopPropagation(); setMinimized(!minimized); }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:4, marginRight:4 }}>
-          {minimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-        </button>
-        <button onClick={e => { e.stopPropagation(); onClose(); }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:4 }}>
+        {onMinimize && (
+          <button onClick={() => onMinimize()} title="Minimize (keep draft while you browse the CRM)" style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:4, marginRight:4 }}>
+            <Minimize2 size={13} />
+          </button>
+        )}
+        <button onClick={() => onClose()} title="Discard draft" style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:4 }}>
           <X size={14} />
         </button>
       </div>
 
-      {!minimized && (
-        <>
+      <>
           {/* To */}
           <div style={{ display:'flex', alignItems:'center', borderBottom:'1px solid var(--border)', padding:'7px 16px' }}>
             <span style={{ fontSize:12, color:'var(--muted)', fontWeight:500, width:50 }}>To</span>
@@ -384,11 +458,24 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
           <textarea ref={bodyRef} value={body} onChange={e => setBody(e.target.value)}
             placeholder={replyTo ? 'Write your reply...' : 'Compose your email...'}
             style={{ flex:1, minHeight:180, padding:'12px 16px', border:'none', outline:'none', fontSize:13, lineHeight:1.7, color:'var(--text)', resize:'none', fontFamily:'Inter, sans-serif', boxSizing:'border-box' }} />
+          {/* Attachment chips */}
+          {attachments.length > 0 && (
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6, padding:'8px 16px', borderTop:'1px solid var(--border)', background:'var(--surface-2)' }}>
+              {attachments.map(a => (
+                <div key={a.url} style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 8px 4px 10px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, fontSize:11.5, color:'var(--text)' }}>
+                  <Paperclip size={11} color="var(--muted)" />
+                  <span style={{ fontWeight:600, maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.name}</span>
+                  <span style={{ color:'var(--muted)', fontSize:10.5 }}>{fmtSize(a.size)}</span>
+                  <button onClick={() => removeAttachment(a.url)} style={{ background:'none', border:'none', cursor:'pointer', padding:2, display:'flex', color:'var(--muted)' }}><X size={11} /></button>
+                </div>
+              ))}
+            </div>
+          )}
           {/* Actions */}
           <div style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderTop:'1px solid var(--border)', position:'relative', flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'stretch', borderRadius:8, overflow:'hidden' }}>
-              <button onClick={handleSend} disabled={sending||!to||!subject}
-                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject)?0.5:1, borderRight:'1px solid rgba(255,255,255,0.2)' }}>
+              <button onClick={handleSend} disabled={sending||!to||!subject||uploading}
+                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject||uploading)?0.5:1, borderRight:'1px solid rgba(255,255,255,0.2)' }}>
                 <Send size={12} /> {sending?'Sending...':'Send'}
               </button>
               <button onClick={() => setShowSchedule(!showSchedule)} style={{ padding:'7px 8px', cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', display:'flex', alignItems:'center' }}>
@@ -396,12 +483,15 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
               </button>
             </div>
             {showSchedule && <SchedulePopup onSelect={handleScheduleSelect} onPickCustom={() => setShowCustomPicker(true)} onClose={() => setShowSchedule(false)} />}
-            <button onClick={() => onSaveDraft({ to, subject, body })} style={{ padding:'7px 12px', borderRadius:8, cursor:'pointer', background:'var(--surface-2)', border:'1px solid var(--border)', color:'var(--muted)', fontSize:12, fontWeight:500 }}>Draft</button>
+            <button onClick={() => onSaveDraft({ to, subject, body, attachments })} style={{ padding:'7px 12px', borderRadius:8, cursor:'pointer', background:'var(--surface-2)', border:'1px solid var(--border)', color:'var(--muted)', fontSize:12, fontWeight:500 }}>Draft</button>
+            <input ref={fileRef} type="file" multiple onChange={e => handlePickFiles(Array.from(e.target.files || []))} style={{ display:'none' }} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Attach files" style={{ padding:'7px 10px', borderRadius:8, cursor:uploading?'wait':'pointer', background:'var(--surface-2)', border:'1px solid var(--border)', color:uploading?'var(--orange)':'var(--muted)', display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
+              {uploading ? <Loader size={12} className="spin" /> : <Paperclip size={13} />}
+            </button>
             <div style={{ flex:1 }} />
             <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:4 }}><Trash2 size={14} /></button>
           </div>
         </>
-      )}
     </div>
   );
 }
@@ -409,14 +499,43 @@ function ComposePopup({ replyTo, contacts, gmailContacts, onSend, onSchedule, on
 /* ════════════════════════════════════════════════════════════════════════════ */
 
 export default function EmailPage() {
+  const { selectedClient } = useClient();
+  const clientId = selectedClient?.id;
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTab]                       = useState('inbox');
+  // Persist tab + selected email in the URL AND localStorage so both switching
+  // pages within the CRM and refreshes remember what you had open.
+  const LAST_TAB_LS  = 'vtm-email-last-tab';
+  const LAST_OPEN_LS = 'vtm-email-last-open';
+  const [tab, setTabInternal] = useState(() => {
+    const t = searchParams.get('tab') || (typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_TAB_LS) : null);
+    return ['inbox','sent','drafts','starred','spam'].includes(t) ? t : 'inbox';
+  });
+  const setTab = (nextTab) => {
+    setTabInternal(nextTab);
+    try { localStorage.setItem(LAST_TAB_LS, nextTab); } catch {}
+    const params = new URLSearchParams(searchParams);
+    if (nextTab === 'inbox') params.delete('tab'); else params.set('tab', nextTab);
+    setSearchParams(params, { replace: true });
+  };
   const [queueEmails, setQueueEmails]       = useState([]);
   const [inboxMessages, setInboxMessages]   = useState([]);
   const [sentMessages, setSentMessages]     = useState([]);
   const [draftMessages, setDraftMessages]   = useState([]);
   const [loading, setLoading]               = useState(true);
-  const [selected, setSelected]             = useState(null);
+  const [selected, setSelectedInternal]     = useState(null);
+  // Persist open email in URL + localStorage. Functional updaters (label refresh
+  // patches, real-time sync) don't change identity, so skip the URL write.
+  const setSelected = (arg) => {
+    if (typeof arg === 'function') { setSelectedInternal(arg); return; }
+    setSelectedInternal(arg);
+    try {
+      if (arg?.id) localStorage.setItem(LAST_OPEN_LS, arg.id);
+      else localStorage.removeItem(LAST_OPEN_LS);
+    } catch {}
+    const params = new URLSearchParams(searchParams);
+    if (arg?.id) params.set('open', arg.id); else params.delete('open');
+    setSearchParams(params, { replace: true });
+  };
   const [foldersOpen, setFoldersOpen]       = useState(false); // mobile folders drawer
   const [threadMessages, setThreadMessages] = useState([]);
   const [threadLoading, setThreadLoading]   = useState(false);
@@ -424,6 +543,34 @@ export default function EmailPage() {
   const [refreshing, setRefreshing]         = useState(false);
   const [allContacts, setAllContacts]       = useState([]);
   const [gmailContactsList, setGmailContactsList] = useState([]);
+  const historyIdRef = useRef(null);
+  const syncingRef = useRef(false);
+  const [labelFilter, setLabelFilter] = useState(() => new Set());
+  const toggleLabelFilter = (labelId) => setLabelFilter(prev => {
+    const next = new Set(prev);
+    if (next.has(labelId)) next.delete(labelId); else next.add(labelId);
+    return next;
+  });
+  const clearLabelFilters = () => setLabelFilter(new Set());
+
+  // Category visibility — user can hide entire Gmail categories from the inbox.
+  // Persisted so the choice sticks across sessions. Default: hide Promotions.
+  const EXCLUDED_LS_KEY = 'vtm-email-excluded-labels';
+  const [excludedLabels, setExcludedLabels] = useState(() => {
+    try {
+      const raw = localStorage.getItem(EXCLUDED_LS_KEY);
+      if (raw) return new Set(JSON.parse(raw));
+    } catch {}
+    return new Set(['CATEGORY_PROMOTIONS']);
+  });
+  useEffect(() => {
+    try { localStorage.setItem(EXCLUDED_LS_KEY, JSON.stringify(Array.from(excludedLabels))); } catch {}
+  }, [excludedLabels]);
+  const toggleCategoryVisible = (labelId) => setExcludedLabels(prev => {
+    const next = new Set(prev);
+    if (next.has(labelId)) next.delete(labelId); else next.add(labelId);
+    return next;
+  });
 
   // Custom labels
   const [customLabels, setCustomLabels]     = useState([]);
@@ -441,9 +588,16 @@ export default function EmailPage() {
   const [showFollowups, setShowFollowups]   = useState(false);
   const [followupsLoading, setFollowupsLoading] = useState(false);
 
-  // Compose popup
-  const [composeOpen, setComposeOpen]       = useState(false); // true = new, or an email obj for reply
+  // Compose popup — draft + open/minimized state live in ComposeContext so they
+  // persist across page changes and browser refresh.
+  const compose = useCompose();
+  const composeOpen = compose.isOpen ? (compose.draft?.replyTo || true) : false;
   const [sending, setSending]               = useState(false);
+  const setComposeOpen = (v) => {
+    if (!v) { compose.close(); return; }
+    if (v === true) { compose.openCompose(null); return; }
+    compose.openCompose(v);
+  };
 
   // Auto-open compose if navigated with ?compose=email
   useEffect(() => {
@@ -453,6 +607,7 @@ export default function EmailPage() {
       setComposeOpen({ to_email: composeEmail, subject: '' });
       setSearchParams({}, { replace: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── data loading (cache-first, then background sync) ─────────────── */
@@ -504,6 +659,102 @@ export default function EmailPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Restore the previously-open email either from ?open=<id> or, if the URL
+  // was reset by a sidebar navigation, from the last-open id we cached in
+  // localStorage. Waits until the relevant list has actually loaded before firing.
+  const restoredOpenRef = useRef(false);
+  useEffect(() => {
+    if (restoredOpenRef.current) return;
+    let openId = searchParams.get('open');
+    if (!openId) {
+      try { openId = localStorage.getItem(LAST_OPEN_LS); } catch {}
+    }
+    if (!openId) return;
+    const pool = [...inboxMessages, ...sentMessages, ...draftMessages, ...queueEmails];
+    const found = pool.find(m => m.id === openId);
+    if (!found) return;
+    restoredOpenRef.current = true;
+    selectEmail(found);
+  }, [inboxMessages, sentMessages, draftMessages, queueEmails, searchParams]);
+
+  // Real-time label sync — poll Gmail's history endpoint every 20s while this
+  // page is open and visible. Any label add/remove that happened outside the
+  // CRM (mobile Gmail, gmail.com, filters, another client) shows up here
+  // without a manual refresh. Pauses while the tab is hidden to avoid burning
+  // Gmail quota. See api/crm/gmail-sync.js for the server side.
+  useEffect(() => {
+    let cancelled = false;
+    let timer = null;
+
+    const applyChanges = (changes, deleted, newMessages) => {
+      if (!changes?.length && !deleted?.length && !newMessages?.length) return;
+      const changeMap = new Map((changes || []).map(c => [c.id, c.labelIds]));
+      const deletedSet = new Set(deleted || []);
+      const update = prev => prev
+        .filter(m => !deletedSet.has(m.id))
+        .map(m => changeMap.has(m.id) ? { ...m, labelIds: changeMap.get(m.id) } : m);
+      setInboxMessages(prev => {
+        const filteredPrev = prev.filter(m => !deletedSet.has(m.id))
+          .map(m => changeMap.has(m.id) ? { ...m, labelIds: changeMap.get(m.id) } : m);
+        // Prepend any brand-new inbox arrivals, skipping ones we already have.
+        if (newMessages?.length) {
+          const have = new Set(filteredPrev.map(m => m.id));
+          const fresh = newMessages
+            .filter(m => !have.has(m.id))
+            .map(m => ({ ...m, _type: 'gmail' }));
+          return [...fresh, ...filteredPrev];
+        }
+        return filteredPrev;
+      });
+      setSentMessages(update);
+      setDraftMessages(update);
+      setSelected(s => {
+        if (!s) return s;
+        if (deletedSet.has(s.id)) return null;
+        if (changeMap.has(s.id)) return { ...s, labelIds: changeMap.get(s.id) };
+        return s;
+      });
+    };
+
+    const tick = async () => {
+      if (cancelled || document.hidden || syncingRef.current) return;
+      syncingRef.current = true;
+      try {
+        const startHistoryId = historyIdRef.current;
+        const data = await gmailSync(startHistoryId);
+        if (cancelled) return;
+        if (data?.historyId) historyIdRef.current = data.historyId;
+        if (data?.reset) return; // server re-anchored us; nothing to apply this cycle
+        applyChanges(data?.changes, data?.deleted, data?.newMessages);
+      } catch (e) {
+        // Silent — polling should never spam toasts on a transient network blip.
+        console.debug('gmail-sync tick failed:', e.message);
+      } finally {
+        syncingRef.current = false;
+      }
+    };
+
+    // Anchor: fetch the current historyId once, then start polling.
+    (async () => {
+      try {
+        const anchor = await gmailSync();
+        if (cancelled) return;
+        historyIdRef.current = anchor?.historyId || null;
+      } catch (e) { console.debug('gmail-sync anchor failed:', e.message); }
+      timer = setInterval(tick, 20000);
+    })();
+
+    // Catch up immediately whenever the tab becomes visible again.
+    const onVis = () => { if (!document.hidden) tick(); };
+    document.addEventListener('visibilitychange', onVis);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
+
   // Auto-sync every 5 minutes for new emails
   useEffect(() => {
     const interval = setInterval(() => {
@@ -520,7 +771,30 @@ export default function EmailPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleRefresh = async () => { setRefreshing(true); await load(true); setRefreshing(false); };
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await load(true);
+      // Also force-refresh labelIds on every currently-cached Gmail message so
+      // any labels applied before our real-time sync started running get pulled in.
+      const ids = [
+        ...inboxMessages.map(m => m.id),
+        ...sentMessages.map(m => m.id),
+        ...draftMessages.map(m => m.id),
+      ].filter(Boolean);
+      if (ids.length) {
+        try {
+          const { changes = [] } = await gmailRefreshLabels(ids);
+          if (changes.length) {
+            const map = new Map(changes.map(c => [c.id, c.labelIds]));
+            const update = prev => prev.map(m => map.has(m.id) ? { ...m, labelIds: map.get(m.id) } : m);
+            setInboxMessages(update); setSentMessages(update); setDraftMessages(update);
+            setSelected(s => s && map.has(s.id) ? { ...s, labelIds: map.get(s.id) } : s);
+          }
+        } catch (e) { console.debug('label refresh failed:', e.message); }
+      }
+    } finally { setRefreshing(false); }
+  };
 
   // Label management — creates/deletes a real Gmail label (two-way synced)
   const handleCreateLabel = async () => {
@@ -607,6 +881,10 @@ export default function EmailPage() {
     const gmailDrafts = draftMessages.map(m => ({...m, _type:'gmail-draft'}));
     const queueDrafts = queueEmails.filter(e => e.status==='draft'||e.status==='pending').map(e => ({...e, _type:'queue'}));
     filtered = [...gmailDrafts, ...queueDrafts].sort((a,b) => new Date(b.date||b.created_at||0) - new Date(a.date||a.created_at||0));
+  } else if (tab==='scheduled') {
+    // Queue items waiting to auto-send at their scheduled_for time.
+    filtered = queueEmails.filter(e => e.status==='scheduled').map(e => ({...e, _type:'queue'}))
+      .sort((a,b) => new Date(a.scheduled_for||0) - new Date(b.scheduled_for||0));
   } else if (tab==='starred') {
     filtered = inboxMessages.filter(m => (m.crmLabels||[]).some(l => l==='favorite'||l==='follow-up'||l==='important')).map(m => ({...m, _type:'gmail'}));
   } else if (tab==='spam') {
@@ -621,7 +899,30 @@ export default function EmailPage() {
     });
   }
 
+  // Category exclusions — hide anything carrying an excluded label (Promotions
+  // by default). Doesn't affect queue rows.
+  if (excludedLabels.size > 0) {
+    const hidden = Array.from(excludedLabels);
+    filtered = filtered.filter(e => {
+      if (e._type === 'queue') return true;
+      const ids = asArray(e.labelIds);
+      return !hidden.some(id => ids.includes(id));
+    });
+  }
+
+  // Label filter — intersection: every filter must be present on the message.
+  // Only meaningful for Gmail-backed rows (queue rows don't have labelIds).
+  if (labelFilter.size > 0) {
+    const wanted = Array.from(labelFilter);
+    filtered = filtered.filter(e => {
+      if (e._type === 'queue') return false; // queue items aren't Gmail-labeled
+      const ids = asArray(e.labelIds);
+      return wanted.every(id => ids.includes(id));
+    });
+  }
+
   const autoDraftCount = queueEmails.filter(e => e.status==='draft'&&e.auto_generated).length;
+  const scheduledCount = queueEmails.filter(e => e.status==='scheduled').length;
   const inboxCount = inboxMessages.filter(m => !(m.crmLabels||[]).includes('spam')).length;
 
   /* ── actions ─────────────────────────────────────────────────────────── */
@@ -630,12 +931,33 @@ export default function EmailPage() {
   const selectEmail = async (email) => {
     setSelected(email);
     setThreadMessages([]);
-    // Load full thread for Gmail messages
+    // Load full thread for Gmail messages — this also refreshes the label state
+    // from Gmail so labels applied outside the CRM (mobile Gmail, gmail.com, other
+    // clients) show up here without waiting for a manual sync.
     if (email.threadId && (email._type==='gmail'||email._type==='gmail-sent'||email._type==='gmail-draft')) {
       setThreadLoading(true);
       try {
         const data = await getGmailThread(email.threadId);
-        setThreadMessages(data?.messages || []);
+        const msgs = data?.messages || [];
+        setThreadMessages(msgs);
+
+        // Find this specific message in the thread and pull its fresh labelIds
+        // + the RFC 2822 Message-ID / References headers. We need those headers
+        // to make a Reply actually thread inside Gmail (In-Reply-To + References
+        // + threadId) instead of showing up as a brand-new conversation.
+        const fresh = msgs.find(m => m.id === email.id);
+        if (fresh) {
+          const freshIds = Array.isArray(fresh.labelIds) ? fresh.labelIds : (email.labelIds || []);
+          const patch = {
+            labelIds: freshIds,
+            threadId: fresh.threadId || email.threadId,
+            messageIdHeader: fresh.messageIdHeader || null,
+            references: fresh.references || null,
+          };
+          setSelected(s => s && s.id === email.id ? { ...s, ...patch } : s);
+          const update = prev => prev.map(m => m.id === email.id ? { ...m, ...patch } : m);
+          setInboxMessages(update); setSentMessages(update); setDraftMessages(update);
+        }
       } catch (e) { console.error('Thread load error:', e); }
       setThreadLoading(false);
     }
@@ -643,6 +965,7 @@ export default function EmailPage() {
 
   const handleSendQueue = async id => { try { await sendQueueItem(id); await load(); setSelected(null); } catch(e) { toast('error', 'Send failed: '+e.message); } };
   const handleDelete = async id => { try { await deleteQueueItem(id); await load(); if(selected?.id===id) setSelected(null); } catch(e) { toast('error', 'Delete failed: '+e.message); } };
+  const handleUnschedule = async id => { try { await updateQueueItem(id, {status:'draft', scheduled_for:null}); await load(); setSelected(null); } catch(e) { toast('error', 'Unschedule failed: '+e.message); } };
   const handleTrashGmail = async (email, e) => {
     e.stopPropagation();
     if (!confirm('Move this email to trash?')) return;
@@ -658,17 +981,33 @@ export default function EmailPage() {
   const openCompose = () => { setComposeOpen(true); setSelected(null); };
   const openReply = () => { setComposeOpen(selected); };
 
-  const handleComposeSend = async ({ to, subject, body, labels }) => {
+  // When the composer is in reply mode, thread the outgoing message into the
+  // original Gmail conversation by carrying threadId + Message-ID/References
+  // headers all the way to Gmail's send API through the queue row.
+  const replyThreading = () => {
+    const rt = compose.draft?.replyTo;
+    if (!rt) return {};
+    const inReplyTo = rt.messageIdHeader || rt.rfc_message_id || null;
+    const references = rt.references
+      ? (inReplyTo ? `${rt.references} ${inReplyTo}` : rt.references)
+      : (inReplyTo || null);
+    return {
+      reply_thread_id: rt.threadId || null,
+      reply_rfc_message_id: references || inReplyTo || null,
+    };
+  };
+
+  const handleComposeSend = async ({ to, subject, body, labels, attachments }) => {
     if(!to||!subject) return; setSending(true);
-    try { const c = await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); await sendQueueItem(c.id); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Send failed: '+e.message); } finally { setSending(false); }
+    try { const c = await createQueueItem({to_email:to,subject,body,labels:labels||[],attachments:attachments||[],status:'draft',...replyThreading()}); await sendQueueItem(c.id); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Send failed: '+e.message); } finally { setSending(false); }
   };
-  const handleComposeSchedule = async ({ to, subject, body, scheduleDate, labels }) => {
+  const handleComposeSchedule = async ({ to, subject, body, scheduleDate, labels, attachments }) => {
     if(!to||!subject||!scheduleDate) return; setSending(true);
-    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft',follow_up_date:scheduleDate}); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Schedule failed: '+e.message); } finally { setSending(false); }
+    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],attachments:attachments||[],status:'draft',follow_up_date:scheduleDate,...replyThreading()}); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Schedule failed: '+e.message); } finally { setSending(false); }
   };
-  const handleComposeDraft = async ({ to, subject, body, labels }) => {
+  const handleComposeDraft = async ({ to, subject, body, labels, attachments }) => {
     if(!to&&!subject&&!body) return;
-    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],status:'draft'}); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Save failed: '+e.message); }
+    try { await createQueueItem({to_email:to,subject,body,labels:labels||[],attachments:attachments||[],status:'draft',...replyThreading()}); setComposeOpen(false); await load(); } catch(e) { toast('error', 'Save failed: '+e.message); }
   };
 
   /* ── display helpers ─────────────────────────────────────────────────── */
@@ -713,6 +1052,7 @@ export default function EmailPage() {
             const isActive = tab===t.key;
             let count = 0;
             if (t.key==='drafts') count = autoDraftCount;
+            if (t.key==='scheduled') count = scheduledCount;
             if (t.key==='inbox') count = inboxCount;
             return (
               <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); setSelectedIds(new Set()); setFoldersOpen(false); }}
@@ -752,6 +1092,7 @@ export default function EmailPage() {
               const hasSelection = selectedIds.size > 0;
               const applied = !hasSelection && selected && asArray(selected.labelIds).includes(l.id);
               const clickable = hasSelection || !!selected;
+              const isFilter = labelFilter.has(l.id);
               const onLabelClick = () => { if (hasSelection) applyLabelToSelected(l); else if (selected) toggleGmailLabel(selected, l); };
               const hint = hasSelection ? `Apply "${l.name}" to ${selectedIds.size} selected` : (selected ? (applied ? `Remove "${l.name}" from this email` : `Apply "${l.name}" to this email`) : l.name);
               return (
@@ -763,6 +1104,14 @@ export default function EmailPage() {
                   <div style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--orange)', flexShrink:0 }} />
                   <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</span>
                   {applied && <Check size={11} style={{ color:l.color||'var(--orange)', flexShrink:0 }} />}
+                  <button
+                    onClick={e => { e.stopPropagation(); toggleLabelFilter(l.id); }}
+                    title={isFilter ? `Stop filtering by "${l.name}"` : `Filter inbox by "${l.name}"`}
+                    style={{ background: isFilter ? 'var(--orange)' : 'none', border:'none', cursor:'pointer', color: isFilter ? '#fff' : 'var(--muted)', display:'flex', padding:2, borderRadius:4 }}
+                    onMouseEnter={e => e.currentTarget.style.color = isFilter ? '#fff' : 'var(--orange)'}
+                    onMouseLeave={e => e.currentTarget.style.color = isFilter ? '#fff' : 'var(--muted)'}>
+                    <Filter size={11} />
+                  </button>
                   <button onClick={e => { e.stopPropagation(); handleDeleteLabel(l.id); }} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:1 }}
                     onMouseEnter={e => e.currentTarget.style.color='#ff5c5c'} onMouseLeave={e => e.currentTarget.style.color='var(--muted)'}>
                     <X size={11} />
@@ -771,6 +1120,34 @@ export default function EmailPage() {
               );
             })}
           </div>
+
+          {/* Categories (Gmail's built-ins) — checkbox to show/hide from inbox, filter icon to focus */}
+          {customLabels.some(l => l.system) && (
+            <>
+              <div style={{ marginTop:10, marginBottom:6, fontSize:10, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em' }}>Categories</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:2, maxHeight:180, overflow:'auto' }}>
+                {customLabels.filter(l => l.system).map(l => {
+                  const isFilter = labelFilter.has(l.id);
+                  const visible = !excludedLabels.has(l.id);
+                  return (
+                    <div key={l.id}
+                      style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 8px', borderRadius:6, fontSize:12, color: isFilter ? 'var(--text)' : 'var(--muted)', background: isFilter ? 'var(--surface-2)' : 'transparent' }}
+                      onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = isFilter ? 'var(--surface-2)' : 'transparent'}>
+                      <input type="checkbox" checked={visible} onChange={() => toggleCategoryVisible(l.id)}
+                        title={visible ? `Hide ${l.name} from inbox` : `Show ${l.name} in inbox`}
+                        style={{ width:12, height:12, cursor:'pointer', accentColor:'var(--orange)', flexShrink:0 }} />
+                      <div style={{ width:10, height:10, borderRadius:'50%', background:l.color||'var(--muted)', flexShrink:0, opacity: visible ? 1 : 0.35 }} />
+                      <span onClick={() => toggleLabelFilter(l.id)}
+                        title={isFilter ? `Stop filtering by "${l.name}"` : `Filter inbox by "${l.name}"`}
+                        style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', cursor:'pointer', opacity: visible ? 1 : 0.5 }}>{l.name}</span>
+                      {isFilter && <Filter size={11} style={{ color:'var(--orange)', flexShrink:0 }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         {/* ── AI Follow-ups & Refresh ── */}
@@ -821,17 +1198,37 @@ export default function EmailPage() {
 
                 {/* CRM labels */}
                 {(selected.crmLabels||[]).filter(l=>l!=='spam').length > 0 && (
-                  <div style={{ display:'flex', gap:6, marginBottom:8 }}>
-                    {(selected.crmLabels||[]).filter(l=>l!=='spam').map(l => { const cfg=LABEL_CONFIG[l]; return cfg ? <span key={l} style={{ fontSize:11, padding:'3px 10px', borderRadius:5, background:cfg.color, color:'#fff', fontWeight:700 }}>{cfg.label}</span> : null; })}
+                  <div style={{ display:'flex', gap:6, marginBottom:8, flexWrap:'wrap' }}>
+                    {(selected.crmLabels||[]).filter(l=>l!=='spam').map(l => {
+                      const cfg = LABEL_CONFIG[l];
+                      if (!cfg) return null;
+                      return (
+                        <span key={l} style={{ fontSize:11, padding:'3px 5px 3px 10px', borderRadius:5, background:cfg.color, color:'#fff', fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+                          {cfg.label}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleLabel(selected, l); }}
+                            title={`Remove ${cfg.label}`}
+                            style={{ background:'rgba(0,0,0,0.18)', border:'none', color:'#fff', width:14, height:14, borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0, lineHeight:1 }}>
+                            <X size={9} />
+                          </button>
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
 
                 {/* Real Gmail labels — click a label in the sidebar to toggle it here */}
-                {customLabels.some(l => asArray(selected.labelIds).includes(l.id)) && (
+                {customLabels.some(l => !HIDDEN_PILL_LABELS.has(l.id) && asArray(selected.labelIds).includes(l.id)) && (
                   <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
-                    {customLabels.filter(l => asArray(selected.labelIds).includes(l.id)).map(l => (
-                      <span key={l.id} style={{ fontSize:11.5, padding:'3px 11px', borderRadius:5, background:l.color||'var(--orange)', color:'#fff', fontWeight:700, display:'flex', alignItems:'center', gap:5 }}>
+                    {customLabels.filter(l => !HIDDEN_PILL_LABELS.has(l.id) && asArray(selected.labelIds).includes(l.id)).map(l => (
+                      <span key={l.id} style={{ fontSize:11.5, padding:'3px 5px 3px 11px', borderRadius:5, background:l.color||'var(--orange)', color:'#fff', fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
                         <Tag size={11} /> {l.name}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleGmailLabel(selected, l); }}
+                          title={`Remove ${l.name}`}
+                          style={{ background:'rgba(0,0,0,0.22)', border:'none', color:'#fff', width:15, height:15, borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0, lineHeight:1, marginLeft:2 }}>
+                          <X size={10} />
+                        </button>
                       </span>
                     ))}
                   </div>
@@ -890,7 +1287,7 @@ export default function EmailPage() {
                         <button onClick={() => handleDelete(selected.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ff5c5c', display:'flex', padding:6 }}><Trash2 size={15} /></button>
                       )}
                     </div>
-                    <div style={{ background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)', padding:16, fontSize:14, lineHeight:1.8, color:'var(--text)', wordBreak:'break-word', overflowWrap:'break-word' }}>
+                    <div style={{ background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)', padding:16, fontSize:14, lineHeight:1.8, color:'var(--text)', wordBreak:'break-word', overflowWrap:'break-word', whiteSpace: (selected.bodyHtml || looksLikeHtml(selected.body || '')) ? 'normal' : 'pre-wrap' }}>
                       <EmailBody
                         msg={threadMessages.length === 1 ? threadMessages[0] : null}
                         fallbackText={threadMessages.length === 1 ? (threadMessages[0]?.body || selected.snippet) : (selected.body||selected.generated_body||selected.snippet)}
@@ -904,6 +1301,20 @@ export default function EmailPage() {
                     <Calendar size={14} color="var(--orange)" />
                     <span style={{ fontSize:13, color:'var(--orange)', fontWeight:500 }}>Scheduled: {new Date(selected.follow_up_date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
                   </div>
+                )}
+
+                {/* Scheduled banner + actions */}
+                {selected.status==='scheduled' && selected.scheduled_for && (
+                  <>
+                    <div style={{ marginTop:16, padding:'10px 16px', background:'rgba(37,99,235,0.06)', border:'1px solid rgba(37,99,235,0.2)', borderRadius:8, display:'flex', alignItems:'center', gap:8 }}>
+                      <Clock size={14} color="var(--orange)" />
+                      <span style={{ fontSize:13, color:'var(--orange)', fontWeight:500 }}>Auto-sends {new Date(selected.scheduled_for).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
+                    </div>
+                    <div style={{ marginTop:20, display:'flex', alignItems:'center', gap:10 }}>
+                      <button onClick={() => handleSendQueue(selected.id)} style={{ padding:'9px 18px', borderRadius:8, cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}><Send size={13} /> Send Now</button>
+                      <button onClick={() => handleUnschedule(selected.id)} style={{ padding:'9px 16px', borderRadius:8, cursor:'pointer', background:'none', border:'1px solid var(--border)', color:'var(--muted)', fontSize:13, fontWeight:500, display:'flex', alignItems:'center', gap:6 }}><X size={13} /> Unschedule</button>
+                    </div>
+                  </>
                 )}
 
                 {/* Draft/pending actions */}
@@ -972,6 +1383,30 @@ export default function EmailPage() {
               </div>
             )}
 
+            {/* Active label filters */}
+            {labelFilter.size > 0 && (
+              <div style={{ padding:'8px 24px', background:'rgba(255,155,38,0.06)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                <Filter size={12} color="var(--orange)" />
+                <span style={{ fontSize:11, color:'var(--muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>Filtering by</span>
+                {Array.from(labelFilter).map(id => {
+                  const l = customLabels.find(x => x.id === id);
+                  if (!l) return null;
+                  return (
+                    <span key={id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11.5, padding:'3px 5px 3px 10px', borderRadius:5, background:l.color||'var(--orange)', color:'#fff', fontWeight:600 }}>
+                      {l.name}
+                      <button onClick={() => toggleLabelFilter(id)} title={`Remove filter`}
+                        style={{ background:'rgba(0,0,0,0.22)', border:'none', color:'#fff', width:14, height:14, borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', padding:0 }}>
+                        <X size={9} />
+                      </button>
+                    </span>
+                  );
+                })}
+                <button onClick={clearLabelFilters} style={{ marginLeft:'auto', background:'none', border:'1px solid var(--border)', color:'var(--muted)', borderRadius:6, padding:'3px 10px', fontSize:11, cursor:'pointer', fontWeight:500 }}>
+                  Clear all
+                </button>
+              </div>
+            )}
+
             {tab==='drafts' && autoDraftCount > 0 && (
               <div className="email-draft-banner" style={{ padding:'8px 24px', background:'var(--surface-2)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
                 <Sparkles size={12} color="var(--orange)" />
@@ -998,7 +1433,7 @@ export default function EmailPage() {
                   const isChecked = selectedIds.has(email.id);
                   // Label pills shown at the FRONT of the row: real Gmail labels
                   // first, then CRM labels (follow-up / important).
-                  const gmailPills = customLabels.filter(l => asArray(email.labelIds).includes(l.id));
+                  const gmailPills = customLabels.filter(l => !HIDDEN_PILL_LABELS.has(l.id) && asArray(email.labelIds).includes(l.id));
                   const crmPills = crmLabels.filter(l => l!=='spam' && l!=='favorite').map(l => LABEL_CONFIG[l]).filter(Boolean);
 
                   return (
@@ -1019,7 +1454,7 @@ export default function EmailPage() {
                         <div className="email-item-name" style={{ width:200, minWidth:0, flexShrink:1 }}>
                           <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                             <span className="private-value" style={{ fontSize:13, fontWeight:600, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                              {isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
+                              {email._type==='queue' ? name : isSentType ? `To: ${(email.to_email||email.to||'').replace(/<.*>/,'').trim().split(',')[0]}` : name}
                             </span>
                             {crmContact && <span style={{ fontSize:9, padding:'1px 5px', borderRadius:3, background:'rgba(37,99,235,0.08)', color:'var(--orange)', fontWeight:600, flexShrink:0 }}>{crmContact._source==='lead'?'Lead':'CRM'}</span>}
                             {email.isReply && <Reply size={11} color="var(--orange)" style={{flexShrink:0}} />}
@@ -1069,17 +1504,22 @@ export default function EmailPage() {
       </div>
 
       {/* ── Floating Compose Popup ── */}
-      {composeOpen && (
+      {compose.isOpen && (
         <ComposePopup
-          replyTo={typeof composeOpen==='object' ? composeOpen : null}
+          replyTo={compose.draft?.replyTo || null}
+          draft={compose.draft}
+          onDraftChange={compose.updateDraft}
           contacts={allContacts}
           gmailContacts={gmailContactsList}
           onSend={handleComposeSend}
           onSchedule={handleComposeSchedule}
           onSaveDraft={handleComposeDraft}
           onClose={() => setComposeOpen(false)}
+          onMinimize={compose.minimize}
           sending={sending}
           labelDefs={customLabels}
+          clientId={clientId}
+          uploadAttachment={uploadEmailAttachment}
         />
       )}
 

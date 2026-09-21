@@ -3,7 +3,7 @@ import { Clock, Play, Square, Plus, Trash2, Check, DollarSign } from 'lucide-rea
 import { useClient } from '../context/ClientContext';
 import {
   getAdminUsers, getTimeEntries, clockIn, clockOut, addTimeEntry,
-  markTimePaid, setEmployeeRate, deleteTimeEntry,
+  markTimePaid, setEmployeeRate, deleteTimeEntry, payTimeRange,
 } from '../api';
 import { toast } from '../components/Toast';
 
@@ -27,6 +27,15 @@ export default function Time() {
   const [addDate, setAddDate] = useState(localToday());
   const [rateInput, setRateInput] = useState('');
 
+  // Pay-a-period: pick a date range, the math (minutes -> hours -> $) is done
+  // for you, one click settles every entry in the window.
+  const weekAgo = () => { const d = new Date(); d.setDate(d.getDate() - 6); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const [payFrom, setPayFrom] = useState(weekAgo());
+  const [payTo, setPayTo] = useState(localToday());
+  const [payPreview, setPayPreview] = useState(null);   // { minutes, entry_count, suggested_amount }
+  const [payAmount, setPayAmount] = useState('');
+  const [paying, setPaying] = useState(false);
+
   const viewingSelf = userId === user?.id;
 
   useEffect(() => { if (isAdmin) getAdminUsers().then(u => setEmployees(u || [])).catch(() => {}); }, [isAdmin]);
@@ -41,6 +50,32 @@ export default function Time() {
     finally { setLoading(false); }
   }, [isAdmin, userId]);
   useEffect(() => { load(); }, [load]);
+
+  // Live preview of the selected pay period (debounced).
+  useEffect(() => {
+    if (!isAdmin || !payFrom || !payTo || payFrom > payTo) { setPayPreview(null); return; }
+    const t = setTimeout(async () => {
+      try {
+        const p = await payTimeRange({ user_id: userId, from: payFrom, to: payTo, preview: true });
+        setPayPreview(p);
+        setPayAmount(p.suggested_amount ? String(p.suggested_amount) : '');
+      } catch { setPayPreview(null); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [isAdmin, userId, payFrom, payTo, data.entries]);
+
+  const doPayRange = async () => {
+    if (!payPreview || !payPreview.minutes) return;
+    const label = `${fmtHM(payPreview.minutes)} (${fmtDate(payFrom)} to ${fmtDate(payTo)})`;
+    if (!window.confirm(`Pay ${label}${payAmount ? ` for ${money(payAmount)}` : ''}? This marks ${payPreview.entry_count} entries paid and records the payment.`)) return;
+    setPaying(true);
+    try {
+      await payTimeRange({ user_id: userId, from: payFrom, to: payTo, amount: payAmount });
+      toast('success', `Paid ${label}.`);
+      await load();
+    } catch (e) { toast('error', e.message); }
+    finally { setPaying(false); }
+  };
 
   // live tick while clocked in
   useEffect(() => { if (!data.open) return; const t = setInterval(() => setNowTs(Date.now()), 1000); return () => clearInterval(t); }, [data.open]);
@@ -131,7 +166,45 @@ export default function Time() {
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>/hr</span>
                 <button className="btn-ghost" onClick={saveRate} style={{ padding: '6px 10px' }}>Save</button>
               </div>
-              {totals.unpaidMin > 0 && <button className="btn-primary" onClick={payAll} style={{ justifyContent: 'center' }}><Check size={14} /> Mark all paid</button>}
+              {/* Pay a period: she logs minutes, you pick the week — the math is automatic */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Pay a period</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <input className="form-input" type="date" value={payFrom} onChange={e => setPayFrom(e.target.value)} style={{ width: 145 }} />
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>to</span>
+                  <input className="form-input" type="date" value={payTo} onChange={e => setPayTo(e.target.value)} style={{ width: 145 }} />
+                </div>
+                <div style={{ fontSize: 12.5, marginTop: 8, color: payPreview?.minutes ? 'var(--text)' : 'var(--muted)', fontWeight: 600 }}>
+                  {payPreview
+                    ? payPreview.minutes
+                      ? `${fmtHM(payPreview.minutes)} unpaid across ${payPreview.entry_count} entr${payPreview.entry_count === 1 ? 'y' : 'ies'}${payPreview.hourly_rate > 0 ? ` · ${money(payPreview.suggested_amount)} at $${payPreview.hourly_rate}/hr` : ''}`
+                      : 'No unpaid time in this range.'
+                    : '…'}
+                </div>
+                {payPreview?.minutes > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>Paid $</span>
+                    <input className="form-input" type="number" min="0" step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)} style={{ width: 110 }} />
+                    <button className="btn-primary" onClick={doPayRange} disabled={paying} style={{ flex: 1, justifyContent: 'center' }}>
+                      <DollarSign size={14} /> {paying ? 'Paying…' : 'Pay period'}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {totals.unpaidMin > 0 && <button className="btn-ghost" onClick={payAll} style={{ justifyContent: 'center' }}><Check size={14} /> Mark ALL unpaid time paid</button>}
+              {(data.payments || []).length > 0 && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Payment history</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 150, overflowY: 'auto' }}>
+                    {data.payments.map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
+                        <span>{fmtDate(p.period_start)} to {fmtDate(p.period_end)} · {fmtHM(p.minutes)}</span>
+                        <span style={{ fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>{p.amount != null ? money(p.amount) : '—'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

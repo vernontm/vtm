@@ -1,14 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { X, Loader } from 'lucide-react';
 
 export default function Modal({ title, onClose, children, onSubmit, submitLabel = 'Save', danger = false, disabled = false }) {
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape' && !submitting) onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onClose, submitting]);
+  // Note: we intentionally do NOT close on Escape or on outside/backdrop clicks.
+  // Dialogs stay open until the user explicitly closes them (X or Cancel), so a
+  // stray click, an accidental key, or switching tabs never wipes typed work.
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -21,7 +19,7 @@ export default function Modal({ title, onClose, children, onSubmit, submitLabel 
   const btnDisabled = submitting || disabled;
 
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
+    <div className="modal-overlay">
       <div className="modal-content">
         <div className="flex items-center justify-between mb-5">
           <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{title}</h2>

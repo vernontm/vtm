@@ -10,25 +10,24 @@
   --orange:      #2563eb;
   --orange-dark: #1d4ed8;
 
-  /* Near-black used for primary buttons + former-orange interactive text/links.
-     Ray asked to drop the bright-orange buttons/text in favor of black. */
-  --btn-black:       linear-gradient(135deg, #23262d, #111318);
-  --btn-black-hover: linear-gradient(135deg, #2c2f37, #16181d);
-  --link:            #14171c;
+  /* Primary buttons — the blue accent gradient. */
+  --btn-black:       linear-gradient(135deg, #3b82f6, #1d4ed8);
+  --btn-black-hover: linear-gradient(135deg, #4f8ff7, #2563eb);
+  --link:            #f0f0f0;
 
-  /* Backgrounds (light theme) */
-  --bg:        #f3f4f6;
-  --surface:   #ffffff;
-  --surface-2: #f5f6f8;
-  --surface-3: #eceef2;
+  /* Backgrounds (DARK crimson theme like the reference) */
+  --bg:        #111112;
+  --surface:   #1a1a1c;
+  --surface-2: #222226;
+  --surface-3: #2a2a2f;
 
-  /* Borders */
-  --border:       #e5e7eb;
-  --border-light: #dcdfe4;
+  /* Borders (subtle light-on-dark) */
+  --border:       rgba(255,255,255,0.07);
+  --border-light: rgba(255,255,255,0.12);
 
   /* Text */
-  --text:  #1a1d21;
-  --muted: #6b7280;
+  --text:  #f0f0f0;
+  --muted: #6b6b72;
 
   /* Status */
   --green:  #16a34a;
@@ -44,19 +43,19 @@
   --accent:      #2563eb;
   --accent-dim:  rgba(37,99,235,0.10);
   --accent-mid:  rgba(37,99,235,0.20);
-  --text-muted:  #6b7280;
+  --text-muted:  #6b6b72;
 
-  /* Sidebar (stays dark; white text) */
-  --side-bg:     #171a1f;
+  /* Sidebar — matched to the reference: a raised surface panel. */
+  --side-bg:     #1a1a1c;
   --side-text:   rgba(255,255,255,0.92);
-  --side-muted:  rgba(255,255,255,0.55);
-  --side-border: rgba(255,255,255,0.08);
-  --side-hover:  rgba(255,255,255,0.07);
+  --side-muted:  rgba(255,255,255,0.50);
+  --side-border: rgba(255,255,255,0.07);
+  --side-hover:  rgba(255,255,255,0.04);
 
-  /* Soft shadows for light surfaces */
-  --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
-  --shadow-md: 0 4px 16px rgba(16,24,40,0.08);
-  --shadow-lg: 0 16px 48px rgba(16,24,40,0.14);
+  /* Deep shadows for dark surfaces */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 6px 20px rgba(0,0,0,0.45);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.6);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────── */
@@ -65,7 +64,12 @@ html { font-size: 16px; }
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* Dark canvas with a soft blue glow bleeding in from the corners. */
+  background:
+    radial-gradient(circle at 15% 15%, rgba(37,99,235,0.14) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(29,78,216,0.10) 0%, transparent 50%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -92,10 +96,10 @@ h1, h2, h3, h4, h5, h6 {
   padding: 9px 18px; border-radius: 10px; border: none; cursor: pointer;
   font-size: 13px; font-weight: 700; font-family: var(--font-display); color: #fff;
   background: var(--btn-black);
-  box-shadow: 0 4px 14px rgba(17,20,26,0.22);
-  transition: opacity 0.15s, transform 0.15s, background 0.15s;
+  box-shadow: 0 6px 20px rgba(37,99,235,0.25);
+  transition: opacity 0.15s, transform 0.18s, box-shadow 0.18s, background 0.15s;
 }
-.btn-primary:hover  { background: var(--btn-black-hover); transform: translateY(-1px); }
+.btn-primary:hover  { background: var(--btn-black-hover); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(37,99,235,0.35); }
 .btn-primary:active { transform: translateY(0); }
 
 .btn-secondary {
@@ -105,7 +109,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display); color: var(--text); background: var(--surface-2);
   transition: border-color 0.15s, background 0.15s;
 }
-.btn-secondary:hover { border-color: rgba(37,99,235,0.35); background: var(--surface-3); }
+.btn-secondary:hover { border-color: rgba(37,99,235,0.3); background: var(--surface-3); }
 
 .btn-ghost {
   display: inline-flex; align-items: center; gap: 6px;
@@ -152,21 +156,27 @@ button:focus, input:focus, select:focus, textarea:focus {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: var(--shadow-sm);
-  transition: border-color 0.15s;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
-.card:hover { border-color: rgba(37,99,235,0.3); }
+.card:hover { transform: translateY(-4px); border-color: rgba(37,99,235,0.25); box-shadow: 0 12px 32px rgba(0,0,0,0.35); }
 
 /* Compact table — tighter rows/columns for dense lists (e.g. contacts). */
 .compact-table td, .compact-table th { padding: 6px 12px; font-size: 12.5px; }
 
 /* Kanban lead card — delete only shows on hover, keeps the card clean. */
-.lead-card { transition: box-shadow 0.12s, border-color 0.12s; }
-.lead-card:hover { border-color: var(--border-light); box-shadow: var(--shadow-md); }
+.lead-card { transition: box-shadow 0.12s, border-color 0.12s, transform 0.12s; }
+.lead-card:hover { border-color: rgba(37,99,235,0.3); box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .lead-card-del { opacity: 0; transition: opacity 0.12s, color 0.12s; }
 .lead-card:hover .lead-card-del { opacity: 1; }
 .lead-card-del:hover { color: #ff5c5c !important; }
+/* Follow-up chip: reveal the remove-x on hover of the chip. */
+.fu-chip .fu-x { opacity: 0; transition: opacity 0.12s; }
+.fu-chip:hover .fu-x { opacity: 1; }
+/* Add-tag button: just a "+" until hover, then reveal the label. */
+.add-tag-btn .add-tag-lbl { max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; transition: max-width 0.15s ease, opacity 0.15s ease, margin 0.15s ease; }
+.add-tag-btn:hover .add-tag-lbl { max-width: 48px; opacity: 1; margin-left: 2px; }
 
 /* Stat tile — icon-in-tinted-square + big tabular number, for dashboard-style
    summary cards. Tint the icon square with the accent's own color at low
@@ -184,32 +194,32 @@ button:focus, input:focus, select:focus, textarea:focus {
 .app-sidebar {
   position: relative; z-index: 100;
   background: var(--side-bg);
+  border-right: 1px solid var(--side-border);
   transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 
 .sidebar-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 14px; margin: 1px 8px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; margin: 1px 8px;
   border-radius: 10px; border: 1px solid transparent;
-  color: var(--side-text); font-size: 13px; font-weight: 400;
+  color: var(--side-muted); font-size: 13.5px; font-weight: 600;
   font-family: var(--font-display); text-decoration: none;
   transition: background 0.15s, color 0.15s, border-color 0.15s; cursor: pointer;
 }
 .sidebar-item:hover { background: var(--side-hover); color: #fff; }
 .sidebar-item.active {
-  background: rgba(37,99,235,0.14);
-  box-shadow: inset 0 0 0 1px rgba(37,99,235,0.4);
-  border-color: transparent; color: #60a5fa; font-weight: 500;
+  background: linear-gradient(135deg, rgba(37,99,235,0.2), rgba(29,78,216,0.15));
+  border-color: rgba(37,99,235,0.4); color: #fff; font-weight: 600;
 }
 
 /* ── Main / App Layout ──────────────────────────────────────────────────────── */
-.app-main { background: var(--bg); }
+.app-main { background: transparent; }
 
 /* ── Page Header ────────────────────────────────────────────────────────────── */
 .page-header {
   position: sticky; top: 0; z-index: 50;
   padding: 16px 24px;
-  background: rgba(255,255,255,0.9);
+  background: rgba(10,13,19,0.82);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -395,12 +405,25 @@ textarea:focus, select:focus {
 .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(130,140,155,0.30); border-top-color: currentColor; border-radius:50%; animation: spin 0.7s linear infinite; vertical-align:-2px; flex-shrink:0; }
 
 /* ── Privacy mode ───────────────────────────────────────────────────────────── */
+/* Blur three categories:
+   .private-value / .private-data — manually tagged values (names, emails, etc)
+   .pii-name  — names via shared cell components
+   .pii-money — money via shared cell components
+   .pii-auto  — runtime-detected currency amounts (safety net)                 */
 .privacy-mode .private-data,
-.privacy-mode .private-value {
-  filter: blur(6px); user-select: none; transition: filter 0.2s;
+.privacy-mode .private-value,
+.privacy-mode .pii-name,
+.privacy-mode .pii-money,
+.privacy-mode .pii-auto {
+  filter: blur(7px); user-select: none; transition: filter 0.15s;
+  cursor: default;
 }
+/* Reveal on hover so the user can still read a single value on purpose. */
 .privacy-mode .private-data:hover,
-.privacy-mode .private-value:hover { filter: blur(0); }
+.privacy-mode .private-value:hover,
+.privacy-mode .pii-name:hover,
+.privacy-mode .pii-money:hover,
+.privacy-mode .pii-auto:hover { filter: blur(0); }
 
 /* ── Group header ───────────────────────────────────────────────────────────── */
 .group-header {
@@ -588,3 +611,76 @@ textarea:focus, select:focus {
 .text-red     { color: var(--red); }
 .divider      { height: 1px; background: var(--border); margin: 12px 0; }
 .truncate     { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Row hover-reveal (used by RowActions cell) ─────────────────────── */
+tr.hover-reveal .row-actions { opacity: 0; transform: translateX(4px); transition: opacity 0.15s, transform 0.15s; }
+tr.hover-reveal:hover .row-actions { opacity: 1; transform: translateX(0); }
+
+/* ── Skeleton loader ────────────────────────────────────────────────── */
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.2s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes skel-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Motion vocabulary (single easing curve) ────────────────────────── */
+:root {
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+}
+
+/* ── Empty state (narrative version) ────────────────────────────────── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 60px 24px; gap: 12px;
+  color: var(--muted);
+  animation: fade-up var(--dur-slow) var(--ease-out) both;
+}
+.empty-state .icon-wrap {
+  width: 64px; height: 64px; border-radius: 18px;
+  background: linear-gradient(135deg, var(--surface-2), var(--surface-3));
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+}
+.empty-state h3 { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--text); margin: 0; }
+.empty-state p  { font-size: 13px; color: var(--muted); margin: 0; max-width: 320px; line-height: 1.55; }
+.empty-state .empty-cta { margin-top: 6px; }
+
+/* ── Fade-up entrance ──────────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Table row micro-motion ────────────────────────────────────────── */
+tbody tr { transition: background var(--dur-fast) var(--ease-out); }
+tbody tr.hover-reveal:hover { background: var(--surface-2); }
+
+/* ── Command palette selection ─────────────────────────────────────── */
+[cmdk-item] { padding: 0; }
+[cmdk-item][data-selected="true"] > div { background: var(--surface-2); }
+[cmdk-list] { scroll-padding: 8px; }
+[cmdk-group-heading] { display: none; }
+
+/* ── Projects table polish (premium feel) ─────────────────────────── */
+.projects-premium { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: var(--surface); margin: 20px 24px; }
+.projects-premium table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.projects-premium thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--surface-2);
+  padding: 11px 14px !important;
+  font-size: 10.5px; font-weight: 800;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+}
+.projects-premium tbody td { padding: 13px 14px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.projects-premium tbody tr:last-child td { border-bottom: none; }
+.projects-premium tbody tr.hover-reveal:hover { background: var(--surface-2); }

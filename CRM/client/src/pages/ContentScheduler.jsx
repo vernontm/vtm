@@ -1543,7 +1543,7 @@ export default function ContentScheduler() {
                             minHeight: 110, padding: 6,
                             borderRight: i % 7 !== 6 ? '1px solid var(--border)' : 'none',
                             borderBottom: '1px solid var(--border)',
-                            background: isToday ? 'rgba(74,108,247,0.04)' : '#fff',
+                            background: isToday ? 'rgba(37,99,235,0.10)' : 'var(--surface)',
                           }}>
                             <div style={{
                               fontSize: 12, fontWeight: isToday ? 700 : 500, marginBottom: 4,
@@ -1729,7 +1729,7 @@ export default function ContentScheduler() {
                                         <button onClick={saveEdit} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#22c55e' }}>
                                           <Check size={10} />
                                         </button>
-                                        <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#ef4444' }}>
+                                        <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#2563eb' }}>
                                           <X size={10} />
                                         </button>
                                       </div>
@@ -1767,7 +1767,7 @@ export default function ContentScheduler() {
                                       }} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#22c55e' }}>
                                         <Check size={10} />
                                       </button>
-                                      <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#ef4444' }}>
+                                      <button onClick={() => setEditingCell(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 10, color: '#2563eb' }}>
                                         <X size={10} />
                                       </button>
                                     </div>
@@ -2255,7 +2255,7 @@ export default function ContentScheduler() {
                                   style={{
                                     width: 32, height: 32, borderRadius: 8, border: '1px solid #fee2e2',
                                     background: '#fef2f2', cursor: 'pointer', display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center', color: '#ef4444',
+                                    alignItems: 'center', justifyContent: 'center', color: '#2563eb',
                                   }}
                                 >
                                   <X size={14} />
@@ -3004,7 +3004,7 @@ export default function ContentScheduler() {
                                   <Play size={11} /> Resume
                                 </button>
                               )}
-                              <button style={{ ...btnGhost, padding: '3px 8px', fontSize: 11, color: '#ef4444' }}
+                              <button style={{ ...btnGhost, padding: '3px 8px', fontSize: 11, color: '#2563eb' }}
                                 onClick={async () => {
                                   if (confirm('Stop and delete this monitor?')) {
                                     try {
@@ -3522,7 +3522,7 @@ export default function ContentScheduler() {
                   <Clock size={12} style={{ color: 'var(--orange)' }} />
                   <span style={{ fontSize: 13 }}>{slot}</span>
                   <button onClick={() => setSchedTimeslots(prev => prev.filter((_, j) => j !== i))}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: 0 }}>
                     <X size={12} />
                   </button>
                 </div>
@@ -3658,7 +3658,7 @@ export default function ContentScheduler() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 {editingClient && (
-                  <button style={{ ...btnGhost, color: '#ef4444' }} onClick={async () => {
+                  <button style={{ ...btnGhost, color: '#2563eb' }} onClick={async () => {
                     if (confirm(`Delete ${editingClient.business_name}? This will also delete all their content.`)) {
                       await deleteContentClient(editingClient.id);
                       setShowClientModal(false);

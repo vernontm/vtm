@@ -4,30 +4,50 @@ import {
   Plus, Search, Trash2, ArrowLeft, Building2, Calendar,
   KeyRound, CheckCircle2, Circle, Clock, ShieldCheck, ListChecks,
   Briefcase, Lock, Eye, EyeOff, Copy, Pencil, ExternalLink,
-  FileSignature, Sparkles, DollarSign, Download,
+  FileSignature, Sparkles, DollarSign, Download, TrendingUp, Repeat,
   StickyNote, Phone, CheckSquare, PhoneIncoming, PhoneOutgoing, Flag, Activity, X, Mail,
-  ChevronLeft, ChevronRight, ChevronDown,
+  ChevronLeft, ChevronRight, ChevronDown, Loader, FolderOpen,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import {
-  getClients, createClient, updateClient, deleteClient,
+  getClients, getClient, createClient, updateClient, deleteClient, getDashboardStats,
   getClientPlatforms, createClientPlatform, updateClientPlatform, deleteClientPlatform,
   getClientTasks, createClientTask, updateClientTask, deleteClientTask,
   getClientCredentials, createClientCredential, updateClientCredential, deleteClientCredential,
-  getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity, generateClientSummary, uploadFile,
-  getProjects, createProject,
+  getClientActivity, createClientActivity, updateClientActivity, deleteClientActivity, generateClientSummary, uploadFile, uploadClientDocument,
+  getProjects, createProject, updateProject,
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
-  analyzeDeal, generateAgreement, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent, startMaintenance,
+  agreementChat, analyzeDeal, generateAgreement, saveAgreementDoc, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent, startMaintenance,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
+import StatusBadge from '../components/StatusBadge';
+import DeliveryBoard from '../components/DeliveryBoard';
+
+// Payment badge for a project, derived from what's actually been paid vs its value.
+const projectPaymentBadge = (p) => {
+  const value = Number(p?.value) || 0, paid = Number(p?.amount_paid) || 0;
+  if (value > 0 && paid >= value) return 'Paid in full';
+  if (paid > 0) return 'Deposit paid';
+  return 'Unpaid';
+};
+const PROJECT_LIFECYCLE = ['Onboarding', 'Awaiting Access', 'In Progress', 'Live', 'Completed', 'Paused'];
+
+// The project's start date IS the pay date — use start_date, else the recorded
+// deposit paid_at. Returns a short formatted string, or '' if neither is set.
+const projectStartDate = (p) => {
+  const raw = p?.start_date || p?.paid_at;
+  if (!raw) return '';
+  const d = new Date(raw);
+  return isNaN(d) ? String(raw) : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 import { toast } from '../components/Toast';
 
 // ── Journey stages ────────────────────────────────────────────────────────────
 const STAGES = [
   { key: 'lead',            label: 'Lead',            color: '#8a8a8a' },
-  { key: 'onboarding',      label: 'Onboarding Call', color: '#f5a623' },
+  { key: 'onboarding',      label: 'Onboarding',      color: '#f5a623' },
   { key: 'awaiting_access', label: 'Awaiting Access', color: '#2563eb' },
   { key: 'scoping',         label: 'Scoping',         color: '#784bd1' },
   { key: 'plan_review',     label: 'Plan Review',     color: '#3b82f6' },
@@ -54,9 +74,10 @@ const TASK_PRIORITY = { low: '#8a8a8a', medium: '#3b82f6', high: '#f5a623', urge
 // stage in the funnel; rank is how strong/priority the lead is.
 // Darker colors so white pill text is easy to read.
 const TEMPERATURES = [
-  { key: 'hot',  label: 'Hot',  color: '#b91c1c' },
-  { key: 'warm', label: 'Warm', color: '#b45309' },
-  { key: 'cold', label: 'Cold', color: '#1d4ed8' },
+  { key: 'contract_sent', label: 'Contract Sent', color: '#7c3aed', blurb: 'Agreement sent, waiting on their signature' },
+  { key: 'hot',  label: 'Hot',  color: '#b91c1c', blurb: 'Told us they want to work with us' },
+  { key: 'warm', label: 'Warm', color: '#b45309', blurb: 'Shared a need, but hasn’t asked us yet' },
+  { key: 'cold', label: 'Cold', color: '#1d4ed8', blurb: 'No interest expressed yet' },
 ];
 const tempOf = (k) => TEMPERATURES.find(t => t.key === k) || TEMPERATURES[1];
 const RANKS = [
@@ -66,7 +87,44 @@ const RANKS = [
 ];
 const rankOf = (k) => RANKS.find(r => r.key === k) || RANKS[1];
 
-const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'Walk-in', client_type: [], notes: '', stage: 'lead', lead_temperature: 'warm', lead_rank: 'medium', potential_value: '', firstNote: '' };
+// Follow-up status for leads/clients — tracks whose court the ball is in.
+const FOLLOW_UPS = [
+  { key: 'none',            label: 'No follow-up',    color: '#64748b' },
+  { key: 'needs_follow_up', label: 'Needs follow-up', color: '#dc2626' },
+  { key: 'waiting_on_them', label: 'Waiting on them', color: '#b45309' },
+  { key: 'contract_sent',   label: 'Contract sent',   color: '#7c3aed' },
+  { key: 'scheduled',       label: 'Scheduled',       color: '#2563eb' },
+  { key: 'done',            label: 'Done',            color: '#16a34a' },
+];
+const followUpOf = (k) => FOLLOW_UPS.find(f => f.key === k) || FOLLOW_UPS[0];
+
+// A client's overall status is derived from their projects (lifecycle lives on
+// projects now, not the client). We surface the "furthest along" active project;
+// if everything's wrapped, show Completed; if they have no projects yet, New.
+const BUILD_RANK = { 'Onboarding': 1, 'Awaiting Access': 2, 'In Progress': 3, 'Live': 4, 'Active': 4, 'Completed': 5, 'Paused': 0, 'Cancelled': 0 };
+function deriveClientStatus(projects) {
+  if (!projects || !projects.length) return 'New';
+  const active = projects.filter(p => !['Completed', 'Cancelled'].includes(p.status));
+  if (active.length) {
+    return active.slice().sort((a, b) => (BUILD_RANK[b.status] || 0) - (BUILD_RANK[a.status] || 0))[0].status;
+  }
+  return projects.some(p => p.status === 'Completed') ? 'Completed' : 'New';
+}
+// Channels for logging the last touch.
+const CONTACT_CHANNELS = ['Call', 'Text', 'Email', 'DM', 'In person', 'Voicemail'];
+function timeSince(iso) {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (isNaN(then)) return null;
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'Walk-in', client_type: [], notes: '', stage: 'lead', lead_temperature: 'warm', lead_rank: 'medium', potential_value: '', potential_value_type: 'one_time', firstNote: '' };
 
 function StageBadge({ stage }) {
   const s = stageOf(stage);
@@ -106,22 +164,30 @@ const fmtUsd = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFr
 // Kanban board for leads — one column per temperature (Hot / Warm / Cold).
 // Drag a card between columns to change its temperature. Each card carries a
 // potential-revenue amount; the board totals it per column and overall.
-function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
+function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFollowUp }) {
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
-  const grandTotal = leads.reduce((s, l) => s + (Number(l.potential_value) || 0), 0);
+  const [fuMenu, setFuMenu] = useState(null); // lead id whose "add tag" menu is open
+  const sumBy = (rows, type) => rows.reduce((s, l) => s + ((l.potential_value_type || 'one_time') === type ? (Number(l.potential_value) || 0) : 0), 0);
+  const grandOneTime = sumBy(leads, 'one_time');
+  const grandMonthly = sumBy(leads, 'monthly');
+  // Fixed board height so each column scrolls its own cards instead of the page.
+  const boardHeight = 'calc(100vh - 200px)';
   return (
     <div style={{ overflowX: 'auto', padding: '16px 24px' }}>
     {/* Pipeline total */}
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '8px 14px', background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.30)', borderRadius: 10 }}>
       <DollarSign size={15} style={{ color: '#16a34a' }} />
-      <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 700 }}>Total potential: {fmtUsd(grandTotal)}</span>
+      <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 700 }}>
+        Total potential: {fmtUsd(grandOneTime)} one-time{grandMonthly > 0 ? ` + ${fmtUsd(grandMonthly)}/mo` : ''}
+      </span>
       <span style={{ fontSize: 12, color: 'var(--muted)' }}>across {leads.length} lead{leads.length !== 1 ? 's' : ''}</span>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TEMPERATURES.length}, minmax(240px, 1fr))`, gap: 14, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TEMPERATURES.length}, minmax(260px, 1fr))`, gap: 14, alignItems: 'start' }}>
       {TEMPERATURES.map(col => {
         const colLeads = leads.filter(l => (l.lead_temperature || 'warm') === col.key);
-        const colTotal = colLeads.reduce((s, l) => s + (Number(l.potential_value) || 0), 0);
+        const colOneTime = sumBy(colLeads, 'one_time');
+        const colMonthly = sumBy(colLeads, 'monthly');
         const isOver = overCol === col.key;
         return (
           <div
@@ -130,29 +196,29 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
             onDragLeave={() => setOverCol(o => o === col.key ? null : o)}
             onDrop={e => { e.preventDefault(); if (dragId) onTempChange(dragId, col.key); setDragId(null); setOverCol(null); }}
             style={{
-              background: isOver ? '#2a2f3a' : '#1e222b',
-              border: `1px solid ${isOver ? col.color : 'rgba(255,255,255,0.10)'}`, borderRadius: 14, minHeight: 200,
+              background: isOver ? 'var(--surface-2)' : 'var(--surface)',
+              border: `1px solid ${isOver ? col.color : 'var(--border)'}`, borderRadius: 16,
+              height: boardHeight, display: 'flex', flexDirection: 'column',
               transition: 'background 0.12s, border-color 0.12s',
             }}
           >
-            <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.10)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: col.color, boxShadow: `0 0 8px ${col.color}` }} />
                 <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', fontFamily: 'var(--font-display)' }}>{col.label}</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: col.color, borderRadius: 999, padding: '0 8px', marginLeft: 'auto' }}>{colLeads.length}</span>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#4ade80', marginTop: 6 }}>{fmtUsd(colTotal)}</div>
+              {/* Explainer under each column */}
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 5, lineHeight: 1.35 }}>{col.blurb}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#4ade80', marginTop: 6 }}>{fmtUsd(colOneTime)}{colMonthly > 0 ? ` + ${fmtUsd(colMonthly)}/mo` : ''}</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, minHeight: 60 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, flex: 1, overflowY: 'auto', minHeight: 60 }}>
               {colLeads.length === 0 && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', padding: '16px 0' }}>Drop a lead here</div>}
               {colLeads.map(l => {
-                const rk = rankOf(l.lead_rank || 'medium');
-                const desc = (l.notes || l.industry || (l.client_type || []).join(', ') || '').trim();
-                const cycleRank = () => {
-                  const idx = RANKS.findIndex(r => r.key === (l.lead_rank || 'medium'));
-                  onRankChange(l.id, RANKS[(idx + 1) % RANKS.length].key);
-                };
                 const initial = (l.owner_name || l.business_name || '?')[0].toUpperCase();
+                const tags = Array.isArray(l.lead_tags) && l.lead_tags.length ? l.lead_tags
+                  : (l.follow_up_status && l.follow_up_status !== 'none' ? [l.follow_up_status] : []);
+                const tagOpts = FOLLOW_UPS.filter(f => f.key !== 'none' && !tags.includes(f.key));
                 return (
                   <div
                     key={l.id}
@@ -162,31 +228,59 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete }) {
                     onClick={() => onOpen(l)}
                     className="lead-card"
                     style={{
-                      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px',
+                      background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px',
                       boxShadow: 'var(--shadow-sm)', cursor: 'pointer', opacity: dragId === l.id ? 0.5 : 1,
                       display: 'flex', flexDirection: 'column', gap: 8,
                     }}
                   >
-                    {/* Title + small rank dot */}
+                    {/* Title */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <span className="private-value" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.business_name || '—'}</span>
                       <button className="lead-card-del" onClick={e => { e.stopPropagation(); onDelete(l); }} title="Delete lead"
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 1, flexShrink: 0 }}><Trash2 size={13} /></button>
-                      <span
-                        onClick={e => { e.stopPropagation(); cycleRank(); }}
-                        title={`Rank: ${rk.label} — click to change`}
-                        style={{ width: 11, height: 11, borderRadius: '50%', background: rk.color, flexShrink: 0, marginTop: 3, cursor: 'pointer', boxShadow: `0 0 0 3px ${rk.color}22` }}
-                      />
                     </div>
-                    {/* Description snippet */}
-                    {desc && (
-                      <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{desc}</div>
-                    )}
-                    {/* Potential revenue — shown only when set; edited on the detail page */}
-                    {(l.potential_value != null && l.potential_value !== '') && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.28)', borderRadius: 8, padding: '3px 8px', alignSelf: 'flex-start' }}>
-                        <DollarSign size={12} style={{ color: '#16a34a', flexShrink: 0 }} />
-                        <span style={{ fontSize: 12.5, fontWeight: 800, color: '#16a34a' }}>{fmtUsd(l.potential_value)}</span>
+                    {/* Follow-up + potential revenue chips */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, position: 'relative' }}>
+                      {(l.potential_value != null && l.potential_value !== '') && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(22,163,74,0.10)', border: '1px solid rgba(22,163,74,0.28)', borderRadius: 8, padding: '3px 8px' }}>
+                          <DollarSign size={12} style={{ color: '#16a34a', flexShrink: 0 }} />
+                          <span style={{ fontSize: 12.5, fontWeight: 800, color: '#16a34a' }}>{fmtUsd(l.potential_value)}{l.potential_value_type === 'monthly' ? '/mo' : ''}</span>
+                        </div>
+                      )}
+                      {tags.map(tk => {
+                        const fu = followUpOf(tk);
+                        return (
+                          <div key={tk} className="fu-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${fu.color}18`, border: `1px solid ${fu.color}44`, borderRadius: 8, padding: '3px 6px 3px 8px' }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: fu.color }} />
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: fu.color }}>{fu.label}</span>
+                            <button className="fu-x" title="Remove tag" onClick={e => { e.stopPropagation(); onFollowUp && onFollowUp(l.id, tags.filter(t => t !== tk)); }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: fu.color, display: 'flex', padding: 0, marginLeft: 1 }}><X size={12} /></button>
+                          </div>
+                        );
+                      })}
+                      {tagOpts.length > 0 && (
+                        <button className="add-tag-btn" title="Add a follow-up tag" onClick={e => { e.stopPropagation(); setFuMenu(fuMenu === l.id ? null : l.id); }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: 'var(--surface-3)', border: '1px dashed var(--border-light)', borderRadius: 8, padding: '3px 7px', cursor: 'pointer', color: 'var(--muted)', fontSize: 11.5, fontWeight: 700 }}>
+                          <Plus size={13} style={{ flexShrink: 0 }} /><span className="add-tag-lbl">Tag</span>
+                        </button>
+                      )}
+                      {fuMenu === l.id && (
+                        <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: '100%', left: 0, zIndex: 30, marginTop: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 6, minWidth: 172, boxShadow: '0 12px 30px rgba(0,0,0,0.4)' }}>
+                          {tagOpts.map(f => (
+                            <div key={f.key} onClick={() => { onFollowUp && onFollowUp(l.id, [...tags, f.key]); setFuMenu(null); }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: f.color }} /> {f.label}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Last contact line */}
+                    {l.last_contact_at && (
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ color: 'var(--muted)' }}>Last touch:</span>
+                        <span style={{ color: 'var(--text)', fontWeight: 600 }}>{l.last_contact_channel || 'contact'} · {timeSince(l.last_contact_at)}</span>
                       </div>
                     )}
                     {/* Footer: owner + date */}
@@ -245,16 +339,40 @@ export default function Clients({ kind = 'client' }) {
   // Reset the open detail view + selection when switching between /leads and /clients.
   useEffect(() => { setSelected(null); clearSelection(); setTempFilter('all'); setView('board'); }, [kind]);
 
-  // Deep-link support: /clients?open=<id> (used by Dashboard links) opens a
-  // specific record directly, regardless of whether it's a lead or client.
+  // Live revenue snapshot for the Clients view (last 30 days + MRR from Stripe).
+  const [revStats, setRevStats] = useState(null);
+  useEffect(() => {
+    if (isLeadView) return;
+    getDashboardStats().then(d => setRevStats(d?.stripeRevenue || null)).catch(() => {});
+  }, [isLeadView]);
+
+  // URL persistence: /leads?open=<id>&step=<idx>&view=<pipeline|details>
+  // If we land with ?open=<id> and the row is loaded, open it. We KEEP the id
+  // in the URL so navigating away and back restores the same view; the record
+  // page also uses the same params to remember which step/tab was active.
   useEffect(() => {
     const openId = searchParams.get('open');
-    if (!openId || !clients.length) return;
+    if (!openId) { if (selected) setSelected(null); return; }
+    if (!clients.length) return;
+    if (selected?.id === openId) return;
     const found = clients.find(c => c.id === openId);
     if (found) setSelected(found);
-    searchParams.delete('open');
-    setSearchParams(searchParams, { replace: true });
-  }, [searchParams, clients]);
+  }, [searchParams, clients, selected]);
+
+  // Whenever the user opens/closes a record, mirror it into the URL.
+  const openRecord = (c) => {
+    setSelected(c);
+    const next = new URLSearchParams(searchParams);
+    next.set('open', c.id);
+    setSearchParams(next, { replace: true });
+  };
+  const closeRecord = () => {
+    setSelected(null);
+    const next = new URLSearchParams(searchParams);
+    ['open', 'step', 'view'].forEach(k => next.delete(k));
+    setSearchParams(next, { replace: true });
+    load();
+  };
 
   const scoped = useMemo(() =>
     clients.filter(c => isLeadView ? c.stage === 'lead' : c.stage !== 'lead'),
@@ -304,14 +422,14 @@ export default function Clients({ kind = 'client' }) {
       if (firstNote && firstNote.trim() && c && c.id) {
         await createClientActivity({ client_id: c.id, type: 'note', tag: 'Important', body: firstNote.trim() }).catch(() => {});
       }
-      setModal(null); await load(); setSelected(c);
+      setModal(null); await load(); openRecord(c);
     } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
       await deleteClient(deleteTarget.id);
-      if (selected?.id === deleteTarget.id) setSelected(null);
+      if (selected?.id === deleteTarget.id) closeRecord();
       setDeleteTarget(null);
       await load();
     } catch (e) { toast('error', e.message); }
@@ -334,7 +452,7 @@ export default function Clients({ kind = 'client' }) {
       <>
         <DetailComponent
           client={selected}
-          onBack={() => { setSelected(null); load(); }}
+          onBack={closeRecord}
           onDelete={() => setDeleteTarget(selected)}
           onPatch={(patch) => setSelected(s => ({ ...s, ...patch }))}
         />
@@ -371,8 +489,8 @@ export default function Clients({ kind = 'client' }) {
             })}
           </div>
         )}
-        {/* Board / List toggle (leads only) */}
-        {isLeadView && (
+        {/* Board / List toggle (leads AND clients: clients get the delivery board) */}
+        {(
           <div style={{ display: 'inline-flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, gap: 2, marginLeft: 'auto' }}>
             {[{ key: 'board', label: 'Board' }, { key: 'list', label: 'List' }].map(v => {
               const on = view === v.key;
@@ -396,15 +514,45 @@ export default function Clients({ kind = 'client' }) {
         </div>
       )}
 
-      {isLeadView && view === 'board' ? (
+      {/* Client revenue snapshot — last 30 days + recurring, from Stripe. */}
+      {!isLeadView && revStats && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '14px 24px 2px' }}>
+          {[
+            { label: 'Revenue · last 30 days', value: money(revStats.windows?.['30d']?.revenue ?? revStats.last30Days), sub: `${revStats.windows?.['30d']?.count ?? revStats.last30Count ?? 0} payments`, color: '#2563eb', Icon: TrendingUp },
+            { label: 'Monthly recurring (MRR)', value: money(revStats.mrr), sub: `${revStats.activeSubCount || 0} active subscriptions`, color: '#16a34a', Icon: Repeat },
+            { label: 'This month', value: money(revStats.thisMonth), sub: `${revStats.thisMonthCount || 0} payments`, color: '#7c3aed', Icon: DollarSign },
+          ].map((s, i) => (
+            <div key={i} style={{
+              flex: '1 1 180px', minWidth: 170,
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(244,248,255,0.7))',
+              backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+              border: '1px solid rgba(37,99,235,0.16)', borderRadius: 14, padding: '13px 16px',
+              boxShadow: '0 6px 20px rgba(37,99,235,0.08)',
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                <s.Icon size={12} color={s.color} /> {s.label}
+              </div>
+              <div className="private-value" style={{ fontSize: 21, fontWeight: 800, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
+              <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isLeadView && view === 'board' ? (
+        <div style={{ padding: '14px 24px 30px' }}>
+          <DeliveryBoard onOpen={(id) => { const c = clients.find(x => x.id === id); if (c) openRecord(c); }} />
+        </div>
+      ) : isLeadView && view === 'board' ? (
         loading ? (
           <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 60 }}>Loading…</div>
         ) : (
           <LeadsBoard
             leads={filtered}
-            onOpen={setSelected}
+            onOpen={openRecord}
             onTempChange={(id, t) => patchLead(id, { lead_temperature: t })}
             onRankChange={(id, r) => patchLead(id, { lead_rank: r })}
+            onFollowUp={(id, arr) => patchLead(id, { lead_tags: arr, follow_up_status: arr[0] || 'none' })}
             onDelete={setDeleteTarget}
           />
         )
@@ -443,8 +591,8 @@ export default function Clients({ kind = 'client' }) {
               <th style={{ minWidth: 220 }}>Business</th>
               <th style={{ minWidth: 160 }}>Owner</th>
               {isLeadView
-                ? <><th style={{ minWidth: 110 }}>Temperature</th><th style={{ minWidth: 100 }}>Rank</th></>
-                : <th style={{ minWidth: 150 }}>Stage</th>}
+                ? <th style={{ minWidth: 130 }}>Status</th>
+                : <th style={{ minWidth: 150 }}>Status</th>}
               <th style={{ minWidth: 130 }}>Source</th>
               <th style={{ minWidth: 150 }}>Type</th>
               <th style={{ minWidth: 120 }}>Added</th>
@@ -457,7 +605,7 @@ export default function Clients({ kind = 'client' }) {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No {isLeadView ? 'leads' : 'clients'} yet.</td></tr>
             ) : filtered.map(c => (
-              <tr key={c.id} style={{ cursor: 'pointer', background: selectedIds.has(c.id) ? 'rgba(37,99,235,0.06)' : undefined }} onClick={() => setSelected(c)}>
+              <tr key={c.id} style={{ cursor: 'pointer', background: selectedIds.has(c.id) ? 'rgba(37,99,235,0.06)' : undefined }} onClick={() => openRecord(c)}>
                 <td onClick={e => e.stopPropagation()}>
                   <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelectId(c.id)} style={{ cursor: 'pointer', accentColor: 'var(--orange)' }} />
                 </td>
@@ -466,14 +614,13 @@ export default function Clients({ kind = 'client' }) {
                     <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
                       {c.logo_url ? <img src={c.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={15} style={{ color: 'var(--muted)' }} />}
                     </div>
-                    <span style={{ fontWeight: 700, color: 'var(--text)' }}>{c.business_name || '—'}</span>
+                    <span className="pii-name" style={{ fontWeight: 700, color: 'var(--text)' }}>{c.business_name || '—'}</span>
                   </div>
                 </td>
-                <td style={{ color: 'var(--muted)' }}>{c.owner_name || '—'}</td>
+                <td><span className="pii-name" style={{ color: 'var(--muted)' }}>{c.owner_name || '—'}</span></td>
                 {isLeadView ? (
                   <>
                     <td onClick={e => e.stopPropagation()}><PillSelect value={c.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => patchLead(c.id, { lead_temperature: v })} /></td>
-                    <td onClick={e => e.stopPropagation()}><PillSelect value={c.lead_rank || 'medium'} options={RANKS} onChange={v => patchLead(c.id, { lead_rank: v })} /></td>
                   </>
                 ) : (
                   <td><StageBadge stage={c.stage} /></td>
@@ -493,21 +640,20 @@ export default function Clients({ kind = 'client' }) {
       {/* Mobile cards */}
       <div className="mobile-cards">
         {!loading && filtered.map(c => (
-          <div key={c.id} className="mobile-card" onClick={() => setSelected(c)} style={{ cursor: 'pointer', position: 'relative', border: selectedIds.has(c.id) ? '1px solid var(--orange)' : undefined }}>
+          <div key={c.id} className="mobile-card" onClick={() => openRecord(c)} style={{ cursor: 'pointer', position: 'relative', border: selectedIds.has(c.id) ? '1px solid var(--orange)' : undefined }}>
             <div className="mobile-card-row primary" style={{ gap: 8 }}>
               <input type="checkbox" checked={selectedIds.has(c.id)} onClick={e => e.stopPropagation()} onChange={() => toggleSelectId(c.id)} style={{ accentColor: 'var(--orange)' }} />
               <Building2 size={14} style={{ color: 'var(--orange)' }} />
-              <span>{c.business_name || '—'}</span>
+              <span className="pii-name">{c.business_name || '—'}</span>
             </div>
             {isLeadView ? (
               <div className="mobile-card-row" style={{ gap: 8 }} onClick={e => e.stopPropagation()}>
                 <PillSelect value={c.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => patchLead(c.id, { lead_temperature: v })} />
-                <PillSelect value={c.lead_rank || 'medium'} options={RANKS} onChange={v => patchLead(c.id, { lead_rank: v })} />
               </div>
             ) : (
               <div className="mobile-card-row"><StageBadge stage={c.stage} /></div>
             )}
-            {c.owner_name && <div className="mobile-card-row">{c.owner_name}</div>}
+            {c.owner_name && <div className="mobile-card-row"><span className="pii-name">{c.owner_name}</span></div>}
             <button
               className="btn-ghost"
               style={{ position: 'absolute', top: 10, right: 10, padding: '5px 7px', color: '#ff5c5c' }}
@@ -552,24 +698,24 @@ export default function Clients({ kind = 'client' }) {
           </div>
           {isLeadView && (
             <>
-              <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Temperature</label>
-                  <select className="form-input" value={form.lead_temperature} onChange={e => setForm(f => ({ ...f, lead_temperature: e.target.value }))}>
-                    {TEMPERATURES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Rank</label>
-                  <select className="form-input" value={form.lead_rank} onChange={e => setForm(f => ({ ...f, lead_rank: e.target.value }))}>
-                    {RANKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-                  </select>
-                </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select className="form-input" value={form.lead_temperature} onChange={e => setForm(f => ({ ...f, lead_temperature: e.target.value }))}>
+                  {TEMPERATURES.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Potential revenue ($)</label>
                 <input className="form-input" type="number" min="0" step="100" value={form.potential_value ?? ''}
                   onChange={e => setForm(f => ({ ...f, potential_value: e.target.value }))} placeholder="e.g. 5000" />
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  {[{ k: 'one_time', label: 'One-time' }, { k: 'monthly', label: 'Monthly' }].map(o => {
+                    const on = (form.potential_value_type || 'one_time') === o.k;
+                    return (
+                      <button key={o.k} type="button" onClick={() => setForm(f => ({ ...f, potential_value_type: o.k }))} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-display)', border: `1.5px solid ${on ? 'var(--orange)' : 'var(--border)'}`, background: on ? 'rgba(37,99,235,0.10)' : 'var(--surface)', color: on ? 'var(--orange)' : 'var(--muted)' }}>{o.label}</button>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}
@@ -630,61 +776,118 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
   };
 
   const stage = stageOf(client.stage);
+  const initials = (client.business_name || client.owner_name || '?').trim().slice(0, 2).toUpperCase();
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      {/* Header */}
-      <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <button className="btn-ghost" onClick={onBack} style={{ padding: '7px 9px', flexShrink: 0 }}><ArrowLeft size={16} /></button>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-          {client.logo_url ? <img src={client.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={20} style={{ color: 'var(--muted)' }} />}
+      {/* Back bar */}
+      <div style={{ padding: '14px 28px 0' }}>
+        <button className="btn-ghost" onClick={onBack} style={{ padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--orange)' }}>
+          <ArrowLeft size={15} /> Back to {stage.key === 'lead' ? 'leads' : 'clients'}
+        </button>
+      </div>
+
+      {/* Title row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 28px 20px' }}>
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, fontFamily: 'var(--font-display)', fontWeight: 800, color: 'var(--muted)', fontSize: 18 }}>
+          {client.logo_url ? <img src={client.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{client.business_name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+          <div className="pii-name" style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.1, letterSpacing: '-0.01em' }}>{client.business_name || '—'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
             <span style={{ fontSize: 13, color: 'var(--muted)' }}>{client.owner_name || 'No owner set'}</span>
+            {client.source && <span style={{ fontSize: 12, color: 'var(--muted)' }}>· via {client.source}</span>}
             {(client.client_type || []).map(t => (
-              <span key={t} style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 999, padding: '1px 8px' }}>{t}</span>
+              <span key={t} style={{ fontSize: 10, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 999, padding: '2px 9px' }}>{t}</span>
             ))}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <select
-            className="form-input"
-            style={{ width: 'auto', padding: '7px 12px', fontSize: 12, fontWeight: 700, color: stage.color, background: `${stage.color}14`, border: `1px solid ${stage.color}40`, borderRadius: 999 }}
-            value={client.stage || 'lead'}
-            onChange={e => saveField('stage', e.target.value)}
-          >
-            {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
-          <button className="btn-ghost" style={{ padding: '7px 9px', color: '#ff5c5c' }} onClick={onDelete} title="Delete client"><Trash2 size={15} /></button>
+          <button className="btn-ghost" style={{ padding: '8px 10px', color: '#ff5c5c' }} onClick={onDelete} title="Delete"><Trash2 size={15} /></button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, padding: '0 28px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        {TABS.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '11px 14px', background: 'none', border: 'none',
-            borderBottom: tab === t.key ? '2px solid var(--orange)' : '2px solid transparent', cursor: 'pointer',
-            color: tab === t.key ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)',
-          }}>
-            <t.icon size={14} /> {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Two-column: vertical sidebar + content */}
+      <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', gap: 24, padding: '0 28px 40px', alignItems: 'start' }}>
+        {/* Vertical tab rail */}
+        <nav style={{ position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {TABS.map(t => {
+            const on = tab === t.key;
+            return (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{
+                display: 'flex', alignItems: 'center', gap: 11, padding: '11px 14px', borderRadius: 12,
+                background: on ? 'var(--btn-black)' : 'transparent',
+                border: '1px solid ' + (on ? 'transparent' : 'transparent'),
+                cursor: 'pointer', textAlign: 'left', width: '100%',
+                color: on ? '#fff' : 'var(--muted)', fontSize: 13.5, fontWeight: on ? 700 : 600, fontFamily: 'var(--font-display)',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+              onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'var(--surface-2)'; }}
+              onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
+                <t.icon size={16} style={{ flexShrink: 0 }} /> <span style={{ flex: 1 }}>{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
-      <div style={{ padding: 28 }}>
-        {tab === 'overview'  && <OverviewTab client={client} saveField={saveField} />}
-        {tab === 'activity'  && <ActivityTab clientId={client.id} />}
-        {tab === 'deals'     && <DealsTab client={client} />}
-        {tab === 'agreement' && <AgreementTab client={client} />}
-        {tab === 'vault'     && <VaultTab clientId={client.id} />}
-        {tab === 'access'    && <AccessTab clientId={client.id} />}
-        {tab === 'tasks'     && <TasksTab clientId={client.id} />}
-        {tab === 'projects'  && <ProjectsTab client={client} />}
+        {/* Content panel */}
+        <div style={{ minWidth: 0 }}>
+          {tab === 'overview'  && <OverviewTab client={client} saveField={saveField} />}
+          {tab === 'activity'  && <ActivityTab clientId={client.id} />}
+          {tab === 'deals'     && <DealsTab client={client} />}
+          {tab === 'agreement' && <AgreementTab client={client} />}
+          {tab === 'vault'     && <VaultTab clientId={client.id} />}
+          {tab === 'access'    && <AccessTab clientId={client.id} />}
+          {tab === 'tasks'     && <TasksTab clientId={client.id} />}
+          {tab === 'projects'  && <ProjectsTab client={client} />}
+        </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+// Follow-up status + last-contact quick control, shown in the profile header.
+function FollowUpControl({ client, saveField }) {
+  const [logging, setLogging] = useState(false);
+  const fu = followUpOf(client.follow_up_status || 'none');
+  const logContact = async (channel) => {
+    const now = new Date().toISOString();
+    saveField('last_contact_at', now);
+    saveField('last_contact_channel', channel);
+    try {
+      await updateClient(client.id, { last_contact_at: now, last_contact_channel: channel });
+    } catch (e) { toast('error', e.message); }
+    setLogging(false);
+  };
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
+      {client.last_contact_at && (
+        <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+          Last: <b style={{ color: 'var(--text)' }}>{client.last_contact_channel || 'touch'} {timeSince(client.last_contact_at)}</b>
+        </span>
+      )}
+      <select
+        value={client.follow_up_status || 'none'}
+        onChange={e => saveField('follow_up_status', e.target.value)}
+        style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700, borderRadius: 999, cursor: 'pointer',
+          color: fu.color, background: `${fu.color}14`, border: `1px solid ${fu.color}40`, fontFamily: 'var(--font-display)' }}>
+        {FOLLOW_UPS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+      </select>
+      <button className="btn-ghost" onClick={() => setLogging(o => !o)} title="Log a contact" style={{ padding: '8px 10px', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600 }}>
+        <Phone size={13} /> Log
+      </button>
+      {logging && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 40, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-lg)', padding: 6, minWidth: 160 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 4px' }}>Log last contact</div>
+          {CONTACT_CHANNELS.map(ch => (
+            <button key={ch} onClick={() => logContact(ch)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--text)', fontSize: 13 }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              {ch} · now
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -702,12 +905,11 @@ const actDate = (iso) => { try { return new Date(iso).toLocaleDateString('en-US'
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 const LEAD_STEPS = [
-  { key: 'overview',  label: 'Overview',           blurb: 'Business details, activity, and AI summaries.' },
-  { key: 'terms',     label: 'Terms',              blurb: 'Review and edit the agreement terms, then approve.' },
+  { key: 'discuss',   label: 'Discuss',            blurb: 'Tell the assistant what to work on; it reads the documents and drafts the terms.' },
+  { key: 'terms',     label: 'Terms',              blurb: 'Confirm standard pricing or a payment plan.' },
+  { key: 'agreement', label: 'Agreement',          blurb: 'Review the auto-generated agreement and approve it.' },
   { key: 'deals',     label: 'Deals & Projects',   blurb: 'Create the deal and projects with pricing.' },
-  { key: 'agreement', label: 'Agreement',          blurb: 'Preview the agreement and approve it.' },
   { key: 'payment',   label: 'Payment',            blurb: 'Choose which payment plans to offer the client in their portal.' },
-  { key: 'access',    label: 'Platforms & Access', blurb: 'A task list of the tools you need access to, with instructions.' },
   { key: 'proposal',  label: 'Proposal',           blurb: 'Draft the cover email to the client, with their portal link.' },
   { key: 'send',      label: 'Send',               blurb: 'Send the agreement to sign and the proposal email, then track it.' },
 ];
@@ -741,13 +943,13 @@ function mdToDocHtml(md) {
   for (const raw of lines) {
     const line = raw.trimEnd();
     if (!line.trim()) { closeList(); continue; }
-    if (/^(---|___|\*\*\*)\s*$/.test(line.trim())) { closeList(); html += '<div style="height:1px;background:var(--border);margin:16px 0"></div>'; continue; }
+    if (/^(---|___|\*\*\*)\s*$/.test(line.trim())) { closeList(); html += '<div style="height:1px;background:#e5e7eb;margin:16px 0"></div>'; continue; }
     if (/^#{1,6}\s/.test(line)) {
       closeList();
       const level = line.match(/^#+/)[0].length;
       const txt = inline(line.replace(/^#+\s*/, ''));
       const size = level === 1 ? 20 : level === 2 ? 15 : 13.5;
-      html += `<div style="font-weight:800;font-size:${size}px;margin:${level <= 2 ? '18px 0 8px' : '12px 0 4px'};color:var(--text);font-family:var(--font-display)">${txt}</div>`;
+      html += `<div style="font-weight:800;font-size:${size}px;margin:${level <= 2 ? '18px 0 8px' : '12px 0 4px'};color:#111827;font-family:var(--font-display)">${txt}</div>`;
     } else if (/^[-*]\s/.test(line)) {
       if (!inList) { html += '<ul style="margin:4px 0;padding-left:20px">'; inList = true; }
       html += `<li style="margin:4px 0;line-height:1.6">${inline(line.replace(/^[-*]\s+/, ''))}</li>`;
@@ -760,22 +962,108 @@ function mdToDocHtml(md) {
   return html;
 }
 
-// Step 1 — Terms: structure the agreement. Two modes:
-//  • Fixed — AI drafts the real contract from the notes; Ray edits/approves it.
-//  • Custom payment plan — Ray sets the deal value + which plans to offer; the
-//    client picks one (and signs) in their portal, so no fixed contract here.
-function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setPaymentMode }) {
+// Step 0 — Discuss: a chat assistant that reads the lead's documents + notes,
+// asks Ray clarifying questions, and writes the terms summary that feeds the
+// agreement. When it has scope + pricing it marks the terms ready and Ray moves on.
+function DiscussStep({ client, chatLog, setChatLog, termsText, setTermsText, setFooter, onReady, onRestart }) {
+  const GREETING = { role: 'assistant', content: `What would you like to work on for ${client.business_name || 'this lead'}? For example: "Create a contract for a website rebuild, 3,500 dollars with a 50 percent deposit." I will read this lead's documents and notes, then ask anything we should nail down before drafting.` };
+  const [messages, setMessages] = useState(() => (Array.isArray(chatLog) && chatLog.length) ? chatLog : [GREETING]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(!!(termsText && termsText.trim()));
+  const scrollRef = useRef(null);
+
+  useEffect(() => { setChatLog(messages); }, [messages]);
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, busy]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || busy) return;
+    const next = [...messages, { role: 'user', content: text }];
+    setMessages(next); setInput(''); setBusy(true);
+    try {
+      const apiMsgs = next.slice(next.findIndex(m => m.role === 'user')); // Claude must start on a user turn
+      const res = await agreementChat(client.id, apiMsgs);
+      setMessages(m => [...m, { role: 'assistant', content: res.reply || '…' }]);
+      if (res.ready && res.terms && res.terms.trim()) { setTermsText(res.terms); setReady(true); }
+    } catch (e) {
+      toast('error', e.message);
+      setMessages(m => [...m, { role: 'assistant', content: 'Sorry, something went wrong on my end. Please try that again.' }]);
+    } finally { setBusy(false); }
+  };
+
+  useStepFooter(setFooter, {
+    label: ready ? 'Next: Terms' : 'Answer a few questions first',
+    disabled: !ready,
+    onClick: onReady,
+  });
+
+  return (
+    <div style={{ maxWidth: 820, margin: '0 auto', height: 'calc(100vh - 300px)', minHeight: 320, paddingBottom: 8, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(37,99,235,0.12)', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Sparkles size={17} /></div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Discuss the deal</div>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>The assistant reads this lead's documents and notes to help shape the terms.</div>
+        </div>
+      </div>
+
+      {/* Chat transcript — grows to fill, scrolls on its own */}
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', padding: '4px 2px' }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+            <div style={{ maxWidth: '82%', padding: '11px 14px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              background: m.role === 'user' ? 'var(--orange)' : 'var(--surface)', color: m.role === 'user' ? '#fff' : 'var(--text)', border: m.role === 'user' ? 'none' : '1px solid var(--border)',
+              borderBottomRightRadius: m.role === 'user' ? 4 : 14, borderBottomLeftRadius: m.role === 'user' ? 14 : 4 }}>{m.content}</div>
+          </div>
+        ))}
+        {busy && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{ padding: '11px 14px', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--muted)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}><Spinner /> Thinking…</div>
+          </div>
+        )}
+      </div>
+
+      {/* Terms-ready banner */}
+      {ready && termsText && (
+        <div style={{ padding: '12px 16px', background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 12, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <CheckCircle2 size={16} style={{ color: '#22c55e' }} />
+            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>Terms ready</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Continue with Next, or keep chatting to refine.</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto' }}>{termsText}</div>
+        </div>
+      )}
+
+      {/* Input — pinned at the bottom, just above the step-count footer */}
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <textarea className="form-input" rows={2} value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="Type what you want to work on, or answer the assistant…" style={{ flex: 1, resize: 'none' }} />
+        <button className="btn-primary" onClick={send} disabled={!input.trim() || busy} style={{ alignSelf: 'stretch', padding: '0 18px' }}>Send</button>
+      </div>
+    </div>
+  );
+}
+
+// Step 1 — Terms: pick the pricing structure. Scope + pricing come from Discuss.
+function TermsStep({ client, savedDraft, termsText, setTermsText, onApprove, setFooter, paymentMode, setPaymentMode }) {
+  // Scope + pricing come from the Discuss chat (termsText). This step only picks
+  // the pricing structure. For Standard, clicking Next drafts the agreement; for
+  // Payment Plan, Ray sets the value + which plans to offer and the client picks
+  // (and signs) in their portal.
+  const stepKey = (n) => `vtm-terms-${client.id}-${n}`;
+  const cached = (n, def) => { try { const r = localStorage.getItem(stepKey(n)); return r == null ? def : JSON.parse(r); } catch { return def; } };
+  const stash = (n, v) => { try { if (v == null || v === '') localStorage.removeItem(stepKey(n)); else localStorage.setItem(stepKey(n), JSON.stringify(v)); } catch {} };
+
   const [loading, setLoading] = useState(true);
-  const [analysis, setAnalysis] = useState(null);
-  const [terms, setTerms] = useState('');
-  const [changes, setChanges] = useState('');
-  const [draft, setDraft] = useState(savedDraft || null);
-  const [docTab, setDocTab] = useState('agreement');
   const [busy, setBusy] = useState('');
-  // Custom-plan state
   const allow = paymentMode === 'custom';
-  const [total, setTotal] = useState('');
-  const [maint, setMaint] = useState(''); // monthly maintenance ($)
+  const [total, setTotalInternal] = useState(() => cached('total', ''));
+  const setTotal = (v) => { setTotalInternal(v); stash('total', v); };
+  const [maint, setMaintInternal] = useState(() => cached('maint', ''));
+  const setMaint = (v) => { setMaintInternal(v); stash('maint', v); };
   const [offered, setOffered] = useState(null); // { planKey: bool }
 
   useEffect(() => {
@@ -783,22 +1071,12 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
       try {
         const d = await getAgreements(client.id);
         const ag = (d.agreements || [])[0];
-        if (ag) {
-          if (ag.payment_mode === 'custom') {
-            setPaymentMode('custom');
-            if (ag.total_amount) setTotal(String(ag.total_amount));
-            if (ag.terms?.maintenance) setMaint(String(ag.terms.maintenance));
-            if (Array.isArray(ag.plan_options) && ag.plan_options.length) {
-              setOffered(Object.fromEntries(computePlans(ag.total_amount).map(p => [p.key, ag.plan_options.some(o => o.key === p.key)])));
-            }
-          } else if (!savedDraft && ag.terms) {
-            setDraft({
-              total: ag.total_amount,
-              installments: (d.payments || []).filter(p => p.kind !== 'recurring').map(p => ({ amount: p.amount, trigger: p.due_condition })),
-              monthly: (d.payments || []).filter(p => p.kind === 'recurring').map(p => ({ amount: p.amount, item: p.description || 'Recurring' })),
-              agreement_markdown: ag.terms.agreement_markdown,
-              nda_markdown: ag.terms.nda_markdown,
-            });
+        if (ag && ag.payment_mode === 'custom') {
+          setPaymentMode('custom');
+          if (ag.total_amount) setTotal(String(ag.total_amount));
+          if (ag.terms?.maintenance) setMaint(String(ag.terms.maintenance));
+          if (Array.isArray(ag.plan_options) && ag.plan_options.length) {
+            setOffered(Object.fromEntries(computePlans(ag.total_amount).map(p => [p.key, ag.plan_options.some(o => o.key === p.key)])));
           }
         }
       } catch (e) { /* no agreement yet — fine */ }
@@ -813,64 +1091,52 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
     }
   }, [allow, total]);
 
-  const runAnalyze = async () => {
-    setBusy('analyze');
+  // Payment-plan mode: pull a build value / maintenance estimate from the notes.
+  const runEstimate = async () => {
+    setBusy('estimate');
     try {
       const a = await analyzeDeal(client.id);
-      setAnalysis(a);
-      if (a.suggested_total && !total) setTotal(String(a.suggested_total));
-      if (Array.isArray(a.suggested_monthly) && a.suggested_monthly[0] && !maint) setMaint(String(a.suggested_monthly[0].amount || ''));
-      const seed = (a.suggested_installments || []).map(i => `- ${money(i.amount)} ${i.trigger ? '(' + i.trigger + ')' : ''}`).join('\n');
-      const monthly = (a.suggested_monthly || []).map(m => `- ${money(m.amount)}/mo ${m.item}`).join('\n');
-      setTerms(`${a.suggested_structure || ''}\n\nInstallments:\n${seed}${monthly ? '\n\nMonthly:\n' + monthly : ''}`.trim());
+      if (a.suggested_total) setTotal(String(a.suggested_total));
+      if (Array.isArray(a.suggested_monthly) && a.suggested_monthly[0]) setMaint(String(a.suggested_monthly[0].amount || ''));
     } catch (e) { toast('error', e.message); }
     finally { setBusy(''); }
   };
 
-  const runGenerate = async (withChanges) => {
+  // Standard mode: Next drafts the agreement from the Discuss terms, then the
+  // Agreement step reviews it.
+  const generateFixed = async () => {
+    if (!termsText || !termsText.trim()) { toast('error', 'Draft the terms in the Discuss step first.'); return; }
     setBusy('generate');
     try {
-      let d;
-      if (withChanges && draft && changes.trim()) {
-        d = await generateAgreement(client.id, changes.trim(), {
-          agreement_markdown: draft.agreement_markdown, nda_markdown: draft.nda_markdown,
-          total: draft.total, installments: draft.installments, monthly: draft.monthly,
-        });
-      } else {
-        if (!terms.trim()) { toast('error', 'Add some terms first (or run Analyze).'); setBusy(''); return; }
-        d = await generateAgreement(client.id, terms);
-      }
-      setDraft(d);
-      if (withChanges && changes.trim()) setChanges('');
-      setDocTab('agreement');
+      const d = await generateAgreement(client.id, termsText);
+      onApprove(d);
+      toast('success', 'Agreement drafted. Review it on the Agreement step.');
     } catch (e) { toast('error', e.message); }
     finally { setBusy(''); }
   };
 
-  const approveFixed = () => { onApprove(draft); toast('success', 'Terms approved — on to Deals & Projects.'); };
   const approveCustom = async () => {
     setBusy('approve');
     try {
       const plans = computePlans(Number(total)).filter(p => offered?.[p.key]);
       // Generate the base agreement + NDA (with a {{PAYMENT_SCHEDULE}} placeholder);
-      // the client's plan choice fills in the concrete schedule at signing. This
-      // MUST succeed — otherwise the client would get a doc with only a schedule.
+      // the client's plan choice fills in the concrete schedule at signing.
       const doc = await generateAgreement(client.id, `Build value $${Number(total)}${Number(maint) ? `, plus $${Number(maint)}/mo maintenance` : ''}. The client selects a custom payment plan in their portal.`, null, 'custom');
-      if (!doc?.agreement_markdown) { toast('error', 'Could not draft the agreement — please click Approve again.'); setBusy(''); return; }
+      if (!doc?.agreement_markdown) { toast('error', 'Could not draft the agreement, please click Approve again.'); setBusy(''); return; }
       await setupCustomAgreement(client.id, { total: Number(total), maintenance: Number(maint) || 0, plan_options: plans, agreement_markdown: doc.agreement_markdown, nda_markdown: doc.nda_markdown || null, recap: doc.recap || null, features: Array.isArray(doc.features) ? doc.features : null });
       onApprove({ total: Number(total), custom: true });
-      toast('success', 'Payment-plan options saved — the client picks one in their portal.');
+      toast('success', 'Payment-plan options saved, the client picks one in their portal.');
     } catch (e) { toast('error', e.message); }
     finally { setBusy(''); }
   };
 
   const offeredCount = offered ? Object.values(offered).filter(Boolean).length : 0;
-  const canApprove = allow ? (Number(total) > 0 && offeredCount > 0) : !!draft;
+  const canContinue = allow ? (Number(total) > 0 && offeredCount > 0) : !!(termsText && termsText.trim());
   useStepFooter(setFooter, {
-    label: busy === 'approve' ? 'Approving…' : 'Approve',
-    disabled: !canApprove || busy === 'approve',
-    busy: busy === 'approve',
-    onClick: allow ? approveCustom : approveFixed,
+    label: allow ? (busy === 'approve' ? 'Approving…' : 'Approve plan') : (busy === 'generate' ? 'Generating agreement…' : 'Next: generate agreement'),
+    disabled: !canContinue || busy === 'approve' || busy === 'generate',
+    busy: busy === 'approve' || busy === 'generate',
+    onClick: allow ? approveCustom : generateFixed,
   });
 
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading terms…</div>;
@@ -879,21 +1145,33 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
 
   return (
     <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Structure the terms</div>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Priced from this client's notes. Choose whether to let them pick a payment plan, then approve.</div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Pricing structure</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Choose how the client pays. The scope and pricing were captured in the Discuss step.</div>
       </div>
 
-      {/* Payment-plan toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', marginBottom: 16, background: allow ? 'rgba(37,99,235,0.06)' : 'var(--surface)', border: `1px solid ${allow ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 10 }}>
-        <button onClick={() => setPaymentMode(allow ? 'fixed' : 'custom')} title="Toggle payment-plan mode"
-          style={{ width: 40, height: 22, borderRadius: 999, border: 'none', cursor: 'pointer', background: allow ? 'var(--orange)' : 'var(--border)', position: 'relative', flexShrink: 0 }}>
-          <span style={{ position: 'absolute', top: 2, left: allow ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
-        </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Allow the client to choose a payment plan</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{allow ? 'They pick from the plans you offer, then sign in their portal. Agreement + Stripe steps move to the portal.' : 'Off — you set a fixed contract here, review it, and send it to sign.'}</div>
-        </div>
+      {/* Standard vs Payment Plan — two big button cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
+        {[
+          { key: 'fixed',  title: 'Standard Pricing', blurb: 'One fixed agreement with the terms from Discuss. Clicking Next drafts it.', icon: FileSignature },
+          { key: 'custom', title: 'Payment Plan',     blurb: 'Let the client pick from the plans you offer, then sign in their portal.', icon: DollarSign },
+        ].map(opt => {
+          const on = (opt.key === 'custom') === allow;
+          const Icon = opt.icon;
+          return (
+            <button key={opt.key} type="button" onClick={() => setPaymentMode(opt.key)}
+              style={{ textAlign: 'left', cursor: 'pointer', background: on ? 'rgba(255,155,38,0.08)' : 'var(--surface)', border: `2px solid ${on ? 'var(--orange)' : 'var(--border)'}`, borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'flex-start', gap: 12, transition: 'all 0.15s' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: on ? 'var(--orange)' : 'var(--surface-2)', color: on ? '#111' : 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={18} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{opt.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, lineHeight: 1.5 }}>{opt.blurb}</div>
+              </div>
+              {on && <CheckCircle2 size={18} style={{ color: 'var(--orange)', flexShrink: 0 }} />}
+            </button>
+          );
+        })}
       </div>
 
       {allow ? (
@@ -908,8 +1186,8 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
               <label className="form-label">Maintenance ($/mo)</label>
               <input className="form-input" type="number" min="0" step="10" value={maint} onChange={e => setMaint(e.target.value)} placeholder="e.g. 199" />
             </div>
-            <button className="btn-ghost" style={{ justifySelf: 'start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'analyze'} onClick={runAnalyze}>
-              {busy === 'analyze' ? <><Spinner /> Estimating…</> : <><Sparkles size={14} /> Estimate from notes</>}
+            <button className="btn-ghost" style={{ justifySelf: 'start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'estimate'} onClick={runEstimate}>
+              {busy === 'estimate' ? <><Spinner /> Estimating…</> : <><Sparkles size={14} /> Estimate from notes</>}
             </button>
           </div>
           {Number(maint) > 0 && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: -6 }}>{money(Number(maint))}/mo maintenance applies to every plan, starting the month after the last plan payment.</div>}
@@ -945,62 +1223,20 @@ function TermsStep({ client, savedDraft, onApprove, setFooter, paymentMode, setP
           )}
         </div>
       ) : (
-        /* ── Fixed contract mode ── */
-        <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: draft ? 'minmax(0,1fr) 340px' : '1fr', gap: 20, alignItems: 'start' }}>
-          <div>
-            {draft ? (
-              <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Proposed agreement · total {money(draft.total)}</div>
-                  {draft.nda_markdown && (
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'agreement' ? 800 : 500 }} onClick={() => setDocTab('agreement')}>Agreement</button>
-                      <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'nda' ? 800 : 500 }} onClick={() => setDocTab('nda')}>NDA</button>
-                    </div>
-                  )}
-                </div>
-                <div style={{ padding: '14px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 560, overflow: 'auto' }}
-                  dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? draft.nda_markdown : draft.agreement_markdown) }} />
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {!analysis && (
-                  <button className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'analyze'} onClick={runAnalyze}>
-                    {busy === 'analyze' ? <><Spinner /> Analyzing…</> : <><Sparkles size={15} /> Analyze deal with AI</>}
-                  </button>
-                )}
-                {(analysis?.flags || []).length > 0 && (
-                  <div style={{ padding: '14px 16px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#f5a623', marginBottom: 8 }}>Worth a look before you price it</div>
-                    <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text)', fontSize: 13, lineHeight: 1.7 }}>
-                      {analysis.flags.map((f, i) => <li key={i}>{f}</li>)}
-                    </ul>
-                  </div>
-                )}
-                <div className="form-group">
-                  <label className="form-label">Billing terms</label>
-                  <textarea className="form-input" rows={8} value={terms} onChange={e => setTerms(e.target.value)} placeholder="e.g. $1,000 up front to start, then $800/mo for 5 months. $199/mo maintenance begins month 7." style={{ resize: 'vertical' }} />
-                </div>
-                <button className="btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'generate'} onClick={() => runGenerate(false)}>
-                  {busy === 'generate' ? <><Spinner /> Drafting…</> : <><FileSignature size={15} /> Generate terms</>}
-                </button>
-              </div>
-            )}
+        /* ── Standard mode — the editable terms captured in Discuss ── */
+        <div style={{ maxWidth: 760 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Terms from your discussion</div>
+          <textarea
+            className="form-input"
+            value={termsText || ''}
+            onChange={e => setTermsText && setTermsText(e.target.value)}
+            placeholder="No terms yet. Go back to the Discuss step and tell the assistant what to build, or type the terms here."
+            style={{ width: '100%', minHeight: 200, resize: 'vertical', lineHeight: 1.6, fontSize: 13.5 }}
+          />
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--muted)' }}>
+            <FileSignature size={14} style={{ color: 'var(--orange)', flexShrink: 0 }} />
+            <span>Edit anything above, then click <b style={{ color: 'var(--text)' }}>Next: generate agreement</b> below and the full agreement drafts from these terms on the next step.</span>
           </div>
-
-          {draft && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'sticky', top: 12 }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Request changes</label>
-                <textarea className="form-input" rows={5} value={changes} onChange={e => setChanges(e.target.value)} placeholder="e.g. Add a $500 rush fee. Change maintenance to $249/mo. Include a 2-week revision window." style={{ resize: 'vertical' }} />
-              </div>
-              <button className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }} disabled={busy === 'generate'} onClick={() => runGenerate(true)}>
-                {busy === 'generate' ? <><Spinner /> Regenerating…</> : 'Regenerate'}
-              </button>
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>Approve (bottom-right) locks these terms. The agreement is previewed and created at the Agreement step.</div>
-              <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => { setDraft(null); setAnalysis(null); }}>Start terms over</button>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -1178,12 +1414,18 @@ function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
   const [previewed, setPreviewed] = useState(false);
   const [docTab, setDocTab] = useState('agreement');
   const [busy, setBusy] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [draftMd, setDraftMd] = useState({ agreement_markdown: '', nda_markdown: '' });
 
   useEffect(() => {
     (async () => {
       try {
         const d = await getAgreements(client.id);
-        if (d.agreements && d.agreements.length) { setAg(d.agreements[0]); }
+        // Work on the latest UNSIGNED agreement. A signed one is a closed deal
+        // (e.g. VNA's completed build): a new deal must draft a NEW agreement,
+        // never resurface or overwrite the signed document.
+        const row = (d.agreements || []).find(x => x.status !== 'signed') || null;
+        if (row) setAg(row);
       } catch (e) { /* none yet */ }
       finally { setLoading(false); }
     })();
@@ -1232,11 +1474,34 @@ function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
     finally { setBusy(''); }
   };
 
+  const beginEdit = () => {
+    setDraftMd({ agreement_markdown: doc.agreement_markdown || '', nda_markdown: doc.nda_markdown || '' });
+    setEditing(true);
+  };
+
+  const saveEdits = async () => {
+    setBusy('save');
+    try {
+      const row = await ensureAgreement();   // creates the row if it doesn't exist yet
+      if (!row) return;
+      const r = await saveAgreementDoc(client.id, {
+        agreement_id: row.id,
+        agreement_markdown: draftMd.agreement_markdown,
+        nda_markdown: draftMd.nda_markdown,
+      });
+      setAg(prev => ({ ...(prev || row), terms: { ...((prev || row).terms || {}), ...(r.terms || {}) } }));
+      setEditing(false);
+      setPreviewed(false);   // re-preview the edited doc before approving
+      toast('success', 'Edits saved to the agreement.');
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
+
   const alreadyApproved = ag && (ag.status === 'approved' || ag.status === 'sent' || ag.status === 'signed');
   const canApprove = previewed || alreadyApproved;
   useStepFooter(setFooter, {
     label: busy === 'approve' ? 'Approving…' : 'Approve',
-    disabled: loading || (!termsDraft && !ag) || !canApprove || busy === 'approve',
+    disabled: loading || (!termsDraft && !ag) || !canApprove || busy === 'approve' || editing,
     busy: busy === 'approve',
     onClick: onApprove,
   });
@@ -1266,7 +1531,9 @@ function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
 
       <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Service Agreement · total {money(doc.total || ag?.total_amount)}</div>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', flex: 1 }}>
+            Service Agreement · total {money(doc.total || ag?.total_amount)}{editing && <span style={{ color: 'var(--orange)', fontWeight: 700 }}> · editing {docTab === 'nda' ? 'NDA' : 'agreement'}</span>}
+          </div>
           {doc.nda_markdown && (
             <div style={{ display: 'flex', gap: 4 }}>
               <button className="btn-ghost" style={{ padding: '5px 12px', fontWeight: docTab === 'agreement' ? 800 : 500 }} onClick={() => setDocTab('agreement')}>Agreement</button>
@@ -1274,15 +1541,39 @@ function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
             </div>
           )}
         </div>
-        <div style={{ padding: '14px 24px 24px', color: 'var(--text)', fontSize: 13, maxHeight: 540, overflow: 'auto' }}
-          dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? doc.nda_markdown : doc.agreement_markdown) }} />
+        {editing ? (
+          <textarea
+            value={docTab === 'nda' ? draftMd.nda_markdown : draftMd.agreement_markdown}
+            onChange={e => setDraftMd(d => ({ ...d, [docTab === 'nda' ? 'nda_markdown' : 'agreement_markdown']: e.target.value }))}
+            spellCheck={true}
+            style={{ display: 'block', width: '100%', border: 'none', borderTop: '1px solid var(--border)', padding: '14px 24px 24px', color: '#1f2937', fontSize: 13, lineHeight: 1.7, minHeight: 480, maxHeight: 600, resize: 'vertical', outline: 'none', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', background: '#fff' }}
+          />
+        ) : (
+          <div style={{ padding: '14px 24px 24px', color: '#1f2937', fontSize: 13, maxHeight: 540, overflow: 'auto' }}
+            dangerouslySetInnerHTML={{ __html: mdToDocHtml(docTab === 'nda' ? doc.nda_markdown : doc.agreement_markdown) }} />
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
-        <button className="btn-ghost" disabled={busy === 'preview'} onClick={onPreview}>
-          <Eye size={15} /> {busy === 'preview' ? 'Opening…' : previewed ? 'Preview again' : 'Preview in signing view'}
-        </button>
-        {!canApprove && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Preview the signing view to unlock Approve (bottom-right).</span>}
+        {editing ? (
+          <>
+            <button className="btn-primary" disabled={busy === 'save'} onClick={saveEdits}>
+              {busy === 'save' ? 'Saving…' : 'Save edits'}
+            </button>
+            <button className="btn-ghost" disabled={busy === 'save'} onClick={() => setEditing(false)}>Cancel</button>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Editing the raw text. Save, then Preview to see it, then Approve.</span>
+          </>
+        ) : (
+          <>
+            <button className="btn-ghost" disabled={busy === 'preview'} onClick={onPreview}>
+              <Eye size={15} /> {busy === 'preview' ? 'Opening…' : previewed ? 'Preview again' : 'Preview in signing view'}
+            </button>
+            <button className="btn-ghost" onClick={beginEdit}>
+              <Pencil size={15} /> Edit text
+            </button>
+            {!canApprove && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Preview the signing view to unlock Approve (bottom-right).</span>}
+          </>
+        )}
       </div>
     </div>
   );
@@ -1636,7 +1927,7 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
 
 // Step 8 — Send: final gate. Sends the agreement to sign + the proposal email,
 // then shows live status (sent → opened → signed).
-function SendStep({ client, emailDraft, onSent, paymentMode }) {
+function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
   const custom = paymentMode === 'custom';
   const [loading, setLoading] = useState(true);
   const [ag, setAg] = useState(null);
@@ -1660,6 +1951,7 @@ function SendStep({ client, emailDraft, onSent, paymentMode }) {
     try {
       await sendAgreementForSignature(ag.id);
       toast('success', ag.sent_at ? 'Re-sent to client.' : 'Sent to client to sign.');
+      if (ag.status !== 'signed') onPatch && onPatch({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' });
       onSent && onSent();
       setLoading(true); load();
     } catch (e) { toast('error', e.message); }
@@ -1677,6 +1969,7 @@ function SendStep({ client, emailDraft, onSent, paymentMode }) {
       await sendClientEmail({ to: client.contact_email, subject: emailDraft.subject, body: emailDraft.body, mode: 'send' });
       setEmailSent(true);
       toast('success', `Sent to ${client.contact_email} — they can review & sign from the link.`);
+      if (ag.status !== 'signed') onPatch && onPatch({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' });
       onSent && onSent();
       setLoading(true); load();
     } catch (e) { toast('error', e.message); }
@@ -1756,14 +2049,69 @@ function SendStep({ client, emailDraft, onSent, paymentMode }) {
 }
 
 function LeadDetail({ client, onBack, onDelete, onPatch }) {
-  const [step, setStep] = useState(0);
-  const [view, setView] = useState('pipeline'); // 'pipeline' | 'details'
-  const [termsDraft, setTermsDraft] = useState(null);
-  const [dealId, setDealId] = useState(null);
-  const [agreementId, setAgreementId] = useState(null);
-  const [emailDraft, setEmailDraft] = useState(null);
-  const [emailTone, setEmailTone] = useState('gain');
-  const [paymentMode, setPaymentMode] = useState('fixed'); // 'fixed' | 'custom'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setViewInternal] = useState(() => searchParams.get('view') === 'pipeline' ? 'pipeline' : 'overview');
+  const setView = (v) => {
+    setViewInternal(v);
+    const params = new URLSearchParams(searchParams);
+    if (v === 'overview') params.delete('view'); else params.set('view', v);
+    setSearchParams(params, { replace: true });
+  };
+
+  // ── Server-synced pipeline state ──────────────────────────────────────────
+  // Every pipeline artifact (current step, the Discuss chat, terms, drafts, and
+  // choices) lives in crm_clients.pipeline_state, so anyone with access to this
+  // lead — on any device or login — sees the same progress. Local edits save
+  // (debounced) and we poll for changes others make while the page is open.
+  const initState = (client.pipeline_state && typeof client.pipeline_state === 'object') ? client.pipeline_state : {};
+  const [pstate, setPstate] = useState(initState);
+  const pstateRef = useRef(pstate);
+  pstateRef.current = pstate;
+  const skipSaveRef = useRef(true); // don't echo the initial load / remote-applied state back to the server
+
+  useEffect(() => {
+    if (skipSaveRef.current) { skipSaveRef.current = false; return; }
+    const t = setTimeout(() => { updateClient(client.id, { pipeline_state: pstateRef.current }).catch(() => {}); }, 700);
+    return () => clearTimeout(t);
+  }, [pstate, client.id]);
+
+  // Hydrate immediately on open, then poll for changes made elsewhere.
+  useEffect(() => {
+    let alive = true;
+    const pull = async () => {
+      try {
+        const c = await getClient(client.id);
+        const remote = c && c.pipeline_state;
+        if (alive && remote && (remote._rev || 0) > (pstateRef.current._rev || 0)) {
+          skipSaveRef.current = true;
+          setPstate(remote);
+        }
+      } catch {}
+    };
+    pull();
+    const iv = setInterval(pull, 7000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [client.id]);
+
+  const syncedField = (name, initial) => {
+    const value = pstate[name] === undefined ? initial : pstate[name];
+    const setValue = (updater) => setPstate(prev => {
+      const cur = prev[name] === undefined ? initial : prev[name];
+      const nextVal = typeof updater === 'function' ? updater(cur) : updater;
+      return { ...prev, [name]: nextVal, _rev: (prev._rev || 0) + 1 };
+    });
+    return [value, setValue];
+  };
+
+  const [step, setStep] = syncedField('step', 0);
+  const [termsText, setTermsText] = syncedField('termsText', '');       // scope+pricing summary from the Discuss chat
+  const [chatLog, setChatLog] = syncedField('chatLog', null);          // persisted Discuss conversation
+  const [termsDraft, setTermsDraft] = syncedField('termsDraft', null);
+  const [dealId, setDealId] = syncedField('dealId', null);
+  const [agreementId, setAgreementId] = syncedField('agreementId', null);
+  const [emailDraft, setEmailDraft] = syncedField('emailDraft', null);
+  const [emailTone, setEmailTone] = syncedField('emailTone', 'gain');
+  const [paymentMode, setPaymentMode] = syncedField('paymentMode', 'fixed'); // 'fixed' | 'custom'
   const [footer, setFooter] = useState(null); // { label, onClick, disabled, busy } set by the active step
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
@@ -1771,6 +2119,17 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
   };
   const stage = stageOf(client.stage);
   const steps = useMemo(() => stepsFor(paymentMode), [paymentMode]);
+
+  // Wipe every cached artifact for this lead so the next run starts clean.
+  // Called from the Overview step's "Restart pipeline" button.
+  const restartPipeline = () => {
+    if (!window.confirm('Restart the pipeline for this lead? Cached AI analysis, drafts, and pending selections will be cleared for everyone. Nothing already saved to the database is affected.')) return;
+    // Wipe every synced field (keeps the rev moving forward so other devices pick it up).
+    setPstate(prev => ({ _rev: (prev._rev || 0) + 1 }));
+    // Also wipe TermsStep's local caches (analysis / total / maint).
+    try { Object.keys(localStorage).forEach(k => { if (k.startsWith(`vtm-terms-${client.id}-`)) localStorage.removeItem(k); }); } catch {}
+    toast('success', 'Pipeline reset — start from the Discuss step.');
+  };
   const stepIdx = Math.min(step, steps.length - 1);
   const cur = steps[stepIdx];
   const advance = () => setStep(() => Math.min(steps.length - 1, stepIdx + 1));
@@ -1787,6 +2146,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{client.owner_name || 'No owner set'}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <FollowUpControl client={client} saveField={saveField} />
           <select className="form-input" style={{ width: 'auto', padding: '7px 12px', fontSize: 12, fontWeight: 700, color: stage.color, background: `${stage.color}14`, border: `1px solid ${stage.color}40`, borderRadius: 999 }}
             value={client.stage || 'lead'} onChange={e => saveField('stage', e.target.value)}>
             {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
@@ -1795,44 +2155,63 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
         </div>
       </div>
 
-      {/* Tabs: Pipeline | Business Details */}
-      <div style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        {[{ k: 'pipeline', label: 'Onboarding Pipeline' }, { k: 'details', label: 'Business Details' }].map(t => (
-          <button key={t.k} onClick={() => setView(t.k)} style={{ padding: '11px 14px', background: 'none', border: 'none', borderBottom: view === t.k ? '2px solid var(--orange)' : '2px solid transparent', cursor: 'pointer', color: view === t.k ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{t.label}</button>
-        ))}
-      </div>
+      {/* Sidebar nav + section content */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* Vertical section nav — sticky so it stays put while content scrolls */}
+        <aside style={{ width: 208, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'var(--surface)', padding: '14px 10px' }}>
+          <div style={{ position: 'sticky', top: 14, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {[{ k: 'overview', label: 'Overview', icon: Building2 }, { k: 'documents', label: 'Documents', icon: FolderOpen }, { k: 'pipeline', label: 'Projects', icon: ListChecks }].map(n => {
+            const on = view === n.k;
+            return (
+              <button key={n.k} onClick={() => setView(n.k)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 9, cursor: 'pointer', border: 'none', textAlign: 'left', fontSize: 13.5, fontWeight: 700, fontFamily: 'var(--font-display)', background: on ? 'var(--btn-black)' : 'transparent', color: on ? '#fff' : 'var(--muted)', transition: 'background 0.12s' }}>
+                <n.icon size={16} /> {n.label}
+              </button>
+            );
+          })}
+          </div>
+        </aside>
 
-      {view === 'details' ? (
+        {/* Section content */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      {view === 'documents' ? (
         <div style={{ flex: 1, padding: 24 }}>
-          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start', maxWidth: 940 }}>
-            <Card title="Business details">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                <Field label="Business Name" value={client.business_name} onSave={v => saveField('business_name', v)} placeholder="Business" />
-                <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
-                <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
-                <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
-                <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
-                <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
-                <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
-              </div>
-            </Card>
-            <Card title="Lead">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Temperature</span>
-                  <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />
+          <div style={{ maxWidth: 760 }}>
+            <LeadDocuments client={client} />
+          </div>
+        </div>
+      ) : view === 'overview' ? (
+        <div style={{ flex: 1, padding: 24 }}>
+          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', gap: 20, alignItems: 'start' }}>
+            {/* LEFT — business details + lead status */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+              <Card title="Business details">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 18 }}>
+                  <Field label="Business Name" value={client.business_name} onSave={v => saveField('business_name', v)} placeholder="Business" />
+                  <Field label="Contact" value={client.owner_name} onSave={v => saveField('owner_name', v)} placeholder="Contact name" />
+                  <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
+                  <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
+                  <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
+                  <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
+                  <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</span>
+                    <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Potential revenue</span>
+                    <RevenueField value={client.potential_value} type={client.potential_value_type}
+                      onSave={({ value, type }) => { saveField('potential_value', value); saveField('potential_value_type', type); }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Automated emails</span>
+                    <Switch on={client.auto_followups_enabled !== false} onChange={v => saveField('auto_followups_enabled', v)}
+                      labelOn="Follow-ups on" labelOff="Follow-ups off" />
+                  </div>
                 </div>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Rank</span>
-                  <PillSelect value={client.lead_rank || 'medium'} options={RANKS} onChange={v => saveField('lead_rank', v)} />
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Potential revenue ($)</span>
-                  <input className="form-input" type="number" min="0" step="100" defaultValue={client.potential_value ?? ''}
-                    onBlur={e => saveField('potential_value', e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 5000" />
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
+            {/* RIGHT — activity timeline */}
+            <LeadActivity client={client} />
           </div>
         </div>
       ) : (
@@ -1852,10 +2231,10 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
 
       {/* Step content */}
       <div style={{ flex: 1, padding: 24 }}>
-        {cur.key === 'overview' ? (
-          <LeadActivity client={client} />
+        {cur.key === 'discuss' ? (
+          <DiscussStep client={client} chatLog={chatLog} setChatLog={setChatLog} termsText={termsText} setTermsText={setTermsText} setFooter={setFooter} onReady={advance} onRestart={restartPipeline} />
         ) : cur.key === 'terms' ? (
-          <TermsStep client={client} savedDraft={termsDraft} setFooter={setFooter} paymentMode={paymentMode} setPaymentMode={setPaymentMode}
+          <TermsStep client={client} savedDraft={termsDraft} termsText={termsText} setTermsText={setTermsText} setFooter={setFooter} paymentMode={paymentMode} setPaymentMode={setPaymentMode}
             onApprove={(d) => { setTermsDraft(d); advance(); }} />
         ) : cur.key === 'deals' ? (
           <DealsStep client={client} termsDraft={termsDraft} savedDealId={dealId} setFooter={setFooter} onCreated={(id) => { setDealId(id); advance(); }} />
@@ -1863,12 +2242,10 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <AgreementStep client={client} termsDraft={termsDraft} setFooter={setFooter} onApproved={(id) => { setAgreementId(id); advance(); }} />
         ) : cur.key === 'payment' ? (
           <PaymentStep client={client} setFooter={setFooter} onDone={advance} />
-        ) : cur.key === 'access' ? (
-          <AccessStep client={client} setFooter={setFooter} onDone={advance} />
         ) : cur.key === 'proposal' ? (
           <ProposalStep client={client} emailDraft={emailDraft} setEmailDraft={setEmailDraft} tone={emailTone} setTone={setEmailTone} setFooter={setFooter} onDone={advance} />
         ) : cur.key === 'send' ? (
-          <SendStep client={client} emailDraft={emailDraft} paymentMode={paymentMode} />
+          <SendStep client={client} emailDraft={emailDraft} onPatch={onPatch} paymentMode={paymentMode} />
         ) : null}
       </div>
 
@@ -1879,21 +2256,29 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
           <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>Step {stepIdx + 1} of {steps.length}</span>
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}> · {cur.label}</span>
         </div>
-        {footer ? (
+        {stepIdx === steps.length - 1 ? (
+          // Last step (Send): swap the dead Next button for a Done button that
+          // returns the user to the Leads list.
+          <button className="btn-primary" onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <CheckCircle2 size={15} /> Done
+          </button>
+        ) : footer ? (
           <button className="btn-primary" disabled={footer.disabled || footer.busy} onClick={footer.onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
             {footer.busy && <Spinner />}{footer.label} {!footer.busy && <ChevronRight size={15} />}
           </button>
         ) : (
-          <button className="btn-primary" disabled={stepIdx === steps.length - 1} onClick={advance}>Next <ChevronRight size={15} /></button>
+          <button className="btn-primary" onClick={advance}>Next <ChevronRight size={15} /></button>
         )}
       </div>
       </>
       )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function LeadActivity({ client }) {
+function LeadActivity({ client, onRestart }) {
   const clientId = client.id;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1907,6 +2292,8 @@ function LeadActivity({ client }) {
   const [summaryPrompt, setSummaryPrompt] = useState(null); // { text, title }
   const [summarizing, setSummarizing] = useState(false);
   const [expanded, setExpanded] = useState({}); // activity id -> forced open/closed
+  const [quick, setQuick] = useState('');        // inline "add a note" bar
+  const [hoverId, setHoverId] = useState(null);  // row hover -> reveal delete
 
   const load = async () => {
     try { const rows = await getClientActivity(clientId); setItems((rows || []).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))); }
@@ -1939,6 +2326,19 @@ function LeadActivity({ client }) {
     finally { setSaving(false); }
   };
 
+  // Inline "add a note to the timeline" — type + Enter (or Add), no form to open.
+  const addQuick = async () => {
+    const text = quick.trim();
+    if (!text || saving) return;
+    setSaving(true);
+    try {
+      await createClientActivity({ client_id: clientId, type: 'note', tag: 'Note', body: text, created_at: new Date().toISOString() });
+      setQuick(''); await load();
+      if (text.split(/\s+/).filter(Boolean).length >= 15) setSummaryPrompt({ text, title: 'Note' });
+    } catch (e) { toast('error', e.message); }
+    finally { setSaving(false); }
+  };
+
   const runSummary = async () => {
     setSummarizing(true);
     try { await generateClientSummary({ client_id: clientId, text: summaryPrompt.text, title: summaryPrompt.title }); toast('success', 'Summary saved to the file'); setSummaryPrompt(null); await load(); }
@@ -1949,12 +2349,42 @@ function LeadActivity({ client }) {
   const remove = async (a) => { setItems(x => x.filter(i => i.id !== a.id)); try { await deleteClientActivity(a.id); } catch (e) { toast('error', e.message); } };
   const toggleTask = async (a) => { const status = a.status === 'done' ? 'todo' : 'done'; setItems(x => x.map(i => i.id === a.id ? { ...i, status } : i)); try { await updateClientActivity(a.id, { status }); } catch (e) { toast('error', e.message); } };
 
-  const inp = { width: '100%' };
+  // Inline note editing — keeps saved terms/notes current so the agreement AI
+  // never drafts from stale numbers.
+  const [editingId, setEditingId] = useState(null);
+  const [editBody, setEditBody] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const startEditNote = (a) => { setEditingId(a.id); setEditBody(a.body || ''); };
+  const saveEditNote = async () => {
+    const id = editingId, body = editBody;
+    setSavingEdit(true);
+    try {
+      await updateClientActivity(id, { body });
+      setItems(x => x.map(i => i.id === id ? { ...i, body } : i));
+      setEditingId(null);
+      toast('success', 'Note updated.');
+    } catch (e) { toast('error', e.message); }
+    finally { setSavingEdit(false); }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 'calc(100vh - 168px)' }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Activity</span>
-        {!adding && <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={openAdd}><Plus size={14} /> New</button>}
+        {onRestart && (
+          <button className="btn-ghost" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12 }} onClick={onRestart} title="Clear cached AI outputs and start the pipeline over">
+            <ChevronLeft size={13} /> Restart pipeline
+          </button>
+        )}
+        {!adding && <button className="btn-ghost" style={{ marginLeft: onRestart ? 0 : 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', fontSize: 12 }} onClick={openAdd} title="Log a call, meeting, or note with a date and document"><Plus size={13} /> Detailed</button>}
+      </div>
+
+      {/* Inline add-a-note bar — just type and hit Add/Enter */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input className="form-input" placeholder="Add a note to the timeline…" value={quick}
+          onChange={e => setQuick(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addQuick(); }} style={{ flex: 1 }} />
+        <button className="btn-primary" onClick={addQuick} disabled={!quick.trim() || saving}>Add</button>
       </div>
 
       {adding && (
@@ -2001,72 +2431,178 @@ function LeadActivity({ client }) {
         </div>
       )}
 
+      {/* Scrollable region — timeline + files + uploader scroll on their own so the page doesn't */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 4 }}>
+      {/* Timeline — connected dots with a vertical rail */}
       {loading ? <div style={{ color: 'var(--muted)' }}>Loading…</div>
-        : items.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13, padding: '10px 0' }}>No activity yet. Click <b>New</b> to log a call, note, or meeting.</div>
-        : items.map(a => {
-          if (a.type === 'task') return (
-            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 11, boxShadow: 'var(--shadow-sm)' }}>
-              <button onClick={() => toggleTask(a)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>{a.status === 'done' ? <CheckCircle2 size={19} style={{ color: '#22c55e' }} /> : <Circle size={19} style={{ color: 'var(--muted)' }} />}</button>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: a.status === 'done' ? 'var(--muted)' : 'var(--text)', textDecoration: a.status === 'done' ? 'line-through' : 'none', fontWeight: 600 }}>{a.title}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{a.assigned_to ? a.assigned_to + ' · ' : ''}{a.due_date ? 'due ' + a.due_date : actTimeAgo(a.created_at)}</div>
-              </div>
-              <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
-            </div>
-          );
-          if (a.type === 'call') return (
-            <div key={a.id} style={{ display: 'flex', gap: 12, padding: '13px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{a.direction === 'inbound' ? <PhoneIncoming size={14} style={{ color: '#22c55e' }} /> : <PhoneOutgoing size={14} style={{ color: 'var(--orange)' }} />}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', textTransform: 'capitalize' }}>{a.direction} call</span>
-                  {a.outcome && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.1)', borderRadius: 999, padding: '1px 9px' }}>{a.outcome}</span>}
-                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{actTimeAgo(a.created_at)}</span>
-                  <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
-                </div>
-                {a.body && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{a.body}</div>}
-              </div>
-            </div>
-          );
+        : items.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13, padding: '10px 0' }}>No activity yet. Type above to add your first note.</div>
+        : <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {items.map((a, idx) => {
+          const isLast = idx === items.length - 1;
+          const hovered = hoverId === a.id;
           const summary = isSummary(a);
           const c = catOf(a.tag);
-          const chipColor = summary ? 'var(--orange)' : (c?.color || NOTE_TAGS[a.tag] || 'var(--muted)');
-          const Icon = summary ? Sparkles : (c?.icon || (a.type === 'meeting' ? Calendar : a.type === 'email' ? Mail : StickyNote));
-          // Long notes collapse by default; summaries always start expanded.
-          const long = (a.body || '').length > 280;
-          const open = expanded[a.id] ?? (summary || !long);
+          const done = a.type === 'task' && a.status === 'done';
+          const dotColor = summary ? '#2563eb'
+            : a.type === 'task' ? (done ? '#22c55e' : 'var(--muted)')
+            : (a.type === 'call' || a.type === 'meeting' || a.type === 'email') ? '#2563eb'
+            : (c?.color || NOTE_TAGS[a.tag] || 'var(--muted)');
+          const titleText = a.type === 'call'
+            ? `${a.direction === 'inbound' ? 'Inbound' : 'Outbound'} call${a.outcome ? ' — ' + a.outcome : ''}`
+            : (a.title || '');
+          const bodyText = a.body || '';
+          const primaryIsBody = !titleText;
           return (
-            <div key={a.id} style={{ padding: '14px 16px', background: summary ? 'rgba(37,99,235,0.05)' : 'var(--surface)', border: `1px solid ${summary ? 'rgba(37,99,235,0.3)' : 'var(--border)'}`, borderRadius: 12, boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Icon size={14} style={{ color: chipColor, flexShrink: 0 }} />
-                {a.tag && <span style={{ fontSize: 10.5, fontWeight: 700, color: chipColor, background: chipColor === 'var(--muted)' ? 'var(--surface-2)' : chipColor + '18', border: `1px solid ${chipColor === 'var(--muted)' ? 'var(--border)' : chipColor + '40'}`, borderRadius: 999, padding: '2px 9px' }}>{a.tag}</span>}
-                {a.title && !summary && <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{a.title}</span>}
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{actDate(a.created_at)} · {a.author || 'Ray'}</span>
-                {long && (
-                  <button className="btn-ghost" style={{ padding: '3px 6px' }} title={open ? 'Collapse' : 'Expand'} onClick={() => setExpanded(e => ({ ...e, [a.id]: !open }))}>
-                    <ChevronDown size={14} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+            <div key={a.id} onMouseEnter={() => setHoverId(a.id)} onMouseLeave={() => setHoverId(null)} style={{ display: 'flex', gap: 13, position: 'relative' }}>
+              {/* rail: connecting line + dot */}
+              <div style={{ position: 'relative', width: 12, flexShrink: 0, alignSelf: 'stretch' }}>
+                {idx !== 0 && <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 0, height: 12, width: 2, background: 'var(--border)' }} />}
+                {!isLast && <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 12, bottom: 0, width: 2, background: 'var(--border)' }} />}
+                {a.type === 'task'
+                  ? <button onClick={() => toggleTask(a)} title="Toggle task" style={{ position: 'relative', zIndex: 1, display: 'block', margin: '7px auto 0', width: 11, height: 11, borderRadius: '50%', border: `2px solid ${done ? '#22c55e' : 'var(--muted)'}`, background: done ? '#22c55e' : 'var(--bg)', cursor: 'pointer', padding: 0 }} />
+                  : <span style={{ position: 'relative', zIndex: 1, display: 'block', margin: '7px auto 0', width: 9, height: 9, borderRadius: '50%', background: dotColor }} />}
+              </div>
+              {/* content */}
+              <div style={{ flex: 1, minWidth: 0, paddingBottom: isLast ? 2 : 18, display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {titleText && <div style={{ fontSize: 14, fontWeight: 600, color: done ? 'var(--muted)' : 'var(--text)', textDecoration: done ? 'line-through' : 'none', lineHeight: 1.4, wordBreak: 'break-word' }}>{titleText}</div>}
+                  {editingId === a.id ? (
+                    <div style={{ marginTop: titleText ? 6 : 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <textarea value={editBody} onChange={e => setEditBody(e.target.value)} rows={Math.min(14, Math.max(4, editBody.split('\n').length))}
+                        autoFocus style={{ width: '100%', boxSizing: 'border-box', background: 'var(--surface-2)', border: '1px solid var(--orange)', borderRadius: 10, padding: '10px 12px', fontSize: 13.5, lineHeight: 1.55, color: 'var(--text)', resize: 'vertical', outline: 'none' }} />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12.5 }} disabled={savingEdit} onClick={saveEditNote}>{savingEdit ? 'Saving…' : 'Save'}</button>
+                        <button className="btn-ghost" style={{ padding: '6px 12px', fontSize: 12.5 }} disabled={savingEdit} onClick={() => setEditingId(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    bodyText && <div style={{ fontSize: 14, fontWeight: primaryIsBody ? 500 : 400, color: primaryIsBody ? 'var(--text)' : 'var(--muted)', lineHeight: 1.5, marginTop: titleText ? 3 : 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{bodyText}</div>
+                  )}
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{actDate(a.created_at)}</div>
+                  {a.attachment_url && (
+                    <a href={a.attachment_url} target="_blank" rel="noreferrer" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--link)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                      <Download size={12} /> {a.attachment_name || 'Document'}
+                    </a>
+                  )}
+                </div>
+                {a.type === 'note' && editingId !== a.id && (
+                  <button onClick={() => startEditNote(a)} title="Edit note" style={{ flexShrink: 0, alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', color: 'var(--muted)', opacity: hovered ? 1 : 0, transition: 'opacity 0.12s' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--orange)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+                    <Pencil size={14} />
                   </button>
                 )}
-                <button className="btn-ghost" style={{ padding: '3px 5px', color: 'var(--red)' }} onClick={() => remove(a)}><Trash2 size={13} /></button>
+                <button onClick={() => remove(a)} title="Delete" style={{ flexShrink: 0, alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', color: 'var(--muted)', opacity: hovered ? 1 : 0, transition: 'opacity 0.12s' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--red)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}>
+                  <Trash2 size={14} />
+                </button>
               </div>
-              {a.body && <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5, ...(open ? {} : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>{a.body}</div>}
-              {long && !open && (
-                <button onClick={() => setExpanded(e => ({ ...e, [a.id]: true }))} style={{ marginTop: 6, background: 'none', border: 'none', color: 'var(--link)', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'var(--font-display)' }}>Show more</button>
-              )}
-              {a.attachment_url && (
-                <a href={a.attachment_url} target="_blank" rel="noreferrer" style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--link)', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>
-                  <Download size={13} /> {a.attachment_name || 'Document'}
-                </a>
-              )}
             </div>
           );
         })}
+        </div>}
+
+      </div>
 
       {summaryPrompt && (
         <Modal title="Generate summary?" onClose={() => setSummaryPrompt(null)} onSubmit={runSummary} submitLabel={summarizing ? 'Generating…' : 'Yes, generate'}>
           <p style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.5 }}>Have AI summarize this into a clean recap (key points + action items) and save it to <strong style={{ color: 'var(--text)' }}>{client.business_name}</strong>'s file?</p>
         </Modal>
       )}
+    </div>
+  );
+}
+
+// Documents tab — drag-and-drop AI file processing + the list of everything
+// that's been uploaded for this lead. Files are stored as activity notes with
+// an attachment, so this reads the same source the timeline does.
+function LeadDocuments({ client }) {
+  const clientId = client.id;
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [aiUploading, setAiUploading] = useState([]);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef(null);
+
+  const load = async () => {
+    try {
+      const rows = await getClientActivity(clientId);
+      setFiles((rows || []).filter(a => a.attachment_url).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')));
+    } catch (e) { toast('error', e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, [clientId]);
+
+  const runAiUpload = async (fileList) => {
+    const list = Array.from(fileList || []).filter(Boolean);
+    if (!list.length) return;
+    setAiUploading(list.map(f => ({ name: f.name, status: 'uploading' })));
+    for (let i = 0; i < list.length; i++) {
+      try { await uploadClientDocument(clientId, list[i]); setAiUploading(prev => prev.map((x, idx) => idx === i ? { ...x, status: 'done' } : x)); }
+      catch (err) { setAiUploading(prev => prev.map((x, idx) => idx === i ? { ...x, status: 'error' } : x)); toast('error', `${list[i].name}: ${err.message}`); }
+    }
+    await load();
+    setTimeout(() => setAiUploading([]), 2500);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 'calc(100vh - 168px)' }}>
+      <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Documents</span>
+
+      {/* Drop files to auto-process with AI */}
+      <div
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => { e.preventDefault(); setDragOver(false); runAiUpload(e.dataTransfer.files); }}
+        onClick={() => inputRef.current?.click()}
+        style={{
+          padding: '26px 20px', borderRadius: 14,
+          background: dragOver ? 'rgba(37,99,235,0.06)' : 'var(--surface)',
+          border: `2px dashed ${dragOver ? 'var(--orange)' : 'var(--border)'}`,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, transition: 'all 0.15s', flexShrink: 0,
+        }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,155,38,0.10)', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Sparkles size={22} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Drop files to auto-process with AI</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>Contracts, briefs, meeting notes, receipts. We store the file, generate a summary + key points, and log it to the timeline.</div>
+        </div>
+        <input ref={inputRef} type="file" multiple hidden onChange={e => { runAiUpload(e.target.files); e.target.value = ''; }} />
+      </div>
+      {aiUploading.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, fontSize: 12, flexShrink: 0 }}>
+          {aiUploading.map((u, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, color: u.status === 'error' ? '#ef4444' : u.status === 'done' ? '#22c55e' : 'var(--muted)' }}>
+              {u.status === 'uploading' && <Loader size={11} style={{ animation: 'spin 1s linear infinite' }} />}
+              {u.status === 'done' && <CheckCircle2 size={11} />}
+              {u.status === 'error' && <X size={11} />}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{u.name}</span>
+              <span>{u.status === 'uploading' ? 'Processing…' : u.status === 'done' ? 'Done' : 'Failed'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Uploaded files list */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Files{files.length ? ` (${files.length})` : ''}</div>
+        {loading ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+          : files.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>No documents yet. Drop a file above to add one.</div>
+          : <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {files.map(f => (
+              <a key={f.id} href={f.attachment_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', textDecoration: 'none' }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FolderOpen size={16} style={{ color: 'var(--orange)' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.attachment_name || 'Document'}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{actDate(f.created_at)}</div>
+                </div>
+                <Download size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+              </a>
+            ))}
+          </div>}
+      </div>
     </div>
   );
 }
@@ -2095,6 +2631,120 @@ function Field({ label, value, onSave, placeholder }) {
   );
 }
 
+// Small on/off switch with an inline label.
+function Switch({ on, onChange, labelOn = 'On', labelOff = 'Off' }) {
+  return (
+    <button type="button" onClick={() => onChange(!on)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '5px 10px 5px 6px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${on ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`, background: on ? 'rgba(34,197,94,0.10)' : 'var(--surface-2)' }}>
+      <span style={{ width: 34, height: 20, borderRadius: 999, background: on ? '#22c55e' : 'var(--surface-3)', position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
+        <span style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }} />
+      </span>
+      <span style={{ fontSize: 12.5, fontWeight: 700, color: on ? '#16a34a' : 'var(--muted)' }}>{on ? labelOn : labelOff}</span>
+    </button>
+  );
+}
+
+// Compact revenue display that expands into a small popover for editing the
+// amount + billing cadence. Collapsed it reads like "$1,500 · one-time".
+function RevenueField({ value, type, onSave }) {
+  const [open, setOpen] = useState(false);
+  const [amt, setAmt] = useState(value ?? '');
+  const [cadence, setCadence] = useState(type || 'one_time');
+  const ref = useRef(null);
+  useEffect(() => { setAmt(value ?? ''); setCadence(type || 'one_time'); }, [value, type, open]);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  const commit = () => {
+    const n = amt === '' || amt == null ? null : Number(amt);
+    onSave({ value: Number.isNaN(n) ? null : n, type: cadence });
+    setOpen(false);
+  };
+  const hasVal = value != null && value !== '';
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '9px 11px', borderRadius: 10, cursor: 'pointer', border: `1px solid ${open ? 'var(--orange)' : 'var(--border)'}`, background: 'var(--surface-2)', textAlign: 'left', transition: 'border-color 0.12s' }}>
+        {hasVal ? (
+          <>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{fmtUsd(value)}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: type === 'monthly' ? 'var(--orange)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{type === 'monthly' ? '/ mo' : 'one-time'}</span>
+          </>
+        ) : <span style={{ fontSize: 13, color: 'var(--muted)' }}>Set potential revenue</span>}
+        <Pencil size={12} style={{ marginLeft: 'auto', color: 'var(--muted)', flexShrink: 0 }} />
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 16px 40px rgba(0,0,0,0.45)', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Amount ($)</span>
+            <input className="form-input" type="number" min="0" step="100" autoFocus value={amt}
+              onChange={e => setAmt(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setOpen(false); }}
+              placeholder="e.g. 5000" />
+          </div>
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Billing</span>
+            <div style={{ display: 'flex', gap: 6, background: 'var(--surface-2)', borderRadius: 9, padding: 3 }}>
+              {[{ k: 'one_time', label: 'One-time' }, { k: 'monthly', label: 'Monthly' }].map(o => {
+                const on = cadence === o.k;
+                return (
+                  <button key={o.k} type="button" onClick={() => setCadence(o.k)}
+                    style={{ flex: 1, padding: '7px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: 'var(--font-display)', border: 'none', background: on ? 'var(--orange)' : 'transparent', color: on ? '#fff' : 'var(--muted)', transition: 'background 0.12s' }}>{o.label}</button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn-ghost" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="btn-primary" onClick={commit}>Save</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Compact roll-up of a client's projects on the Overview — each with its
+// lifecycle status + payment badge, so the client page reads as a summary of
+// their work without opening the Projects tab.
+function ClientProjectsRollup({ client }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        const all = await getProjects();
+        setRows(all.filter(p => p.client_id === client.id || (!p.client_id && p.client === client.business_name)));
+      } catch {}
+      finally { setLoading(false); }
+    })();
+  }, [client.id]);
+
+  return (
+    <Card title="Projects">
+      {loading ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+        : rows.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>No projects yet. Add one from the Projects tab.</div>
+        : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {rows.map(p => {
+            const start = projectStartDate(p);
+            return (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10 }}>
+              <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: 13.5, flex: 1, minWidth: 100 }}>{p.name}</span>
+              {start && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Started {start}</span>}
+              {p.value ? <span style={{ fontSize: 12.5, fontWeight: 800, color: '#22c55e' }}>{fmtUsd(p.value)}{p.billing_type === 'monthly' ? '/mo' : ''}</span> : null}
+              <StatusBadge status={projectPaymentBadge(p)} />
+              <StatusBadge status={p.status || 'Onboarding'} />
+            </div>
+            );
+          })}
+        </div>}
+    </Card>
+  );
+}
+
 function OverviewTab({ client, saveField }) {
   return (
     <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start' }}>
@@ -2118,6 +2768,8 @@ function OverviewTab({ client, saveField }) {
           </div>
         </Card>
 
+        <ClientProjectsRollup client={client} />
+
         <Card title="What we're doing / notes">
           <textarea className="form-input" rows={7} defaultValue={client.notes || ''} onBlur={e => saveField('notes', e.target.value)} placeholder="Scope, goals, what VTM is delivering for this client…" style={{ resize: 'vertical', width: '100%' }} />
         </Card>
@@ -2126,12 +2778,13 @@ function OverviewTab({ client, saveField }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <Card title="Quick info">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Stage</span>
-              <div><StageBadge stage={client.stage} /></div>
-            </div>
             <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Walk-in / Referral…" />
             <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Automated emails</span>
+              <Switch on={client.auto_followups_enabled !== false} onChange={v => saveField('auto_followups_enabled', v)}
+                labelOn="Reminders on" labelOff="Reminders off" />
+            </div>
             {client.created_at && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Client since</span>
@@ -3061,19 +3714,26 @@ function ProjectsTab({ client }) {
   };
   useEffect(() => { load(); }, [client.id]);
 
+  const setStatus = async (p, status) => {
+    setRows(rs => rs.map(r => r.id === p.id ? { ...r, status } : r));
+    try { await updateProject(p.id, { status }); } catch (e) { toast('error', e.message); }
+  };
+
   if (loading) return <div style={{ color: 'var(--muted)' }}>Loading…</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {rows.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>No projects linked to this client yet. Create one from the Projects page.</div>}
       {rows.map(p => {
-        const ps = PLAN_STATUS[p.plan_status] || PLAN_STATUS.none;
         return (
           <div key={p.id} style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <Briefcase size={15} style={{ color: 'var(--orange)' }} />
-              <span style={{ fontWeight: 700, color: 'var(--text)', flex: 1 }}>{p.name}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: ps.color, background: `${ps.color}18`, border: `1px solid ${ps.color}40`, padding: '2px 10px', borderRadius: 999 }}>{ps.label}</span>
+              <span style={{ fontWeight: 700, color: 'var(--text)', flex: 1, minWidth: 120 }}>{p.name}</span>
+              {projectStartDate(p) && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Started {projectStartDate(p)}</span>}
+              {p.value ? <span style={{ fontSize: 12.5, fontWeight: 800, color: '#22c55e' }}>{fmtUsd(p.value)}{p.billing_type === 'monthly' ? '/mo' : ''}</span> : null}
+              <StatusBadge status={projectPaymentBadge(p)} />
+              <StatusBadge status={p.status || 'Onboarding'} options={PROJECT_LIFECYCLE} onChange={s => setStatus(p, s)} />
             </div>
             {p.scope && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>{p.scope}</div>}
           </div>

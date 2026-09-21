@@ -43,6 +43,10 @@ export const getAdminUsers    = () => request('/admin-users');
 export const createAdminUser  = (data) => request('/admin-users', { method: 'POST', body: JSON.stringify(data) });
 export const updateAdminUser  = (id, data) => request(`/admin-users?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteAdminUser  = (id) => request(`/admin-users?id=${id}`, { method: 'DELETE' });
+
+// Admin: who gets which push notifications (mobile app)
+export const getPushPrefs = () => request('/push?action=prefs');
+export const setPushPrefs = (userId, prefs) => request('/push?action=set-prefs', { method: 'POST', body: JSON.stringify({ user_id: userId, prefs }) });
 export const resetUserPassword = (id, password) => request(`/admin-users?id=${id}&action=reset-password`, { method: 'PUT', body: JSON.stringify({ password }) });
 export const upsertUserGrant  = (id, data) => request(`/admin-users?id=${id}&action=grant`, { method: 'POST', body: JSON.stringify(data) });
 export const revokeUserGrant  = (id, client_id) => request(`/admin-users?id=${id}&client_id=${client_id}&action=grant`, { method: 'DELETE' });
@@ -76,6 +80,7 @@ export const clockIn          = (data = {}) => request('/time-entries?action=clo
 export const clockOut         = (data = {}) => request('/time-entries?action=clock-out', { method: 'POST', body: JSON.stringify(data) });
 export const addTimeEntry     = (data) => request('/time-entries?action=add', { method: 'POST', body: JSON.stringify(data) });
 export const markTimePaid     = (data) => request('/time-entries?action=mark-paid', { method: 'POST', body: JSON.stringify(data) });
+export const payTimeRange     = (data) => request('/time-entries?action=pay-range', { method: 'POST', body: JSON.stringify(data) });
 export const setEmployeeRate  = (data) => request('/time-entries?action=set-rate', { method: 'POST', body: JSON.stringify(data) });
 export const updateTimeEntry  = (id, data) => request(`/time-entries?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTimeEntry  = (id) => request(`/time-entries?id=${id}`, { method: 'DELETE' });
@@ -149,6 +154,48 @@ export const updateQueueItem = (id, data) => request(`/email-queue?id=${id}`, { 
 export const deleteQueueItem = (id) => request(`/email-queue?id=${id}`, { method: 'DELETE' });
 export const sendQueueItem   = (id) => request(`/email-queue?id=${id}&action=send`, { method: 'POST' });
 export const draftQueueItem  = (id) => request(`/email-queue?id=${id}&action=draft`, { method: 'POST' });
+
+// Gmail near-real-time label sync. Call with no id to get an initial anchor,
+// then poll with the last historyId to receive changes since then.
+export const gmailSync = (startHistoryId) =>
+  request(`/gmail-sync${startHistoryId ? `?startHistoryId=${encodeURIComponent(startHistoryId)}` : ''}`);
+
+// Batch label refresh — force-refetch labelIds for the given message IDs from Gmail.
+// Used by the manual Refresh button so pre-existing labels applied outside our
+// history window still make it into the CRM cache.
+export const gmailRefreshLabels = (ids) => {
+  if (!Array.isArray(ids) || !ids.length) return Promise.resolve({ changes: [], refreshed: 0 });
+  return request(`/gmail-sync?ids=${encodeURIComponent(ids.join(','))}`);
+};
+
+// Upload a client-facing document (contract, brief, discovery notes, receipt, etc.).
+// Server runs AI over extractable content and logs a summary as an activity note.
+export const uploadClientDocument = async (client_id, file) => {
+  const reader = new FileReader();
+  const data_base64 = await new Promise((res, rej) => {
+    reader.onload = () => res(reader.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+  return request('/client-document', {
+    method: 'POST',
+    body: JSON.stringify({ client_id, filename: file.name, content_type: file.type, data_base64 }),
+  });
+};
+
+// Attachment upload — turns a File into { url, name, mime, size } via Supabase Storage.
+export const uploadEmailAttachment = async (client_id, file) => {
+  const reader = new FileReader();
+  const data_base64 = await new Promise((res, rej) => {
+    reader.onload = () => res(reader.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+  return request('/email-upload-attachment', {
+    method: 'POST',
+    body: JSON.stringify({ client_id, filename: file.name, content_type: file.type, data_base64 }),
+  });
+};
 
 // Email Generation
 export const generateSingleEmail = (lead_id, focus, extra_context) =>
@@ -321,6 +368,13 @@ export const updateClientPlatform = (id, data)  => request(`/client-platforms?id
 export const deleteClientPlatform = (id)        => request(`/client-platforms?id=${id}`, { method: 'DELETE' });
 
 // Client onboarding / access checklist (portal to-dos the client checks off)
+// Delivery board (kanban of clients in delivery)
+export const getDeliveryBoard     = ()                 => request('/delivery-board?action=board');
+export const moveDeliveryCard     = (id, delivery_stage) => request(`/delivery-board?action=move&id=${id}`, { method: 'PATCH', body: JSON.stringify({ delivery_stage }) });
+export const setContentQuota      = (id, quota)        => request(`/delivery-board?action=quota&id=${id}`, { method: 'POST', body: JSON.stringify(quota) });
+export const bumpContentProgress  = (id, kind, delta = 1) => request(`/delivery-board?action=progress&id=${id}`, { method: 'POST', body: JSON.stringify({ kind, delta }) });
+export const generateSocialReport = (id)               => request(`/delivery-board?action=report&id=${id}`, { method: 'POST' });
+
 export const getClientTasks   = (client_id) => request(`/client-tasks?client_id=${client_id}`);
 export const createClientTask = (data)      => request('/client-tasks', { method: 'POST', body: JSON.stringify(data) });
 export const updateClientTask = (id, data)  => request(`/client-tasks?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -329,6 +383,10 @@ export const deleteClientTask = (id)        => request(`/client-tasks?id=${id}`,
 // MailerLite email blast (regular campaign) to a group
 export const getCampaignDefaults = (client_id) => request(`/mailerlite-campaign?client_id=${client_id}`);
 export const sendMailerliteCampaign = (data)   => request('/mailerlite-campaign', { method: 'POST', body: JSON.stringify(data) });
+export const deleteMailerliteCampaign = (client_id, campaign_id) =>
+  request(`/mailerlite-campaign?client_id=${client_id}&campaign_id=${campaign_id}`, { method: 'DELETE' });
+export const rescheduleMailerliteCampaign = (data) =>
+  request('/mailerlite-campaign', { method: 'PUT', body: JSON.stringify(data) });
 
 // Recurring email-blast automations (weekly, by weekday + time)
 export const getEmailAutomations   = (client_id) => request(`/email-automations?client_id=${client_id}`);
@@ -401,6 +459,7 @@ export const previewAgreementToken = (id)      => request(`/agreements?id=${id}&
 export const sendAgreementForSignature = (id)  => request(`/agreements?id=${id}&action=send`, { method: 'POST' });
 export const updatePayment       = (id, status) => request(`/agreements?id=${id}&action=payment`, { method: 'PATCH', body: JSON.stringify({ status }) });
 // AI agreement builder
+export const agreementChat    = (client_id, messages) => request('/agreement-ai?action=chat', { method: 'POST', body: JSON.stringify({ client_id, messages }) });
 export const analyzeDeal      = (client_id)        => request('/agreement-ai?action=analyze', { method: 'POST', body: JSON.stringify({ client_id }) });
 export const generateAgreement = (client_id, terms, base, mode) => request('/agreement-ai?action=generate', { method: 'POST', body: JSON.stringify({ client_id, terms, base, mode }) });
 export const suggestProjects   = (client_id) => request('/agreement-ai?action=suggest-projects', { method: 'POST', body: JSON.stringify({ client_id }) });
@@ -412,6 +471,7 @@ export const setupCustomAgreement = (client_id, data) => request(`/agreements?ac
 export const markAgreementSent = (id) => request(`/agreements?id=${id}&action=mark-sent`, { method: 'POST' });
 export const startMaintenance  = (id) => request(`/agreements?id=${id}&action=start-maintenance`, { method: 'POST' });
 export const approveAgreement  = (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) });
+export const saveAgreementDoc  = (client_id, doc) => request('/agreement-ai?action=save-doc', { method: 'POST', body: JSON.stringify({ client_id, ...doc }) });
 
 // Content Clients
 export const getContentClients = () => request('/content-clients');
@@ -574,9 +634,12 @@ export const editEmailAI = async (data, { onProgress } = {}) => {
 
 // MailerLite groups for a client (for broadcast audience picker)
 export const getMailerliteGroups = (client_id) => request(`/mailerlite-groups?client_id=${client_id}`);
+export const createMailerliteGroup = (client_id, name) => request('/mailerlite-groups', { method: 'POST', body: JSON.stringify({ client_id, name }) });
 // Live MailerLite subscribers (marketing audience) — optionally filtered by group
 export const getMailerliteSubscribers = (client_id, group_id) =>
   request(`/mailerlite-subscribers?client_id=${client_id}${group_id ? `&group_id=${group_id}` : ''}`);
+export const updateMailerliteSubscriber = (data) =>
+  request('/mailerlite-subscribers', { method: 'PUT', body: JSON.stringify(data) });
 
 // ══════════════════════════════════════════════════════════════
 // ══ ACADEMY ADMIN API ══

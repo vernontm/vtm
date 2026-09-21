@@ -116,12 +116,14 @@ export default function InlineEdit({
         gap: 4,
         padding: '2px 6px',
         borderRadius: 4,
-        minWidth: 32,
+        minWidth: 0,
         minHeight: 22,
         color: value ? 'var(--text)' : 'var(--muted)',
         transition: 'background 0.1s, filter 0.25s ease',
         userSelect: 'none',
         lineHeight: '18px',
+        wordBreak: 'break-word',
+        overflowWrap: 'anywhere',
       }}
       onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-3)')}
       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}

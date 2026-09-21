@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   RefreshCw, FolderOpen, CheckSquare, ListChecks,
   Calendar, Plus, Trash2, AlertTriangle,
-  TrendingUp, DollarSign, CreditCard, Bell, Check, X, Repeat,
+  TrendingUp, DollarSign, CreditCard, Bell, Check, X, Repeat, Link2,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -110,7 +110,8 @@ function WeekMeetings({ meetings, onMeetingClick }) {
                   <span style={{
                     fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
                     color: isToday ? '#fff' : 'var(--muted)',
-                    background: isToday ? 'var(--link)' : 'transparent',
+                    background: isToday ? 'var(--orange)' : 'transparent',
+                    boxShadow: isToday ? '0 0 0 3px rgba(37,99,235,0.20)' : 'none',
                     borderRadius: 999, padding: isToday ? '2px 9px' : '0',
                   }}>{WD[d.getDay()]} {d.getDate()}</span>
                 </div>
@@ -126,7 +127,7 @@ function WeekMeetings({ meetings, onMeetingClick }) {
                     >
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#784bd1', flexShrink: 0 }} />
                       <span style={{ fontSize: 12.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontWeight: 700 }}>{fmtTime(m.start_time)}</span> {m.title || m.summary || '(no title)'}
+                        <span style={{ fontWeight: 700 }}>{fmtTime(m.start_time)}</span> <span className="pii-name">{m.title || m.summary || '(no title)'}</span>
                       </span>
                     </div>
                   ))}
@@ -178,9 +179,9 @@ function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32,
             borderRadius: 8, cursor: 'pointer', flexShrink: 0,
-            background: urgent ? '#ef444418' : 'var(--surface-2)',
-            border: `1px solid ${urgent ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`,
-            color: urgent ? '#ef4444' : 'var(--muted)',
+            background: urgent ? '#2563eb18' : 'var(--surface-2)',
+            border: `1px solid ${urgent ? 'rgba(37,99,235,0.5)' : 'var(--border)'}`,
+            color: urgent ? '#2563eb' : 'var(--muted)',
           }}
         >
           <AlertTriangle size={14} />
@@ -228,7 +229,7 @@ function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
                 {t.done && <Check size={12} color="#fff" />}
               </button>
               {t.urgent && !t.done && (
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} title="Urgent" />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb', flexShrink: 0 }} title="Urgent" />
               )}
               <span style={{
                 flex: 1, minWidth: 0, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -257,6 +258,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(null);
+  const [range, setRange] = useState('30d');   // revenue-analytics window
   const [meetings, setMeetings] = useState([]);
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -337,13 +339,49 @@ export default function Dashboard() {
   const money = (v) => `$${(Number(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
   const sr = stats?.stripeRevenue;
 
+  // Revenue-analytics windows for the dropdown.
+  const RANGES = [
+    { key: '24h', label: 'Last 24 hours' },
+    { key: '7d', label: 'Last 7 days' },
+    { key: '30d', label: 'Last 30 days' },
+    { key: '90d', label: 'Last 90 days' },
+    { key: '12mo', label: 'Last 12 months' },
+  ];
+  const rangeLabel = (RANGES.find(r => r.key === range) || RANGES[2]).label;
+  const win = sr?.windows?.[range] || { revenue: 0, count: 0 };
+  const connWin = sr?.connected?.windows?.[range] || null;
+
+  // Frosted-glass stat tile used across the analytics panel.
+  const glassTile = (label, value, sub, color, Icon) => (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.5))',
+      backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+      border: '1px solid rgba(255,255,255,0.85)', borderRadius: 16, padding: '16px 18px',
+      boxShadow: '0 8px 24px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+    }}>
+      <div style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+        <Icon size={12} color={color} /> {label}
+      </div>
+      <div className="private-value" style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1.1, letterSpacing: '-0.01em' }}>{value}</div>
+      <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{sub}</div>
+    </div>
+  );
+  const CHEVRON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E";
+
   return (
     <div className="dashboard-page" style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: 'var(--bg)' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Dashboard</div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>Vernon Tech & Media — What needs your attention</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
+            {(() => {
+              const h = new Date().getHours();
+              return h < 12 ? 'Good morning, Ray' : h < 18 ? 'Good afternoon, Ray' : 'Good evening, Ray';
+            })()}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · here's what's on your plate today
+          </div>
         </div>
         <button onClick={handleRefresh} style={{
           display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)',
@@ -354,6 +392,55 @@ export default function Dashboard() {
           Refresh
         </button>
       </div>
+
+      {/* ── Today band ────────────────────────────────────────────────────── */}
+      {(() => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+        const meetingsToday = (meetings || []).filter(m => {
+          const s = new Date(m.start_time || m.start);
+          return s >= today && s < tomorrow;
+        });
+        const overdueTodos = (todos || []).filter(t => !t.done && t.due_date && new Date(t.due_date) < today);
+        const outstandingProjects = (projects || []).filter(p => {
+          const total = Number(p.value || 0) + Number(p.recurring_amount || 0);
+          const paid  = Number(p.amount_paid || 0);
+          return total > 0 && paid < total;
+        });
+        const outstandingAmount = outstandingProjects.reduce((s, p) => {
+          const total = Number(p.value || 0) + Number(p.recurring_amount || 0);
+          return s + Math.max(0, total - Number(p.amount_paid || 0));
+        }, 0);
+        const items = [
+          { label: 'Meetings today',   value: meetingsToday.length, hint: meetingsToday[0] ? meetingsToday[0].summary || meetingsToday[0].title : 'Nothing on the calendar', color: '#2563eb', to: '/meetings' },
+          { label: 'Overdue tasks',    value: overdueTodos.length,  hint: overdueTodos.length ? overdueTodos[0].title : 'All clear',                                     color: '#2563eb', to: '/todos' },
+          { label: 'Awaiting payment', value: outstandingProjects.length, hint: outstandingAmount > 0 ? `$${outstandingAmount.toLocaleString()} outstanding` : 'Nothing outstanding',   color: '#f59e0b', to: '/projects' },
+          { label: 'Active leads',     value: (clients || []).filter(c => c.stage === 'lead').length, hint: 'In your pipeline right now', color: '#22c55e', to: '/leads' },
+        ];
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
+            {items.map(it => (
+              <button key={it.label} onClick={() => navigate(it.to)}
+                style={{
+                  textAlign: 'left', background: 'var(--surface)', border: '1px solid var(--border)',
+                  borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
+                  transition: 'transform var(--dur-fast, 150ms) var(--ease-out, cubic-bezier(0.4,0,0.2,1)), border-color var(--dur-fast, 150ms)',
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = it.color + '80'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}>
+                <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{it.label}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1 }}>{it.value}</div>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: it.color, marginBottom: 4 }} />
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.hint}</div>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── Client Activity alerts ── */}
       {alerts.length > 0 && (
@@ -391,35 +478,35 @@ export default function Dashboard() {
       {/* ── Stripe money row ── */}
       {sr ? (
         <div style={{ marginBottom: 22 }}>
-          {/* This Month · MRR · Balance · Last 30 Days */}
-          <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <TrendingUp size={12} /> This Month's Sales
+          {/* ── Glassmorphism revenue analytics panel ── */}
+          <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 22, marginBottom: 14,
+              background: 'linear-gradient(135deg,#e9f0ff 0%,#f4f9ff 45%,#eef3ff 100%)',
+              border: '1px solid rgba(37,99,235,0.14)', padding: 20,
+              boxShadow: '0 12px 40px rgba(37,99,235,0.12)' }}>
+            <div aria-hidden style={{ position: 'absolute', top: -70, right: -50, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.35), transparent 70%)', filter: 'blur(46px)', pointerEvents: 'none' }} />
+            <div aria-hidden style={{ position: 'absolute', bottom: -90, left: -40, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.28), transparent 70%)', filter: 'blur(48px)', pointerEvents: 'none' }} />
+
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(37,99,235,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <TrendingUp size={17} color="#2563eb" />
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15.5, color: 'var(--text)', letterSpacing: '-0.01em' }}>Revenue Analytics</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{rangeLabel}</div>
+                </div>
               </div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--orange)' }}>{money(sr.thisMonth)}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sr.thisMonthCount || 0} payment{sr.thisMonthCount !== 1 ? 's' : ''} this month</div>
+              <select value={range} onChange={e => setRange(e.target.value)}
+                style={{ appearance: 'none', WebkitAppearance: 'none', background: `rgba(255,255,255,0.72) url("${CHEVRON}") no-repeat right 12px center`, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(37,99,235,0.28)', borderRadius: 11, padding: '9px 34px 9px 14px', fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)', cursor: 'pointer', outline: 'none' }}>
+                {RANGES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+              </select>
             </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Repeat size={12} /> Current MRR
-              </div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#784bd1' }}>{money(sr.mrr)}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sr.activeSubCount || 0} active subscription{sr.activeSubCount !== 1 ? 's' : ''}</div>
-            </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <DollarSign size={12} /> Stripe Balance
-              </div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>{money(sr.available)}</div>
-              {sr.pending > 0 && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{money(sr.pending)} pending</div>}
-            </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <CreditCard size={12} /> Last 30 Days
-              </div>
-              <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{money(sr.last30Days)}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sr.last30Count || 0} payment{sr.last30Count !== 1 ? 's' : ''}</div>
+
+            <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+              {glassTile('Your Revenue', money(win.revenue), `${win.count} payment${win.count !== 1 ? 's' : ''} · ${rangeLabel.toLowerCase()}`, '#2563eb', TrendingUp)}
+              {connWin && glassTile('Connected Fees', money(connWin.revenue), `your cut · ${(sr.connected.accounts || []).length} connected account${(sr.connected.accounts || []).length !== 1 ? 's' : ''}`, '#7c3aed', Link2)}
+              {glassTile('Current MRR', money(sr.mrr), `${sr.activeSubCount || 0} active sub${sr.activeSubCount !== 1 ? 's' : ''}`, '#16a34a', Repeat)}
+              {glassTile('Stripe Balance', money(sr.available), sr.pending > 0 ? `${money(sr.pending)} pending` : 'available now', '#0ea5e9', DollarSign)}
             </div>
           </div>
 

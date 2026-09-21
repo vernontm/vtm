@@ -41,9 +41,16 @@ export function AuthProvider({ children }) {
         setLoading(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (cancelled) return;
-      setSession(session);
+      // Only propagate a session change when the signed-in USER actually changes
+      // (sign in, sign out, account switch). Supabase also fires this on every
+      // tab-focus token refresh with a brand-new session object; re-setting state
+      // there would churn the session reference, re-run the workspace loader, and
+      // remount the whole app — closing any open dialog and wiping typed work.
+      // API calls always read the freshest token via getSession() at call time,
+      // so we never need the refreshed object in React state.
+      setSession(prev => (prev?.user?.id === newSession?.user?.id ? prev : newSession));
     });
 
     return () => {

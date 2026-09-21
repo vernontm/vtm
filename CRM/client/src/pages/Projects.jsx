@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink, Receipt, Loader, Check } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink, Receipt, Loader, Check, Clock } from 'lucide-react';
 import { getProjects, createProject, updateProject, deleteProject, getProjectItems, createProjectItem, updateProjectItem, deleteProjectItem, createProjectInvoice, getClients } from '../api';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
@@ -8,13 +8,52 @@ import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
 import { usePageActions } from '../context/UiContext';
 import { toast } from '../components/Toast';
+import { MoneyCell, PersonCell, DateCell, ProgressCell, TextCell, EmptyStub, RowActions } from '../components/cells';
+import EmptyState from '../components/EmptyState';
+import SkeletonRow from '../components/SkeletonRow';
 
-const PROJECT_STATUSES = ['Active', 'In Progress', 'Working on it', 'Not Started', 'Completed', 'On Hold', 'Cancelled', 'Stuck'];
+// Project lifecycle: a project runs Onboarding -> Awaiting Access -> In Progress
+// -> Live -> Completed (Paused for on-hold work). This is per-PROJECT, not per
+// client, so one client can have several projects at different stages.
+// Builds are one-time deliverables with a start and an end. Retainers are
+// ongoing monthly services (maintenance, hosting, marketing) that never
+// "complete" — they just run until paused/cancelled.
+const BUILD_STATUSES = ['Onboarding', 'Awaiting Access', 'In Progress', 'Live', 'Completed', 'Paused'];
+const RETAINER_STATUSES = ['Active', 'Paused', 'Cancelled'];
+const PROJECT_STATUSES = BUILD_STATUSES; // legacy alias
+const projectKind = (p) => p?.project_kind || (p?.billing_type === 'monthly' ? 'retainer' : 'build');
+const statusesFor = (p) => projectKind(p) === 'retainer' ? RETAINER_STATUSES : BUILD_STATUSES;
 const ITEM_STATUSES  = ['Not Started', 'Working on it', 'Done', 'Stuck', 'On Hold'];
+
+// "Days until due" for the timeline column — clearer at a glance than a date
+// range. Retainers are Ongoing; finished builds read Done; overdue is flagged.
+function dueInfo(project) {
+  if (projectKind(project) === 'retainer') return { label: 'Ongoing', color: 'var(--muted)' };
+  if (['Completed', 'Cancelled', 'Live'].includes(project.status)) return { label: 'Done', color: '#22c55e' };
+  const end = project.end_date || project.start_date;
+  if (!end) return { label: 'No due date', color: 'var(--muted)' };
+  const d = new Date(`${end}T00:00:00`);
+  if (isNaN(d.getTime())) return { label: 'No due date', color: 'var(--muted)' };
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((d - today) / 86400000);
+  if (days > 1)  return { label: `${days} days left`, color: days <= 7 ? '#f59e0b' : 'var(--text)' };
+  if (days === 1) return { label: 'Due tomorrow', color: '#f59e0b' };
+  if (days === 0) return { label: 'Due today', color: '#f59e0b' };
+  return { label: `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} overdue`, color: '#ef4444' };
+}
 
 // Completed projects sink to the bottom of the single list; everything else
 // keeps its natural (most-recent-first) order.
-const COMPLETED_STATUSES = ['Completed', 'Cancelled'];
+const COMPLETED_STATUSES = ['Completed'];
+
+// Payment badge derived from what's actually been paid vs the project value.
+export function paymentBadge(project) {
+  const value = Number(project?.value) || 0;
+  const paid = Number(project?.amount_paid) || 0;
+  if (value > 0 && paid >= value) return 'Paid in full';
+  if (paid > 0) return 'Deposit paid';
+  return 'Unpaid';
+}
 
 // How the project is billed. 'monthly' projects have no fixed end — they show
 // an "Ongoing" pill instead of a progress bar. 'hybrid' covers an upfront fee
@@ -25,7 +64,7 @@ const BILLING_TYPES = [
   { key: 'hybrid',   label: 'One-time + recurring' },
 ];
 
-const EMPTY_PROJECT = { name: '', client: '', client_id: null, status: 'Active', billing_type: 'one_time', value: '', recurring_amount: '', start_date: '', end_date: '', notes: '' };
+const EMPTY_PROJECT = { name: '', client: '', client_id: null, project_kind: 'build', status: 'Onboarding', billing_type: 'one_time', value: '', recurring_amount: '', start_date: '', end_date: '', notes: '' };
 const EMPTY_ITEM    = { name: '', owner: '', status: 'Not Started', date: '', text: '', link: '' };
 
 // ── Subitem row (used inside the project detail page) ─────────────────────────
@@ -155,7 +194,8 @@ function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
           {project.client && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{project.client}</div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => saveField('status', s)} />
+          <StatusBadge status={paymentBadge(project)} />
+          <StatusBadge status={project.status} options={statusesFor(project)} onChange={s => saveField('status', s)} />
           <button className="btn-ghost" style={{ padding: '7px 9px', color: '#ff5c5c' }} onClick={onDelete} title="Delete project"><Trash2 size={15} /></button>
         </div>
       </div>
@@ -329,8 +369,10 @@ export default function Projects() {
   // One flat list. Completed/cancelled projects sink to the bottom; the sort is
   // stable so everything else keeps its existing order.
   const sorted = useMemo(() => {
-    const rank = (p) => (COMPLETED_STATUSES.includes(p.status) ? 1 : 0);
-    return [...filtered].sort((a, b) => rank(a) - rank(b));
+    // Cluster Builds first, then Retainers; within each, finished work sinks.
+    const kindRank = (p) => (projectKind(p) === 'retainer' ? 1 : 0);
+    const endRank = (p) => ((COMPLETED_STATUSES.includes(p.status) || p.status === 'Cancelled') ? 1 : 0);
+    return [...filtered].sort((a, b) => kindRank(a) - kindRank(b) || endRank(a) - endRank(b));
   }, [filtered]);
 
   // Selection helpers
@@ -355,6 +397,25 @@ export default function Projects() {
     try {
       await updateProject(project.id, { status });
       setProjects(ps => ps.map(p => p.id === project.id ? { ...p, status } : p));
+      // When a build with a recurring upkeep fee goes Live/Completed, spin up the
+      // paired ongoing Retainer automatically (so MRR is tracked from day one).
+      const rec = Number(project.recurring_amount) || 0;
+      if (projectKind(project) === 'build' && rec > 0 && (status === 'Live' || status === 'Completed')) {
+        const exists = projects.some(p => projectKind(p) === 'retainer'
+          && (p.client_id ? p.client_id === project.client_id : p.client === project.client)
+          && (p.name || '').startsWith(project.name));
+        if (!exists) {
+          await createProject({
+            name: `${project.name} — Maintenance`,
+            client: project.client || '', client_id: project.client_id || null,
+            project_kind: 'retainer', billing_type: 'monthly',
+            status: 'Active', value: 0, recurring_amount: rec,
+            notes: `Auto-created from the "${project.name}" build.`,
+          });
+          toast('success', `Started a $${rec.toLocaleString()}/mo retainer for ${project.client || project.name}.`);
+          await load();
+        }
+      }
     } catch (e) { toast('error', e.message); }
   };
 
@@ -420,6 +481,45 @@ export default function Projects() {
   const formatMoney = (v) => `$${Number(v || 0).toLocaleString()}`;
   const isOngoing   = (p) => p.billing_type === 'monthly';
 
+  // ── Payment tracking ─────────────────────────────────────────────────────
+  // Which project's "mark paid" popover is currently open (keyed by project id).
+  const [payingId, setPayingId] = useState(null);
+  const [payDraft, setPayDraft] = useState({ amount: '', note: '' });
+  const openMarkPaid = (project) => {
+    // Pre-fill the popover with the outstanding balance so "Mark paid in full"
+    // is one click. For monthly projects we suggest the recurring amount.
+    const total = Number(project.value || 0) + (project.billing_type !== 'one_time' ? Number(project.recurring_amount || 0) : 0);
+    const outstanding = Math.max(0, total - Number(project.amount_paid || 0));
+    const suggest = outstanding > 0 ? outstanding : (Number(project.recurring_amount) || Number(project.value) || 0);
+    setPayDraft({ amount: suggest ? String(suggest) : '', note: project.payment_note || '' });
+    setPayingId(project.id);
+  };
+  const markPaid = async (project, { addTotal = false } = {}) => {
+    const parsed = Math.max(0, parseFloat(payDraft.amount) || 0);
+    if (!addTotal && !parsed) { toast('error', 'Enter an amount'); return; }
+    const nextPaid = Number(project.amount_paid || 0) + parsed;
+    const patch = {
+      amount_paid: nextPaid,
+      paid_at: new Date().toISOString(),
+      payment_note: payDraft.note || null,
+    };
+    try {
+      await updateProject(project.id, patch);
+      setProjects(ps => ps.map(p => p.id === project.id ? { ...p, ...patch } : p));
+      setPayingId(null);
+      toast('success', `Recorded $${parsed.toLocaleString()} paid on ${project.name}`);
+    } catch (e) { toast('error', e.message); }
+  };
+  const clearPaid = async (project) => {
+    if (!window.confirm(`Reset paid balance on "${project.name}" to $0?`)) return;
+    const patch = { amount_paid: 0, paid_at: null, payment_note: null };
+    try {
+      await updateProject(project.id, patch);
+      setProjects(ps => ps.map(p => p.id === project.id ? { ...p, ...patch } : p));
+      setPayingId(null);
+    } catch (e) { toast('error', e.message); }
+  };
+
   const progressPercent = (p) => {
     if (p.status === 'Completed') return 100;
     if (['Cancelled', 'On Hold'].includes(p.status)) return 0;
@@ -455,12 +555,78 @@ export default function Projects() {
     );
   }
 
+  // ── Page-level roll-ups for the hero summary strip ─────────────────────
+  const totals = useMemo(() => {
+    const oneTime = projects.reduce((s, p) => s + (Number(p.value) || 0), 0);
+    const mrr     = projects.reduce((s, p) => s + (Number(p.recurring_amount) || 0), 0);
+    const paid    = projects.reduce((s, p) => s + (Number(p.amount_paid) || 0), 0);
+    const total   = oneTime + mrr;
+    const outstanding = Math.max(0, total - paid);
+    const active  = projects.filter(p => !p.archived && !['Cancelled', 'Completed'].includes(p.status)).length;
+    return { oneTime, mrr, paid, outstanding, active, total };
+  }, [projects]);
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
-        <div style={{ position: 'relative' }}>
-          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-          <input className="search-input" placeholder="Search projects…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
+      {/* ─── Hero: greeting + stats + toolbar ───────────────────────── */}
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+        {/* Row 1 — title + primary CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px 28px 12px' }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: 'linear-gradient(135deg, rgba(37,99,235,0.14), rgba(37,99,235,0.02))',
+            border: '1px solid rgba(37,99,235,0.22)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--orange)',
+          }}>
+            <FolderOpen size={18} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>Pipeline</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+              {totals.active} active · {projects.length} total
+            </div>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={openAdd}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+            <Plus size={14} /> New project
+          </button>
+        </div>
+
+        {/* Row 2 — summary strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, padding: '4px 28px 16px' }}>
+          {[
+            { label: 'Total value',   value: `$${totals.total.toLocaleString()}`,        color: 'var(--orange)', hint: totals.mrr ? `${totals.oneTime ? `$${totals.oneTime.toLocaleString()} one-time · ` : ''}$${totals.mrr.toLocaleString()}/mo` : 'One-time work' },
+            { label: 'Paid',          value: `$${totals.paid.toLocaleString()}`,          color: '#22c55e',       hint: totals.total ? `${Math.round((totals.paid / (totals.total || 1)) * 100)}% collected` : '—' },
+            { label: 'Outstanding',   value: `$${totals.outstanding.toLocaleString()}`,   color: '#f59e0b',       hint: 'Awaiting payment' },
+            { label: 'MRR',           value: `$${totals.mrr.toLocaleString()}`,           color: '#2563eb',       hint: 'Recurring revenue' },
+          ].map((s) => (
+            <div key={s.label} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 14px', borderRadius: 12,
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+            }}>
+              <span style={{ width: 4, alignSelf: 'stretch', borderRadius: 3, background: s.color, flexShrink: 0 }} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+                  <div className="pii-money" style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
+                </div>
+                <div className="pii-money" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.hint}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Row 3 — search + filter chrome */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 28px 14px' }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 340 }}>
+            <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+            <input className="search-input" placeholder="Search projects, clients, notes…" value={search} onChange={e => setSearch(e.target.value)}
+              style={{ paddingLeft: 32, width: '100%' }} />
+          </div>
         </div>
       </div>
 
@@ -485,15 +651,13 @@ export default function Projects() {
               )}
               <div className="mobile-card-row">
                 <span className="mobile-card-label">Status</span>
-                <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
+                <StatusBadge status={project.status} options={statusesFor(project)} onChange={s => handleStatusChange(project, s)} />
               </div>
-              {(project.start_date || project.end_date) && (
-                <div className="mobile-card-row">
-                  <span className="mobile-card-label">Timeline</span>
-                  <Calendar size={11} style={{ color: 'var(--muted)' }} />
-                  <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
-                </div>
-              )}
+              <div className="mobile-card-row">
+                <span className="mobile-card-label">Due</span>
+                <Clock size={11} style={{ color: 'var(--muted)' }} />
+                {(() => { const di = dueInfo(project); return <span style={{ color: di.color, fontWeight: 600 }}>{di.label}</span>; })()}
+              </div>
               {(project.value > 0 || project.recurring_amount > 0) && (
                 <div className="mobile-card-row">
                   <span className="mobile-card-label">Value</span>
@@ -529,7 +693,7 @@ export default function Projects() {
       </div>
 
       {/* ── Desktop table view ── */}
-      <div className="table-container desktop-table">
+      <div className="table-container desktop-table projects-premium">
         <table>
           <thead>
             <tr>
@@ -537,7 +701,7 @@ export default function Projects() {
               <th style={{ minWidth: 220 }}>Project</th>
               <th style={{ minWidth: 120 }}>Client</th>
               <th style={{ minWidth: 145 }}>Status</th>
-              <th style={{ minWidth: 120 }}>Timeline</th>
+              <th style={{ minWidth: 120 }}>Due</th>
               <th style={{ minWidth: 120 }}>Value</th>
               <th style={{ minWidth: 160 }}>Progress</th>
               <th style={{ minWidth: 150 }}>Notes</th>
@@ -546,17 +710,41 @@ export default function Projects() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
+              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} cols={9} />)
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No projects yet.</td></tr>
+              <tr>
+                <td colSpan={9} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon={FolderOpen}
+                    title="No projects yet"
+                    description="Projects show up here once you invoice a signed deal or create one by hand. Track scope, timeline, revenue, and payment status in one place."
+                    cta={<button className="btn-primary" onClick={openAdd}><Plus size={13} /> New project</button>}
+                  />
+                </td>
+              </tr>
             ) : (
               <>
-                {sorted.map(project => {
+                {(() => { let lastKind = null; return sorted.map(project => {
                   const pct = progressPercent(project);
+                  const kind = projectKind(project);
+                  const showHeader = kind !== lastKind; lastKind = kind;
+                  const grp = sorted.filter(p => projectKind(p) === kind);
+                  const grpAmt = kind === 'retainer'
+                    ? `$${grp.reduce((s, p) => s + (Number(p.recurring_amount) || 0), 0).toLocaleString()}/mo`
+                    : `$${grp.reduce((s, p) => s + (Number(p.value) || 0), 0).toLocaleString()} one-time`;
 
                   return (
+                    <React.Fragment key={project.id}>
+                    {showHeader && (
+                      <tr>
+                        <td colSpan={9} style={{ padding: '16px 12px 6px' }}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{kind === 'retainer' ? 'Retainers · Ongoing' : 'Builds · One-time'}</span>
+                          <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 10 }}>{grp.length} · {grpAmt}</span>
+                        </td>
+                      </tr>
+                    )}
                     <tr
-                      key={project.id}
+                      className="hover-reveal"
                       onClick={() => setSelected(project)}
                       style={{ cursor: 'pointer', background: selectedIds.has(project.id) ? 'rgba(37,99,235,0.08)' : undefined }}
                     >
@@ -568,92 +756,75 @@ export default function Projects() {
                         />
                       </td>
                       <td>
-                        <span className="private-value" style={{ fontWeight: 700, color: 'var(--text)' }}>{project.name || '—'}</span>
+                        <TextCell value={project.name} weight={700} size={13.5} />
                       </td>
-                      <td style={{ color: 'var(--muted)' }} className="private-value">{project.client || '—'}</td>
+                      <td><PersonCell name={project.client} /></td>
                       <td onClick={e => e.stopPropagation()}>
-                        <StatusBadge status={project.status} options={PROJECT_STATUSES} onChange={s => handleStatusChange(project, s)} />
+                        <StatusBadge status={project.status} options={statusesFor(project)} onChange={s => handleStatusChange(project, s)} />
                       </td>
-                      <td>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                          {project.start_date || project.end_date ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <Calendar size={11} style={{ color: 'var(--muted)' }} />
-                              <span>{formatDate(project.start_date)}{project.start_date && project.end_date ? ' → ' : ''}{formatDate(project.end_date)}</span>
-                            </div>
-                          ) : <span style={{ color: '#555880' }}>—</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="private-value" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {project.billing_type !== 'monthly' && project.value > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <td>{(() => { const di = dueInfo(project); return (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: di.color }}>
+                          <Clock size={12} style={{ opacity: 0.7, flexShrink: 0 }} /> {di.label}
+                        </span>
+                      ); })()}</td>
+                      <td onClick={e => e.stopPropagation()} style={{ position: 'relative' }}>
+                        <MoneyCell
+                          value={project.billing_type !== 'monthly' ? project.value : 0}
+                          recurring={project.billing_type !== 'one_time' ? project.recurring_amount : 0}
+                          paid={project.amount_paid}
+                          onMarkPaid={() => openMarkPaid(project)}
+                        />
+
+                        {/* Mark-paid popover */}
+                        {payingId === project.id && (
+                          <div style={{ position: 'absolute', top: '100%', left: 8, zIndex: 20, marginTop: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, minWidth: 240, boxShadow: '0 12px 32px rgba(0,0,0,0.18)' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Amount received</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
                               <DollarSign size={13} style={{ color: 'var(--orange)', flexShrink: 0 }} />
-                              <span>{Number(project.value).toLocaleString()}</span>
+                              <input autoFocus type="number" min="0" step="0.01" value={payDraft.amount}
+                                onChange={e => setPayDraft(d => ({ ...d, amount: e.target.value }))}
+                                style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: 13, minWidth: 0 }} />
                             </div>
-                          )}
-                          {project.billing_type !== 'one_time' && project.recurring_amount > 0 && (
-                            <div style={{ fontSize: 11, color: 'var(--muted)' }}>${Number(project.recurring_amount).toLocaleString()}/mo</div>
-                          )}
-                          {!project.value && !project.recurring_amount && <span style={{ color: '#555880' }}>—</span>}
-                        </div>
-                      </td>
-                      <td>
-                        {isOngoing(project) ? (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: '#22c55e18', border: '1px solid #22c55e40', borderRadius: 999, padding: '2px 10px' }}>Ongoing</span>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
-                              <div style={{
-                                height: '100%', borderRadius: 3, width: `${pct}%`,
-                                background: pct === 100 ? '#22c55e' : pct > 60 ? 'var(--orange)' : '#ef4444',
-                                transition: 'width 0.3s',
-                              }} />
+                            <input placeholder="Note (optional)" value={payDraft.note}
+                              onChange={e => setPayDraft(d => ({ ...d, note: e.target.value }))}
+                              style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: 12, marginBottom: 10 }} />
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between', alignItems: 'center' }}>
+                              {Number(project.amount_paid || 0) > 0 ? (
+                                <button onClick={() => clearPaid(project)} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 11, cursor: 'pointer', padding: 0, fontWeight: 600 }}>Reset</button>
+                              ) : <span />}
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button onClick={() => setPayingId(null)} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}>Cancel</button>
+                                <button onClick={() => markPaid(project)} className="btn-primary" style={{ padding: '4px 12px', fontSize: 11, background: '#16a34a', borderColor: '#16a34a' }}>Record</button>
+                              </div>
                             </div>
-                            <span style={{ fontSize: 11, color: 'var(--muted)', width: 28 }}>{pct}%</span>
                           </div>
                         )}
                       </td>
-                      <td style={{ color: 'var(--muted)', fontSize: 12 }}>
-                        {project.notes ? (project.notes.length > 50 ? project.notes.slice(0, 50) + '…' : project.notes) : '—'}
+                      <td>
+                        <ProgressCell value={pct} total={100} ongoing={isOngoing(project)} />
                       </td>
-                      <td onClick={e => e.stopPropagation()}>
-                        <button className="btn-ghost" style={{ padding: '4px 6px', color: '#ff5c5c' }} onClick={() => openDelete(project)} title="Delete">
-                          <Trash2 size={14} />
-                        </button>
+                      <td>
+                        {project.notes ? (
+                          <span style={{ color: 'var(--muted)', fontSize: 12 }}>{project.notes.length > 50 ? project.notes.slice(0, 50) + '…' : project.notes}</span>
+                        ) : <EmptyStub />}
+                      </td>
+                      <td onClick={e => e.stopPropagation()} style={{ textAlign: 'right' }}>
+                        <RowActions>
+                          <button
+                            onClick={() => openDelete(project)}
+                            title="Delete"
+                            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: '#2563eb', padding: 6, display: 'inline-flex' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#fecaca'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
+                            <Trash2 size={13} />
+                          </button>
+                        </RowActions>
                       </td>
                     </tr>
+                    </React.Fragment>
                   );
-                })}
+                }); })()}
 
-                {/* Grand total */}
-                {sorted.length > 0 && (
-                  <tr className="sum-row">
-                    <td colSpan={4}></td>
-                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>Total</td>
-                    <td>
-                      <div className="private-value" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <DollarSign size={13} style={{ color: 'var(--orange)' }} />
-                          <span>{formatMoney(sorted.reduce((s, p) => s + (p.value || 0), 0))}</span>
-                        </div>
-                        {sorted.some(p => p.recurring_amount > 0) && (
-                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            {formatMoney(sorted.reduce((s, p) => s + (p.recurring_amount || 0), 0))}/mo MRR
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td colSpan={3}></td>
-                  </tr>
-                )}
-
-                {/* Add project */}
-                <tr>
-                  <td colSpan={9} style={{ padding: 0 }}>
-                    <div className="add-row" onClick={openAdd}><Plus size={14} /> Add Project</div>
-                  </td>
-                </tr>
               </>
             )}
           </tbody>
@@ -690,15 +861,29 @@ export default function Projects() {
             <div className="form-group">
               <label className="form-label">Status</label>
               <select className="form-select" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                {PROJECT_STATUSES.map(s => <option key={s}>{s}</option>)}
+                {(form.project_kind === 'retainer' ? RETAINER_STATUSES : BUILD_STATUSES).map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
           </div>
-          <div className="form-group">
-            <label className="form-label">Billing</label>
-            <select className="form-select" value={form.billing_type} onChange={e => setForm(f => ({ ...f, billing_type: e.target.value }))}>
-              {BILLING_TYPES.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
-            </select>
+          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="form-group">
+              <label className="form-label">Type</label>
+              <select className="form-select" value={form.project_kind} onChange={e => {
+                const k = e.target.value;
+                setForm(f => k === 'retainer'
+                  ? { ...f, project_kind: 'retainer', billing_type: 'monthly', status: RETAINER_STATUSES.includes(f.status) ? f.status : 'Active' }
+                  : { ...f, project_kind: 'build', billing_type: f.billing_type === 'monthly' ? 'one_time' : f.billing_type, status: BUILD_STATUSES.includes(f.status) ? f.status : 'Onboarding' });
+              }}>
+                <option value="build">Build (one-time)</option>
+                <option value="retainer">Retainer (ongoing / monthly)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Billing</label>
+              <select className="form-select" value={form.billing_type} onChange={e => setForm(f => ({ ...f, billing_type: e.target.value }))}>
+                {BILLING_TYPES.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
+              </select>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: form.billing_type === 'one_time' ? '1fr' : '1fr 1fr', gap: 12 }}>
             {form.billing_type !== 'monthly' && (

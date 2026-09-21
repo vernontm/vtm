@@ -11,7 +11,7 @@ import { useUi, usePageActions } from '../context/UiContext';
 import { supabase } from '../lib/supabase';
 import { getLeads, createLead, updateLead, deleteLead, convertLead, getCommLog, getLeadRecordings, getLeadRecordingCounts, getRecordingStats, getMeetingStats, createCommLog, getClients, addEmailContacts, getProcessingRecordings, getScripts, personalizeScript, deleteRecording } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
-import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
+import { useScheduleMeeting } from '../context/ScheduleMeetingContext';
 import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 import SelectionBar from '../components/SelectionBar';
@@ -54,6 +54,14 @@ const EMPTY = {
   tiktok_username: '', ig_username: '', lead_source: '', notes: '', product_need: '',
   segment: 'inbound', assigned_to: 'Ray',
 };
+
+// Autosave for the New Lead form — persisted to localStorage as the user types,
+// restored when they reopen "New Lead", cleared once the lead is created.
+const LEAD_DRAFT_KEY = 'vtm.crm.leadDraft';
+const hasLeadContent = (f) => !!(f && (
+  f.name?.trim() || f.company?.trim() || f.email?.trim() || f.phone?.trim() ||
+  f.notes?.trim() || f.tiktok_username?.trim() || f.ig_username?.trim() || f.product_need
+));
 
 // ─── Package offerings ────────────────────────────────────────────────────────
 const PRODUCT_NEEDS = [
@@ -427,7 +435,7 @@ function CollapsibleSection({ title, defaultOpen = true, children }) {
 
 // ─── Activity Timeline ────────────────────────────────────────────────────────
 const ACTIVITY_ICONS = {
-  call:      { icon: '📞', color: '#f87171', bg: 'rgba(239,68,68,0.15)' },
+  call:      { icon: '📞', color: '#f87171', bg: 'rgba(37,99,235,0.15)' },
   email:     { icon: '✉️',  color: 'var(--orange)', bg: 'rgba(59,130,246,0.15)' },
   recording: { icon: '🎙️', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)' },
   meeting:   { icon: '📅', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
@@ -1211,7 +1219,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
       <div style={{
         position: 'relative', width: 560, background: 'var(--surface)',
         borderLeft: '1px solid var(--border)', overflowY: 'auto',
@@ -1576,6 +1584,16 @@ export default function Leads() {
   const [activeSegment, setActiveSegment] = useState('cold');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY);
+
+  // Persist the New Lead form as it's typed so nothing is lost if the dialog
+  // closes or the page navigates away.
+  useEffect(() => {
+    if (modal !== 'add') return;
+    try {
+      if (hasLeadContent(form)) localStorage.setItem(LEAD_DRAFT_KEY, JSON.stringify(form));
+      else localStorage.removeItem(LEAD_DRAFT_KEY);
+    } catch {}
+  }, [form, modal]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -1732,7 +1750,17 @@ export default function Leads() {
     } catch (e) { console.error(e); }
   };
 
-  const openAdd    = () => { setForm({ ...EMPTY, segment: activeSegment, assigned_to: assignedFromSegment(activeSegment) }); setModal('add'); };
+  const openAdd    = () => {
+    let draft = null;
+    try { draft = JSON.parse(localStorage.getItem(LEAD_DRAFT_KEY) || 'null'); } catch {}
+    if (draft && hasLeadContent(draft)) {
+      setForm({ ...EMPTY, ...draft });
+      toast('success', 'Restored your unsaved lead draft.');
+    } else {
+      setForm({ ...EMPTY, segment: activeSegment, assigned_to: assignedFromSegment(activeSegment) });
+    }
+    setModal('add');
+  };
   const openDelete = (l) => { setSelected(l); setModal('delete'); };
   const openConvert = (l) => { setSelected(l); setModal('convert'); };
 
@@ -1744,7 +1772,12 @@ export default function Leads() {
 
   const handleSave = async () => {
     if (!form.name.trim() && !form.company?.trim()) return;
-    try { await createLead(form); await load(); setModal(null); } catch (e) { toast('error', e.message); }
+    try {
+      await createLead(form);
+      try { localStorage.removeItem(LEAD_DRAFT_KEY); } catch {}
+      await load();
+      setModal(null);
+    } catch (e) { toast('error', e.message); }
   };
   const handleDelete = async () => {
     try { await deleteLead(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
@@ -1788,7 +1821,41 @@ export default function Leads() {
   const [recordingCounts, setRecordingCounts] = useState({});
   const [recordingStats, setRecordingStats]   = useState({ calls_24h: 0, calls_7d: 0, calls_30d: 0 });
   const [meetingStats,   setMeetingStats]     = useState({ meets_7d: 0, meets_30d: 0 });
-  const [scheduleLead, setScheduleLead] = useState(null); // lead to schedule meeting for
+  const { openModal: openScheduleMeeting } = useScheduleMeeting();
+  // Kick off a Google Meet schedule for this lead. Handled globally so users can
+  // minimize the modal and browse Contacts/Clients/Email while it stays docked.
+  const scheduleForLead = (lead) => openScheduleMeeting({
+    initialTitle: `VernonTM 30 Minute Call w/ ${lead.name || 'Lead'}`,
+    initialLeadName: lead.name || '',
+    initialAttendees: lead.email ? [{ name: lead.name || '', email: lead.email }] : [],
+    onComplete: async (result) => {
+      const lid = lead.id;
+      handleFieldSave(lid, 'status', 'Call Scheduled');
+      try {
+        const startISO = result?.start_time;
+        const endISO   = result?.end_time;
+        const durationMins = (startISO && endISO)
+          ? Math.round((new Date(endISO) - new Date(startISO)) / 60000)
+          : null;
+        const meetMeta = {
+          __meetingMeta: true,
+          meet_link:        result?.meet_link || null,
+          start_time:       startISO || null,
+          duration_minutes: durationMins,
+          attendees:        (result?.participants || []).map(p => p.email).filter(Boolean),
+        };
+        await createCommLog({
+          lead_id: lid,
+          channel: 'meeting',
+          subject: result?.title || result?.summary || 'Google Meet scheduled',
+          body: JSON.stringify(meetMeta),
+          direction: 'outbound',
+        });
+      } catch (e) { console.warn('Failed to log meeting to activity:', e.message); }
+      getCommLog().then(logs => setAllCommLog(logs || [])).catch(() => {});
+      getMeetingStats().then(s => setMeetingStats(s || { meets_7d: 0, meets_30d: 0 })).catch(() => {});
+    },
+  });
   useEffect(() => {
     getLeadRecordingCounts().then(c => setRecordingCounts(c || {})).catch(() => {});
     getRecordingStats().then(s => setRecordingStats(s || { calls_24h: 0, calls_7d: 0, calls_30d: 0 })).catch(() => {});
@@ -2270,7 +2337,7 @@ export default function Leads() {
             onSaveAll={handleSaveAllFields}
             statuses={LEAD_STATUSES}
             onEmail={handleEmail}
-            onSchedule={(lead) => { setScheduleLead(lead); }}
+            onSchedule={(lead) => { scheduleForLead(lead); }}
             onAddToList={(lead) => setEmailListLead(lead)}
             lastFollowUp={lastFollowUps[detailLead.id]}
             convos={detailConvos}
@@ -2293,48 +2360,7 @@ export default function Leads() {
         <BulkImport onClose={() => setShowImport(false)} onImported={() => { load(); setShowImport(false); }} />
       )}
 
-      {scheduleLead && (
-        <ScheduleMeetingModal
-          initialTitle={`VernonTM 30 Minute Call w/ ${scheduleLead.name || 'Lead'}`}
-          initialLeadName={scheduleLead.name || ''}
-          initialAttendees={scheduleLead.email ? [{ name: scheduleLead.name || '', email: scheduleLead.email }] : []}
-          onClose={() => setScheduleLead(null)}
-          onComplete={async (result) => {
-            const lid = scheduleLead.id;
-            // Auto-update lead status to Call Scheduled
-            handleFieldSave(lid, 'status', 'Call Scheduled');
-            // Log meeting to activity timeline
-            try {
-              const startISO = result?.start_time;
-              const endISO   = result?.end_time;
-              const durationMins = (startISO && endISO)
-                ? Math.round((new Date(endISO) - new Date(startISO)) / 60000)
-                : null;
-              const meetMeta = {
-                __meetingMeta: true,
-                meet_link:        result?.meet_link || null,
-                start_time:       startISO || null,
-                duration_minutes: durationMins,
-                attendees:        (result?.participants || []).map(p => p.email).filter(Boolean),
-              };
-              await createCommLog({
-                lead_id: lid,
-                channel: 'meeting',
-                subject: result?.title || result?.summary || 'Google Meet scheduled',
-                body: JSON.stringify(meetMeta),
-                direction: 'outbound',
-              });
-            } catch (e) {
-              console.warn('Failed to log meeting to activity:', e.message);
-            }
-            setScheduleLead(null);
-            // Refresh comm log so new meeting shows in timeline
-            getCommLog().then(logs => setAllCommLog(logs || [])).catch(() => {});
-            // Refresh meeting stats
-            getMeetingStats().then(s => setMeetingStats(s || { meets_7d: 0, meets_30d: 0 })).catch(() => {});
-          }}
-        />
-      )}
+      {/* Schedule meeting modal is now mounted globally via ScheduleMeetingContext. */}
 
       {modal === 'add' && (
         <Modal title="New Lead" onClose={() => setModal(null)} onSubmit={handleSave} submitLabel="Add Lead">

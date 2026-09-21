@@ -1,12 +1,13 @@
 // Admin-only page to manage CRM user accounts + per-client page access.
 // Non-admins see a friendly "not authorized" card instead.
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound } from 'lucide-react';
+import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound, Bell, Smartphone } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { useToast } from '../components/Toast';
 import {
   getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   upsertUserGrant, revokeUserGrant, resetUserPassword,
+  getPushPrefs, setPushPrefs,
 } from '../api';
 
 // Canonical list of page slugs that can be toggled per grant — only the pages
@@ -91,6 +92,7 @@ export default function AdminUsers() {
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [pushData, setPushData] = useState(null);   // { prefs, devices } for the notification toggles
 
   async function load() {
     setLoading(true); setError(null);
@@ -98,8 +100,11 @@ export default function AdminUsers() {
     catch (e) { setError(e.message); }
     finally { setLoading(false); }
   }
+  async function loadPrefs() {
+    try { setPushData(await getPushPrefs()); } catch (_) { /* toggles just hide */ }
+  }
 
-  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+  useEffect(() => { if (isAdmin) { load(); loadPrefs(); } }, [isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -143,6 +148,8 @@ export default function AdminUsers() {
             onChanged={load}
             onViewAs={() => viewAsUser(u)}
             isSelf={u.id === realUser?.id}
+            pushData={pushData}
+            onPrefsSaved={loadPrefs}
           />
         ))}
       </div>
@@ -177,7 +184,7 @@ function ResetPasswordModal({ user, onClose }) {
   const copy = async () => { try { await navigator.clipboard.writeText(pw); toast.success('Password copied'); } catch { /* ignore */ } };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
       <div onClick={e => e.stopPropagation()} style={{ ...card, width: 420, maxWidth: '92vw' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Reset password</div>
@@ -203,7 +210,7 @@ function ResetPasswordModal({ user, onClose }) {
   );
 }
 
-function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSelf }) {
+function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSelf, pushData, onPrefsSaved }) {
   const toast = useToast();
   const [resetOpen, setResetOpen] = useState(false);
   const isRestricted = user.is_admin && Array.isArray(user.allowed_pages_global) && user.allowed_pages_global.length > 0;
@@ -231,7 +238,7 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer' }} onClick={onToggle}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{user.email}</div>
+            <div className="pii-name" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{user.email}</div>
             {user.is_admin && !isRestricted && (
               <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(37,99,235,0.15)', color: 'var(--orange)', fontWeight: 700 }}>ADMIN</span>
             )}
@@ -278,9 +285,12 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
       {resetOpen && <ResetPasswordModal user={user} onClose={() => setResetOpen(false)} />}
 
       {expanded && (
-        user.is_admin
-          ? <GlobalPagesEditor user={user} onChanged={onChanged} />
-          : <PageAccessEditor user={user} workspace={clients[0]} onChanged={onChanged} />
+        <>
+          {user.is_admin
+            ? <GlobalPagesEditor user={user} onChanged={onChanged} />
+            : <PageAccessEditor user={user} workspace={clients[0]} onChanged={onChanged} />}
+          <NotificationPrefsEditor user={user} pushData={pushData} onSaved={onPrefsSaved} />
+        </>
       )}
     </div>
   );
@@ -452,6 +462,88 @@ function PageAccessEditor({ user, workspace, onChanged }) {
   );
 }
 
+// Which push notifications this person's phone gets (mobile app). Saved prefs
+// win; without one the default is: admins get everything, employees nothing.
+const PUSH_EVENT_META = [
+  { key: 'booking', name: 'New call booked 📅', hint: 'someone books on /book-call' },
+  { key: 'signed',  name: 'Agreement signed 🎉', hint: 'a client signs' },
+  { key: 'paid',    name: 'Payment received 💰', hint: 'a deposit is paid' },
+];
+
+function NotificationPrefsEditor({ user, pushData, onSaved }) {
+  const toast = useToast();
+  const saved = pushData?.prefs?.find(p => p.user_id === user.id)?.prefs || {};
+  const deviceCount = pushData?.devices?.[user.id] || 0;
+  const effective = (key) => (typeof saved[key] === 'boolean' ? saved[key] : !!user.is_admin);
+  const [vals, setVals] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  // Re-seed the toggles whenever the prefs payload (or target user) changes.
+  useEffect(() => {
+    setVals(Object.fromEntries(PUSH_EVENT_META.map(m => [m.key, effective(m.key)])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pushData, user.id]);
+
+  const dirty = PUSH_EVENT_META.some(m => vals[m.key] !== effective(m.key));
+
+  async function save() {
+    setSaving(true);
+    try {
+      await setPushPrefs(user.id, vals);
+      toast.success(`Notifications updated for ${user.email}`);
+      onSaved?.();
+    } catch (e) { toast.error(e.message); }
+    finally { setSaving(false); }
+  }
+
+  if (!pushData) return null;   // prefs endpoint unavailable, hide quietly
+
+  return (
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <Bell size={11} /> Phone notifications
+        </span>
+        <span style={{ fontSize: 11, color: deviceCount ? '#34d399' : 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <Smartphone size={11} />
+          {deviceCount
+            ? `${deviceCount} phone${deviceCount === 1 ? '' : 's'} connected`
+            : 'No phone yet. Starts working once they log into the mobile app'}
+        </span>
+        {dirty && (
+          <button style={{ ...btnPrimary, marginLeft: 'auto', padding: '6px 12px' }} onClick={save} disabled={saving}>
+            <Check size={13} /> {saving ? 'Saving…' : 'Save notifications'}
+          </button>
+        )}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+        Choose which alerts land on {user.email}'s phone.
+      </div>
+      <div className="access-pill-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {PUSH_EVENT_META.map(m => {
+          const on = !!vals[m.key];
+          return (
+            <button
+              key={m.key}
+              onClick={() => setVals(prev => ({ ...prev, [m.key]: !prev[m.key] }))}
+              title={`Sent when ${m.hint}`}
+              style={{
+                padding: '5px 10px', borderRadius: 20,
+                background: on ? 'var(--orange)' : 'var(--surface)',
+                color: on ? '#fff' : 'var(--text)',
+                border: `1px solid ${on ? 'var(--orange)' : 'var(--border)'}`,
+                fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {m.name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CreateUserModal({ clients, onClose, onCreated }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -486,14 +578,14 @@ function CreateUserModal({ clients, onClose, onCreated }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
       <form onClick={e => e.stopPropagation()} onSubmit={submit} style={{ ...card, width: 440, maxWidth: '92vw' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>New user</div>
           <button type="button" style={btnGhost} onClick={onClose}><X size={13} /></button>
         </div>
 
-        {err && <div style={{ marginBottom: 10, padding: 10, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: 12 }}>{err}</div>}
+        {err && <div style={{ marginBottom: 10, padding: 10, borderRadius: 8, background: 'rgba(37,99,235,0.1)', color: '#2563eb', fontSize: 12 }}>{err}</div>}
 
         <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Email</label>
         <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }} />

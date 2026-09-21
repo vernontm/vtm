@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, X, Plus, Check, Loader, Video, Clock, Users, Search } from 'lucide-react';
-import { createMeeting, checkMeetingAvailability, getContacts, getLeads, getGmailContacts, getCommLog } from '../api';
+import { Calendar, X, Plus, Check, Loader, Video, Clock, Users, Search, Minimize2, MapPin, ArrowLeft } from 'lucide-react';
+import { createMeeting, checkMeetingAvailability, getContacts, getLeads, getGmailContacts, getCommLog, getUpcomingMeetings } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
 
-export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle, initialAttendees, initialLeadName }) {
+export default function ScheduleMeetingModal({ onClose, onComplete, onMinimize, initialTitle, initialAttendees, initialLeadName, pickType }) {
   // Normalise initial attendees — ensure email is lowercase
   const seedAttendees = (initialAttendees || []).map(a => ({ ...a, email: a.email?.trim().toLowerCase() })).filter(a => a.email);
   const [title, setTitle]                   = useState(initialTitle || '');
@@ -21,6 +21,91 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
   const [checkingAvail, setCheckingAvail]   = useState(false);
   const [availStatus, setAvailStatus]       = useState(null);
   const [copied, setCopied]                 = useState(false);
+
+  // When to meet: 'available' lists the next open slots computed from the
+  // synced calendar (meetings, OOO blocks, class, weekends all count as busy);
+  // 'custom' is the manual date+time; 'instant' starts right now.
+  const [timeMode, setTimeMode]             = useState('available');
+  const [busyRows, setBusyRows]             = useState(null);   // null = not loaded yet
+  const [slotsLoading, setSlotsLoading]     = useState(false);
+  const [selectedSlot, setSelectedSlot]     = useState('');
+
+  useEffect(() => {
+    if (timeMode !== 'available' || busyRows !== null) return;
+    setSlotsLoading(true);
+    getUpcomingMeetings()
+      .then(rows => setBusyRows((rows || []).filter(m => m.status !== 'cancelled')))
+      .catch(() => setBusyRows([]))
+      .finally(() => setSlotsLoading(false));
+  }, [timeMode, busyRows]);
+
+  // Next open slots: weekdays 9am to 6pm CT, 30-minute grid, must fit the full
+  // duration without touching anything on the calendar, at least 45 min out.
+  const slots = React.useMemo(() => {
+    if (!busyRows) return [];
+    const busy = busyRows.map(m => [new Date(m.start_time).getTime(), new Date(m.end_time || m.start_time).getTime()]);
+    const out = [];
+    const minStart = Date.now() + 45 * 60000;
+    const day = new Date(); day.setHours(0, 0, 0, 0);
+    for (let d = 0; d < 14 && out.length < 30; d++) {
+      const dow = day.getDay();
+      if (dow !== 0 && dow !== 6) {
+        for (let mins = 9 * 60; mins + duration <= 18 * 60; mins += 30) {
+          const s = day.getTime() + mins * 60000;
+          const e = s + duration * 60000;
+          if (s < minStart) continue;
+          if (busy.some(([bs, be]) => s < be && e > bs)) continue;
+          out.push(s);
+          if (out.length >= 30) break;
+        }
+      }
+      day.setDate(day.getDate() + 1);
+    }
+    return out;
+  }, [busyRows, duration]);
+
+  const fmtSlot = (ms) => new Date(ms).toLocaleString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' CT';
+
+  function pickSlot(msStr) {
+    setSelectedSlot(msStr);
+    if (!msStr) return;
+    const dt = new Date(Number(msStr));
+    const p = (n) => String(n).padStart(2, '0');
+    setDate(`${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`);
+    setTime(`${p(dt.getHours())}:${p(dt.getMinutes())}`);
+    setAvailStatus(null);
+  }
+
+  // Event-type flow: when opened via "New Event", first pick online vs in-person.
+  const [step, setStep]                     = useState(pickType ? 'type' : 'form');   // 'type' | 'form'
+  const [eventType, setEventType]           = useState('online');                     // 'online' | 'in_person'
+  const [address, setAddress]               = useState('');
+  const [addressResults, setAddressResults] = useState([]);
+  const [addressOpen, setAddressOpen]       = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const addressBoxRef = useRef(null);
+  const addressTimer = useRef(null);
+
+  // Debounced address autocomplete (OpenStreetMap geocoder — keyless; swaps to
+  // Google Places automatically if a VITE_GOOGLE_MAPS_KEY is ever configured).
+  function onAddressInput(v) {
+    setAddress(v); setAddressOpen(true);
+    clearTimeout(addressTimer.current);
+    if (v.trim().length < 3) { setAddressResults([]); return; }
+    addressTimer.current = setTimeout(async () => {
+      setAddressLoading(true);
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&countrycodes=us&q=${encodeURIComponent(v.trim())}`, { headers: { Accept: 'application/json' } });
+        const j = await r.json();
+        setAddressResults((j || []).map(x => x.display_name));
+      } catch { setAddressResults([]); }
+      finally { setAddressLoading(false); }
+    }, 350);
+  }
+  useEffect(() => {
+    const h = e => { if (addressBoxRef.current && !addressBoxRef.current.contains(e.target)) setAddressOpen(false); };
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h);
+  }, []);
 
   // Contact search
   const [allContacts, setAllContacts]       = useState([]);
@@ -139,11 +224,25 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
 
   async function handleSchedule() {
     if (!title.trim()) { setError('Meeting title is required.'); return; }
-    if (!date||!time) { setError('Date and time are required.'); return; }
-    const startISO = buildStartISO(); const endISO = buildEndISO(startISO);
+    if (eventType==='in_person' && !address.trim()) { setError('Add the address for this in-person meeting.'); return; }
+    let startISO;
+    if (timeMode === 'instant') {
+      startISO = new Date(Math.ceil(Date.now() / 300000) * 300000).toISOString();   // next 5-min mark
+    } else if (timeMode === 'available') {
+      if (!selectedSlot) { setError('Pick one of the available times.'); return; }
+      startISO = new Date(Number(selectedSlot)).toISOString();
+    } else {
+      if (!date||!time) { setError('Date and time are required.'); return; }
+      startISO = buildStartISO();
+    }
+    const endISO = buildEndISO(startISO);
     setSaving(true); setError('');
     try {
-      const result = await createMeeting({ summary:title.trim(), start:startISO, end:endISO, attendees:attendees.map(a=>a.email), description:description.trim(), addMeetLink, reminderMinutes:reminder });
+      const result = await createMeeting({
+        summary:title.trim(), start:startISO, end:endISO, attendees:attendees.map(a=>a.email),
+        description:description.trim(), addMeetLink: eventType==='in_person' ? false : addMeetLink,
+        reminderMinutes:reminder, location: eventType==='in_person' ? address.trim() : '',
+      });
       setSuccess(result); if(onComplete) onComplete(result);
     } catch(e) { setError(e.message); }
     finally { setSaving(false); }
@@ -169,9 +268,23 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
             <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg,var(--orange),#2563eb)', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <Calendar size={16} color="#fff" />
             </div>
-            <span style={{ fontSize:16, fontWeight:700, color:'var(--text)' }}>Schedule Meeting</span>
+            <span style={{ fontSize:16, fontWeight:700, color:'var(--text)' }}>{step==='type' ? 'New Event' : eventType==='in_person' ? 'Schedule In-Person Meeting' : 'Schedule Meeting'}</span>
           </div>
-          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex' }}><X size={18} /></button>
+          <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+            {onMinimize && (
+              <button onClick={onMinimize} title="Minimize (keep working across pages)"
+                style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:6, borderRadius:6 }}
+                onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'}
+                onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                <Minimize2 size={16} />
+              </button>
+            )}
+            <button onClick={onClose} title="Close" style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', display:'flex', padding:6, borderRadius:6 }}
+              onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'}
+              onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -200,12 +313,43 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                     {copied?'Copied!':'Copy Link'}
                   </button>
                 </div>
+              ) : eventType==='in_person' && address.trim() ? (
+                <div style={{ background:'var(--surface-2)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 14px', display:'flex', alignItems:'flex-start', gap:10 }}>
+                  <MapPin size={14} color="var(--orange)" style={{ flexShrink:0, marginTop:2 }} />
+                  <span style={{ fontSize:12, color:'var(--text)', lineHeight:1.5 }}>{address.trim()}</span>
+                </div>
               ) : <div style={{ fontSize:12, color:'var(--muted)' }}>No Meet link attached.</div>}
               <button onClick={onClose} style={{ alignSelf:'flex-end', padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>Done</button>
+            </div>
+          ) : step === 'type' ? (
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div style={{ fontSize:13.5, color:'var(--muted)' }}>What kind of event is this?</div>
+              {[
+                { k:'online', icon:<Video size={22} />, t:'Online meeting', d:'Video call with a Google Meet link added automatically.' },
+                { k:'in_person', icon:<MapPin size={22} />, t:'In-person meeting', d:'Meet at a physical location. Pick the address with autocomplete.' },
+              ].map(o => (
+                <button key={o.k} onClick={() => { setEventType(o.k); setAddMeetLink(o.k==='online'); setStep('form'); }}
+                  style={{ display:'flex', alignItems:'center', gap:14, textAlign:'left', padding:'18px 18px', borderRadius:12, cursor:'pointer',
+                    border:'1.5px solid var(--border)', background:'var(--surface-2)', color:'var(--text)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor='var(--orange)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)'; }}>
+                  <div style={{ width:44, height:44, borderRadius:11, background:'rgba(37,99,235,0.10)', color:'var(--orange)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{o.icon}</div>
+                  <div>
+                    <div style={{ fontSize:15, fontWeight:700 }}>{o.t}</div>
+                    <div style={{ fontSize:12.5, color:'var(--muted)', marginTop:2 }}>{o.d}</div>
+                  </div>
+                </button>
+              ))}
             </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               {error && <div style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:8, padding:'9px 13px', fontSize:13, color:'#ef4444' }}>{error}</div>}
+
+              {pickType && (
+                <button onClick={() => setStep('type')} style={{ alignSelf:'flex-start', display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:12, fontWeight:600, padding:0 }}>
+                  <ArrowLeft size={13} /> {eventType==='in_person' ? 'In-person meeting' : 'Online meeting'} · change type
+                </button>
+              )}
 
               {/* Title */}
               <div>
@@ -213,34 +357,72 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                 <input value={title} onChange={e => setTitle(e.target.value)} placeholder="VernonTM 30 Minute Call w/" style={inputStyle} autoFocus />
               </div>
 
-              {/* Date + Time + Duration */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-                <div>
-                  <label style={labelStyle}>Date *</label>
-                  <input type="date" value={date} onChange={e => { setDate(e.target.value); setAvailStatus(null); }} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Time *</label>
-                  <input type="time" value={time} onChange={e => { setTime(e.target.value); setAvailStatus(null); }} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Duration</label>
-                  <select value={duration} onChange={e => { setDuration(Number(e.target.value)); setAvailStatus(null); }} style={inputStyle}>
-                    <option value={15}>15 min</option>
-                    <option value={30}>30 min</option>
-                    <option value={45}>45 min</option>
-                    <option value={60}>1 hour</option>
-                    <option value={90}>1.5 hours</option>
-                  </select>
-                </div>
-              </div>
 
-              {/* CST timezone warning */}
-              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'#fef3c7', border:'1px solid #fde68a' }}>
-                <Clock size={13} color="#d97706" style={{ flexShrink:0 }} />
-                <span style={{ fontSize:12, color:'#92400e', fontWeight:500 }}>
-                  All calls are scheduled in <strong>Central Standard Time (CST)</strong>. Make sure the time above reflects CST.
-                </span>
+              {/* When: Available slots / Custom time / Instant */}
+              <div>
+                <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}>
+                  <div style={{ display:'inline-flex', border:'1px solid var(--border)', borderRadius:10, overflow:'hidden' }}>
+                    {[{ k:'available', l:'Available' }, { k:'custom', l:'Custom' }, { k:'instant', l:'⚡ Instant' }].map(o => (
+                      <button key={o.k} onClick={() => { setTimeMode(o.k); setError(''); setAvailStatus(null); }}
+                        style={{ padding:'7px 14px', fontSize:12.5, fontWeight:700, cursor:'pointer', border:'none',
+                          background: timeMode===o.k ? 'var(--orange)' : 'var(--surface-2)',
+                          color: timeMode===o.k ? '#fff' : 'var(--muted)' }}>
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display:'grid', gridTemplateColumns: timeMode==='custom' ? '1fr 1fr 1fr' : '2fr 1fr', gap:12 }}>
+                  {timeMode==='available' && (
+                    <div>
+                      <label style={labelStyle}>Available times (CT)</label>
+                      <select value={selectedSlot} onChange={e => pickSlot(e.target.value)} style={inputStyle}>
+                        <option value="">{slotsLoading ? 'Finding open times…' : slots.length ? 'Choose a time…' : 'No open slots in the next 2 weeks'}</option>
+                        {slots.map(s => <option key={s} value={String(s)}>{fmtSlot(s)}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {timeMode==='custom' && (
+                    <>
+                      <div>
+                        <label style={labelStyle}>Date *</label>
+                        <input type="date" value={date} onChange={e => { setDate(e.target.value); setAvailStatus(null); }} style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Time *</label>
+                        <input type="time" value={time} onChange={e => { setTime(e.target.value); setAvailStatus(null); }} style={inputStyle} />
+                      </div>
+                    </>
+                  )}
+                  {timeMode==='instant' && (
+                    <div>
+                      <label style={labelStyle}>Starts now (CT)</label>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', borderRadius:8, border:'1px solid rgba(37,99,235,0.3)', background:'rgba(37,99,235,0.06)', fontSize:13, fontWeight:600, color:'var(--orange)' }}>
+                        ⚡ Meeting starts now
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label style={labelStyle}>Length</label>
+                    <select value={duration} onChange={e => { setDuration(Number(e.target.value)); setAvailStatus(null); setSelectedSlot(''); }} style={inputStyle}>
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>1 hour</option>
+                      <option value={90}>1.5 hours</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'#eff5ff', border:'1px solid rgba(37,99,235,0.25)', marginTop:10 }}>
+                  <Clock size={13} color="var(--orange)" style={{ flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:'#1e40af', fontWeight:500 }}>
+                    {timeMode==='available' && 'These times come straight from your calendar: meetings, class, and out-of-office blocks are already excluded. Weekdays 9 AM to 6 PM Central.'}
+                    {timeMode==='custom' && 'Books the exact time you pick (Central Time). Make sure the slot is actually free.'}
+                    {timeMode==='instant' && `Creates the meeting right now${eventType!=='in_person' ? ' and generates the Meet link immediately, so you can start the call this minute' : ''}.`}
+                  </span>
+                </div>
               </div>
 
               {/* Attendees with contact search */}
@@ -303,7 +485,7 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                         Check Availability
                       </button>
                       {availStatus && (
-                        <span style={{ fontSize:11, color:availStatus.allFree?'#22c55e':'#ef4444', fontWeight:600 }}>
+                        <span style={{ fontSize:11, color:availStatus.allFree?'#22c55e':'#2563eb', fontWeight:600 }}>
                           {availStatus.allFree ? '✓ All free' : `✗ ${availStatus.busy.length} conflict${availStatus.busy.length>1?'s':''}`}
                         </span>
                       )}
@@ -312,11 +494,14 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                 </div>
               </div>
 
-              {/* Description */}
+              {/* Private notes / agenda — internal to the CRM, NOT synced to Google Calendar. */}
               <div>
-                <label style={labelStyle}>Description / Agenda</label>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Agenda or notes..." rows={4}
+                <label style={labelStyle}>Private notes / agenda 🔒</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="What you want to remember about this call, agenda points, questions to ask… (only visible to you inside the CRM)" rows={4}
                   style={{ ...inputStyle, resize:'vertical', minHeight:80, lineHeight:1.6 }} />
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+                  This won't be sent to attendees or added to the Google Calendar event — it stays private to the CRM.
+                </div>
               </div>
 
               {/* Reminder + Meet link */}
@@ -329,6 +514,27 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                     <option value={60}>1 hour before</option>
                   </select>
                 </div>
+                {eventType==='in_person' ? (
+                <div ref={addressBoxRef}>
+                  <label style={{ ...labelStyle, display:'flex', alignItems:'center', gap:6 }}><MapPin size={13} color="#8e8ea0" /> Location *</label>
+                  <div style={{ position:'relative' }}>
+                    <input value={address} onChange={e => onAddressInput(e.target.value)} onFocus={() => address.trim().length>=3 && setAddressOpen(true)}
+                      placeholder="Start typing the address…" style={inputStyle} />
+                    {addressOpen && (addressLoading || addressResults.length>0) && (
+                      <div style={{ position:'absolute', bottom:'100%', left:0, right:0, marginBottom:4, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.18)', zIndex:110, maxHeight:220, overflow:'auto' }}>
+                        {addressLoading && <div style={{ padding:'10px 14px', fontSize:12, color:'var(--muted)', display:'flex', alignItems:'center', gap:8 }}><Loader size={12} style={{ animation:'spin 0.7s linear infinite' }} /> Searching…</div>}
+                        {!addressLoading && addressResults.map((a,i) => (
+                          <div key={i} onClick={() => { setAddress(a); setAddressOpen(false); }}
+                            style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'9px 14px', cursor:'pointer', fontSize:12.5, color:'var(--text)', borderBottom:i<addressResults.length-1?'1px solid var(--border)':'none', lineHeight:1.4 }}
+                            onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+                            <MapPin size={13} style={{ flexShrink:0, marginTop:2, color:'var(--orange)' }} /> {a}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                ) : (
                 <div>
                   <label style={labelStyle}>Google Meet Link</label>
                   <div onClick={() => setAddMeetLink(v=>!v)}
@@ -342,19 +548,20 @@ export default function ScheduleMeetingModal({ onClose, onComplete, initialTitle
                     </span>
                   </div>
                 </div>
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {!success && (
+        {!success && step !== 'type' && (
           <div style={{ padding:'14px 20px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'flex-end', gap:10, flexShrink:0 }}>
             <button onClick={onClose} style={{ padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--surface)', color:'var(--muted)', fontSize:13, fontWeight:500, cursor:'pointer' }}>Cancel</button>
             <button onClick={handleSchedule} disabled={saving}
               style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 20px', borderRadius:8, background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity:saving?0.7:1 }}>
               {saving ? <Loader size={14} style={{ animation:'spin 0.7s linear infinite' }} /> : <Calendar size={14} />}
-              {saving ? 'Scheduling…' : 'Schedule Meeting'}
+              {saving ? 'Scheduling…' : timeMode==='instant' ? (eventType==='in_person' ? 'Start now' : 'Start now + create Meet') : 'Schedule Meeting'}
             </button>
           </div>
         )}

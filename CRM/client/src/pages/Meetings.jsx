@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Clock, Users, MapPin, ExternalLink, Check, CheckCircle2,
 } from 'lucide-react';
 import { getUpcomingMeetings, getPastMeetings, deleteMeeting, syncMeetings, updateMeeting } from '../api';
-import ScheduleMeetingModal from '../components/ScheduleMeetingModal';
+import { useScheduleMeeting } from '../context/ScheduleMeetingContext';
 
 const AVATAR_COLORS = ['#334155', '#784bd1', '#0ea5e9', '#16a34a', '#e11d48', '#d97706'];
 
@@ -17,7 +17,7 @@ const stripHtml = (s) => (s ? String(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g,
 const dayKey = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 // All-day blocks / OOO clutter the list — treat 12h+ or OOO-titled events as "blocks".
-const isBlock = (m) => (m.duration_minutes && m.duration_minutes >= 720) || /out of office|ooo|busy/i.test(m.title || '');
+const isBlock = (m) => m.all_day === true || (m.duration_minutes && m.duration_minutes >= 720) || /out of office|ooo|busy|unavailable|blocked/i.test(m.title || '');
 
 // Meeting status → color. A meeting is:
 //   done     (green)  → explicitly marked completed
@@ -31,8 +31,14 @@ const meetingStatus = (m) => {
 const STATUS = {
   done:     { color: '#16a34a', label: 'Done' },
   missed:   { color: '#dc2626', label: 'Missed' },
-  upcoming: { color: '#334155', label: 'Upcoming' },
+  // Light blue: readable on the dark surface (the old #334155 slate all but
+  // disappeared, especially the time text on calendar chips).
+  upcoming: { color: '#60a5fa', label: 'Upcoming' },
 };
+
+// Personal commitments (school etc.) that hard-block time like an OOO does.
+// Gets the ⛔ prefix on calendar chips so it reads as "cannot book over this."
+const isCommitment = (m) => /\bclass\b/i.test(m.title || '');
 
 function Avatars({ participants = [], max = 4 }) {
   const shown = participants.slice(0, max);
@@ -81,7 +87,7 @@ export default function Meetings() {
   const [syncing, setSyncing] = useState(false);
   const [showBlocks, setShowBlocks] = useState(false);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
-  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const { openModal: openScheduleMeeting } = useScheduleMeeting();
 
   const load = useCallback(async () => {
     try {
@@ -145,7 +151,8 @@ export default function Meetings() {
         <button className="btn-ghost" onClick={handleSync} disabled={syncing}>
           <RefreshCw size={14} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} /> {syncing ? 'Syncing…' : 'Sync'}
         </button>
-        <button className="btn-primary" onClick={() => setScheduleOpen(true)}><Plus size={15} /> Schedule Meeting</button>
+        <button className="btn-ghost" onClick={() => openScheduleMeeting({ onComplete: () => handleSync() })}><Video size={15} /> Quick Meeting</button>
+        <button className="btn-primary" onClick={() => openScheduleMeeting({ pickType: true, onComplete: () => handleSync() })}><Plus size={15} /> New Event</button>
       </div>
 
       <div style={{ padding: '0 24px 40px' }}>
@@ -171,7 +178,7 @@ export default function Meetings() {
               </div>
             ) : grouped.map(group => (
               <div key={group.key} style={{ marginBottom: 22 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: sameDay(group.date, new Date()) ? 'var(--link)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: sameDay(group.date, new Date()) ? 'var(--orange)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
                   {sameDay(group.date, new Date()) ? 'Today · ' : ''}{fmtDayLong(group.date)}
                 </div>
                 {group.items.map(m => {
@@ -188,7 +195,7 @@ export default function Meetings() {
                     <div style={{ width: 4, alignSelf: 'stretch', background: st.color, borderRadius: 3 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                        <span className="pii-name" style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
                         <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, color: st.color, background: st.color + '1a', border: `1px solid ${st.color}40`, borderRadius: 999, padding: '1px 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{st.label}</span>
                       </div>
                       {stripHtml(m.description) && <div style={{ fontSize: 12.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{stripHtml(m.description)}</div>}
@@ -215,9 +222,7 @@ export default function Meetings() {
         )}
       </div>
 
-      {scheduleOpen && (
-        <ScheduleMeetingModal onClose={() => setScheduleOpen(false)} onComplete={() => { setScheduleOpen(false); handleSync(); }} />
-      )}
+      {/* Schedule meeting modal is mounted globally via ScheduleMeetingContext. */}
     </div>
   );
 }
@@ -237,7 +242,25 @@ function CalendarView({ month, setMonth, meetings, onOpen }) {
 
   const byDay = useMemo(() => {
     const map = {};
-    (meetings || []).forEach(m => { const k = dayKey(m.start_time); (map[k] = map[k] || []).push(m); });
+    (meetings || []).forEach(m => {
+      // Blocks (busy/OOO/all-day) span every local day they cover, so a 3-day
+      // "unavailable" shows on all 3 days, not just the first. Timed meetings
+      // stay on their start day. Capped at 62 days as a runaway guard.
+      const start = new Date(m.start_time);
+      const end = new Date(m.end_time || m.start_time);
+      // A block ending exactly at midnight does NOT cover that day (a Tue
+      // 12am-12am OOO is Tuesday only), so step the end back 1ms before
+      // counting local calendar days.
+      const endAdj = end > start ? new Date(end.getTime() - 1) : end;
+      const dayFloor = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+      const spanDays = isBlock(m) ? Math.min(Math.max(0, Math.round((dayFloor(endAdj) - dayFloor(start)) / 86400000)), 62) : 0;
+      const d = new Date(start);
+      for (let i = 0; i <= spanDays; i++) {
+        const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        (map[k] = map[k] || []).push(m);
+        d.setDate(d.getDate() + 1);
+      }
+    });
     Object.values(map).forEach(arr => arr.sort((a, b) => new Date(a.start_time) - new Date(b.start_time)));
     return map;
   }, [meetings]);
@@ -268,25 +291,55 @@ function CalendarView({ month, setMonth, meetings, onOpen }) {
           const items = byDay[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] || [];
           const timed = items.filter(m => !isBlock(m));
           const blocks = items.filter(isBlock);
+          // For each block, its coverage of THIS day (a multi-day block only
+          // partially covers its first/last day; the 10am Tue/Thu blocks only
+          // cover the back half of the day).
+          const dayStartMs = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+          const dayEndMs = dayStartMs + 86400000;
+          const blockSeg = (b) => {
+            const s = Math.max(new Date(b.start_time).getTime(), dayStartMs);
+            const e = Math.min(new Date(b.end_time || b.start_time).getTime(), dayEndMs);
+            const allDay = (e - s) >= 23 * 3600000;
+            const t = (ms) => fmtTime(new Date(ms)).replace(':00', '');
+            return { allDay, label: allDay ? 'All day' : `${t(s)} to ${e === dayEndMs ? '12 AM' : t(e)}` };
+          };
+          const fullyBlocked = blocks.some(b => blockSeg(b).allDay);
           return (
-            <div key={i} style={{ minHeight: 108, borderRight: (i % 7 !== 6) ? '1px solid var(--border)' : 'none', borderBottom: '1px solid var(--border)', padding: 6, background: inMonth ? 'var(--surface)' : 'var(--surface-2)', opacity: inMonth ? 1 : 0.6 }}>
+            <div key={i} style={{ height: 128, overflow: 'hidden', boxSizing: 'border-box', borderRight: (i % 7 !== 6) ? '1px solid var(--border)' : 'none', borderBottom: '1px solid var(--border)', padding: 6, background: fullyBlocked && inMonth ? 'rgba(245,158,11,0.06)' : inMonth ? 'var(--surface)' : 'var(--surface-2)', opacity: inMonth ? 1 : 0.6 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 800, color: isToday ? '#fff' : 'var(--text)', background: isToday ? 'var(--link)' : 'transparent' }}>{d.getDate()}</div>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 800, color: isToday ? '#fff' : 'var(--text)', background: isToday ? 'var(--orange)' : 'transparent', boxShadow: isToday ? '0 0 0 3px rgba(37,99,235,0.22)' : 'none' }}>{d.getDate()}</div>
               </div>
-              {blocks.length > 0 && <div style={{ height: 4, borderRadius: 3, background: 'var(--surface-3)', marginBottom: 3 }} title={`${blocks.length} blocked`} />}
-              {timed.slice(0, 3).map(m => {
+              {/* One chronological list: whatever starts first sits on top, so a
+                  9:30 class renders above the 10am OOO block. */}
+              {items.slice(0, 3).map(m => {
+                if (isBlock(m)) {
+                  const seg = blockSeg(m);
+                  return (
+                  <div key={`b-${m.id}`} onClick={() => onOpen(m)} title={`${seg.label} busy: ${m.title || 'Unavailable'}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 5, padding: '3px 7px', marginBottom: 3, borderRadius: 6, cursor: 'pointer',
+                    background: 'repeating-linear-gradient(45deg, rgba(245,158,11,0.10), rgba(245,158,11,0.10) 6px, rgba(245,158,11,0.20) 6px, rgba(245,158,11,0.20) 12px)',
+                    border: '1px dashed rgba(245,158,11,0.55)', overflow: 'hidden',
+                  }}>
+                    <span style={{ fontSize: 10.5, flexShrink: 0 }}>⛔</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 800, color: '#d97706', flexShrink: 0, whiteSpace: 'nowrap' }}>{seg.label}</span>
+                    <span className="pii-name" style={{ fontSize: 11.5, fontWeight: 700, color: '#f59e0b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title || 'Busy'}</span>
+                  </div>
+                  );
+                }
                 const c = STATUS[meetingStatus(m)].color;
+                const commit = isCommitment(m);
                 return (
                 <div key={m.id} onClick={() => onOpen(m)} title={`${fmtTime(m.start_time)} · ${m.title}`} style={{
                   display: 'flex', alignItems: 'center', gap: 5, padding: '4px 7px', marginBottom: 3, borderRadius: 6, cursor: 'pointer',
-                  background: c + '1a', borderLeft: `3px solid ${c}`, overflow: 'hidden',
+                  background: c + '22', borderLeft: `3px solid ${c}`, overflow: 'hidden',
                 }}>
+                  {commit && <span style={{ fontSize: 10.5, flexShrink: 0 }}>⛔</span>}
                   <span style={{ fontSize: 11, fontWeight: 800, color: c, flexShrink: 0 }}>{fmtTime(m.start_time).replace(':00', '')}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
+                  <span className="pii-name" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
                 </div>
                 );
               })}
-              {timed.length > 3 && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', paddingLeft: 4 }}>+{timed.length - 3} more</div>}
+              {items.length > 3 && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', paddingLeft: 4 }}>+{items.length - 3} more</div>}
             </div>
           );
         })}

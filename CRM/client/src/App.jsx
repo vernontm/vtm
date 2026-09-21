@@ -4,6 +4,9 @@ import { RefreshProvider, useRefresh } from './context/RefreshContext';
 import { PrivacyProvider, usePrivacy } from './context/PrivacyContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ClientProvider, useClient } from './context/ClientContext';
+import { ScheduleMeetingProvider } from './context/ScheduleMeetingContext';
+import { ComposeProvider } from './context/ComposeContext';
+import CommandPalette from './components/CommandPalette';
 // Gate a route by page slug. Admins bypass; anyone else needs the slug
 // in their current client's allowed_pages. Blocked users get a friendly
 // /no-access page so they know *why* they can't see something (instead of
@@ -267,7 +270,12 @@ function AuthGate() {
           <TeamProvider>
             <RecorderProvider>
               <UiProvider>
-                <ClientGate><AppLayout /></ClientGate>
+                <ScheduleMeetingProvider>
+                  <ComposeProvider>
+                    <ClientGate><AppLayout /></ClientGate>
+                    <CommandPalette />
+                  </ComposeProvider>
+                </ScheduleMeetingProvider>
               </UiProvider>
             </RecorderProvider>
           </TeamProvider>
