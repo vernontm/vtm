@@ -219,11 +219,13 @@
     function render(){
       if (!isPreview && data.needs_plan) { pill.textContent=''; renderPlanChooser(); return; }
       const hasNda=!!data.nda_markdown;
+      // Needed by both the preview branch and the signing branch below, so it
+      // has to live at the top of render() rather than inside the preview block.
+      const isContractor = data.kind==='contractor';
 
       // Preview mode: read-only, with an Agreement/NDA toggle. No signing UI.
       if (isPreview) {
-        const isContractor = data.kind==='contractor';
-      const title = step==='nda' ? 'Non-Disclosure Agreement' : (isContractor ? (data.doc_title||'Independent Contractor Agreement') : 'Service Agreement');
+        const title = step==='nda' ? 'Non-Disclosure Agreement' : (isContractor ? (data.doc_title||'Independent Contractor Agreement') : 'Service Agreement');
         pill.textContent = 'Preview';
         app.innerHTML =
           '<div class="lead"><h1>'+title+'</h1>'
