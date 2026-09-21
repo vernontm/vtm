@@ -493,6 +493,21 @@ export default function Projects() {
     </Modal>
   );
 
+  // Every hook has to run on every render, so this roll-up lives ABOVE the
+  // `if (selected)` early return below. Moving it back under that return makes
+  // React render fewer hooks when a project is open, which throws error #300
+  // and blanks the page.
+  // ── Page-level roll-ups for the hero summary strip ─────────────────────
+  const totals = useMemo(() => {
+    const oneTime = projects.reduce((s, p) => s + (Number(p.value) || 0), 0);
+    const mrr     = projects.reduce((s, p) => s + (Number(p.recurring_amount) || 0), 0);
+    const paid    = projects.reduce((s, p) => s + (Number(p.amount_paid) || 0), 0);
+    const total   = oneTime + mrr;
+    const outstanding = Math.max(0, total - paid);
+    const active  = projects.filter(p => !p.archived && !['Cancelled', 'Completed'].includes(p.status)).length;
+    return { oneTime, mrr, paid, outstanding, active, total };
+  }, [projects]);
+
   if (selected) {
     return (
       <>
@@ -507,17 +522,6 @@ export default function Projects() {
       </>
     );
   }
-
-  // ── Page-level roll-ups for the hero summary strip ─────────────────────
-  const totals = useMemo(() => {
-    const oneTime = projects.reduce((s, p) => s + (Number(p.value) || 0), 0);
-    const mrr     = projects.reduce((s, p) => s + (Number(p.recurring_amount) || 0), 0);
-    const paid    = projects.reduce((s, p) => s + (Number(p.amount_paid) || 0), 0);
-    const total   = oneTime + mrr;
-    const outstanding = Math.max(0, total - paid);
-    const active  = projects.filter(p => !p.archived && !['Cancelled', 'Completed'].includes(p.status)).length;
-    return { oneTime, mrr, paid, outstanding, active, total };
-  }, [projects]);
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
