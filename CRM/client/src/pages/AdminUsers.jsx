@@ -1,13 +1,13 @@
 // Admin-only page to manage CRM user accounts + per-client page access.
 // Non-admins see a friendly "not authorized" card instead.
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound, Bell, Smartphone } from 'lucide-react';
+import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound, Bell, Smartphone, Mail, Copy } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { useToast } from '../components/Toast';
 import {
   getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   upsertUserGrant, revokeUserGrant, resetUserPassword,
-  getPushPrefs, setPushPrefs,
+  getPushPrefs, setPushPrefs, inviteUser,
 } from '../api';
 
 // Canonical list of page slugs that can be toggled per grant — only the pages
@@ -79,6 +79,13 @@ const btnGhost = {
   border: '1px solid var(--border)', color: 'var(--text)', fontSize: 12,
   cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
 };
+const labelStyle = {
+  fontSize: 11, fontWeight: 700, color: 'var(--muted)',
+  textTransform: 'uppercase', letterSpacing: '0.1em',
+};
+// Every toggleable page, flattened out of PAGE_GROUPS for the invite form.
+const ALL_PAGES = PAGE_GROUPS.flatMap(g => g.pages);
+
 const inputStyle = {
   width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid var(--border)',
   background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13,
@@ -92,6 +99,7 @@ export default function AdminUsers() {
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const [pushData, setPushData] = useState(null);   // { prefs, devices } for the notification toggles
 
   async function load() {
@@ -126,9 +134,14 @@ export default function AdminUsers() {
             Create logins for your team and choose which pages each person can access.
           </div>
         </div>
-        <button style={btnPrimary} onClick={() => setShowCreate(true)}>
-          <UserPlus size={14} /> New user
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={btnPrimary} onClick={() => setShowInvite(true)}>
+            <Mail size={14} /> Invite teammate
+          </button>
+          <button style={btnGhost} onClick={() => setShowCreate(true)}>
+            <UserPlus size={14} /> New user
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -154,6 +167,12 @@ export default function AdminUsers() {
         ))}
       </div>
 
+      {showInvite && (
+        <InviteUserModal
+          onClose={() => setShowInvite(false)}
+          onInvited={() => { setShowInvite(false); load(); }}
+        />
+      )}
       {showCreate && (
         <CreateUserModal
           clients={clients}
@@ -161,6 +180,91 @@ export default function AdminUsers() {
           onCreated={() => { setShowCreate(false); load(); }}
         />
       )}
+    </div>
+  );
+}
+
+// Invite a teammate by email. Creates the login with NO password and returns a
+// one-time link they use to set their own, so nobody ever handles someone
+// else's password. Preferred over New user for onboarding a real person.
+function InviteUserModal({ onClose, onInvited }) {
+  const toast = useToast();
+  const [email, setEmail] = useState('');
+  const [rate, setRate] = useState('');
+  const [pages, setPages] = useState(['time']);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [link, setLink] = useState(null);
+
+  const togglePage = (slug) => setPages(p => p.includes(slug) ? p.filter(x => x !== slug) : [...p, slug]);
+
+  async function send() {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast.error('Enter a valid email address'); return; }
+    setSaving(true);
+    try {
+      const r = await inviteUser({
+        email: email.trim(),
+        is_admin: isAdmin,
+        allowed_pages_global: isAdmin ? null : pages,
+        hourly_rate: rate === '' ? null : Number(rate),
+      });
+      setLink(r.action_link || null);
+      toast.success(`${email} can now be sent their set-up link`);
+      onInvited();
+    } catch (e) { toast.error(e.message); }
+    finally { setSaving(false); }
+  }
+  const copy = async () => { try { await navigator.clipboard.writeText(link); toast.success('Link copied'); } catch { /* ignore */ } };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div onClick={e => e.stopPropagation()} style={{ ...card, width: 460, maxWidth: '92vw', maxHeight: '88vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Invite teammate</div>
+          <button style={btnGhost} onClick={onClose}><X size={14} /></button>
+        </div>
+        {!link ? (
+          <>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
+              They set their own password from the link, so you never have to send one.
+            </div>
+            <label style={labelStyle}>Email</label>
+            <input style={inputStyle} value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" autoFocus />
+            <label style={{ ...labelStyle, marginTop: 12, display: 'block' }}>Hourly rate (optional)</label>
+            <input style={inputStyle} type="number" min="0" step="0.01" value={rate} onChange={e => setRate(e.target.value)} placeholder="e.g. 30.00" />
+            <label style={{ ...labelStyle, marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} /> Full admin access
+            </label>
+            {!isAdmin && (
+              <>
+                <label style={{ ...labelStyle, marginTop: 12, display: 'block' }}>Pages they can see</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  {ALL_PAGES.map(pg => (
+                    <button key={pg.slug} onClick={() => togglePage(pg.slug)}
+                      style={{ ...btnGhost, padding: '5px 10px', fontSize: 12, borderColor: pages.includes(pg.slug) ? 'var(--accent)' : 'var(--border)', color: pages.includes(pg.slug) ? 'var(--accent)' : 'var(--muted)' }}>
+                      {pages.includes(pg.slug) && <Check size={11} />} {pg.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <button style={{ ...btnPrimary, width: '100%', justifyContent: 'center', marginTop: 18 }} onClick={send} disabled={saving}>
+              <Mail size={13} /> {saving ? 'Creating...' : 'Create invite link'}
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>
+              Send this to <strong style={{ color: 'var(--text)' }}>{email}</strong>. It is single use and lets them set their own password.
+            </div>
+            <div style={{ ...inputStyle, wordBreak: 'break-all', fontSize: 11.5, lineHeight: 1.5, background: 'var(--bg)' }}>{link}</div>
+            <button style={{ ...btnPrimary, width: '100%', justifyContent: 'center', marginTop: 14 }} onClick={copy}>
+              <Copy size={13} /> Copy link
+            </button>
+            <button style={{ ...btnGhost, width: '100%', justifyContent: 'center', marginTop: 8 }} onClick={onClose}>Done</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
