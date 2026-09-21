@@ -215,6 +215,10 @@
       close(); return html;
     }
 
+    // Contractor agreements must not call the signer a Client: section 2.1 of
+    // that agreement exists to establish she is neither a client nor an employee.
+    function ROLE(){ return data && data.kind==='contractor' ? 'Contractor' : 'Client'; }
+
     function sigLineHtml(sig){
       if(!sig) return '<div class="sigline empty">Sign here</div>';
       if(sig.method==='draw') return '<div class="sigline"><img src="'+sig.value+'" alt="signature"/></div>';
@@ -227,7 +231,7 @@
       return '<div class="paper">'+mdToHtml(md)
         + '<div class="sigblock">'
         +   '<div class="party"><div class="sigline">Rayvaughn Vernon</div><div class="sublabel">Rayvaughn Vernon &middot; Vernon Tech &amp; Media</div><div class="sublabel">Date: '+today+'</div></div>'
-        +   '<div class="party">'+sigLineHtml(sig)+'<div class="sublabel">'+esc(data.owner_name||'Client')+' &middot; Client</div><div class="sublabel">Date: '+(sig?today:'____________')+'</div></div>'
+        +   '<div class="party">'+sigLineHtml(sig)+'<div class="sublabel">'+esc(data.owner_name||ROLE())+' &middot; '+ROLE()+'</div><div class="sublabel">Date: '+(sig?today:'____________')+'</div></div>'
         + '</div></div>';
     }
 
