@@ -44,6 +44,17 @@
     .paper h2{font-size:14.5px;font-weight:700;color:#1c3f63;margin:20px 0 6px}
     .paper p{margin:0 0 10px} .paper ul{margin:0 0 10px 22px} .paper li{margin:2px 0}
     .paper strong{font-weight:700}
+    /* House contract dialect: sub-clauses, tables, exhibits, initials, form signature lines. */
+    .paper p.sub{margin-left:26px}
+    .paper p.deep{margin-left:52px}
+    .paper .tablewrap{overflow-x:auto;margin:0 0 14px}
+    .paper .doctable{border-collapse:collapse;width:100%;font-size:12.5px}
+    .paper .doctable th,.paper .doctable td{border:1px solid #c9ced6;padding:6px 9px;text-align:left;vertical-align:top}
+    .paper .doctable th{background:#eceef1;font-weight:700}
+    .paper .exhibit{margin:30px 0 4px;padding-top:22px;border-top:1px solid var(--line)}
+    .paper p.initialline{margin:14px 0 18px;padding:9px 12px;background:#f6f7f9;border-left:3px solid #1c3f63}
+    .paper .sigform{margin:22px 0 6px}
+    .paper .sigform .sigrule{border-bottom:1px solid #333;height:30px;max-width:330px}
     /* plan chooser */
     .plans{display:flex;flex-direction:column;gap:14px;margin-top:8px}
     .planc{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:0 8px 26px -14px rgba(16,24,40,.16);transition:transform .15s,box-shadow .15s,border-color .15s}
@@ -146,18 +157,62 @@
     function inline(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\_(.+?)\_/g,'<em>$1</em>'); }
     function mdToHtml(md){
       const lines=(md||'').split('\n'); let html=''; let inList=false; let firstH1=true;
+      let tbl=null;
       const closeList=()=>{ if(inList){html+='</ul>';inList=false;} };
+      const closeTable=()=>{
+        if(!tbl) return;
+        html+='<div class="tablewrap"><table class="doctable"><thead><tr>'
+          + tbl[0].map(c=>'<th>'+inline(c)+'</th>').join('') + '</tr></thead><tbody>'
+          + tbl.slice(1).map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('')
+          + '</tbody></table></div>';
+        tbl=null;
+      };
+      const close=()=>{ closeList(); closeTable(); };
       for(let raw of lines){
         const line=raw.trimEnd();
-        if(!line.trim()){ closeList(); continue; }
-        if(line.startsWith('# ')){ closeList(); if(firstH1){ html+='<div class="doctitle">'+inline(line.slice(2))+'</div>'; firstH1=false; } else html+='<h2>'+inline(line.slice(2))+'</h2>'; continue; }
-        if(line.startsWith('## ')){ closeList(); html+='<h2>'+inline(line.slice(3))+'</h2>'; continue; }
-        if(line.startsWith('- ')){ if(!inList){html+='<ul>';inList=true;} html+='<li>'+inline(line.slice(2))+'</li>'; continue; }
+        if(!line.trim()){ close(); continue; }
+
+        // House contract dialect (see Team/_build_agreement_from_md.js).
+        if(line.startsWith('|')){
+          if(/^\|[\s:|-]+\|?$/.test(line)) continue;      // the |---|---| rule
+          closeList();
+          const cells=line.replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
+          if(tbl) tbl.push(cells); else tbl=[cells];
+          continue;
+        }
+        if(line.startsWith('@meta ')||line.startsWith('@footer ')) continue;   // build-only
+        if(line==='@pagebreak'){ close(); continue; }
+        if(line.startsWith('@subtitle ')){ close(); html+='<div class="docsub">'+inline(line.slice(10))+'</div>'; continue; }
+        if(line.startsWith('@exhibit ')){
+          close();
+          const parts=line.slice(9).split('|');
+          html+='<div class="exhibit"><div class="doctitle">'+inline((parts[0]||'').trim())+'</div>'
+             + ((parts[1]||'').trim() ? '<div class="docsub">'+inline(parts[1].trim())+'</div>' : '') + '</div>';
+          continue;
+        }
+        if(line.startsWith('@witness ')){ close(); html+='<p><strong>'+inline(line.slice(9))+'</strong></p>'; continue; }
+        if(line.startsWith('@execute')){ close(); continue; }   // the real signature block is appended separately
+        if(line.startsWith('@initial ')){ close(); html+='<p class="initialline">'+inline(line.slice(9))+'</p>'; continue; }
+        if(line.startsWith('@sig ')){
+          close();
+          const parts=line.slice(5).split('|');
+          html+='<div class="sigform"><div class="sublabel"><strong>'+inline((parts[0]||'').trim())+'</strong></div>'
+             + '<div class="sigrule"></div>'
+             + '<div class="sublabel">'+inline((parts[1]||'').trim())+'</div>'
+             + '<div class="sublabel">Date: ____________</div></div>';
+          continue;
+        }
+        if(line.startsWith('> ')){ close(); html+='<p class="deep">'+inline(line.slice(2))+'</p>'; continue; }
+        if(/^\([a-z]\)\s/.test(line)){ close(); html+='<p class="sub">'+inline(line)+'</p>'; continue; }
+
+        if(line.startsWith('# ')){ close(); if(firstH1){ html+='<div class="doctitle">'+inline(line.slice(2))+'</div>'; firstH1=false; } else html+='<h2>'+inline(line.slice(2))+'</h2>'; continue; }
+        if(line.startsWith('## ')){ close(); html+='<h2>'+inline(line.slice(3))+'</h2>'; continue; }
+        if(line.startsWith('- ')){ closeTable(); if(!inList){html+='<ul>';inList=true;} html+='<li>'+inline(line.slice(2))+'</li>'; continue; }
         // a lone bold line right after the title reads as subtitle
         if(!firstH1 && /^\*\*.+\*\*$/.test(line) && html.endsWith('</div>')){ html+='<div class="docsub">'+inline(line)+'</div>'; continue; }
-        closeList(); html+='<p>'+inline(line)+'</p>';
+        close(); html+='<p>'+inline(line)+'</p>';
       }
-      closeList(); return html;
+      close(); return html;
     }
 
     function sigLineHtml(sig){
@@ -245,7 +300,7 @@
 
       const stepNum = step==='agreement'?1:2, total=hasNda?2:1;
       pill.textContent='Step '+stepNum+' of '+total;
-      const title = step==='nda' ? 'Non-Disclosure Agreement' : 'Service Agreement';
+      const title = step==='nda' ? 'Non-Disclosure Agreement' : (isContractor ? (data.doc_title||'Independent Contractor Agreement') : 'Service Agreement');
       const nextLabel = step==='agreement' && hasNda ? 'Next: NDA →' : 'Finish &amp; Send';
 
       const started = formOpen || !!sigs[step];
