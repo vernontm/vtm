@@ -34,7 +34,7 @@ const navMarketing = [
 ];
 
 const navTeam = [
-  { to: '/employees',    icon: UserCog,         label: 'Team',         slug: 'employees' },
+  { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees' },
   { to: '/time',         icon: Clock,           label: 'Time',         slug: 'time' },
   { to: '/employee-resources', icon: BookOpen,  label: 'Library',      slug: 'employee-resources' },
 ];

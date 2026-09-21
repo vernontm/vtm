@@ -104,6 +104,7 @@ const AcademyRecommendations = lazy(() => import('./pages/AcademyRecommendations
 const AcademySettings = lazy(() => import('./pages/AcademySettings'));
 
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const Employees = lazy(() => import('./pages/Employees'));
 const Training = lazy(() => import('./pages/Training'));
 const Scripts = lazy(() => import('./pages/Scripts'));
 const Products = lazy(() => import('./pages/Products'));
@@ -152,7 +153,7 @@ function AppLayout() {
               <Route path="/projects" element={<Gated slug="projects"><Projects /></Gated>} />
               <Route path="/appointments" element={<Gated slug="appointments"><Meetings /></Gated>} />
               <Route path="/appointments/:eventId" element={<Gated slug="appointments"><MeetingDetail /></Gated>} />
-              <Route path="/employees" element={<Gated slug="employees" adminOnly><AdminUsers /></Gated>} />
+              <Route path="/employees" element={<Gated slug="employees" adminOnly><Employees /></Gated>} />
               <Route path="/time" element={<Gated slug="time"><Time /></Gated>} />
               <Route path="/todos" element={<Gated slug="todos"><TeamTodos /></Gated>} />
               <Route path="/routines" element={<Gated slug="routines"><Routines /></Gated>} />

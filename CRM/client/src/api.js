@@ -102,6 +102,14 @@ export const deleteProjectItem  = (id) => request(`/project-board?id=${id}`, { m
 export const addProjectComment  = (projectId, data) => request(`/project-board?action=comment&project_id=${projectId}`, { method: 'POST', body: JSON.stringify(data) });
 export const buildProjectReport = (projectId, data) => request(`/project-board?action=report&project_id=${projectId}`, { method: 'POST', body: JSON.stringify(data) });
 
+// Employee roster. Distinct from the login list: a person exists here before
+// they have an account, and clients never appear.
+export const getEmployees    = () => request('/employees');
+export const addEmployee     = (data) => request('/employees', { method: 'POST', body: JSON.stringify(data) });
+export const updateEmployee  = (id, data) => request(`/employees?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const removeEmployee  = (id) => request(`/employees?id=${id}`, { method: 'DELETE' });
+export const inviteEmployee  = (id) => request(`/employees?action=invite&id=${id}`, { method: 'POST', body: '{}' });
+
 // Employee resources — internal team hub (SOPs, guides, links). Admin edits.
 export const getEmployeeResources    = () => request('/employee-resources');
 export const createEmployeeResource  = (data) => request('/employee-resources', { method: 'POST', body: JSON.stringify(data) });
