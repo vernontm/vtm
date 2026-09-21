@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink, Receipt, Loader, Check, Clock } from 'lucide-react';
-import { getProjects, createProject, updateProject, deleteProject, getProjectItems, createProjectItem, updateProjectItem, deleteProjectItem, createProjectInvoice, getClients } from '../api';
+import { getProjects, createProject, updateProject, deleteProject, createProjectInvoice, getClients } from '../api';
 import Modal from '../components/Modal';
+import ProjectBoard from '../components/ProjectBoard';
 import StatusBadge from '../components/StatusBadge';
 import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
@@ -126,41 +127,13 @@ function Card({ title, children, style }) {
 // ── Project detail page ────────────────────────────────────────────────────────
 function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
   const [items, setItems] = useState([]);
-  const [itemsLoading, setItemsLoading] = useState(true);
   const [invoiceEmail, setInvoiceEmail] = useState('');
   const [invoicing, setInvoicing] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setItemsLoading(true);
-    getProjectItems(project.id)
-      .then(rows => { if (!cancelled) setItems(rows); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setItemsLoading(false); });
-    return () => { cancelled = true; };
-  }, [project.id]);
 
   const saveField = async (field, value) => {
     const parsed = (field === 'value' || field === 'recurring_amount') ? (parseFloat(value) || 0) : value;
     onPatch({ [field]: parsed });
     try { await updateProject(project.id, { [field]: parsed }); }
-    catch (e) { toast('error', e.message); }
-  };
-
-  const addSubitem = async () => {
-    try {
-      const item = await createProjectItem({ project_id: project.id, ...EMPTY_ITEM });
-      setItems(its => [...its, item]);
-    } catch (e) { toast('error', e.message); }
-  };
-  const handleItemField = async (itemId, field, value) => {
-    setItems(its => its.map(it => it.id === itemId ? { ...it, [field]: value } : it));
-    try { await updateProjectItem(itemId, { [field]: value }); }
-    catch (e) { toast('error', e.message); }
-  };
-  const deleteSubitem = async (itemId) => {
-    setItems(its => its.filter(it => it.id !== itemId));
-    try { await deleteProjectItem(itemId); }
     catch (e) { toast('error', e.message); }
   };
 
@@ -202,37 +175,7 @@ function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
 
       <div style={{ padding: 28, display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-          <Card title="Subitems">
-            {itemsLoading ? (
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ paddingLeft: 16 }}>Subitem</th>
-                      <th>Owner</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                      <th>Text</th>
-                      <th>Link</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map(item => (
-                      <SubitemRow key={item.id} item={item} onFieldSave={handleItemField} onDelete={deleteSubitem} />
-                    ))}
-                    <tr>
-                      <td colSpan={7} style={{ padding: 0 }}>
-                        <div className="add-row" onClick={addSubitem}><Plus size={13} /> Add subitem</div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
+          <ProjectBoard project={project} />
 
           <Card title="Notes">
             <textarea className="form-input" rows={6} defaultValue={project.notes || ''} onBlur={e => saveField('notes', e.target.value)} placeholder="Project notes…" style={{ resize: 'vertical', width: '100%' }} />

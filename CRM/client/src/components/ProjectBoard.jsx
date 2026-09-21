@@ -1,0 +1,258 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Trash2, Eye, EyeOff, MessageSquare, FileText, Loader, ChevronRight, ChevronDown } from 'lucide-react';
+import {
+  getProjectBoard, seedProjectBoard, addProjectItem, updateProjectItem,
+  deleteProjectItem, addProjectComment, buildProjectReport,
+} from '../api';
+import { toast } from './Toast';
+
+// Phases and the steps inside them, for one project. Clicking a step's marker
+// cycles it todo -> doing -> done; the server stamps completed_at, which is what
+// the period report groups by.
+//
+// Two visibility ideas travel with this screen and are easy to confuse:
+//   client_visible on a STEP    - whether a client ever sees that row
+//   internal on a COMMENT       - whether that note stays inside the CRM
+// Comments are internal by default. A note only reaches a client when it is
+// deliberately marked shared.
+
+const RANGES = [
+  { key: 'this-week', label: 'This week' },
+  { key: 'this-month', label: 'This month' },
+  { key: 'last-month', label: 'Last month' },
+  { key: 'custom', label: 'Custom' },
+];
+
+const STATUS_NEXT = { todo: 'doing', doing: 'done', done: 'todo' };
+const STATUS_MARK = {
+  todo: { ch: '', bg: 'transparent', bd: 'var(--border)', fg: 'var(--muted)' },
+  doing: { ch: '/', bg: '#fef3c7', bd: '#f59e0b', fg: '#b45309' },
+  done: { ch: '✓', bg: '#dcfce7', bd: '#16a34a', fg: '#15803d' },
+};
+
+const lbl = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 };
+
+export default function ProjectBoard({ project }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState({});            // phaseId -> expanded
+  const [newStep, setNewStep] = useState({});      // phaseId -> text
+  const [newPhase, setNewPhase] = useState('');
+  const [commentFor, setCommentFor] = useState(null);
+  const [commentText, setCommentText] = useState('');
+  const [commentShared, setCommentShared] = useState(false);
+  const [range, setRange] = useState('this-month');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [clientFacing, setClientFacing] = useState(true);
+  const [reporting, setReporting] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await getProjectBoard(project.id);
+      setData(r);
+      setOpen(o => Object.keys(o).length ? o : Object.fromEntries((r.phases || []).map(p => [p.id, true])));
+    } catch (e) { toast('error', e.message); }
+    finally { setLoading(false); }
+  }, [project.id]);
+  useEffect(() => { load(); }, [load]);
+
+  const guard = async (fn) => { setBusy(true); try { await fn(); await load(); } catch (e) { toast('error', e.message); } finally { setBusy(false); } };
+
+  const seed = () => guard(async () => { const r = await seedProjectBoard(project.id); toast('success', r.already ? 'Board already set up' : `Seeded the ${r.template} template`); });
+  const cycle = (step) => guard(() => updateProjectItem(step.id, { status: STATUS_NEXT[step.status] || 'doing' }));
+  const toggleVisible = (step) => guard(() => updateProjectItem(step.id, { client_visible: !step.client_visible }));
+  const removeItem = (item, isPhase) => {
+    if (!window.confirm(isPhase ? `Delete "${item.name}" and every step inside it?` : `Delete "${item.name}"?`)) return;
+    guard(() => deleteProjectItem(item.id));
+  };
+  const addStep = (phaseId) => {
+    const name = (newStep[phaseId] || '').trim();
+    if (!name) return;
+    guard(async () => { await addProjectItem(project.id, { name, parent_id: phaseId }); setNewStep(s => ({ ...s, [phaseId]: '' })); });
+  };
+  const addPhase = () => {
+    const name = newPhase.trim();
+    if (!name) return;
+    guard(async () => { await addProjectItem(project.id, { name }); setNewPhase(''); });
+  };
+  const saveComment = () => {
+    const body = commentText.trim();
+    if (!body) return;
+    guard(async () => {
+      await addProjectComment(project.id, { item_id: commentFor, body, internal: !commentShared });
+      setCommentText(''); setCommentFor(null); setCommentShared(false);
+    });
+  };
+
+  const runReport = async () => {
+    if (range === 'custom' && (!from || !to)) { toast('error', 'Pick both dates for a custom range.'); return; }
+    setReporting(true);
+    try {
+      const r = await buildProjectReport(project.id, { range, from, to, client_facing: clientFacing });
+      toast('success', `Report ready for ${r.range?.label || 'the period'}`);
+      if (r.url) window.open(r.url, '_blank', 'noopener');
+      await load();
+    } catch (e) { toast('error', e.message); }
+    finally { setReporting(false); }
+  };
+
+  const commentsFor = (itemId) => (data?.comments || []).filter(c => c.item_id === itemId);
+
+  if (loading) return <div style={{ padding: 20, color: 'var(--muted)', fontSize: 13 }}>Loading board…</div>;
+
+  const phases = data?.phases || [];
+  const progress = data?.progress || { total: 0, done: 0, pct: 0 };
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ fontSize: 15, fontWeight: 800 }}>Delivery board</div>
+        {progress.total > 0 && (
+          <>
+            <div style={{ flex: 1, minWidth: 120, height: 7, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden', maxWidth: 260 }}>
+              <div style={{ width: `${progress.pct}%`, height: '100%', background: '#16a34a' }} />
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{progress.done} of {progress.total} done ({progress.pct}%)</div>
+          </>
+        )}
+      </div>
+
+      {!phases.length ? (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 22, textAlign: 'center' }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 6 }}>No phases yet</div>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>
+            Start from the standard {project.project_kind === 'retainer' ? 'retainer' : 'build'} phases, then edit them for this client.
+          </div>
+          <button className="btn-primary" onClick={seed} disabled={busy} style={{ padding: '9px 18px' }}>
+            <Plus size={14} /> Set up the board
+          </button>
+        </div>
+      ) : (
+        <>
+          {phases.map(ph => {
+            const steps = ph.steps || [];
+            const doneN = steps.filter(s => s.status === 'done').length;
+            const expanded = open[ph.id] !== false;
+            return (
+              <div key={ph.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, marginBottom: 10, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', cursor: 'pointer' }}
+                     onClick={() => setOpen(o => ({ ...o, [ph.id]: !expanded }))}>
+                  {expanded ? <ChevronDown size={15} style={{ color: 'var(--muted)' }} /> : <ChevronRight size={15} style={{ color: 'var(--muted)' }} />}
+                  <div style={{ fontWeight: 800, fontSize: 13.5, flex: 1 }}>{ph.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>{doneN}/{steps.length}</div>
+                  <button className="btn-ghost" title="Delete phase" onClick={e => { e.stopPropagation(); removeItem(ph, true); }} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={13} /></button>
+                </div>
+
+                {expanded && (
+                  <div style={{ borderTop: '1px solid var(--border)', padding: '6px 14px 12px' }}>
+                    {steps.map(st => {
+                      const mk = STATUS_MARK[st.status] || STATUS_MARK.todo;
+                      const notes = commentsFor(st.id);
+                      return (
+                        <div key={st.id} style={{ padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button onClick={() => cycle(st)} title={`Mark ${STATUS_NEXT[st.status]}`}
+                              style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${mk.bd}`, background: mk.bg, color: mk.fg, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {mk.ch}
+                            </button>
+                            <div style={{ flex: 1, minWidth: 0, fontSize: 13, textDecoration: st.status === 'done' ? 'line-through' : 'none', color: st.status === 'done' ? 'var(--muted)' : 'var(--text)' }}>
+                              {st.name}
+                            </div>
+                            {st.due_date && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>due {st.due_date}</span>}
+                            <button className="btn-ghost" title={st.client_visible ? 'Client can see this' : 'Hidden from the client'} onClick={() => toggleVisible(st)}
+                              style={{ padding: '4px 6px', color: st.client_visible ? 'var(--muted)' : '#b45309' }}>
+                              {st.client_visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                            </button>
+                            <button className="btn-ghost" title="Comments" onClick={() => { setCommentFor(commentFor === st.id ? null : st.id); setCommentText(''); setCommentShared(false); }}
+                              style={{ padding: '4px 6px', color: notes.length ? 'var(--accent)' : 'var(--muted)' }}>
+                              <MessageSquare size={13} />{notes.length ? <span style={{ fontSize: 10, marginLeft: 3 }}>{notes.length}</span> : null}
+                            </button>
+                            <button className="btn-ghost" title="Delete step" onClick={() => removeItem(st, false)} style={{ padding: '4px 6px', color: '#ff5c5c' }}><Trash2 size={12} /></button>
+                          </div>
+
+                          {(commentFor === st.id || notes.length > 0) && (
+                            <div style={{ marginLeft: 30, marginTop: 6 }}>
+                              {notes.map(c => (
+                                <div key={c.id} style={{ fontSize: 12, marginBottom: 5, paddingLeft: 8, borderLeft: `2px solid ${c.internal ? '#ef4444' : '#16a34a'}` }}>
+                                  <span style={{ color: 'var(--muted)', fontWeight: 700 }}>{c.author}</span>
+                                  <span style={{ color: c.internal ? '#b91c1c' : '#15803d', fontSize: 10, fontWeight: 800, marginLeft: 6 }}>{c.internal ? 'INTERNAL' : 'SHARED'}</span>
+                                  <div style={{ color: 'var(--text)' }}>{c.body}</div>
+                                </div>
+                              ))}
+                              {commentFor === st.id && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                                  <input className="form-input" value={commentText} onChange={e => setCommentText(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') saveComment(); }}
+                                    placeholder="Add a note" style={{ flex: 1, minWidth: 180 }} autoFocus />
+                                  <label style={{ fontSize: 11.5, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <input type="checkbox" checked={commentShared} onChange={e => setCommentShared(e.target.checked)} /> share with client
+                                  </label>
+                                  <button className="btn-primary" onClick={saveComment} disabled={busy} style={{ padding: '6px 12px' }}>Save</button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      <input className="form-input" value={newStep[ph.id] || ''} onChange={e => setNewStep(s => ({ ...s, [ph.id]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') addStep(ph.id); }}
+                        placeholder="Add a step" style={{ flex: 1 }} />
+                      <button className="btn-ghost" onClick={() => addStep(ph.id)} disabled={busy} style={{ padding: '7px 12px' }}><Plus size={13} /></button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+            <input className="form-input" value={newPhase} onChange={e => setNewPhase(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addPhase(); }} placeholder="Add a phase" style={{ flex: 1, maxWidth: 320 }} />
+            <button className="btn-ghost" onClick={addPhase} disabled={busy} style={{ padding: '8px 14px' }}><Plus size={13} /> Phase</button>
+          </div>
+        </>
+      )}
+
+      {/* Period report */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <FileText size={15} style={{ color: 'var(--accent)' }} />
+          <div style={{ fontSize: 13, fontWeight: 800 }}>Progress report</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+          <div>
+            <div style={lbl}>Period</div>
+            <select className="form-input" value={range} onChange={e => setRange(e.target.value)} style={{ width: 150 }}>
+              {RANGES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+            </select>
+          </div>
+          {range === 'custom' && (
+            <>
+              <div><div style={lbl}>From</div><input className="form-input" type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 150 }} /></div>
+              <div><div style={lbl}>To</div><input className="form-input" type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 150 }} /></div>
+            </>
+          )}
+          <label style={{ fontSize: 12.5, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 9 }}>
+            <input type="checkbox" checked={clientFacing} onChange={e => setClientFacing(e.target.checked)} />
+            Client-safe version
+          </label>
+          <button className="btn-primary" onClick={runReport} disabled={reporting} style={{ padding: '9px 16px' }}>
+            {reporting ? <><Loader size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Building…</> : <><FileText size={14} /> Generate PDF</>}
+          </button>
+        </div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
+          {clientFacing
+            ? 'Leaves out internal notes and any step hidden from the client. Safe to send.'
+            : 'Includes internal notes and hidden steps. For your eyes only.'}
+          {' '}The PDF is also filed on the client’s Documents.
+        </div>
+      </div>
+    </div>
+  );
+}

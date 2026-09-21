@@ -93,6 +93,15 @@ export const disputeStatement = (data) => request('/time-entries?action=dispute-
 export const payStatement     = (data) => request('/time-entries?action=pay-statement', { method: 'POST', body: JSON.stringify(data) });
 export const inviteUser       = (data) => request('/admin-users?action=invite', { method: 'POST', body: JSON.stringify(data) });
 
+// Per-project delivery board: phases, steps, comments, period reports.
+export const getProjectBoard    = (projectId) => request(`/project-board?project_id=${projectId}`);
+export const seedProjectBoard   = (projectId, data = {}) => request(`/project-board?action=seed-template&project_id=${projectId}`, { method: 'POST', body: JSON.stringify(data) });
+export const addProjectItem     = (projectId, data) => request(`/project-board?action=item&project_id=${projectId}`, { method: 'POST', body: JSON.stringify(data) });
+export const updateProjectItem  = (id, data) => request(`/project-board?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteProjectItem  = (id) => request(`/project-board?id=${id}`, { method: 'DELETE' });
+export const addProjectComment  = (projectId, data) => request(`/project-board?action=comment&project_id=${projectId}`, { method: 'POST', body: JSON.stringify(data) });
+export const buildProjectReport = (projectId, data) => request(`/project-board?action=report&project_id=${projectId}`, { method: 'POST', body: JSON.stringify(data) });
+
 // Employee resources — internal team hub (SOPs, guides, links). Admin edits.
 export const getEmployeeResources    = () => request('/employee-resources');
 export const createEmployeeResource  = (data) => request('/employee-resources', { method: 'POST', body: JSON.stringify(data) });
@@ -119,10 +128,6 @@ export const deleteProject  = (id) => request(`/projects?id=${id}`, { method: 'D
 export const createProjectInvoice = (id, data) => request(`/project-invoice?id=${id}`, { method: 'POST', body: JSON.stringify(data) });
 
 // Project Items (subitems)
-export const getProjectItems    = (project_id) => request(`/project-items?project_id=${project_id}`);
-export const createProjectItem  = (data) => request('/project-items', { method: 'POST', body: JSON.stringify(data) });
-export const updateProjectItem  = (id, data) => request(`/project-items?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteProjectItem  = (id) => request(`/project-items?id=${id}`, { method: 'DELETE' });
 
 // Activities
 export const getActivities  = (params = {}) => {
