@@ -68,6 +68,20 @@ const initialsOf = (n) => String(n || '')
   .toUpperCase()
   .slice(0, 4);
 
+// A contractor agreement can carry its document by reference instead of storing
+// 50KB of contract text in a database column, so the authoritative text lives in
+// version control under _lib/contracts and is reviewable in a diff. The ref is
+// strictly allowlisted, so it can never escape that directory.
+function markdownFor(terms) {
+  if (terms && terms.agreement_markdown) return terms.agreement_markdown;
+  const ref = terms && terms.markdown_ref;
+  if (typeof ref === 'string' && /^[a-z0-9-]+$/.test(ref)) {
+    try { return require('../_lib/contracts/' + ref + '.js'); }
+    catch (e) { console.error('contract ref not resolvable:', ref, e.message); }
+  }
+  return '';
+}
+
 async function agreementForToken(token) {
   if (!token || !UUID_RE.test(token)) return null;
   const rows = await supaFetch(`crm_agreements?sign_token=eq.${token}&select=*,client:crm_clients(id,business_name,owner_name,contact_email,contact_phone,portal_user_id)`);
@@ -206,6 +220,7 @@ module.exports = async function handler(req, res) {
     if (!ag) return res.status(404).json({ error: 'Agreement not found' });
     const client = ag.client || {};
     const terms = ag.terms || {};
+    const agreementMd = markdownFor(terms);
     const contractor = isContractor(ag) ? (terms.signer || {}) : null;
 
     // GET action=paid — Stripe success return: mark the deposit paid, then
@@ -261,7 +276,7 @@ module.exports = async function handler(req, res) {
 
       const maintAmt = Number(terms.maintenance) || 0;
       const schedMd = scheduleMarkdown(plan, maintAmt);
-      let md = terms.agreement_markdown || '';
+      let md = agreementMd || '';
       md = md.includes('{{PAYMENT_SCHEDULE}}')
         ? md.replace('{{PAYMENT_SCHEDULE}}', schedMd)
         : `${md}\n\n## Payment Schedule\n${schedMd}`;
@@ -305,7 +320,7 @@ module.exports = async function handler(req, res) {
       // Custom plan not chosen yet → the page shows a recap + the plan chooser.
       if (ag.payment_mode === 'custom' && !ag.selected_plan) {
         // Strip the schedule placeholder from the recap-facing agreement text.
-        const scope = (terms.agreement_markdown || '').replace('{{PAYMENT_SCHEDULE}}', '_(you choose your plan below)_');
+        const scope = (agreementMd || '').replace('{{PAYMENT_SCHEDULE}}', '_(you choose your plan below)_');
         return res.json({
           status: ag.signed_at ? 'signed' : 'sent',
           needs_plan: true,
@@ -326,7 +341,7 @@ module.exports = async function handler(req, res) {
         requires_ai_consent: !!terms.requires_ai_consent,
         business_name: contractor ? '' : client.business_name,
         owner_name: contractor ? (contractor.name || '') : client.owner_name,
-        agreement_markdown: terms.agreement_markdown || '',
+        agreement_markdown: agreementMd || '',
         nda_markdown: terms.nda_markdown || '',
         total: contractor ? null : ag.total_amount,
         installments: contractor ? [] : (terms.installments || []),
@@ -365,7 +380,7 @@ module.exports = async function handler(req, res) {
       let fileUrl = ag.file_url || null;
       try {
         const pdfBytes = await buildAgreementPdf({
-          agreementMarkdown: terms.agreement_markdown,
+          agreementMarkdown: agreementMd,
           ndaMarkdown: terms.nda_markdown,
           ownerName: contractor ? (contractor.name || signerName) : client.owner_name,
           signerName,
