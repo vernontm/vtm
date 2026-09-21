@@ -57,7 +57,16 @@ function isContractor(ag) {
   return !ag.client_id && !!(ag.terms && ag.terms.signer && ag.terms.signer.kind === 'contractor');
 }
 
-const initialsOf = (n) => String(n || '').trim().split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 4);
+// Initials for the AI-consent acknowledgment. Only letters count, so a suffix
+// or punctuation in the signer's name ("John Smith Jr.", "Ray Vernon (Test)")
+// cannot leak a stray character into the initials.
+const initialsOf = (n) => String(n || '')
+  .split(/\s+/)
+  .map(w => (w.match(/[A-Za-z]/) || [''])[0])
+  .filter(Boolean)
+  .join('')
+  .toUpperCase()
+  .slice(0, 4);
 
 async function agreementForToken(token) {
   if (!token || !UUID_RE.test(token)) return null;
