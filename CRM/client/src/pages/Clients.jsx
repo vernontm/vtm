@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Trash2, ArrowLeft, Building2, Calendar,
   KeyRound, CheckCircle2, Circle, Clock, ShieldCheck, ListChecks,
@@ -3704,6 +3704,10 @@ function DealsTab({ client }) {
 function ProjectsTab({ client }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  // The delivery board lives on the project detail screen, so this tab hands
+  // off to it rather than being a dead end that tells you to go and find it.
+  const openBoard = (p) => navigate(`/projects?open=${p.id}`);
 
   const load = async () => {
     try {
@@ -3723,17 +3727,28 @@ function ProjectsTab({ client }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {rows.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>No projects linked to this client yet. Create one from the Projects page.</div>}
+      {rows.length === 0 && (
+        <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+          No projects linked to {client.business_name} yet.{' '}
+          <button className="btn-ghost" onClick={() => navigate('/projects')} style={{ padding: '4px 10px', marginLeft: 4 }}>
+            Create one
+          </button>
+        </div>
+      )}
       {rows.map(p => {
         return (
-          <div key={p.id} style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
+          <div key={p.id} onClick={() => openBoard(p)} title="Open the delivery board"
+               style={{ padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <Briefcase size={15} style={{ color: 'var(--orange)' }} />
               <span style={{ fontWeight: 700, color: 'var(--text)', flex: 1, minWidth: 120 }}>{p.name}</span>
               {projectStartDate(p) && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Started {projectStartDate(p)}</span>}
               {p.value ? <span style={{ fontSize: 12.5, fontWeight: 800, color: '#22c55e' }}>{fmtUsd(p.value)}{p.billing_type === 'monthly' ? '/mo' : ''}</span> : null}
-              <StatusBadge status={projectPaymentBadge(p)} />
-              <StatusBadge status={p.status || 'Onboarding'} options={PROJECT_LIFECYCLE} onChange={s => setStatus(p, s)} />
+              {/* The card navigates, so the controls inside it must not. */}
+              <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <StatusBadge status={projectPaymentBadge(p)} />
+                <StatusBadge status={p.status || 'Onboarding'} options={PROJECT_LIFECYCLE} onChange={s => setStatus(p, s)} />
+              </div>
             </div>
             {p.scope && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>{p.scope}</div>}
           </div>

@@ -295,6 +295,16 @@ export default function Projects() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [clients, setClients]       = useState([]); // for linking a project to a real client
 
+  // Deep link: /projects?open=<id> opens that project's detail and board, so
+  // the Projects tab on a client can hand off straight to it.
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || !projects.length) return;
+    if (selected?.id === openId) return;
+    const found = projects.find(p => p.id === openId);
+    if (found) setSelected(found);
+  }, [searchParams, projects, selected]);
+
   const load = async () => {
     try { setProjects((await getProjects()).filter(p => !p.archived)); } catch (e) { console.error(e); }
     finally { setLoading(false); }
