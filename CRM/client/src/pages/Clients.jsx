@@ -3705,9 +3705,28 @@ function ProjectsTab({ client }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
   // The delivery board lives on the project detail screen, so this tab hands
   // off to it rather than being a dead end that tells you to go and find it.
   const openBoard = (p) => navigate(`/projects?open=${p.id}`);
+
+  // Projects are created here now, already attached to this client, rather than
+  // on a separate page that has to be told which client it belongs to.
+  const createForClient = async () => {
+    const name = window.prompt(`Name this project for ${client.business_name}`);
+    if (name == null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setCreating(true);
+    try {
+      const p = await createProject({
+        name: trimmed, client_id: client.id, client: client.business_name,
+        project_kind: 'build', status: 'Onboarding', billing_type: 'one_time',
+        value: 0, recurring_amount: 0,
+      });
+      openBoard(p);
+    } catch (e) { toast('error', e.message); setCreating(false); }
+  };
 
   const load = async () => {
     try {
@@ -3729,12 +3748,13 @@ function ProjectsTab({ client }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {rows.length === 0 && (
         <div style={{ color: 'var(--muted)', fontSize: 13 }}>
-          No projects linked to {client.business_name} yet.{' '}
-          <button className="btn-ghost" onClick={() => navigate('/projects')} style={{ padding: '4px 10px', marginLeft: 4 }}>
-            Create one
-          </button>
+          No projects for {client.business_name} yet.
         </div>
       )}
+      <button className="btn-primary" onClick={createForClient} disabled={creating}
+              style={{ alignSelf: 'flex-start', padding: '8px 14px' }}>
+        <Plus size={14} /> {creating ? 'Creating...' : 'New project'}
+      </button>
       {rows.map(p => {
         return (
           <div key={p.id} onClick={() => openBoard(p)} title="Open the delivery board"

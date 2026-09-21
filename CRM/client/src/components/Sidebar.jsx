@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Users, Briefcase, LayoutDashboard,
+  Users, LayoutDashboard,
   Mail, Calendar, Settings, LogOut,
   Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock, BookOpen, CheckSquare, RotateCcw,
 } from 'lucide-react';
@@ -20,7 +20,6 @@ const nav = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Home',         slug: 'dashboard' },
   { to: '/leads',        icon: UserPlus,        label: 'Leads',        slug: 'leads' },
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
-  { to: '/projects',     icon: Briefcase,       label: 'Pipeline',     slug: 'projects' },
   { to: '/email',        icon: Mail,            label: 'Inbox',        slug: 'email' },
   { to: '/appointments', icon: Calendar,        label: 'Calendar',     slug: 'appointments' },
 ];
