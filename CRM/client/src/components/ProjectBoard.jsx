@@ -24,11 +24,15 @@ const RANGES = [
 ];
 
 const STATUS_NEXT = { todo: 'doing', doing: 'done', done: 'todo' };
+// Clicking a marker cycles it. The in-progress mark is a bar rather than a
+// glyph: it reads as "partially done" the way an indeterminate checkbox does,
+// which a slash did not.
 const STATUS_MARK = {
-  todo: { ch: '', bg: 'transparent', bd: 'var(--border)', fg: 'var(--muted)' },
-  doing: { ch: '/', bg: '#fef3c7', bd: '#f59e0b', fg: '#b45309' },
-  done: { ch: '✓', bg: '#dcfce7', bd: '#16a34a', fg: '#15803d' },
+  todo:  { ch: '',  label: 'Not started', bg: 'transparent', bd: 'var(--border)', fg: 'var(--muted)' },
+  doing: { ch: '-', label: 'In progress', bg: '#fef3c7', bd: '#f59e0b', fg: '#b45309' },
+  done:  { ch: '✓', label: 'Done',        bg: '#dcfce7', bd: '#16a34a', fg: '#15803d' },
 };
+const STATUS_ORDER = ['todo', 'doing', 'done'];
 
 const lbl = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 };
 
@@ -158,6 +162,17 @@ export default function ProjectBoard({ project }) {
               <div style={{ width: `${progress.pct}%`, height: '100%', background: '#16a34a' }} />
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{progress.done} of {progress.total} done ({progress.pct}%)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+              {STATUS_ORDER.map(k => {
+                const m = STATUS_MARK[k];
+                return (
+                  <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--muted)' }}>
+                    <span style={{ width: 15, height: 15, borderRadius: 5, border: `1.5px solid ${m.bd}`, background: m.bg, color: m.fg, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{m.ch}</span>
+                    {m.label}
+                  </span>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
@@ -206,7 +221,8 @@ export default function ProjectBoard({ project }) {
                       return (
                         <div key={st.id} style={{ padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <button onClick={() => cycle(st)} title={`Mark ${STATUS_NEXT[st.status]}`}
+                            <button onClick={() => cycle(st)}
+                              title={`${(STATUS_MARK[st.status] || STATUS_MARK.todo).label}. Click to mark ${(STATUS_MARK[STATUS_NEXT[st.status] || 'doing']).label.toLowerCase()}.`}
                               style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${mk.bd}`, background: mk.bg, color: mk.fg, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {mk.ch}
                             </button>
