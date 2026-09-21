@@ -1,4 +1,5 @@
 const { setCors, requireAuth } = require('../_lib/supabase.js');
+const { marketingSkillsPrompt } = require('../_lib/marketing-skills.js');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -19,7 +20,9 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Lead payload too large' });
   }
 
-  const systemPrompt = `You are a sales script personalizer for Vernon Tech & Media, a creative technology studio that builds websites, apps, AI content systems, and marketing automation for small businesses.
+  const systemPrompt = `${marketingSkillsPrompt('text')}
+
+You are a sales script personalizer for Vernon Tech & Media, a creative technology studio that builds websites, apps, AI content systems, and marketing automation for small businesses.
 
 You receive a base call script template and specific information about a lead. Your job is to rewrite the script so it is hyper-personalized, short, natural, and focused on booking a 15-minute call. These are COLD calls — the prospect did not ask for this call, so you need to keep them engaged without taking up too much of their time.
 

@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
     const phoneRaw = clean(body.phone, 40);
     const phoneDigits = phoneRaw.replace(/\D/g, '');
     const eventName = clean(body.event, 120) || DEFAULT_EVENT_NAME;
-    const source = clean(body.source, 60) || 'meetup-page';
+    const source = clean(body.source, 60) || 'katy-ai-meetup';
 
     const results = { checkin: null, contact: null };
 

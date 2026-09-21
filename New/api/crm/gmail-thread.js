@@ -1,4 +1,4 @@
-import { setCors, requireAuth } from '../_lib/supabase.js';
+import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import { getGmailAuth } from '../_lib/gmail.js';
 
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -124,10 +124,28 @@ export default async function handler(req, res) {
         snippet: msg.snippet || '',
         body: text,
         bodyHtml: html,
+        // Include the raw RFC 2822 Message-ID + Reply Headers so the client can
+        // stitch replies into the correct Gmail thread and inline properly in
+        // recipients' clients (In-Reply-To / References chain).
+        messageIdHeader: getHeader(msg, 'Message-ID'),
+        references:      getHeader(msg, 'References'),
         labelIds: msg.labelIds || [],
         isFromMe: from.email.toLowerCase() === (userEmail || '').toLowerCase(),
       };
     });
+
+    // Write fresh labelIds back to the cached inbox rows so the CRM list picks up
+    // any labels that were added/removed outside our UI (mobile Gmail, gmail.com,
+    // filters, etc.). Best-effort — a cache write failure shouldn't break the read.
+    try {
+      await Promise.all(messages.map(m =>
+        supaFetch(`crm_gmail_cache?gmail_id=eq.${encodeURIComponent(m.id)}`, {
+          method: 'PATCH',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ label_ids: m.labelIds || [] }),
+        }).catch(() => null)
+      ));
+    } catch {}
 
     return res.json({ threadId, messages, messageCount: messages.length });
   } catch (err) {

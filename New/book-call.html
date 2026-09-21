@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book a Call · Vernon Tech &amp; Media</title>
+  <meta name="description" content="Book a free 30-minute intro call with Vernon Tech & Media. Tell us what you need and pick a time that works." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#0d1117;--panel:#151b26;--panel2:#1b2331;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);--text:#eef2f8;--muted:#94a0b3;--blue:#2563eb;--blue2:#4f8cff;--ok:#38d18a;--fdisp:'Plus Jakarta Sans',system-ui,sans-serif;--fbody:'DM Sans',system-ui,sans-serif}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:radial-gradient(1100px 560px at 50% -8%,#182234,#0d1117 60%);color:var(--text);font-family:var(--fbody);min-height:100vh;-webkit-font-smoothing:antialiased}
+    .wrap{max-width:640px;margin:0 auto;padding:44px 20px 90px}
+    .brand{text-align:center;font-family:var(--fdisp);font-weight:800;font-size:12px;letter-spacing:.22em;color:var(--muted);margin-bottom:8px}
+    .brand b{color:var(--text)}
+    .sub-brand{text-align:center;font-size:13px;color:var(--muted);margin-bottom:26px}
+    /* progress */
+    .prog{display:flex;gap:6px;margin:0 auto 30px;max-width:320px}
+    .prog span{flex:1;height:4px;border-radius:99px;background:var(--panel2);transition:background .25s}
+    .prog span.on{background:linear-gradient(90deg,var(--blue),var(--blue2))}
+    h1{font-family:var(--fdisp);font-weight:800;font-size:clamp(24px,5vw,32px);line-height:1.15;text-align:center;margin-bottom:8px}
+    .lede{text-align:center;color:var(--muted);font-size:15px;line-height:1.55;margin-bottom:26px}
+    .step{display:none;animation:fade .25s ease}
+    .step.on{display:block}
+    @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    /* option cards */
+    .cards{display:flex;flex-direction:column;gap:10px}
+    .card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;cursor:pointer;text-align:left;color:var(--text);font-family:var(--fbody);width:100%;transition:border-color .15s, transform .1s}
+    .card:hover{border-color:var(--blue)}
+    .card:active{transform:scale(.99)}
+    .card .em{font-size:24px;flex-shrink:0;width:44px;height:44px;border-radius:11px;background:rgba(37,99,235,.12);display:flex;align-items:center;justify-content:center}
+    .card .t{font-family:var(--fdisp);font-weight:700;font-size:15.5px}
+    .card .d{color:var(--muted);font-size:12.5px;margin-top:2px}
+    .card .chk{margin-left:auto;flex-shrink:0;width:24px;height:24px;border-radius:8px;border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;transition:all .15s}
+    .card.on{border-color:var(--blue);background:rgba(37,99,235,.10)}
+    .card.on .chk{background:var(--blue);border-color:var(--blue);color:#fff}
+    /* inputs */
+    .fl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:16px 0 7px}
+    .inp{width:100%;background:var(--panel2);border:1.5px solid var(--line2);border-radius:12px;padding:14px 15px;font-size:16px;color:var(--text);font-family:var(--fbody)}
+    .inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.2)}
+    .inp::placeholder{color:#5d6878}
+    textarea.inp{resize:vertical;min-height:96px;line-height:1.5}
+    .btn{width:100%;margin-top:22px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border:none;border-radius:12px;padding:16px;font-family:var(--fdisp);font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 10px 26px -10px rgba(37,99,235,.7)}
+    .btn:hover{filter:brightness(1.07)} .btn:disabled{opacity:.5;cursor:default;filter:none}
+    .back{background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin-bottom:16px;font-family:var(--fbody);padding:0}
+    .back:hover{color:var(--text)}
+    .err{color:#ff8f8f;font-size:13.5px;margin-top:12px;text-align:center;min-height:1px}
+    /* time picker */
+    .days{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px}
+    .day{flex-shrink:0;background:var(--panel);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;color:var(--text);font-family:var(--fdisp)}
+    .day .dw{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+    .day .dn{font-size:15px;font-weight:800;margin-top:2px;white-space:nowrap}
+    .day.on{border-color:var(--blue);background:rgba(37,99,235,.12)}
+    .times{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .tm{background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:12px 6px;cursor:pointer;color:var(--text);font-family:var(--fdisp);font-weight:700;font-size:14px;text-align:center}
+    .tm:hover{border-color:var(--blue)}
+    .tm.on{background:var(--blue);border-color:var(--blue);color:#fff}
+    .tz{text-align:center;color:var(--muted);font-size:12px;margin-top:12px}
+    .state{text-align:center;color:var(--muted);padding:34px 10px;font-size:14px}
+    /* success */
+    .okwrap{text-align:center;padding:18px 0}
+    .okball{width:72px;height:72px;border-radius:50%;background:rgba(56,209,138,.14);border:2px solid var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:32px}
+    .meet{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:12px 18px;color:var(--blue2);font-size:14px;font-weight:600;text-decoration:none;margin-top:16px;word-break:break-all}
+    .fine{color:var(--muted);font-size:12.5px;text-align:center;margin-top:18px;line-height:1.6}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand"><b>VERNON TECH &amp; MEDIA</b></div>
+    <div class="sub-brand">Free 30-minute intro call with Ray</div>
+    <div class="prog" id="prog"></div>
+    <div id="err" class="err"></div>
+
+    <!-- Step 1: contact -->
+    <div class="step" data-step="0">
+      <h1>Let's start with you</h1>
+      <p class="lede">So we can send your calendar invite with the Google Meet link.</p>
+      <label class="fl">Full name *</label>
+      <input class="inp" id="name" placeholder="Your name" autocomplete="name" />
+      <label class="fl">Email *</label>
+      <input class="inp" id="email" type="email" placeholder="you@email.com" autocomplete="email" />
+      <label class="fl">Phone</label>
+      <input class="inp" id="phone" type="tel" placeholder="(555) 555-5555" autocomplete="tel" />
+      <input class="inp" id="website" style="display:none" tabindex="-1" autocomplete="off" />
+      <button class="btn" data-next>Continue</button>
+    </div>
+
+    <!-- Step 2: reasons (multi-select) -->
+    <div class="step" data-step="1">
+      <button class="back" data-back>← Back</button>
+      <h1>What can we help you with?</h1>
+      <p class="lede">Pick everything that applies. This helps us come prepared for your call.</p>
+      <div class="cards">
+        <button class="card" data-focus="marketing"><span class="em">📈</span><span><span class="t">Marketing &amp; going viral</span><br/><span class="d">Content, TikTok/Instagram growth, local reach, ads</span></span><span class="chk">✓</span></button>
+        <button class="card" data-focus="crm"><span class="em">🧩</span><span><span class="t">A CRM or custom software</span><br/><span class="d">Own your system instead of renting bloated software</span></span><span class="chk">✓</span></button>
+        <button class="card" data-focus="website"><span class="em">🌐</span><span><span class="t">A website</span><br/><span class="d">A site that looks premium and actually converts</span></span><span class="chk">✓</span></button>
+        <button class="card" data-focus="ai"><span class="em">🤖</span><span><span class="t">AI automations</span><br/><span class="d">Auto-replies, review requests, lead capture, workflows</span></span><span class="chk">✓</span></button>
+        <button class="card" data-focus="other"><span class="em">💬</span><span><span class="t">Something else</span><br/><span class="d">Tell us about it on the next step</span></span><span class="chk">✓</span></button>
+      </div>
+      <button class="btn" data-next>Continue</button>
+    </div>
+
+    <!-- Step 3: about -->
+    <div class="step" data-step="2">
+      <button class="back" data-back>← Back</button>
+      <h1>Tell us a little about it</h1>
+      <p class="lede">A sentence or two is plenty. It makes the call twice as useful.</p>
+      <label class="fl">Business name <span style="font-weight:400">(if you have one)</span></label>
+      <input class="inp" id="business" placeholder="e.g. Lupe's Mexican Cafe" />
+      <label class="fl">What are you working on, or what's the biggest challenge right now?</label>
+      <textarea class="inp" id="notes" placeholder="e.g. We get great reviews in person but nobody finds us online…"></textarea>
+      <button class="btn" data-next>Pick a time →</button>
+    </div>
+
+    <!-- Step 4: time -->
+    <div class="step" data-step="3">
+      <button class="back" data-back>← Back</button>
+      <h1>Pick a time</h1>
+      <p class="lede">Live availability from our calendar. All times Central.</p>
+      <div id="slotArea"><div class="state">Loading open times…</div></div>
+      <button class="btn" id="bookBtn" disabled>Book the call</button>
+      <div class="tz">30 minutes · Google Meet · Central Time</div>
+    </div>
+
+    <!-- Step 5: done -->
+    <div class="step" data-step="4">
+      <div class="okwrap">
+        <div class="okball">✓</div>
+        <h1>You're booked!</h1>
+        <p class="lede" id="okWhen"></p>
+        <a id="meetLink" class="meet" target="_blank" rel="noopener" style="display:none">📹 Google Meet link</a>
+        <div class="fine">A calendar invite is on its way to your email.<br/>Need to change the time? Just reply to the invite.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var state = { step: 0, focuses: [], slots: [], day: '', slot: null, loading: false };
+    var STEPS = 5;
+    var prog = document.getElementById('prog');
+    for (var i = 0; i < STEPS - 1; i++) { var s = document.createElement('span'); prog.appendChild(s); }
+    var err = document.getElementById('err');
+
+    function show(n) {
+      state.step = n; err.textContent = '';
+      document.querySelectorAll('.step').forEach(function (el) { el.classList.toggle('on', +el.dataset.step === n); });
+      prog.querySelectorAll('span').forEach(function (el, i) { el.classList.toggle('on', i <= Math.min(n, STEPS - 2)); });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (n === 3 && !state.slots.length && !state.loading) loadSlots();
+    }
+    show(0);
+
+    // Multi-select: tap to toggle any number of reasons.
+    document.querySelectorAll('[data-focus]').forEach(function (c) {
+      c.onclick = function () {
+        var f = c.dataset.focus;
+        var i = state.focuses.indexOf(f);
+        if (i >= 0) state.focuses.splice(i, 1); else state.focuses.push(f);
+        c.classList.toggle('on', i < 0);
+        err.textContent = '';
+      };
+    });
+    document.querySelectorAll('[data-back]').forEach(function (b) { b.onclick = function () { show(state.step - 1); }; });
+    document.querySelectorAll('[data-next]').forEach(function (b) {
+      b.onclick = function () {
+        if (state.step === 0) {
+          var name = val('name'), email = val('email');
+          if (!name) return fail('Please add your name.');
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('Please add a valid email.');
+        }
+        if (state.step === 1 && !state.focuses.length) return fail('Pick at least one so we know how to prepare.');
+        show(state.step + 1);
+      };
+    });
+    function val(id) { return document.getElementById(id).value.trim(); }
+    function fail(m) { err.textContent = m; }
+
+    function loadSlots() {
+      state.loading = true;
+      fetch('/api/book-call?action=slots').then(function (r) { return r.json(); }).then(function (d) {
+        state.slots = d.slots || [];
+        renderSlots();
+      }).catch(function () {
+        document.getElementById('slotArea').innerHTML = '<div class="state">Could not load times. Refresh to try again.</div>';
+      }).finally(function () { state.loading = false; });
+    }
+
+    function renderSlots() {
+      var area = document.getElementById('slotArea');
+      if (!state.slots.length) { area.innerHTML = '<div class="state">No open times in the next two weeks. Email ray@vernontm.com and we\'ll find one.</div>'; return; }
+      var days = []; var seen = {};
+      state.slots.forEach(function (s) { if (!seen[s.day]) { seen[s.day] = true; days.push(s.day); } });
+      if (!state.day || !seen[state.day]) state.day = days[0];
+      var h = '<div class="days">';
+      days.forEach(function (d) {
+        var parts = d.split(', ');
+        h += '<div class="day' + (d === state.day ? ' on' : '') + '" data-day="' + d + '"><div class="dw">' + parts[0] + '</div><div class="dn">' + (parts[1] || '') + '</div></div>';
+      });
+      h += '</div><div class="times">';
+      state.slots.filter(function (s) { return s.day === state.day; }).forEach(function (s) {
+        h += '<div class="tm' + (state.slot === s.iso ? ' on' : '') + '" data-slot="' + s.iso + '">' + s.time + '</div>';
+      });
+      h += '</div>';
+      area.innerHTML = h;
+      area.querySelectorAll('[data-day]').forEach(function (el) { el.onclick = function () { state.day = el.dataset.day; state.slot = null; document.getElementById('bookBtn').disabled = true; renderSlots(); }; });
+      area.querySelectorAll('[data-slot]').forEach(function (el) { el.onclick = function () { state.slot = el.dataset.slot; document.getElementById('bookBtn').disabled = false; renderSlots(); }; });
+    }
+
+    document.getElementById('bookBtn').onclick = function () {
+      var btn = this;
+      if (!state.slot) return fail('Pick a time first.');
+      btn.disabled = true; btn.textContent = 'Booking…'; err.textContent = '';
+      fetch('/api/book-call?action=book', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          focus: state.focuses, business: val('business'), notes: val('notes'),
+          name: val('name'), email: val('email'), phone: val('phone'),
+          website: val('website'), slot: state.slot,
+        }),
+      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }).then(function (o) {
+        if (!o.ok) {
+          btn.disabled = false; btn.textContent = 'Book the call';
+          fail(o.j.error || 'Something went wrong. Try another time.');
+          if ((o.j.error || '').indexOf('taken') >= 0) { state.slots = []; state.slot = null; loadSlots(); }
+          return;
+        }
+        document.getElementById('okWhen').textContent = o.j.when;
+        var ml = document.getElementById('meetLink');
+        if (o.j.meet_link) { ml.href = o.j.meet_link; ml.style.display = 'inline-flex'; }
+        show(4);
+      }).catch(function () { btn.disabled = false; btn.textContent = 'Book the call'; fail('Network error. Please try again.'); });
+    };
+  </script>
+</body>
+</html>

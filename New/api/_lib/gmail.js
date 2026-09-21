@@ -86,6 +86,9 @@ function getAuthUrl() {
       // Google Meet: read conference records + transcripts (post-call notes sync).
       // Requires the Google Meet API enabled in the Cloud project + a reconnect.
       'https://www.googleapis.com/auth/meetings.space.readonly',
+      // Write scope needed to configure auto-recording / auto-transcription on
+      // Meet spaces we create through the Calendar API. Requires a reconnect.
+      'https://www.googleapis.com/auth/meetings.space.created',
     ].join(' '),
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
@@ -182,7 +185,11 @@ function rfc2047(str) {
   return `=?UTF-8?B?${Buffer.from(str, 'utf-8').toString('base64')}?=`;
 }
 
-function buildRawEmail({ to, from, subject, body, html, inReplyTo, references }) {
+// Wrap a base64 string in 76-char lines per RFC 2045.
+function chunk76(s) { return s.replace(/(.{76})/g, '$1\r\n'); }
+
+// Attachments: array of { filename, mimeType, data_base64 } (data_base64 is raw base64, no data-URI prefix).
+function buildRawEmail({ to, from, subject, body, html, inReplyTo, references, attachments }) {
   const headers = [
     `From: ${from}`,
     `To: ${to}`,
@@ -192,34 +199,61 @@ function buildRawEmail({ to, from, subject, body, html, inReplyTo, references })
   if (references) headers.push(`References: ${references}`);
   headers.push('MIME-Version: 1.0');
 
-  let lines;
-  if (html) {
-    // multipart/alternative: plain-text fallback + the HTML (hyperlinked) part.
-    const boundary = 'bnd_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    lines = [
-      ...headers,
-      `Content-Type: multipart/alternative; boundary="${boundary}"`,
-      '',
-      `--${boundary}`,
+  const hasAttach = Array.isArray(attachments) && attachments.length > 0;
+
+  // Build the body part (multipart/alternative if html present, otherwise text/plain).
+  const altBoundary = 'alt_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const buildBodyPart = () => {
+    if (html) {
+      return [
+        `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+        '',
+        `--${altBoundary}`,
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: base64',
+        '',
+        Buffer.from(body || '', 'utf-8').toString('base64'),
+        `--${altBoundary}`,
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: base64',
+        '',
+        Buffer.from(html, 'utf-8').toString('base64'),
+        `--${altBoundary}--`,
+      ];
+    }
+    return [
       'Content-Type: text/plain; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
       '',
       Buffer.from(body || '', 'utf-8').toString('base64'),
-      `--${boundary}`,
-      'Content-Type: text/html; charset=UTF-8',
-      'Content-Transfer-Encoding: base64',
-      '',
-      Buffer.from(html, 'utf-8').toString('base64'),
-      `--${boundary}--`,
     ];
-  } else {
+  };
+
+  let lines;
+  if (hasAttach) {
+    const mixBoundary = 'mix_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
     lines = [
       ...headers,
-      'Content-Type: text/plain; charset=UTF-8',
-      'Content-Transfer-Encoding: base64',
+      `Content-Type: multipart/mixed; boundary="${mixBoundary}"`,
       '',
-      Buffer.from(body, 'utf-8').toString('base64'),
+      `--${mixBoundary}`,
+      ...buildBodyPart(),
     ];
+    for (const a of attachments) {
+      const safeName = String(a.filename || 'attachment').replace(/[\r\n"]/g, '_');
+      const mime = a.mimeType || 'application/octet-stream';
+      lines.push(
+        `--${mixBoundary}`,
+        `Content-Type: ${mime}; name="${safeName}"`,
+        `Content-Disposition: attachment; filename="${safeName}"`,
+        'Content-Transfer-Encoding: base64',
+        '',
+        chunk76(a.data_base64),
+      );
+    }
+    lines.push(`--${mixBoundary}--`);
+  } else {
+    lines = [ ...headers, ...buildBodyPart() ];
   }
   return Buffer.from(lines.join('\r\n')).toString('base64url');
 }
@@ -320,10 +354,10 @@ async function modifyMessageLabels(messageId, { addLabelIds = [], removeLabelIds
 
 // ── Send + Draft ─────────────────────────────────────────────────────────────
 
-async function sendEmail({ to, from: fromOverride, subject, body, html, threadId, inReplyTo, references, labelName }) {
+async function sendEmail({ to, from: fromOverride, subject, body, html, threadId, inReplyTo, references, labelName, attachments }) {
   const { accessToken, email: defaultFrom } = await getGmailAuth();
   const from = fromOverride || defaultFrom;
-  const raw = buildRawEmail({ to, from, subject, body, html, inReplyTo, references });
+  const raw = buildRawEmail({ to, from, subject, body, html, inReplyTo, references, attachments });
   const requestBody = { raw };
   if (threadId) requestBody.threadId = threadId;
 

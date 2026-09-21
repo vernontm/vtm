@@ -1,2 +1,5 @@
-.vercel
+*.bak
+.env*
 .env*.local
+.vercel
+.vercel*

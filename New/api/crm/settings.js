@@ -9,12 +9,6 @@ export default async function handler(req, res) {
   const { key, action } = req.query;
 
   try {
-    // GET /api/crm/settings - list all
-    if (req.method === 'GET' && !key) {
-      const rows = await supaFetch('crm_app_settings?order=key.asc');
-      return res.json(rows);
-    }
-
     // GET /api/crm/settings?action=gmail-status
     if (req.method === 'GET' && action === 'gmail-status') {
       const rows = await supaFetch('crm_app_settings?key=in.(gmail_access_token,gmail_connected_email,gmail_token_expiry)');
@@ -25,6 +19,12 @@ export default async function handler(req, res) {
         email: map.gmail_connected_email || '',
         tokenExpiry: map.gmail_token_expiry || '',
       });
+    }
+
+    // GET /api/crm/settings - list all (no action, no key)
+    if (req.method === 'GET' && !action && !key) {
+      const rows = await supaFetch('crm_app_settings?order=key.asc');
+      return res.json(rows);
     }
 
     // PUT /api/crm/settings?key=xxx - update single setting

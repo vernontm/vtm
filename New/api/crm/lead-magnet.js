@@ -82,6 +82,7 @@ module.exports = async function handler(req, res) {
           client_id,
           email,
           name: name || null,
+          phone: (phone && phone.trim()) || null,
           tags,
           source,
           status: 'active',

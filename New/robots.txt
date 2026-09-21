@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Internal tools and gated areas, not for search
+Disallow: /admin
+Disallow: /academy
+Disallow: /portal
+Disallow: /client
+Disallow: /sign
+Disallow: /workshop-admin
+Disallow: /workshop-slides
+Disallow: /present
+Disallow: /crm-welcome
+Disallow: /api/
+
+Sitemap: https://www.vernontm.com/sitemap.xml

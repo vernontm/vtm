@@ -12,17 +12,21 @@ const PLAYBOOK = `VTM service lines & pricing (reference):
 - Coaching: from $497/mo.
 Frame value as "save them money or make them money," never sell on price. Most website deals carry a recurring monthly hosting/upkeep fee.`;
 
-async function callClaude(system, user, maxTokens = 4096) {
+async function callClaudeMessages(system, messages, maxTokens = 4096) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
   const res = await fetch(ANTHROPIC_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages }),
   });
   if (!res.ok) throw new Error(`Claude API error: ${await res.text()}`);
   const data = await res.json();
   return (data.content || []).find(c => c.type === 'text')?.text || '';
+}
+
+async function callClaude(system, user, maxTokens = 4096) {
+  return callClaudeMessages(system, [{ role: 'user', content: user }], maxTokens);
 }
 
 // Escape bare control characters (raw newlines/tabs/returns) that appear INSIDE
@@ -85,7 +89,7 @@ function contextBlock(client, projects, activity = []) {
   // Summaries first (most decision-dense), then the rest of the notes.
   const notes = [...activity].sort((a, b) => (b.tag === 'Summary' ? 1 : 0) - (a.tag === 'Summary' ? 1 : 0));
   const notesBlock = notes.length
-    ? notes.map(a => `- [${a.tag || 'note'}] ${(a.body || '').toString().slice(0, 1500)}`).join('\n').slice(0, 8000)
+    ? notes.map(a => `- [${a.tag || 'note'} · ${(a.created_at || '').slice(0, 10)}] ${(a.body || '').toString().slice(0, 1500)}`).join('\n').slice(0, 8000)
     : 'none';
   return `CLIENT: ${client.business_name} (owner: ${client.owner_name}, ${client.contact_email || 'no email'}, ${client.contact_phone || 'no phone'}, ${[client.location_city, client.location_state].filter(Boolean).join(', ')})
 Service types: ${(client.client_type || []).join(', ') || 'unspecified'}
@@ -106,13 +110,53 @@ module.exports = async function handler(req, res) {
   const { action } = req.query;
 
   try {
+    // ── chat: conversational intake. Reads the lead's docs/notes, asks Ray
+    //    clarifying questions, and when it has enough writes the terms summary
+    //    that feeds the agreement generator. ──
+    if (req.method === 'POST' && action === 'chat') {
+      const { client_id, messages } = req.body || {};
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      if (!Array.isArray(messages) || !messages.length) return res.status(400).json({ error: 'messages required' });
+      const { client, projects, activity } = await loadContext(client_id);
+
+      const system = `You are the deal assistant for Vernon Tech & Media (VTM), Vernon Tech & Media LLC, a New Mexico LLC operating out of Katy, Texas (signer: Rayvaughn Vernon). You help Ray turn a lead conversation plus their uploaded documents and notes into the TERMS for a service agreement.
+
+Your job: hold a short back-and-forth with Ray. Reply conversationally and briefly (2 to 5 sentences). Ask sharp, specific clarifying questions using the context below (scope specifics, total price, deposit vs payment plan, timeline, recurring/monthly fees, revision limits, third-party costs, anything the notes leave ambiguous or that a founder might forget to charge for). Ask one focused question or a small batch at a time, not a long list. Do NOT draft the full contract or NDA here.
+
+PRECEDENCE RULE (critical): deals change between meetings. If Ray states terms IN THIS CONVERSATION that differ from the stored notes below (a different price, commitment length, scope item, or anything else), Ray's latest message ALWAYS WINS. Notes are background from when they were written; the conversation is the current decision. Acknowledge the change once (for example "Got it, $550/mo with a 6 month minimum, overriding the earlier note") and use the NEW terms in everything that follows, including the TERMS block. Never argue a stored note back at Ray, and never silently revert to the note's numbers. Among the notes themselves, when two conflict, trust the one with the LATER date.
+
+When (and ONLY when) you have enough to draft the terms, meaning a clear scope, a total price, and a payment structure, end your message with a block in EXACTLY this format and nothing after it:
+<<<TERMS>>>
+[a concise but COMPLETE billing and scope summary: the total, the deposit/installments or a note that the client will choose a payment plan, any monthly/recurring fees, the timeline, and the key deliverables]
+<<<END>>>
+Do not include that block until you have those essentials. Everything before the block is your normal conversational reply to Ray (a quick confirmation is fine).
+
+NEVER use em dashes or en dashes; use commas, periods, hyphens, or the word "to".
+${PLAYBOOK}
+
+CONTEXT (the lead's business, documents, notes, and any logged projects):
+${contextBlock(client, projects, activity)}`;
+
+      const cleanMsgs = messages
+        .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+        .map(m => ({ role: m.role, content: m.content.slice(0, 6000) }));
+      const out = await callClaudeMessages(system, cleanMsgs, 1500);
+      // Free-text reply with an optional delimited TERMS block. Far more robust
+      // than forcing the whole conversational turn into JSON.
+      const m = out.match(/<<<TERMS>>>([\s\S]*?)<<<END>>>/);
+      const terms = m ? stripDashes(m[1].trim()) : '';
+      let reply = (m ? out.replace(m[0], '') : out).trim();
+      reply = stripDashes(reply.replace(/<<<TERMS>>>[\s\S]*$/, '').trim()) || (terms ? 'Great, I have what I need. The terms are ready below.' : 'Okay.');
+      return res.json({ reply, ready: !!terms, terms });
+    }
+
     // ── analyze: propose billing + surface gaps/questions before drafting ──
     if (req.method === 'POST' && action === 'analyze') {
       const { client_id } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
       const { client, projects, activity } = await loadContext(client_id);
 
-      const system = `You are a deal strategist for Vernon Tech & Media (VTM), a Katy, Texas agency (Rayvaughn Vernon, dba Vernon Tech & Media). You prepare service agreements. Be sharp about what a founder might FORGET to charge for or specify. ${PLAYBOOK}
+      const system = `You are a deal strategist for Vernon Tech & Media (VTM), Vernon Tech & Media LLC, a New Mexico LLC operating out of Katy, Texas (signer: Rayvaughn Vernon). You prepare service agreements. Be sharp about what a founder might FORGET to charge for or specify. When notes conflict, trust the one with the LATER date; deals change between meetings and the newest decision wins. ${PLAYBOOK}
 Return ONLY JSON with this shape:
 {
   "suggested_total": number,
@@ -162,9 +206,12 @@ CURRENT MUTUAL NDA (markdown):
         return res.json(parseJson(out));
       }
 
-      const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media (VTM) — Rayvaughn Vernon, dba Vernon Tech & Media, Katy, Texas, ray@vernontm.com. Governing law: Texas.
-Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law. Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. End with a one-line "not legal advice" note.
-Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance) — no refunds are issued. Section 9 Commitment: once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy). Note it is not legal advice.
+      const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media LLC, a New Mexico limited liability company, with its office at 1209 Mountain Road Pl NE, Ste R, Albuquerque, NM 87110 ("VTM"), ray@vernontm.com. Governing law: Texas.\nPARTIES BLOCK IS AUTHORITATIVE: the contracting party is always "Vernon Tech & Media LLC, a New Mexico limited liability company, with its office at 1209 Mountain Road Pl NE, Ste R, Albuquerque, NM 87110". Never write "Rayvaughn Vernon, dba Vernon Tech & Media" or "doing business as" in the parties block. Rayvaughn Vernon appears only as the signer, not as the contracting entity. Both documents MUST include a "Notices" section stating that all notices under the agreement are sent in writing to VTM at its Katy office, 23018 Undertaken Path, Katy, TX 77493, and to the Client at the email or address on file.
+Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law; 11. Notices (written notices to VTM go to the Katy office at 23018 Undertaken Path, Katy, TX 77493). Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. By default, end with a one-line "not legal advice" note.
+Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance) — no refunds are issued. Section 9 Commitment: by default, once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy).
+RAY'S BILLING TERMS BELOW ARE AUTHORITATIVE AND OVERRIDE THESE DEFAULTS. Read them carefully and obey any explicit instruction they contain, even if it contradicts the default structure above:
+- If Ray's terms say the engagement is month-to-month, or has NO minimum commitment, or no lock-in: Section 9 MUST reflect that. Do NOT say the client must "see it through to completion" or fulfill a fixed multi-month schedule, and do NOT state or imply any minimum term or commitment anywhere in either document. Instead, Section 9 covers only card-authorization / recurring-billing consent and states that either party may cancel with the stated notice (e.g. 30 days). A guaranteed or "held" intro RATE for a number of months is a price promise, not a commitment, so never phrase it as the client being locked in or committed to that many months.
+- If Ray's terms say to remove references to lawyers, legal counsel, or "consult an attorney", or to remove the "not legal advice" note: OMIT the closing "not legal advice" note and any "consult your own legal counsel / attorney" lines from BOTH the Service Agreement and the NDA entirely.
 Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives); never default the total to 0. NEVER use em dashes or en dashes ("—" or "–") anywhere; use commas, periods, hyphens, or the word "to" instead.${mode === 'custom' ? ` CUSTOM PLAN MODE: The client chooses their payment plan later in their portal, so DO NOT list any amounts, installments, or dates anywhere. For section 3 (Total Price & Payment Schedule), write the heading and then a single line containing exactly the token {{PAYMENT_SCHEDULE}} and nothing else. Set "total" to the build value from the terms/notes, and return installments: [] and monthly: []. Also fill "recap": a warm, client-facing 2-4 sentence summary of everything included, and EXPLICITLY call out (with enthusiasm) any bonus feature added at no additional cost or any goodwill on timeline mentioned in the notes. Also fill "features": an array of 5 to 8 objects { "title": short bold label (2-4 words), "detail": one concise client-facing sentence }, covering the key deliverables and capabilities in this package (pull them from the Scope of Work / notes; include the no-cost bonus as one of them).` : ''} Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
 {
   "summary": "one line",
@@ -305,6 +352,27 @@ ${contextBlock(client, projects, activity)}`;
         await supaFetch('crm_payments', { method: 'POST', body: JSON.stringify(rows) });
       }
       return res.json({ ok: true, agreement_id: agreement.id });
+    }
+
+    // ── save-doc: persist HAND-EDITED agreement / NDA markdown verbatim, no AI.
+    //    Patches the latest non-signed agreement row in place (never duplicates),
+    //    so manual tweaks show up in the preview + signing view immediately. ──
+    if (req.method === 'POST' && action === 'save-doc') {
+      const { client_id, agreement_id, agreement_markdown, nda_markdown, total } = req.body || {};
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      const rows = agreement_id
+        ? await supaFetch(`crm_agreements?id=eq.${agreement_id}&select=id,terms,status`)
+        : await supaFetch(`crm_agreements?client_id=eq.${client_id}&status=neq.signed&order=created_at.desc&limit=1&select=id,terms,status`);
+      const row = rows && rows[0];
+      if (!row) return res.status(404).json({ error: 'No agreement to edit yet. Use Preview once to create it, then edit.' });
+      if (row.status === 'signed') return res.status(409).json({ error: 'This agreement is already signed and cannot be edited.' });
+      const terms = { ...(row.terms || {}) };
+      if (typeof agreement_markdown === 'string') terms.agreement_markdown = stripDashes(agreement_markdown);
+      if (typeof nda_markdown === 'string') terms.nda_markdown = stripDashes(nda_markdown);
+      const patch = { terms };
+      if (typeof total === 'number' && !Number.isNaN(total)) patch.total_amount = total;
+      await supaFetch(`crm_agreements?id=eq.${row.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+      return res.json({ ok: true, agreement_id: row.id, terms });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

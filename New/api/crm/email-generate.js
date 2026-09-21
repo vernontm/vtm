@@ -1,5 +1,6 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import Anthropic from '@anthropic-ai/sdk';
+import { marketingSkillsPrompt } from '../_lib/marketing-skills.js';
 
 /** Strip em dashes (—), en dashes (–), and replace with hyphens or commas */
 function stripDashes(text) {
@@ -33,7 +34,9 @@ export default async function handler(req, res) {
 
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-      const systemPrompt = `You are an expert email copywriter for ${settingsMap.company_name || 'Vernon Tech & Media'}.
+      const systemPrompt = `${marketingSkillsPrompt('email')}
+
+You are an expert email copywriter for ${settingsMap.company_name || 'Vernon Tech & Media'}.
 Tone: ${settingsMap.tone_preference || 'professional'}.
 Services: ${settingsMap.services_offered || 'web development, AI automation, social media'}.
 Target client: ${settingsMap.target_client || 'small business owners'}.

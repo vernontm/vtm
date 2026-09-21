@@ -130,13 +130,17 @@ module.exports = async function handler(req, res) {
     // the delivery vehicle and already carries the sign link.
     if (req.method === 'POST' && action === 'mark-sent') {
       if (!id) return res.status(400).json({ error: 'id required' });
-      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=id,sign_token,status,sent_at`);
+      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=id,client_id,sign_token,status,sent_at`);
       if (!ag) return res.status(404).json({ error: 'Agreement not found' });
       const signToken = ag.sign_token || crypto.randomUUID();
       const patch = { sign_token: signToken };
       if (ag.status !== 'signed') patch.status = 'sent';
       if (!ag.sent_at) patch.sent_at = new Date().toISOString();
       await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+      // Move the lead to the "Contract Sent" column (unless already signed).
+      if (ag.status !== 'signed' && ag.client_id) {
+        await supaFetch(`crm_clients?id=eq.${ag.client_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' }) }).catch(() => {});
+      }
       return res.json({ ok: true, sign_token: signToken, link: `https://vernontm.com/sign?token=${signToken}` });
     }
 
@@ -189,6 +193,10 @@ module.exports = async function handler(req, res) {
         method: 'PATCH',
         body: JSON.stringify({ sign_token: signToken, status: 'sent', sent_at: new Date().toISOString() }),
       });
+      // Move the lead to the "Contract Sent" column (unless already signed).
+      if (ag.status !== 'signed' && (client.id || ag.client_id)) {
+        await supaFetch(`crm_clients?id=eq.${client.id || ag.client_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' }) }).catch(() => {});
+      }
       const link = `https://vernontm.com/sign?token=${signToken}`;
       const first = (client.owner_name || 'there').split(' ')[0];
 

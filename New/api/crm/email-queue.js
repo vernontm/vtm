@@ -1,11 +1,9 @@
 import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import { sendEmail, createDraft } from '../_lib/gmail.js';
+import emailSend from '../_lib/email-send.js';
 
-/** Strip em dashes (—) and en dashes (–), replace with hyphens */
-function stripDashes(text) {
-  if (!text) return text;
-  return text.replace(/\u2014/g, '-').replace(/\u2013/g, '-');
-}
+// Shared email rendering (dash-strip, markdown-link → HTML, plain-text fallback).
+const { stripDashes, bodyToHtml, stripMarkdownLinks } = emailSend;
 
 export default async function handler(req, res) {
   setCors(res, req);
@@ -43,16 +41,37 @@ export default async function handler(req, res) {
       if (!toEmail) return res.status(400).json({ error: 'No email address' });
 
       const subject = stripDashes(item.subject || '(no subject)');
-      const body = stripDashes(item.body || item.generated_body || '');
+      const rawBody = stripDashes(item.body || item.generated_body || '');
+      const html = bodyToHtml(rawBody);          // clickable links + preserved breaks (null if no links)
+      const body = stripMarkdownLinks(rawBody);  // plain-text fallback
+
+      // Fetch attachments (public Supabase Storage URLs) and inline as base64.
+      let attachments = [];
+      if (Array.isArray(item.attachments) && item.attachments.length) {
+        attachments = await Promise.all(item.attachments.map(async a => {
+          try {
+            const r = await fetch(a.url);
+            if (!r.ok) throw new Error(`fetch ${a.url} → ${r.status}`);
+            const buf = Buffer.from(await r.arrayBuffer());
+            return { filename: a.name || 'attachment', mimeType: a.mime || 'application/octet-stream', data_base64: buf.toString('base64') };
+          } catch (e) {
+            console.error('attachment fetch failed:', e.message);
+            return null;
+          }
+        }));
+        attachments = attachments.filter(Boolean);
+      }
 
       try {
         const result = await sendEmail({
           to: toEmail,
           subject,
           body,
+          html: html || undefined,
           threadId: item.reply_thread_id || undefined,
           inReplyTo: item.reply_rfc_message_id || undefined,
           references: item.reply_rfc_message_id || undefined,
+          attachments: attachments.length ? attachments : undefined,
         });
 
         // Update queue item as sent
@@ -95,10 +114,12 @@ export default async function handler(req, res) {
       if (!toEmail) return res.status(400).json({ error: 'No email address' });
 
       try {
+        const draftRaw = stripDashes(item.body || item.generated_body || '');
         const draft = await createDraft({
           to: toEmail,
           subject: stripDashes(item.subject || '(no subject)'),
-          body: stripDashes(item.body || item.generated_body || ''),
+          body: stripMarkdownLinks(draftRaw),
+          html: bodyToHtml(draftRaw) || undefined,
           threadId: item.reply_thread_id || undefined,
           inReplyTo: item.reply_rfc_message_id || undefined,
           references: item.reply_rfc_message_id || undefined,

@@ -572,7 +572,7 @@
             const params = new URLSearchParams(location.search);
             const utm = {};
             ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(k => { const v = params.get(k); if (v) utm[k] = v; });
-            return { source: params.get('utm_source') || 'webinar-page', utm: Object.keys(utm).length ? utm : null };
+            return { source: params.get('utm_source') || 'katy-ai-meetup', utm: Object.keys(utm).length ? utm : null };
         }
 
         // FIRST slide: capture name + email + phone up front and save a partial

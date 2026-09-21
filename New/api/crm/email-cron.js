@@ -24,10 +24,24 @@ async function sendCampaign(apiKey, a) {
   const H = { Authorization: `Bearer ${apiKey}`, Accept: 'application/json', 'Content-Type': 'application/json' };
   const ml = (method, path, body) => fetch(`https://connect.mailerlite.com/api/${path}`, { method, headers: H, body: body ? JSON.stringify(body) : undefined });
 
+  const mdToHtml = (text) => {
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>"')\]]+)/g;
+    let out = '', last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) out += esc(text.slice(last, m.index));
+      const label = m[1] && m[2] ? m[1] : m[3];
+      const url = m[1] && m[2] ? m[2] : m[3];
+      out += `<a href="${esc(url)}" style="color:#2563eb;text-decoration:underline">${esc(label)}</a>`;
+      last = re.lastIndex;
+    }
+    if (last < text.length) out += esc(text.slice(last));
+    return out.replace(/\r?\n/g, '<br>');
+  };
   const looksHtml = /<[a-z][\s\S]*>/i.test(a.body);
   const inner = looksHtml
     ? a.body
-    : `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#111">${a.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>`;
+    : `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#111">${mdToHtml(a.body)}</div>`;
   const content = `${inner}<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#888;margin-top:28px">You're receiving this because you subscribed to ${(a.from_name || 'us').replace(/</g, '&lt;')}.<br><a href="{$unsubscribe}" style="color:#888">Unsubscribe</a></p>`;
 
   const createRes = await ml('POST', 'campaigns', {

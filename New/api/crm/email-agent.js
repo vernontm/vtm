@@ -1,5 +1,6 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
 const { buildUserContent } = require('../_lib/agent-attachments.js');
+const { marketingSkillsPrompt } = require('../_lib/marketing-skills.js');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -40,7 +41,9 @@ module.exports = async function handler(req, res) {
       ...(leads || []).map(l => `- ${l.name} (${l.email})${l.company ? ` at ${l.company}` : ''} [lead, ${l.status || 'unknown'}]${l.notes ? ` Notes: ${l.notes}` : ''}${l.problem ? ` Problem: ${l.problem}` : ''}`),
     ].join('\n');
 
-    const systemPrompt = `You are an AI email agent for ${settingsMap.company_name || 'Vernon Tech & Media'}.
+    const systemPrompt = `${marketingSkillsPrompt('email')}
+
+You are an AI email agent for ${settingsMap.company_name || 'Vernon Tech & Media'}.
 Sender: ${settingsMap.sender_name || 'Ray Vernon'}
 Company: ${settingsMap.company_name || 'Vernon Tech & Media'}
 Services: ${settingsMap.services_offered || 'web development, AI automation, social media marketing, content creation'}

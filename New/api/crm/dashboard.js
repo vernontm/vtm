@@ -25,12 +25,17 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
+    // Resilient: a single failing table must never blank the whole dashboard
+    // (that's what was hiding Stripe revenue when a client was selected). Each
+    // query defaults to [] on error. NOTE: crm_invoices has no client_id column,
+    // so it is never scoped by client.
+    const safe = async (p) => { try { return (await supaFetch(p)) || []; } catch (e) { console.error('dashboard query failed:', p, e.message); return []; } };
     const [contacts, deals, projects, invoices, leads] = await Promise.all([
-      supaFetch(`crm_contacts?select=id,archived${q}`),
-      supaFetch(`crm_deals?select=id,name,stage,value,amount_paid,payment_status,created_at,updated_at,archived${q}`),
-      supaFetch(`crm_projects?select=id,status,value,archived${q}`),
-      supaFetch(`crm_invoices?select=id,status,amount${q}`),
-      supaFetch(`crm_leads?select=id,status,interest,lead_segment,archived,created_at${q}`),
+      safe(`crm_contacts?select=id,archived${q}`),
+      safe(`crm_deals?select=id,name,stage,value,amount_paid,payment_status,created_at,updated_at,archived${q}`),
+      safe(`crm_projects?select=id,status,value,archived${q}`),
+      safe(`crm_invoices?select=id,status,amount`),
+      safe(`crm_leads?select=id,status,interest,lead_segment,archived,created_at${q}`),
     ]);
 
     // ── Stripe Revenue ────────────────────────────────────────────────────────
@@ -130,6 +135,42 @@ export default async function handler(req, res) {
           date: new Date(c.created * 1000).toISOString(),
         }));
 
+        // ── Windowed revenue (24h / 7d / 30d / 90d / 12mo) ──────────────────
+        // Derived from the year charges we already fetched, so no extra calls.
+        const nowTs = Math.floor(Date.now() / 1000);
+        const WINDOWS = { '24h': 86400, '7d': 604800, '30d': 2592000, '90d': 7776000, '12mo': 31536000 };
+        const windowRevenue = {};
+        for (const [k, secs] of Object.entries(WINDOWS)) {
+          const cut = nowTs - secs;
+          const inWin = yearCharges.data.filter(c => c.created >= cut);
+          windowRevenue[k] = { revenue: inWin.reduce((s, c) => s + c.amount, 0) / 100, count: inWin.length };
+        }
+
+        // ── Connected fees (Stripe Connect application fees) ─────────────────
+        // The platform's CUT from connected accounts (what VTM earns off their
+        // revenue), NOT the connected accounts' gross revenue.
+        let connected = null;
+        try {
+          const feesRes = await stripeFetchAll(`/application_fees?created[gte]=${yearAgoTs}`);
+          const fees = feesRes.data || [];
+          // Best-effort map of connected account id -> display name.
+          const nameById = {};
+          try {
+            const accts = await stripeFetch('/accounts?limit=100');
+            (accts.data || []).forEach(a => { nameById[a.id] = (a.business_profile && a.business_profile.name) || a.email || a.id; });
+          } catch { /* names are optional */ }
+          const connWindows = {};
+          for (const [k, secs] of Object.entries(WINDOWS)) {
+            const cut = nowTs - secs;
+            const inw = fees.filter(f => f.created >= cut);
+            connWindows[k] = { revenue: inw.reduce((s, f) => s + f.amount, 0) / 100, count: inw.length };
+          }
+          const byAcct = {};
+          fees.forEach(f => { const a = f.account || 'unknown'; byAcct[a] = (byAcct[a] || 0) + f.amount / 100; });
+          const accounts = Object.entries(byAcct).map(([id, total]) => ({ id, name: nameById[id] || id, total }));
+          connected = { total: fees.reduce((s, f) => s + f.amount, 0) / 100, windows: connWindows, accounts, isFees: true };
+        } catch (e) { console.error('connected fees error:', e.message); }
+
         stripeRevenue = {
           available: availableBalance,
           pending: pendingBalance,
@@ -142,6 +183,8 @@ export default async function handler(req, res) {
           total: totalStripeRevenue,
           byMonth: stripeMonthly,
           recentPayments,
+          windows: windowRevenue,
+          connected,
         };
       } catch (stripeErr) {
         console.error('Stripe fetch error:', stripeErr.message);

@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
       const { task_id } = req.query;
       if (!task_id) return res.status(400).json({ error: 'task_id required' });
       const status = (req.body && req.body.status) === 'done' ? 'done' : 'todo';
-      const owned = await supaFetch(`crm_client_tasks?id=eq.${task_id}&client_id=eq.${client.id}&select=id,title,status`);
+      const owned = await supaFetch(`crm_client_tasks?id=eq.${task_id}&client_id=eq.${client.id}&select=id,title,status&or=(category.is.null,category.not.like.delivery:*)`);
       if (!owned || owned.length === 0) return res.status(403).json({ error: 'Not your task' });
       const prev = owned[0];
       const r = await supaFetch(`crm_client_tasks?id=eq.${task_id}`, { method: 'PATCH', body: JSON.stringify({ status, completed_at: status === 'done' ? new Date().toISOString() : null, updated_at: new Date().toISOString() }) });
@@ -127,7 +127,7 @@ module.exports = async function handler(req, res) {
 
     // ── GET — the full dashboard payload ──
     const [tasks, platforms, agrRows, payments, creds] = await Promise.all([
-      supaFetch(`crm_client_tasks?client_id=eq.${client.id}&select=id,title,description,category,status&order=created_at.asc`),
+      supaFetch(`crm_client_tasks?client_id=eq.${client.id}&select=id,title,description,category,status&order=created_at.asc&or=(category.is.null,category.not.like.delivery:*)`),
       supaFetch(`crm_client_platforms?client_id=eq.${client.id}&select=platform_name,access_status,access_process&order=created_at.asc`),
       supaFetch(`crm_agreements?client_id=eq.${client.id}&select=id,title,status,total_amount,signed_at,file_url,terms&order=created_at.desc&limit=1`),
       supaFetch(`crm_payments?client_id=eq.${client.id}&order=created_at.asc`),

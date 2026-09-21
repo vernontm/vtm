@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <title>Building AI Agents — Live Webinar Replay | Vernon Tech &amp; Media</title>
+  <meta name="description" content="Watch the full Building AI Agents Live webinar replay. Drop your name, email, and phone to unlock instant access." />
+  <meta property="og:title" content="Building AI Agents Live — Free Replay" />
+  <meta property="og:description" content="Get the full replay of the live workshop — see exactly how we build AI agents that run on autopilot for real businesses." />
+  <meta name="theme-color" content="#0e0e0f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0b0b0d;
+      --surface: #14151a;
+      --surface-2: #1c1e25;
+      --surface-3: #262832;
+      --border: rgba(255,255,255,0.09);
+      --border-strong: rgba(255,255,255,0.16);
+      --text: #f4f4f6;
+      --muted: #8b8f99;
+      --orange: #ff9b26;
+      --orange-dark: #ee4c27;
+      --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background — orange radial + subtle grid */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% -10%, rgba(255,155,38,0.16) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 90% 100%, rgba(238,76,39,0.12) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+      mask-image: radial-gradient(ellipse 90% 70% at 50% 40%, black 0%, transparent 100%);
+    }
+
+    .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Top bar ── */
+    nav.top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 32px;
+      max-width: 1200px; margin: 0 auto; width: 100%;
+    }
+    nav.top .logo { display: flex; align-items: center; text-decoration: none; color: var(--text); }
+    nav.top .logo img {
+      height: 42px; width: auto; display: block;
+      /* Force the black-artwork logo to render white against the dark nav. */
+      filter: brightness(0) invert(1);
+    }
+    nav.top .live-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 11px; border-radius: 999px;
+      font-family: var(--font-display); font-size: 11.5px; font-weight: 700;
+      color: #ff9b26; background: rgba(255,155,38,0.12);
+      border: 1px solid rgba(255,155,38,0.28);
+    }
+    nav.top .live-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.7); }
+
+    /* ── Hero ── */
+    main {
+      flex: 1;
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 18px 32px 60px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 44px;
+      align-items: start;
+    }
+
+    .left { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: 999px;
+      background: rgba(255,155,38,0.10);
+      border: 1px solid rgba(255,155,38,0.24);
+      color: #ffb15a;
+      font-family: var(--font-display); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      align-self: flex-start;
+    }
+    .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: #ff9b26; }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(30px, 4.2vw, 46px);
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+    h1 em {
+      font-style: italic;
+      background: linear-gradient(135deg, #ffb15a, var(--orange-dark));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .lede {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 500px;
+    }
+
+    .bullets {
+      display: flex; flex-direction: column; gap: 8px;
+      margin-top: 2px;
+    }
+    .bullet {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13.5px; color: var(--text);
+      font-weight: 500;
+    }
+    .bullet .icon {
+      width: 20px; height: 20px; border-radius: 6px;
+      background: rgba(255,155,38,0.14);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--orange); font-weight: 900; font-size: 11px; flex-shrink: 0;
+    }
+    .bullet strong { color: var(--text); font-weight: 700; }
+    .bullet .desc { color: var(--muted); font-weight: 400; }
+
+    .presenter {
+      display: flex; align-items: center; gap: 10px; margin-top: 4px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      max-width: 460px;
+    }
+    .presenter img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--surface-2); }
+    .presenter .who .name { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: -0.01em; }
+    .presenter .who .role { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Right column: form / video card ── */
+    .right { position: sticky; top: 30px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+      backdrop-filter: blur(20px);
+    }
+
+    .card-head {
+      padding: 14px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .card-head .tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(34,197,94,0.14);
+      color: #4ade80;
+      border: 1px solid rgba(34,197,94,0.28);
+      font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .card-head .tag .live-pulse { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+    .card-head .runtime { font-size: 12px; color: var(--muted); margin-left: auto; font-family: var(--font-display); }
+
+    .card-body { padding: 18px 20px 20px; }
+    .card-title {
+      font-family: var(--font-display); font-size: 18px; font-weight: 800;
+      letter-spacing: -0.02em; margin-bottom: 4px;
+    }
+    .card-sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+
+    form { display: flex; flex-direction: column; gap: 10px; }
+    label { display: flex; flex-direction: column; gap: 4px; }
+    label span {
+      font-family: var(--font-display); font-size: 11px; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    input {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 13px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--font-body);
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    input::placeholder { color: #55575e; }
+    input:focus {
+      outline: none;
+      border-color: rgba(255,155,38,0.55);
+      background: #1a1c22;
+      box-shadow: 0 0 0 3px rgba(255,155,38,0.14);
+    }
+
+    button.submit {
+      margin-top: 8px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+      color: #0b0b0d;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    button.submit:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(255,155,38,0.28);
+    }
+    button.submit:disabled { opacity: 0.65; cursor: wait; }
+
+    .fine {
+      font-size: 11px; color: var(--muted); text-align: center;
+      margin-top: 4px; line-height: 1.5;
+    }
+
+    /* Error message */
+    .err {
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fca5a5;
+      font-size: 13px;
+      display: none;
+    }
+    .err.show { display: block; animation: fadeUp 0.25s ease both; }
+
+    /* Video card */
+    .video-wrap {
+      position: relative;
+      background: #000;
+      aspect-ratio: 16/9;
+      width: 100%;
+    }
+    .video-wrap iframe {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+    .video-actions {
+      padding: 18px 22px;
+      display: flex; flex-direction: column; gap: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .video-actions .row {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .video-actions .cta {
+      flex: 1; min-width: 200px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+      color: #0b0b0d;
+      border-radius: 10px;
+      text-decoration: none;
+      font-family: var(--font-display);
+      font-weight: 800; font-size: 14px;
+      transition: transform 0.15s;
+    }
+    .video-actions .cta:hover { transform: translateY(-1px); }
+    .video-actions .cta.secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .video-actions .thanks {
+      font-family: var(--font-display); font-size: 13px; font-weight: 600;
+      color: #4ade80;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .video-actions .thanks .check {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #4ade80; color: #0b0b0d;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 12px;
+    }
+
+    /* fade transition between form and video */
+    .stage { transition: opacity 0.3s ease; }
+    .stage.hidden { display: none; }
+
+    /* ── Resources section (unlocks with the video) ── */
+    .rez-wrap { max-width: 820px; margin: 40px auto 100px; padding: 0 32px; display: none; }
+    .rez-wrap.show { display: block; animation: fadeUp 0.4s ease both; }
+    .rez-head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 28px; }
+    .rez-head .kicker {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 5px 12px; border-radius: 999px;
+      background: rgba(255,155,38,0.10);
+      border: 1px solid rgba(255,155,38,0.28);
+      color: #ffb15a;
+      font-family: var(--font-display); font-size: 11.5px; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .rez-head h2 {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 3.6vw, 40px);
+      line-height: 1.05; font-weight: 800; letter-spacing: -0.02em;
+    }
+    .rez-head h2 em {
+      font-style: italic;
+      background: linear-gradient(135deg, #ffb15a, var(--orange-dark));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .rez-head p { color: var(--muted); font-size: 14.5px; max-width: 640px; line-height: 1.55; }
+
+    /* Individual resource card — matches the /workshop page style closely, dark theme. */
+    #rez-list { display: flex; flex-direction: column; gap: 14px; }
+    .rez {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      transition: border-color 0.18s;
+    }
+    .rez:hover { border-color: var(--border-strong); }
+    .rez-t { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .rez-t svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--orange); }
+    .rez-t h3 {
+      font-family: var(--font-display); font-size: 16.5px; font-weight: 800;
+      letter-spacing: -0.01em; color: var(--text); flex: 1;
+    }
+    .rez .note {
+      color: var(--muted); font-size: 14px; line-height: 1.65; white-space: pre-wrap;
+    }
+    .rez .note a { color: var(--orange); text-decoration: underline; text-underline-offset: 2px; word-break: break-word; }
+
+    .rez .codewrap {
+      position: relative;
+      background: #08080b;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .rez .lang {
+      position: absolute; top: 8px; left: 12px;
+      font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .rez .codebtns {
+      position: absolute; top: 8px; right: 8px;
+      display: flex; gap: 6px; z-index: 2;
+    }
+    .rez .codebtns button {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 11.5px; font-weight: 600;
+      border-radius: 8px; padding: 5px 10px;
+      cursor: pointer; font-family: var(--font-display);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .rez .codebtns button:hover { border-color: var(--orange); color: var(--orange); }
+    .rez pre {
+      margin: 0; padding: 34px 14px 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12.5px; line-height: 1.6;
+      color: #dbe3ee; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+      max-height: 240px; overflow-y: auto;
+    }
+
+    .rez .dl {
+      display: flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+      color: #0b0b0d;
+      border-radius: 12px; padding: 12px 14px;
+      font-family: var(--font-display); font-weight: 800; font-size: 14.5px;
+      text-decoration: none;
+    }
+    .rez .dl svg { width: 18px; height: 18px; color: currentColor; }
+
+    .rez-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13.5px; }
+
+    /* Expand modal for long code snippets */
+    .rez-modal-ov {
+      position: fixed; inset: 0; z-index: 9500;
+      background: rgba(6,9,14,0.82); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .rez-modal {
+      background: #08080b; border: 1px solid var(--border-strong);
+      border-radius: 16px; max-width: 900px; width: 100%; max-height: 88vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 30px 90px -20px rgba(0,0,0,0.8);
+    }
+    .rez-modal-h { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .rez-modal-h h3 { font-family: var(--font-display); font-weight: 700; font-size: 15px; flex: 1; color: var(--text); }
+    .rez-modal pre { flex: 1; overflow: auto; max-height: none; padding: 18px 16px; font-size: 13.5px; }
+    .rez-modal .mbtn {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-display);
+      font-size: 12.5px; font-weight: 700; border-radius: 8px; padding: 7px 12px; cursor: pointer;
+    }
+    .rez-modal .mbtn.gold { background: linear-gradient(135deg, var(--orange), var(--orange-dark)); color: #0b0b0d; border: none; }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; gap: 32px; padding-top: 12px; }
+      .right { position: static; }
+      h1 { font-size: clamp(30px, 8vw, 44px); }
+      .presenter { max-width: 100%; }
+    }
+    @media (max-width: 560px) {
+      nav.top { padding: 18px 20px; }
+      main { padding: 20px 20px 60px; }
+      .card-body { padding: 18px; }
+      .card-head { padding: 16px 18px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <nav class="top">
+      <a href="/" class="logo" aria-label="Vernon Tech & Media">
+        <img src="/Logo /vtm-logo-white.svg" alt="Vernon Tech & Media" />
+      </a>
+      <span class="live-badge"><span class="dot"></span> Free Replay</span>
+    </nav>
+
+    <main>
+      <!-- Left column: pitch -->
+      <div class="left">
+        <span class="eyebrow"><span class="dot"></span> Building AI Agents · Live</span>
+        <h1>The <em>Building AI Agents</em> replay.</h1>
+        <p class="lede">A live walkthrough of how we build the AI agents Vernon Tech &amp; Media ships to clients — real prompts, real tools, unedited.</p>
+
+        <div class="bullets">
+          <div class="bullet">
+            <span class="icon">✦</span>
+            <div><strong>Live builds, not demos.</strong></div>
+          </div>
+          <div class="bullet">
+            <span class="icon">✦</span>
+            <div><strong>Real business use cases.</strong></div>
+          </div>
+        </div>
+
+        <div class="presenter">
+          <img src="/assets/rayvaughn/rayvaughn-hero.svg" alt="Rayvaughn Vernon" onerror="this.style.display='none'" />
+          <div class="who">
+            <div class="name">Hosted by Rayvaughn Vernon</div>
+            <div class="role">Founder, Vernon Tech &amp; Media · AI Architect &amp; Business Strategist</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: gate / video -->
+      <div class="right">
+        <div class="card">
+          <!-- FORM STAGE -->
+          <div class="stage" id="form-stage">
+            <div class="card-head">
+              <span class="tag"><span class="live-pulse"></span> Instant Access</span>
+              <span class="runtime">Full replay</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Unlock the replay</div>
+              <div class="card-sub">Drop your details and we'll show you the full workshop right on this page.</div>
+
+              <div class="err" id="err"></div>
+
+              <form id="unlock-form" autocomplete="on">
+                <label>
+                  <span>Your name</span>
+                  <input type="text" name="name" required placeholder="Marcus Blackwell" autocomplete="name" />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input type="email" name="email" required placeholder="you@business.com" autocomplete="email" />
+                </label>
+                <label>
+                  <span>Mobile phone</span>
+                  <input type="tel" name="phone" required placeholder="(281) 555-0142" autocomplete="tel" />
+                </label>
+                <button class="submit" type="submit" id="submit-btn">
+                  <span id="submit-label">Unlock the replay →</span>
+                </button>
+                <div class="fine">We'll never share your info. You can unsubscribe anytime.</div>
+              </form>
+            </div>
+          </div>
+
+          <!-- VIDEO STAGE -->
+          <div class="stage hidden" id="video-stage">
+            <div class="card-head">
+              <span class="tag"><span class="live-pulse"></span> Access granted</span>
+              <span class="runtime" id="video-runtime">Replay</span>
+            </div>
+            <div class="video-wrap">
+              <iframe
+                id="video-frame"
+                src="about:blank"
+                title="Building AI Agents Live — Replay"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+              ></iframe>
+            </div>
+            <div class="video-actions">
+              <div class="thanks"><span class="check">✓</span> You're in — enjoy the replay.</div>
+              <div class="row">
+                <a href="/book-call" class="cta">Book a strategy call →</a>
+                <a id="watch-elsewhere" href="https://youtu.be/AzYdWN1fcPw" target="_blank" rel="noreferrer" class="cta secondary">Open on YouTube</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ─── Live workshop resources: fetched from the same endpoint /workshop uses ─── -->
+    <section class="rez-wrap" id="blueprint">
+      <div class="rez-head">
+        <span class="kicker">✦ Workshop resources</span>
+        <h2>The <em>step-by-step</em> guide from the workshop.</h2>
+        <p>Every prompt, code snippet, and asset from the live build — synced from the workshop notes. Copy any snippet, expand for full-screen, or open the linked docs.</p>
+      </div>
+      <div id="rez-list">
+        <div class="rez-state">Loading the workshop resources…</div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // ── Video source switch ──────────────────────────────────────────────
+    // Set VIDEO_SOURCE = 'gdrive' and paste the Google Drive file ID once you
+    // finish uploading. Falls back to YouTube in the meantime so nothing breaks.
+    const VIDEO_SOURCE = 'gdrive';                  // 'youtube' | 'gdrive'
+    const YT_ID       = 'AzYdWN1fcPw';
+    const GDRIVE_ID   = '1iu0EMEoh60Z0cCOcb_Mv5dTc9VuF95cC';
+
+    const form = document.getElementById('unlock-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitLabel = document.getElementById('submit-label');
+    const errBox = document.getElementById('err');
+    const formStage = document.getElementById('form-stage');
+    const videoStage = document.getElementById('video-stage');
+    const videoFrame = document.getElementById('video-frame');
+
+    function showError(msg) {
+      errBox.textContent = msg;
+      errBox.classList.add('show');
+    }
+    function clearError() {
+      errBox.textContent = '';
+      errBox.classList.remove('show');
+    }
+
+    // If they've unlocked before on this browser, skip the gate.
+    const CACHE_KEY = 'vtm-ai-agent-replay-unlocked-v1';
+    if (localStorage.getItem(CACHE_KEY) === '1') {
+      unlockVideo(false);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      const fd = new FormData(form);
+      const name = (fd.get('name') || '').toString().trim();
+      const email = (fd.get('email') || '').toString().trim();
+      const phone = (fd.get('phone') || '').toString().trim();
+
+      if (!name || !email || !phone) { showError('Fill out every field to unlock the replay.'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('That email doesn\'t look right. Try again.'); return; }
+      if (phone.replace(/\D/g, '').length < 7) { showError('Add a real phone number so we can reach you.'); return; }
+
+      submitBtn.disabled = true;
+      submitLabel.textContent = 'Unlocking…';
+
+      try {
+        const r = await fetch('/api/crm/lead-magnet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'signup',
+            name,
+            email,
+            phone,
+            source: 'ai-agent-replay',
+            tags: ['AI Agent Webinar'],
+          }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || 'Signup failed');
+        try { localStorage.setItem(CACHE_KEY, '1'); } catch {}
+        unlockVideo(true);
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitLabel.textContent = 'Unlock the replay →';
+        showError(err.message || 'Something went wrong — try again in a moment.');
+      }
+    });
+
+    function unlockVideo(autoplay) {
+      const src = VIDEO_SOURCE === 'gdrive'
+        ? `https://drive.google.com/file/d/${GDRIVE_ID}/preview`
+        : `https://www.youtube.com/embed/${YT_ID}?rel=0&modestbranding=1${autoplay ? '&autoplay=1' : ''}`;
+      videoFrame.src = src;
+      // Update the secondary "watch elsewhere" button to match the active source.
+      const elsewhere = document.getElementById('watch-elsewhere');
+      if (elsewhere) {
+        if (VIDEO_SOURCE === 'gdrive') {
+          elsewhere.href = `https://drive.google.com/file/d/${GDRIVE_ID}/view`;
+          elsewhere.textContent = 'Open in Google Drive';
+        } else {
+          elsewhere.href = `https://youtu.be/${YT_ID}`;
+          elsewhere.textContent = 'Open on YouTube';
+        }
+      }
+      formStage.classList.add('hidden');
+      videoStage.classList.remove('hidden');
+      // Reveal the resources section and start loading it in parallel.
+      const rezWrap = document.getElementById('blueprint');
+      rezWrap.classList.add('show');
+      loadResources();
+      // Scroll the video into view on smaller screens.
+      if (window.innerWidth < 900) {
+        setTimeout(() => videoStage.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      }
+    }
+
+    // ── Live workshop-resources loader ────────────────────────────
+    // Same data source that powers /workshop — anything added there shows here.
+    const WORKSHOP_SLUG = 'katy-ai-workshop';
+    let __rezLoaded = false;
+
+    function escHtml(s) {
+      return (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+    // Escape, then linkify URLs and bare site domains. Filenames like `db.ts`
+    // or `vercel.json` stay text because the regex only matches real TLDs.
+    function linkifyText(s) {
+      return escHtml(s).replace(
+        /(^|[\s(>])((https?:\/\/)?(?:[a-z0-9-]+\.)+(?:com|org|io|net|co|dev|app|ai|gg|me)(?:\/[^\s<]*)?)/gi,
+        (m, pre, full, proto) => {
+          let trail = '';
+          const mt = full.match(/[)\].,;:!?]+$/);
+          if (mt) { trail = mt[0]; full = full.slice(0, -trail.length); }
+          const href = proto ? full : 'https://' + full;
+          return `${pre}<a href="${href}" target="_blank" rel="noopener">${full}</a>${trail}`;
+        }
+      );
+    }
+
+    async function loadResources() {
+      if (__rezLoaded) return;
+      __rezLoaded = true;
+      const el = document.getElementById('rez-list');
+      try {
+        const r = await fetch('/api/event-resources?slug=' + encodeURIComponent(WORKSHOP_SLUG));
+        const data = await r.json();
+        renderResources(data?.resources || []);
+      } catch {
+        el.innerHTML = '<div class="rez-state">Couldn\'t load resources. Refresh in a moment.</div>';
+      }
+    }
+
+    function renderResources(list) {
+      const el = document.getElementById('rez-list');
+      if (!list.length) {
+        el.innerHTML = '<div class="rez-state">Resources will appear here shortly. Refresh once we\'ve added them.</div>';
+        return;
+      }
+      const CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+      const DOC  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+      const DL   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>';
+
+      let h = '';
+      list.forEach((r, i) => {
+        const icon = r.kind === 'code' ? CODE : DOC;
+        h += `<div class="rez"><div class="rez-t">${icon}<h3>${escHtml(r.title)}</h3></div>`;
+        if (r.kind === 'code') {
+          h += `<div class="codewrap">${r.language ? `<span class="lang">${escHtml(r.language)}</span>` : ''}`
+             + `<div class="codebtns">`
+             +   `<button data-x="${i}">Expand</button>`
+             +   `<button data-c="${i}">Copy</button>`
+             + `</div>`
+             + `<pre id="rez-code-${i}">${escHtml(r.body || '')}</pre></div>`;
+        } else if (r.kind === 'link') {
+          h += `<a class="dl" href="${escHtml(r.url || '#')}" target="_blank" rel="noopener">${DL}${escHtml(r.body) || 'Open resource'}</a>`;
+        } else {
+          h += `<div class="note">${linkifyText(r.body || '')}</div>`;
+        }
+        h += '</div>';
+      });
+      el.innerHTML = h;
+      el.querySelectorAll('[data-c]').forEach(b => {
+        b.addEventListener('click', () => {
+          const text = document.getElementById('rez-code-' + b.dataset.c).innerText;
+          navigator.clipboard.writeText(text).then(() => {
+            const orig = b.textContent;
+            b.textContent = 'Copied ✓';
+            setTimeout(() => { b.textContent = orig; }, 1600);
+          });
+        });
+      });
+      el.querySelectorAll('[data-x]').forEach(b => {
+        b.addEventListener('click', () => openCodeModal(list[b.dataset.x]));
+      });
+    }
+
+    function openCodeModal(r) {
+      const ov = document.createElement('div');
+      ov.className = 'rez-modal-ov';
+      ov.innerHTML = `<div class="rez-modal">
+        <div class="rez-modal-h">
+          <h3>${escHtml(r.title)}</h3>
+          <button class="mbtn gold" id="mcopy">Copy</button>
+          <button class="mbtn" id="mclose">Close</button>
+        </div>
+        <pre>${escHtml(r.body || '')}</pre>
+      </div>`;
+      document.body.appendChild(ov);
+      const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+      const onKey = (e) => { if (e.key === 'Escape') close(); };
+      ov.addEventListener('click', e => { if (e.target === ov) close(); });
+      ov.querySelector('#mclose').onclick = close;
+      ov.querySelector('#mcopy').onclick = () => {
+        const b = ov.querySelector('#mcopy');
+        navigator.clipboard.writeText(r.body || '').then(() => {
+          b.textContent = 'Copied ✓';
+          setTimeout(() => { b.textContent = 'Copy'; }, 1500);
+        });
+      };
+      document.addEventListener('keydown', onKey);
+    }
+  </script>
+</body>
+</html>

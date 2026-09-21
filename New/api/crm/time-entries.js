@@ -35,7 +35,12 @@ module.exports = async function handler(req, res) {
       const entries = await supaFetch(path);
       const open = (entries || []).find(e => e.user_id === (scoped ? targetUser : e.user_id) && !e.ended_at && e.started_at) || null;
       const hourly_rate = scoped ? await rateFor(targetUser) : 0;
-      return res.json({ entries: entries || [], hourly_rate, open });
+      // Recent period payments so "when did I last pay her, and for what?"
+      // is always answerable at a glance.
+      const payments = scoped
+        ? await supaFetch(`crm_time_payments?user_id=eq.${targetUser}&order=paid_at.desc&limit=20`).catch(() => [])
+        : [];
+      return res.json({ entries: entries || [], hourly_rate, open, payments: payments || [] });
     }
 
     // ── POST actions ─────────────────────────────────────────────────────────
@@ -64,6 +69,37 @@ module.exports = async function handler(req, res) {
         const row = { user_id: targetUser, user_email: (targetUser === user.id ? user.email : (req.body?.user_email || '')), work_date: req.body?.work_date || new Date().toISOString().slice(0, 10), minutes, note: req.body?.note || '', status: 'logged' };
         const [created] = await supaFetch('crm_time_entries', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) });
         return res.status(201).json(created);
+      }
+
+      // ── pay-range: mark every logged entry in a date window paid, compute the
+      // minutes -> hours math, and record ONE payment row for the period. This
+      // replaces clicking entries one by one. Admin only.
+      if (action === 'pay-range') {
+        if (!user.is_admin) return res.status(403).json({ error: 'Admins only' });
+        const { from, to, amount, preview } = req.body || {};
+        if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+          return res.status(400).json({ error: 'Pick a valid date range.' });
+        }
+        const rows = await supaFetch(`crm_time_entries?user_id=eq.${targetUser}&status=eq.logged&minutes=gt.0&work_date=gte.${from}&work_date=lte.${to}&select=id,minutes`) || [];
+        const minutes = rows.reduce((s, r) => s + (r.minutes || 0), 0);
+        const rate = await rateFor(targetUser);
+        const suggested = Math.round((minutes / 60) * rate * 100) / 100;
+        if (preview) return res.json({ minutes, entry_count: rows.length, hourly_rate: rate, suggested_amount: suggested });
+        if (!rows.length) return res.status(400).json({ error: 'No unpaid time in that range.' });
+
+        const now = new Date().toISOString();
+        const inList = rows.map(r => r.id).join(',');
+        await supaFetch(`crm_time_entries?id=in.(${inList})`, { method: 'PATCH', body: JSON.stringify({ status: 'paid', paid_at: now, updated_at: now }) });
+        const [payment] = await supaFetch('crm_time_payments', {
+          method: 'POST',
+          headers: { Prefer: 'return=representation' },
+          body: JSON.stringify({
+            user_id: targetUser, period_start: from, period_end: to,
+            minutes, entry_count: rows.length,
+            amount: amount != null && amount !== '' ? Number(amount) : suggested,
+          }),
+        });
+        return res.json({ ok: true, payment, minutes, entry_count: rows.length });
       }
 
       if (action === 'mark-paid') {

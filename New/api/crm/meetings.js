@@ -10,25 +10,54 @@ async function syncCalendar() {
   const { accessToken } = await getGmailAuth();
   const timeMin = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
   const timeMax = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
-  const params = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '150' });
-  const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!r.ok) throw new Error(`Calendar fetch failed: ${await r.text()}`);
-  const data = await r.json();
-  const rows = (data.items || [])
+  // Paginate: with singleEvents=true the recurring OOO blocks alone can blow
+  // past one page, and an incomplete list would make the stale-row cleanup
+  // below delete real meetings.
+  const items = [];
+  let pageToken = null;
+  do {
+    const params = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '250' });
+    if (pageToken) params.set('pageToken', pageToken);
+    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!r.ok) throw new Error(`Calendar fetch failed: ${await r.text()}`);
+    const data = await r.json();
+    items.push(...(data.items || []));
+    pageToken = data.nextPageToken || null;
+  } while (pageToken);
+  const rows = items
     .filter(e => e.status !== 'cancelled' && (e.start?.dateTime || e.start?.date))
     .map(e => {
-      const start = e.start.dateTime || e.start.date;
-      const end = e.end?.dateTime || e.end?.date || start;
-      const durMin = (e.start.dateTime && e.end?.dateTime) ? Math.round((new Date(end) - new Date(start)) / 60000) : null;
+      const allDay = !e.start.dateTime;
+      let startISO, endISO, durMin;
+      if (allDay) {
+        // All-day/busy days: Google gives date-only strings, and end.date is
+        // EXCLUSIVE (the day after the last day). Anchor both ends at noon UTC
+        // so the block lands on the correct local calendar day in US timezones
+        // (raw midnight-UTC parses back to 7pm the PREVIOUS day in Central).
+        const startDate = e.start.date;
+        const endExcl = e.end?.date || startDate;
+        const lastMs = Math.max(new Date(endExcl + 'T00:00:00Z').getTime() - 86400000, new Date(startDate + 'T00:00:00Z').getTime());
+        const lastDate = new Date(lastMs).toISOString().slice(0, 10);
+        startISO = startDate + 'T12:00:00.000Z';
+        endISO = lastDate + 'T12:00:00.000Z';
+        durMin = Math.max(1, Math.round((new Date(endExcl + 'T00:00:00Z') - new Date(startDate + 'T00:00:00Z')) / 60000)); // days * 1440
+      } else {
+        const start = e.start.dateTime;
+        const end = e.end?.dateTime || start;
+        startISO = new Date(start).toISOString();
+        endISO = new Date(end).toISOString();
+        durMin = e.end?.dateTime ? Math.round((new Date(end) - new Date(start)) / 60000) : null;
+      }
       const meet = (e.conferenceData?.entryPoints || []).find(p => p.entryPointType === 'video')?.uri || e.hangoutLink || null;
       return {
         id: e.id,
         summary: e.summary || '(no title)',
-        start_time: new Date(start).toISOString(),
-        end_time: new Date(end).toISOString(),
+        start_time: startISO,
+        end_time: endISO,
         duration_minutes: durMin,
+        all_day: allDay,
         location: e.location || null,
         description: e.description || null,
         meet_link: meet,
@@ -45,6 +74,22 @@ async function syncCalendar() {
       body: JSON.stringify(rows),
     });
   }
+
+  // Remove local rows for events Google no longer returns in this window:
+  // cancelled events, and orphaned recurring instances (editing a series'
+  // time re-keys its instance ids, stranding the old rows forever).
+  // Keep vtm-* rows — those are local-only meetings Google never had.
+  try {
+    const liveIds = new Set(rows.map(x => x.id));
+    const winRows = await supaFetch(`crm_meetings?start_time=gte.${encodeURIComponent(timeMin)}&start_time=lte.${encodeURIComponent(timeMax)}&select=id`) || [];
+    const stale = winRows.map(x => x.id).filter(x => !liveIds.has(x) && !String(x).startsWith('vtm-'));
+    for (let i = 0; i < stale.length; i += 50) {
+      const chunk = stale.slice(i, i + 50);
+      await supaFetch(`crm_meetings?id=in.(${chunk.map(encodeURIComponent).join(',')})`, { method: 'DELETE' });
+    }
+    if (stale.length) console.log(`meetings sync: removed ${stale.length} stale rows`);
+  } catch (e) { console.error('stale-row cleanup failed:', e.message); }
+
   await setSetting('meetings_last_sync', String(Date.now())).catch(() => {});
   return rows.length;
 }
@@ -126,8 +171,14 @@ export default async function handler(req, res) {
         }
       }
       if (action === 'create') {
-        const { summary, start, end, attendees = [], description = '', addMeetLink = true, reminderMinutes = 10 } = req.body;
+        // NOTE: `description` here is now treated as a PRIVATE agenda / notes
+        // field — it is saved to crm_meetings.notes and NOT sent to Google
+        // Calendar. Anything the caller wants attendees to see should be in
+        // the invite `summary` (title) instead.
+        const { summary, start, end, attendees = [], description = '', addMeetLink = true, reminderMinutes = 10, location = '' } = req.body;
         if (!summary || !start || !end) return res.status(400).json({ error: 'summary, start, and end are required' });
+        const privateNotes = (description || '').trim();
+        const eventLocation = (location || '').trim();
 
         // ── Create Google Calendar event ───────────────────────────────────────
         let gcalEvent = null;
@@ -135,12 +186,14 @@ export default async function handler(req, res) {
           const { accessToken } = await getGmailAuth();
           const eventBody = {
             summary,
-            description,
+            // Intentionally NO description here: the private agenda stays in
+            // our DB only, so attendees don't see internal notes.
             start: { dateTime: start, timeZone: 'UTC' },
             end:   { dateTime: end,   timeZone: 'UTC' },
             attendees: attendees.map(email => ({ email })),
             reminders: { useDefault: false, overrides: [{ method: 'email', minutes: reminderMinutes }, { method: 'popup', minutes: reminderMinutes }] },
           };
+          if (eventLocation) eventBody.location = eventLocation;   // in-person events carry the address
           if (addMeetLink) {
             eventBody.conferenceData = {
               createRequest: {
@@ -166,11 +219,45 @@ export default async function handler(req, res) {
           console.warn('Google Calendar create failed:', calErr.message);
         }
 
+        // ── Turn on Google Meet auto-recording for this call ──────────────────
+        // Google Meet's REST API lets us flip auto_recording_generation on the
+        // space attached to the event. Requires the meetings.space.created OAuth
+        // scope and a Workspace tier that supports recording (Business Standard+).
+        // Best-effort: if the scope's missing or the plan doesn't support it, we
+        // log and move on — the meeting itself is already scheduled.
+        const meetLink = gcalEvent?.hangoutLink || gcalEvent?.conferenceData?.entryPoints?.[0]?.uri || '';
+        try {
+          if (meetLink) {
+            const meetingCode = meetLink.match(/meet\.google\.com\/([a-z0-9-]+)/i)?.[1];
+            if (meetingCode) {
+              const { accessToken } = await getGmailAuth();
+              const patchUrl = `https://meet.googleapis.com/v2/spaces/${encodeURIComponent(meetingCode)}?updateMask=config.artifactConfig.recordingConfig.autoRecordingGeneration,config.artifactConfig.transcriptionConfig.autoTranscriptionGeneration`;
+              const mRes = await fetch(patchUrl, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  config: {
+                    artifactConfig: {
+                      recordingConfig:     { autoRecordingGeneration:     'ON' },
+                      transcriptionConfig: { autoTranscriptionGeneration: 'ON' },
+                    },
+                  },
+                }),
+              });
+              if (!mRes.ok) {
+                const t = await mRes.text();
+                console.warn(`Meet auto-record patch failed for ${meetingCode}: ${mRes.status} ${t.slice(0, 200)}`);
+              }
+            }
+          }
+        } catch (meetErr) {
+          console.warn('Meet auto-record setup skipped:', meetErr.message);
+        }
+
         // ── Save to crm_meetings ───────────────────────────────────────────────
         const startMs  = new Date(start).getTime();
         const endMs    = new Date(end).getTime();
         const durationMins = Math.round((endMs - startMs) / 60000);
-        const meetLink = gcalEvent?.hangoutLink || gcalEvent?.conferenceData?.entryPoints?.[0]?.uri || '';
 
         const row = {
           id:               gcalEvent?.id || `vtm-${Date.now()}`,
@@ -178,7 +265,11 @@ export default async function handler(req, res) {
           start_time:       start,
           end_time:         end,
           duration_minutes: durationMins,
-          description,
+          // description column left empty on purpose — the field the user typed
+          // is the internal agenda and lives in `notes` instead.
+          description:      '',
+          notes:            privateNotes,
+          location:         eventLocation || null,
           meet_link:        meetLink,
           attendees:        JSON.stringify(attendees.map(email => ({ email }))),
           html_link:        gcalEvent?.htmlLink || '',
@@ -301,23 +392,101 @@ export default async function handler(req, res) {
       return res.json({ success: true });
     }
 
-    // PUT meeting
+    // PUT meeting — update BOTH Google Calendar and the local row. Whatever
+    // fields the caller sends are patched into the Google event first (so a
+    // failed Google patch aborts before we diverge from reality), then written
+    // back to Supabase.
     if (req.method === 'PUT' && id) {
-      const { id: _, ...data } = req.body;
-      const result = await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-      return res.json(result[0] || result);
+      const { id: _, title, summary, start_time, end_time, description, attendees, notes, ...rest } = req.body;
+
+      // Skip Google sync entirely for locally-created rows (id starts with "vtm-").
+      const isGoogleEvent = !String(id).startsWith('vtm-');
+      let gcalPatched = false;
+      if (isGoogleEvent) {
+        try {
+          const { accessToken } = await getGmailAuth();
+          const patchBody = {};
+          const summaryVal = summary || title;
+          if (summaryVal) patchBody.summary = summaryVal;
+          if (description !== undefined) patchBody.description = description; // synced description field
+          if (start_time) patchBody.start = { dateTime: start_time, timeZone: 'UTC' };
+          if (end_time)   patchBody.end   = { dateTime: end_time,   timeZone: 'UTC' };
+          if (Array.isArray(attendees)) {
+            // Callers pass either ["a@b.com"] or [{ email }] — normalise both.
+            patchBody.attendees = attendees.map(a => typeof a === 'string' ? { email: a } : { email: a.email }).filter(x => x.email);
+          }
+          if (Object.keys(patchBody).length) {
+            const gRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(id)}?sendUpdates=all`, {
+              method: 'PATCH',
+              headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(patchBody),
+            });
+            if (!gRes.ok) {
+              const errText = await gRes.text();
+              return res.status(502).json({ error: `Google Calendar update failed: ${errText}` });
+            }
+            gcalPatched = true;
+          }
+        } catch (e) {
+          return res.status(502).json({ error: `Google Calendar update failed: ${e.message}` });
+        }
+      }
+
+      // Now mirror the change locally.
+      const localPatch = { ...rest };
+      const summaryVal = summary || title;
+      if (summaryVal !== undefined) localPatch.summary = summaryVal;
+      if (start_time)         localPatch.start_time = start_time;
+      if (end_time)           localPatch.end_time   = end_time;
+      if (description !== undefined) localPatch.description = description;
+      if (notes !== undefined)       localPatch.notes = notes;
+      if (Array.isArray(attendees))  localPatch.attendees = JSON.stringify(attendees.map(a => typeof a === 'string' ? { email: a } : { email: a.email }).filter(x => x.email));
+      if (start_time && end_time) {
+        localPatch.duration_minutes = Math.max(1, Math.round((new Date(end_time).getTime() - new Date(start_time).getTime()) / 60000));
+      }
+
+      const result = await supaFetch(`crm_meetings?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify(localPatch),
+      });
+      return res.json({ ok: true, gcalSynced: gcalPatched, meeting: result?.[0] || result });
     }
 
-    // DELETE
+    // DELETE — nuke the Google Calendar event first, then remove locally.
     if (req.method === 'DELETE' && id) {
       if (action === 'lead-link') {
         await supaFetch(`crm_meeting_lead_links?id=eq.${id}`, { method: 'DELETE' });
-      } else if (action === 'chat') {
-        await supaFetch(`crm_meeting_chat_history?meeting_id=eq.${id}`, { method: 'DELETE' });
-      } else {
-        await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'DELETE' });
+        return res.json({ success: true });
       }
-      return res.json({ success: true });
+      if (action === 'chat') {
+        await supaFetch(`crm_meeting_chat_history?meeting_id=eq.${id}`, { method: 'DELETE' });
+        return res.json({ success: true });
+      }
+
+      const isGoogleEvent = !String(id).startsWith('vtm-');
+      let gcalDeleted = false;
+      if (isGoogleEvent) {
+        try {
+          const { accessToken } = await getGmailAuth();
+          const gRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(id)}?sendUpdates=all`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          // 404/410 = already gone on Google's side; treat as success.
+          if (gRes.ok || gRes.status === 404 || gRes.status === 410) {
+            gcalDeleted = true;
+          } else {
+            const errText = await gRes.text();
+            return res.status(502).json({ error: `Google Calendar delete failed: ${errText}` });
+          }
+        } catch (e) {
+          return res.status(502).json({ error: `Google Calendar delete failed: ${e.message}` });
+        }
+      }
+
+      await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'DELETE' });
+      return res.json({ success: true, gcalDeleted });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
