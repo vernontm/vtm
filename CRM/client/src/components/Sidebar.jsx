@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, LayoutDashboard,
   Mail, Calendar, Settings, LogOut,
-  Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock, BookOpen, CheckSquare, RotateCcw, Megaphone, Briefcase, MessageSquare,
+  Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock, BookOpen, CheckSquare, RotateCcw, Megaphone, Briefcase, MessageSquare, ListChecks,
 } from 'lucide-react';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,7 @@ const nav = [
 ];
 
 const navWork = [
+  { to: '/tasks',        icon: ListChecks,      label: 'Tasks',        slug: 'tasks' },
   { to: '/todos',        icon: CheckSquare,     label: 'To-Do',        slug: 'todos' },
   { to: '/routines',     icon: RotateCcw,       label: 'Routines',     slug: 'routines' },
 ];

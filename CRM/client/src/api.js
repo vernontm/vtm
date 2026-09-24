@@ -43,6 +43,12 @@ export const getSmsThreads = () => request('/sms');
 export const getSmsThread  = (phone) => request(`/sms?phone=${encodeURIComponent(phone)}`);
 export const sendSms       = (phone, body) => request('/sms?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
 
+// Tasks / priorities (assignable to a client)
+export const getTasks   = (status) => request(`/tasks${status ? `?status=${status}` : ''}`);
+export const createTask = (data) => request('/tasks', { method: 'POST', body: JSON.stringify(data) });
+export const updateTask = (id, data) => request(`/tasks?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteTask = (id) => request(`/tasks?id=${id}`, { method: 'DELETE' });
+
 // Admin: user management
 export const getAdminUsers    = () => request('/admin-users');
 export const createAdminUser  = (data) => request('/admin-users', { method: 'POST', body: JSON.stringify(data) });
