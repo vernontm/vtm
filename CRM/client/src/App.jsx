@@ -24,7 +24,7 @@ function Gated({ slug, adminOnly = false, children }) {
 const LANDING_ORDER = [
   ['dashboard', '/dashboard'], ['leads', '/leads'], ['clients', '/clients'],
   ['projects', '/projects'], ['appointments', '/appointments'], ['todos', '/todos'],
-  ['routines', '/routines'], ['email', '/email'], ['time', '/time'],
+  ['routines', '/routines'], ['inbox', '/inbox'], ['email', '/email'], ['time', '/time'],
   ['employee-resources', '/employee-resources'], ['contacts', '/contacts'], ['marketing', '/marketing'], ['settings', '/settings'],
 ];
 function Landing() {
@@ -66,6 +66,7 @@ import Header from './components/Header';
 import RecordingBar from './components/RecordingBar';
 import Login from './pages/Login';
 import Contacts from './pages/Contacts';
+import Inbox from './pages/Inbox';
 import Marketing from './pages/Marketing';
 import Deals from './pages/Deals';
 import Clients from './pages/Clients';
@@ -153,6 +154,7 @@ function AppLayout() {
               <Route path="/projects" element={<Gated slug="projects"><Projects /></Gated>} />
               <Route path="/appointments" element={<Gated slug="appointments"><Meetings /></Gated>} />
               <Route path="/appointments/:eventId" element={<Gated slug="appointments"><MeetingDetail /></Gated>} />
+              <Route path="/inbox" element={<Gated slug="inbox"><Inbox /></Gated>} />
               <Route path="/employees" element={<Gated slug="employees" adminOnly><Employees /></Gated>} />
               <Route path="/time" element={<Gated slug="time"><Time /></Gated>} />
               <Route path="/todos" element={<Gated slug="todos"><TeamTodos /></Gated>} />

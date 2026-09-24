@@ -38,6 +38,11 @@ async function request(path, options = {}) {
 // Current user + accessible clients (multi-tenant bootstrap)
 export const getMe = () => request('/me');
 
+// SMS inbox (two-way texting from the VTM number)
+export const getSmsThreads = () => request('/sms');
+export const getSmsThread  = (phone) => request(`/sms?phone=${encodeURIComponent(phone)}`);
+export const sendSms       = (phone, body) => request('/sms?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
+
 // Admin: user management
 export const getAdminUsers    = () => request('/admin-users');
 export const createAdminUser  = (data) => request('/admin-users', { method: 'POST', body: JSON.stringify(data) });
