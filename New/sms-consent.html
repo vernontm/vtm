@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Text Updates &middot; Vernon Tech &amp; Media</title>
+<meta name="description" content="Opt in to receive account, project, and appointment text updates from Vernon Tech & Media.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f4f5f8; color: #1a1a1f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; }
+  header { background: #0b0b16; padding: 18px 20px; }
+  .bar { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; background: linear-gradient(120deg,#5b6cff,#a855f7); }
+  .brand { color: #fff; font-weight: 700; font-size: 16px; }
+  main { max-width: 640px; margin: 0 auto; padding: 0 20px 64px; }
+  h1 { font-size: 27px; font-weight: 800; margin: 36px 0 6px; }
+  .sub { color: #666; margin-bottom: 8px; }
+  h2 { font-size: 18px; font-weight: 700; margin: 30px 0 10px; }
+  p, li { font-size: 15px; color: #333; }
+  ul, ol { padding-left: 20px; margin: 0 0 12px; }
+  li { margin-bottom: 7px; }
+  .card { background: #fff; border: 1px solid #e6e6ec; border-radius: 16px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-top: 18px; }
+  label.field { display: block; font-size: 13px; font-weight: 600; color: #444; margin: 12px 0 5px; }
+  input[type=text], input[type=email], input[type=tel] { width: 100%; border: 1px solid #d5d5dd; border-radius: 10px; padding: 12px 14px; font-size: 15px; background: #fafafb; }
+  input:focus { outline: none; border-color: #5b6cff; background: #fff; }
+  .consent { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0 4px; }
+  .consent input { margin-top: 4px; width: 16px; height: 16px; }
+  .consent span { font-size: 12.5px; color: #555; }
+  button { margin-top: 16px; width: 100%; border: 0; border-radius: 999px; padding: 13px 0; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(120deg,#5b6cff,#a855f7); cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .fine { font-size: 11.5px; color: #888; margin-top: 12px; }
+  a { color: #5b6cff; text-decoration: none; }
+  .err { color: #c0392b; font-size: 13px; margin-top: 10px; }
+  .ok { text-align: center; padding: 20px 0; }
+  .ok .check { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(120deg,#5b6cff,#a855f7); color: #fff; font-size: 28px; display: inline-flex; align-items: center; justify-content: center; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header><div class="bar"><span class="logo">V</span><span class="brand">Vernon Tech &amp; Media</span></div></header>
+<main>
+  <h1>Text updates from Vernon Tech &amp; Media</h1>
+  <p class="sub">Get account, project, and appointment updates by text. Opt in below.</p>
+
+  <div class="card" id="formCard">
+    <form id="optinForm" novalidate>
+      <label class="field" for="name">Name</label>
+      <input type="text" id="name" autocomplete="name" placeholder="Your name">
+      <label class="field" for="email">Email (optional)</label>
+      <input type="email" id="email" autocomplete="email" placeholder="you@example.com">
+      <label class="field" for="phone">Mobile number</label>
+      <input type="tel" id="phone" autocomplete="tel" placeholder="(555) 000-0000" required>
+
+      <label class="consent">
+        <input type="checkbox" id="consent">
+        <span>I agree to receive account, project, and appointment text messages from Vernon Tech &amp; Media.
+        Recurring messages, up to about 6 per month. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.</span>
+      </label>
+
+      <div class="err" id="err" hidden></div>
+      <button type="submit" id="btn">Sign me up for text updates</button>
+      <p class="fine">By opting in you agree to receive texts from Vernon Tech &amp; Media at the number provided.
+      Consent is not a condition of any purchase. Message frequency varies (up to about 6 per month); msg &amp; data
+      rates may apply; reply STOP to cancel, HELP for help. No mobile information is shared with third parties or
+      affiliates for marketing purposes. See our <a href="/privacy.html" target="_blank">Privacy Policy</a> and
+      <a href="/terms.html" target="_blank">Terms</a>.</p>
+    </form>
+  </div>
+
+  <div class="card ok" id="okCard" hidden>
+    <div class="check">&check;</div>
+    <h2 style="margin-top:14px;">You're subscribed</h2>
+    <p>Thanks. You'll get account, project, and appointment updates from Vernon Tech &amp; Media by text. Reply STOP anytime to opt out.</p>
+  </div>
+
+  <h2>About this program</h2>
+  <ul>
+    <li><strong>Who sends the messages:</strong> Vernon Tech &amp; Media LLC (<a href="https://vernontm.com">vernontm.com</a>).</li>
+    <li><strong>What you get:</strong> account updates, project communication, and appointment reminders.</li>
+    <li><strong>Frequency:</strong> recurring, up to about 6 messages per month.</li>
+    <li><strong>Cost:</strong> message and data rates may apply.</li>
+    <li><strong>Opt out:</strong> reply STOP at any time. Reply HELP, or email support@vernontm.com, for help.</li>
+    <li><strong>Privacy:</strong> no mobile information is shared with third parties or affiliates for marketing or promotional purposes.</li>
+  </ul>
+</main>
+
+<script>
+  var phone = document.getElementById('phone');
+  phone.addEventListener('input', function (e) {
+    var v = e.target.value.replace(/\D/g, '').slice(0, 10);
+    if (v.length >= 7) v = '(' + v.slice(0,3) + ') ' + v.slice(3,6) + '-' + v.slice(6);
+    else if (v.length >= 4) v = '(' + v.slice(0,3) + ') ' + v.slice(3);
+    else if (v.length > 0) v = '(' + v;
+    e.target.value = v;
+  });
+
+  var CONSENT_TEXT = 'I agree to receive account, project, and appointment text messages from Vernon Tech & Media. Recurring messages, up to about 6 per month. Msg & data rates may apply. Reply STOP to opt out, HELP for help.';
+
+  document.getElementById('optinForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var err = document.getElementById('err');
+    var btn = document.getElementById('btn');
+    err.hidden = true;
+    var name = document.getElementById('name').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var phoneVal = document.getElementById('phone').value.trim();
+    var consent = document.getElementById('consent').checked;
+    if (phoneVal.replace(/\D/g, '').length < 10) { err.textContent = 'Please enter a valid mobile number.'; err.hidden = false; return; }
+    if (!consent) { err.textContent = 'Please check the box to opt in.'; err.hidden = false; return; }
+    btn.disabled = true; btn.textContent = 'Signing you up...';
+    try {
+      var resp = await fetch('/api/sms-optin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, email: email, phone: phoneVal, consent: true, consentText: CONSENT_TEXT, source: 'sms-consent-page' }),
+      });
+      var data = await resp.json().catch(function () { return {}; });
+      if (!resp.ok) { err.textContent = data.error || 'Something went wrong. Please try again.'; err.hidden = false; btn.disabled = false; btn.textContent = 'Sign me up for text updates'; return; }
+      document.getElementById('formCard').hidden = true;
+      document.getElementById('okCard').hidden = false;
+    } catch (e2) {
+      err.textContent = 'Network error. Please try again.'; err.hidden = false; btn.disabled = false; btn.textContent = 'Sign me up for text updates';
+    }
+  });
+</script>
+</body>
+</html>
