@@ -22,7 +22,9 @@ import {
   agreementChat, analyzeDeal, generateAgreement, saveAgreementDoc, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent, startMaintenance,
   listClientFiles, listClientFolders, createClientFolder, renameClientFile,
   moveClientFile, deleteClientFile, uploadClientFile,
+  getAssignees,
 } from '../api';
+import { useClient } from '../context/ClientContext';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
 import StatusBadge from '../components/StatusBadge';
@@ -67,7 +69,7 @@ const ACCESS_STATUS = {
   blocked:   { label: 'Blocked',   color: '#ff5c5c', icon: Circle },
 };
 
-const SOURCES = ['Walk-in', 'Referral', 'Instagram', 'TikTok', 'Google', 'Website', 'Cold outreach', 'Event / networking', 'Other'];
+const SOURCES = ['TikTok', 'Referral', 'In-person', 'Cold outreach', 'LinkedIn', 'Website'];
 const CLIENT_TYPES = ['Websites', 'Apps & CRMs', 'Marketing', 'AI Services', 'Coaching'];
 const NOTE_TAGS = { Important: '#f5a623', Call: '#3b82f6', Meeting: '#784bd1', Update: '#22c55e', Idea: '#0ea5e9' };
 const CALL_OUTCOMES = ['Connected', 'No answer', 'Left voicemail', 'Booked meeting', 'Not interested', 'Follow up'];
@@ -127,7 +129,20 @@ function timeSince(iso) {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
-const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'Walk-in', client_type: [], notes: '', stage: 'lead', lead_temperature: 'warm', lead_rank: 'medium', potential_value: '', potential_value_type: 'one_time', firstNote: '' };
+const EMPTY_CLIENT = { business_name: '', owner_name: '', contact_phone: '', contact_email: '', industry: '', website_url: '', source: 'TikTok', client_type: [], notes: '', stage: 'lead', lead_temperature: 'warm', lead_rank: 'medium', potential_value: '', potential_value_type: 'one_time', firstNote: '', assigned_to: null, assigned_to_name: '' };
+
+// Team roster for "assign to" pickers. Fetched once per mount; any signed-in
+// user can read it (see /api/crm/assignees), so appointment setters can assign
+// leads without seeing payroll.
+function useAssignees() {
+  const [list, setList] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    getAssignees().then(r => { if (alive) setList(Array.isArray(r) ? r : (r?.employees || [])); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return list;
+}
 
 function StageBadge({ stage }) {
   const s = stageOf(stage);
@@ -290,6 +305,11 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFol
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--surface-3)', color: 'var(--muted)', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial}</span>
                       <span className="private-value" style={{ fontSize: 11.5, color: 'var(--text)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.owner_name || l.source || '—'}</span>
+                      {l.assigned_to_name && (
+                        <span title={`Assigned to ${l.assigned_to_name}`} style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.25)', borderRadius: 999, padding: '2px 8px', flexShrink: 0, maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {l.assigned_to_name.split(' ')[0]}
+                        </span>
+                      )}
                       {l.created_at && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
                           <Calendar size={11} /> {new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -315,6 +335,17 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFol
 export default function Clients({ kind = 'client' }) {
   const isLeadView = kind === 'lead';
   const noun = isLeadView ? 'Lead' : 'Client';
+
+  const { user } = useClient();
+  const assignees = useAssignees();
+  // A new lead defaults to whoever is adding it (matched to the roster by
+  // email), falling back to their login name if they aren't on the roster yet.
+  // Always changeable in the form and on the record.
+  const defaultAssignee = () => {
+    const me = assignees.find(a => (a.email || '').toLowerCase() === (user?.email || '').toLowerCase());
+    if (me) return { assigned_to: me.id, assigned_to_name: me.name };
+    return { assigned_to: null, assigned_to_name: user?.email ? user.email.split('@')[0] : '' };
+  };
 
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
@@ -455,7 +486,7 @@ export default function Clients({ kind = 'client' }) {
     catch (e) { toast('error', e.message); load(); }
   };
 
-  const openAdd = () => { setForm({ ...EMPTY_CLIENT, stage: isLeadView ? 'lead' : 'onboarding' }); setModal('add'); };
+  const openAdd = () => { setForm({ ...EMPTY_CLIENT, ...defaultAssignee(), stage: isLeadView ? 'lead' : 'onboarding' }); setModal('add'); };
   const handleCreate = async () => {
     if (!form.business_name.trim()) return;
     try {
@@ -643,6 +674,7 @@ export default function Clients({ kind = 'client' }) {
                 <>
                   <th style={{ minWidth: 130 }}>Source</th>
                   <th style={{ minWidth: 150 }}>Type</th>
+                  <th style={{ minWidth: 140 }}>Assigned</th>
                   <th style={{ minWidth: 120 }}>Added</th>
                 </>
               ) : (
@@ -686,6 +718,7 @@ export default function Clients({ kind = 'client' }) {
                   <>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.source || '—'}</td>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(c.client_type || []).join(', ') || '—'}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.assigned_to_name || '—'}</td>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
                   </>
                 ) : (() => {
@@ -821,17 +854,15 @@ export default function Clients({ kind = 'client' }) {
               })}
             </div>
           </div>
-          <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Stage</label>
-              <select className="form-input" value={form.stage} onChange={e => setForm(f => ({ ...f, stage: e.target.value }))}>
-                {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Industry</label>
-              <input className="form-input" value={form.industry} onChange={e => setForm(f => ({ ...f, industry: e.target.value }))} placeholder="Restaurant" />
-            </div>
+          <div className="form-group">
+            <label className="form-label">Assign to</label>
+            <select className="form-input" value={form.assigned_to || ''} onChange={e => {
+              const m = assignees.find(a => a.id === e.target.value);
+              setForm(f => ({ ...f, assigned_to: m ? m.id : null, assigned_to_name: m ? m.name : '' }));
+            }}>
+              <option value="">Unassigned</option>
+              {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">First note (what you learned)</label>
@@ -2222,6 +2253,15 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
     onPatch({ [field]: value });
     try { await updateClient(client.id, { [field]: value }); } catch (e) { toast('error', e.message); }
   };
+  const assignees = useAssignees();
+  // Set both the assignee id and the denormalized name in one write so the
+  // record shows a name everywhere without a join.
+  const setAssignee = (id) => {
+    const m = assignees.find(a => a.id === id);
+    const patch = { assigned_to: m ? m.id : null, assigned_to_name: m ? m.name : '' };
+    onPatch(patch);
+    updateClient(client.id, patch).catch(e => toast('error', e.message));
+  };
   const stage = stageOf(client.stage);
   const steps = useMemo(() => stepsFor(paymentMode), [paymentMode]);
 
@@ -2296,8 +2336,14 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
                   <Field label="Phone" value={client.contact_phone} onSave={v => saveField('contact_phone', v)} placeholder="(000) 000-0000" />
                   <Field label="Email" value={client.contact_email} onSave={v => saveField('contact_email', v)} placeholder="you@business.com" />
                   <Field label="Website" value={client.website_url} onSave={v => saveField('website_url', v)} placeholder="https://…" />
-                  <Field label="Industry" value={client.industry} onSave={v => saveField('industry', v)} placeholder="Industry" />
                   <Field label="Source" value={client.source} onSave={v => saveField('source', v)} placeholder="Where they came from" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Assigned to</span>
+                    <select className="form-input" value={client.assigned_to || ''} onChange={e => setAssignee(e.target.value)} style={{ padding: '7px 10px', fontSize: 13 }}>
+                      <option value="">{client.assigned_to_name && !client.assigned_to ? client.assigned_to_name : 'Unassigned'}</option>
+                      {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</span>
                     <PillSelect value={client.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => saveField('lead_temperature', v)} />

@@ -1,5 +1,22 @@
 const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
 
+// Write to crm_clients, tolerating the case where the lead-assignee columns
+// (assigned_to / assigned_to_name) haven't been added to the schema yet. If the
+// insert/update fails because those columns are missing, retry once without
+// them so creating and editing leads never breaks while the migration is
+// pending. Any other error re-throws unchanged.
+async function writeWithAssigneeFallback(path, method, data) {
+  try {
+    return await supaFetch(path, { method, body: JSON.stringify(data) });
+  } catch (e) {
+    const missingAssignee = /assigned_to/.test(e.message || '')
+      && ('assigned_to' in data || 'assigned_to_name' in data);
+    if (!missingAssignee) throw e;
+    const { assigned_to, assigned_to_name, ...rest } = data;
+    return await supaFetch(path, { method, body: JSON.stringify(rest) });
+  }
+}
+
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -40,10 +57,7 @@ module.exports = async function handler(req, res) {
         return res.json(existing[0]); // Return existing client
       }
     }
-    const rows = await supaFetch('crm_clients', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const rows = await writeWithAssigneeFallback('crm_clients', 'POST', data);
     return res.json(rows[0]);
   }
 
@@ -51,10 +65,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'PUT') {
     if (!id) return res.status(400).json({ error: 'id required' });
     const data = { ...req.body, updated_at: new Date().toISOString() };
-    const rows = await supaFetch(`crm_clients?id=eq.${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
+    const rows = await writeWithAssigneeFallback(`crm_clients?id=eq.${id}`, 'PATCH', data);
     return res.json(rows[0]);
   }
 

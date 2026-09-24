@@ -148,6 +148,8 @@ export const buildProjectReport = (projectId, data) => request(`/project-board?a
 // Employee roster. Distinct from the login list: a person exists here before
 // they have an account, and clients never appear.
 export const getEmployees    = () => request('/employees');
+// Lightweight roster for assignee pickers (any signed-in user; no pay/hours).
+export const getAssignees    = () => request('/assignees');
 export const addEmployee     = (data) => request('/employees', { method: 'POST', body: JSON.stringify(data) });
 export const updateEmployee  = (id, data) => request(`/employees?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 export const removeEmployee  = (id) => request(`/employees?id=${id}`, { method: 'DELETE' });
