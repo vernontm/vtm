@@ -28,7 +28,7 @@ const STATUS_COLORS = {
   'Paused':          { bg: '#ff5c5c', text: '#fff' },
   // Project payment badge
   'Unpaid':       { bg: 'rgba(245,166,35,0.15)', text: '#f5a623' },
-  'Deposit paid': { bg: 'rgba(37,99,235,0.15)',  text: '#60a5fa' },
+  'Deposit paid': { bg: 'rgba(37,99,235,0.15)',  text: 'var(--blue)' },
   'Paid in full': { bg: 'rgba(22,163,74,0.15)',  text: '#22c55e' },
   // Legacy project statuses (still colored if any old rows remain)
   'Active':     { bg: '#3b82f6', text: '#fff' },

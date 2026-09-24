@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Trash2, ArrowLeft, DollarSign, Calendar, FolderOpen, ExternalLink, Receipt, Loader, Check, Clock } from 'lucide-react';
-import { getProjects, createProject, updateProject, deleteProject, createProjectInvoice, getClients } from '../api';
+import { getProjects, createProject, updateProject, deleteProject, getClients } from '../api';
 import Modal from '../components/Modal';
 import ProjectBoard from '../components/ProjectBoard';
 import StatusBadge from '../components/StatusBadge';
@@ -9,6 +9,9 @@ import InlineEdit from '../components/InlineEdit';
 import SelectionBar from '../components/SelectionBar';
 import { usePageActions } from '../context/UiContext';
 import { toast } from '../components/Toast';
+import ProgressReport from '../components/ProgressReport';
+import WorkLog from '../components/WorkLog';
+import WorkspacePicker from '../components/WorkspacePicker';
 import { MoneyCell, PersonCell, DateCell, ProgressCell, TextCell, EmptyStub, RowActions } from '../components/cells';
 import EmptyState from '../components/EmptyState';
 import SkeletonRow from '../components/SkeletonRow';
@@ -64,6 +67,40 @@ const BILLING_TYPES = [
   { key: 'monthly',  label: 'Monthly (recurring)' },
   { key: 'hybrid',   label: 'One-time + recurring' },
 ];
+
+
+// The project's `client` text column is denormalized and drifts. Resolve the
+// real client from client_id whenever we have the list loaded.
+
+// Projects read top-to-bottom by where they are in the lifecycle, not by how
+// they bill. Anything unrecognised sorts just before Completed.
+const STATUS_ORDER = ['Onboarding', 'Awaiting Access', 'In Progress', 'Live', 'Paused', 'Completed', 'Cancelled'];
+
+// The board groups by where a project sits in its life, not by how it bills.
+// A retainer and a build that are both underway belong in the same bucket.
+const PHASES = ['Onboarding', 'In Progress', 'Completed'];
+const phaseOf = (p) => {
+  const st = String(p?.status || '').toLowerCase();
+  if (st === 'onboarding' || st === 'awaiting access') return 'Onboarding';
+  if (st === 'completed' || st === 'cancelled') return 'Completed';
+  return 'In Progress';
+};
+const phaseRank = (p) => {
+  const i = PHASES.indexOf(phaseOf(p));
+  return i === -1 ? PHASES.indexOf('In Progress') : i;
+};
+const statusRank = (st) => {
+  const i = STATUS_ORDER.findIndex(x => x.toLowerCase() === String(st || '').toLowerCase());
+  return i === -1 ? STATUS_ORDER.indexOf('Paused') : i;
+};
+
+const clientNameOf = (project, clients = []) => {
+  if (project?.client_id) {
+    const hit = clients.find(c => c.id === project.client_id);
+    if (hit?.business_name) return hit.business_name;
+  }
+  return project?.client || '';
+};
 
 const EMPTY_PROJECT = { name: '', client: '', client_id: null, project_kind: 'build', status: 'Onboarding', billing_type: 'one_time', value: '', recurring_amount: '', start_date: '', end_date: '', notes: '' };
 const EMPTY_ITEM    = { name: '', owner: '', status: 'Not Started', date: '', text: '', link: '' };
@@ -127,29 +164,12 @@ function Card({ title, children, style }) {
 // ── Project detail page ────────────────────────────────────────────────────────
 function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
   const [items, setItems] = useState([]);
-  const [invoiceEmail, setInvoiceEmail] = useState('');
-  const [invoicing, setInvoicing] = useState(false);
 
   const saveField = async (field, value) => {
     const parsed = (field === 'value' || field === 'recurring_amount') ? (parseFloat(value) || 0) : value;
     onPatch({ [field]: parsed });
     try { await updateProject(project.id, { [field]: parsed }); }
     catch (e) { toast('error', e.message); }
-  };
-
-  const sendInvoice = async () => {
-    const oneTime = project.billing_type === 'monthly' ? 0 : (project.value || 0);
-    const monthly = project.billing_type === 'one_time' ? 0 : (project.recurring_amount || 0);
-    if (oneTime <= 0 && monthly <= 0) { toast('error', 'Set a price on this project first.'); return; }
-    const parts = [oneTime > 0 ? `$${Number(oneTime).toLocaleString()} one-time` : null, monthly > 0 ? `$${Number(monthly).toLocaleString()}/mo` : null].filter(Boolean).join(' + ');
-    if (!window.confirm(`Create & send a Stripe invoice for ${parts} to ${invoiceEmail || 'the linked client'}?`)) return;
-    setInvoicing(true);
-    try {
-      const r = await createProjectInvoice(project.id, { email: invoiceEmail.trim(), name: project.client });
-      onPatch({ invoice_status: 'sent', stripe_invoice_url: r.invoiceUrl || project.stripe_invoice_url });
-      toast('success', 'Invoice created and sent via Stripe.');
-    } catch (e) { toast('error', e.message); }
-    finally { setInvoicing(false); }
   };
 
   return (
@@ -164,7 +184,7 @@ function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>
             <InlineEdit value={project.name} onSave={v => saveField('name', v)} placeholder="Project name" />
           </div>
-          {project.client && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{project.client}</div>}
+          {clientNameOf(project, clients) && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{clientNameOf(project, clients)}</div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <StatusBadge status={paymentBadge(project)} />
@@ -235,45 +255,23 @@ function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>End Date</span>
                 <InlineEdit value={project.end_date} type="date" onSave={v => saveField('end_date', v)} placeholder="—" />
               </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Claude Workspace</span>
+                <WorkspacePicker
+                  value={project.claude_workspace}
+                  onChange={v => saveField('claude_workspace', v)}
+                />
+              </div>
             </div>
           </Card>
 
-          {/* Invoicing — set the price above, then bill through Stripe */}
-          <Card title="Invoicing">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-                Billing this project:{' '}
-                <strong style={{ color: 'var(--text)' }}>
-                  {project.billing_type !== 'monthly' && project.value > 0 ? `$${Number(project.value).toLocaleString()} one-time` : ''}
-                  {project.billing_type !== 'one_time' && project.recurring_amount > 0 ? `${project.billing_type !== 'monthly' && project.value > 0 ? ' + ' : ''}$${Number(project.recurring_amount).toLocaleString()}/mo` : ''}
-                  {(!project.value && !project.recurring_amount) ? 'no price set' : ''}
-                </strong>
-              </div>
+          {/* Period report. A project's own paperwork, next to its facts. */}
+          <Card title="Progress report">
+            <ProgressReport project={project} />
+          </Card>
 
-              {project.invoice_status === 'sent' ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#16a34a', fontWeight: 700 }}>
-                  <Check size={14} /> Invoice sent via Stripe
-                  {project.stripe_invoice_url && (
-                    <a href={project.stripe_invoice_url} target="_blank" rel="noreferrer" style={{ color: 'var(--orange)', marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-                      View <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Billing email</span>
-                    <input className="form-input" type="email" value={invoiceEmail} onChange={e => setInvoiceEmail(e.target.value)} placeholder="client@business.com (defaults to linked client)" />
-                  </div>
-                  <button className="btn-primary" onClick={sendInvoice} disabled={invoicing} style={{ justifyContent: 'center' }}>
-                    {invoicing ? <><Loader size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Sending…</> : <><Receipt size={14} /> Create &amp; send Stripe invoice</>}
-                  </button>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.55 }}>
-                    Stripe emails the client a hosted invoice. Monthly projects also start a recurring subscription billed each month.
-                  </div>
-                </>
-              )}
-            </div>
+          <Card title="Work log">
+            <WorkLog project={project} />
           </Card>
         </div>
       </div>
@@ -284,7 +282,7 @@ function ProjectDetail({ project, clients = [], onBack, onPatch, onDelete }) {
 
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function Projects() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects]     = useState([]);
   const [search, setSearch]         = useState(() => searchParams.get('search') || '');
   const [modal, setModal]           = useState(null);
@@ -315,18 +313,26 @@ export default function Projects() {
   const filtered = useMemo(() =>
     projects.filter(p => !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.client || '').toLowerCase().includes(search.toLowerCase())),
-    [projects, search]
+      clientNameOf(p, clients).toLowerCase().includes(search.toLowerCase()))
+      .slice()
+      .sort((a, b) => {
+        const ph = phaseRank(a) - phaseRank(b);
+        if (ph !== 0) return ph;
+        const d = statusRank(a.status) - statusRank(b.status);
+        if (d !== 0) return d;
+        // Within a stage, biggest commitment first.
+        const worth = (p) => (Number(p.recurring_amount) || 0) * 12 + (Number(p.value) || 0);
+        const w = worth(b) - worth(a);
+        return w !== 0 ? w : (clientNameOf(a, clients) || a.name || '').localeCompare(clientNameOf(b, clients) || b.name || '');
+      }),
+    [projects, search, clients]
   );
 
   // One flat list. Completed/cancelled projects sink to the bottom; the sort is
   // stable so everything else keeps its existing order.
-  const sorted = useMemo(() => {
-    // Cluster Builds first, then Retainers; within each, finished work sinks.
-    const kindRank = (p) => (projectKind(p) === 'retainer' ? 1 : 0);
-    const endRank = (p) => ((COMPLETED_STATUSES.includes(p.status) || p.status === 'Cancelled') ? 1 : 0);
-    return [...filtered].sort((a, b) => kindRank(a) - kindRank(b) || endRank(a) - endRank(b));
-  }, [filtered]);
+  // `filtered` already orders by lifecycle phase, then status, then worth.
+  // Re-sorting here would undo that, so this just passes the order through.
+  const sorted = filtered;
 
   // Selection helpers
   const toggleSelect = (id) => setSelectedIds(prev => {
@@ -514,7 +520,18 @@ export default function Projects() {
         <ProjectDetail
           project={selected}
           clients={clients}
-          onBack={() => { setSelected(null); load(); }}
+          onBack={() => {
+            setSelected(null);
+            // Drop ?open=<id> too. Leaving it in the URL makes the deep-link
+            // effect re-select the same project the moment we clear it, which
+            // reads as the back button doing nothing.
+            if (searchParams.get('open')) {
+              const next = new URLSearchParams(searchParams);
+              next.delete('open');
+              setSearchParams(next, { replace: true });
+            }
+            load();
+          }}
           onPatch={(patch) => setSelected(s => ({ ...s, ...patch }))}
           onDelete={() => setDeleteTarget(selected)}
         />
@@ -552,30 +569,6 @@ export default function Projects() {
           </button>
         </div>
 
-        {/* Row 2 — summary strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, padding: '4px 28px 16px' }}>
-          {[
-            { label: 'Total value',   value: `$${totals.total.toLocaleString()}`,        color: 'var(--orange)', hint: totals.mrr ? `${totals.oneTime ? `$${totals.oneTime.toLocaleString()} one-time · ` : ''}$${totals.mrr.toLocaleString()}/mo` : 'One-time work' },
-            { label: 'Paid',          value: `$${totals.paid.toLocaleString()}`,          color: '#22c55e',       hint: totals.total ? `${Math.round((totals.paid / (totals.total || 1)) * 100)}% collected` : '—' },
-            { label: 'Outstanding',   value: `$${totals.outstanding.toLocaleString()}`,   color: '#f59e0b',       hint: 'Awaiting payment' },
-            { label: 'MRR',           value: `$${totals.mrr.toLocaleString()}`,           color: '#2563eb',       hint: 'Recurring revenue' },
-          ].map((s) => (
-            <div key={s.label} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 14px', borderRadius: 12,
-              background: 'var(--surface-2)', border: '1px solid var(--border)',
-            }}>
-              <span style={{ width: 4, alignSelf: 'stretch', borderRadius: 3, background: s.color, flexShrink: 0 }} />
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
-                  <div className="pii-money" style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
-                </div>
-                <div className="pii-money" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.hint}</div>
-              </div>
-            </div>
-          ))}
-        </div>
 
         {/* Row 3 — search + filter chrome */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 28px 14px' }}>
@@ -600,10 +593,10 @@ export default function Projects() {
               <div className="mobile-card-row primary">
                 <span className="private-value">{project.name || '—'}</span>
               </div>
-              {project.client && (
+              {clientNameOf(project, clients) && (
                 <div className="mobile-card-row">
                   <span className="mobile-card-label">Client</span>
-                  <span className="private-value">{project.client}</span>
+                  <span className="private-value">{clientNameOf(project, clients)}</span>
                 </div>
               )}
               <div className="mobile-card-row">
@@ -681,21 +674,26 @@ export default function Projects() {
               </tr>
             ) : (
               <>
-                {(() => { let lastKind = null; return sorted.map(project => {
+                {(() => { let lastPhase = null; return sorted.map(project => {
                   const pct = progressPercent(project);
-                  const kind = projectKind(project);
-                  const showHeader = kind !== lastKind; lastKind = kind;
-                  const grp = sorted.filter(p => projectKind(p) === kind);
-                  const grpAmt = kind === 'retainer'
-                    ? `$${grp.reduce((s, p) => s + (Number(p.recurring_amount) || 0), 0).toLocaleString()}/mo`
-                    : `$${grp.reduce((s, p) => s + (Number(p.value) || 0), 0).toLocaleString()} one-time`;
+                  const phase = phaseOf(project);
+                  const showHeader = phase !== lastPhase; lastPhase = phase;
+                  const grp = sorted.filter(p => phaseOf(p) === phase);
+                  // A phase mixes builds and retainers, so show whichever
+                  // money each group actually holds.
+                  const grpOnce = grp.reduce((s, p) => s + (Number(p.value) || 0), 0);
+                  const grpMo   = grp.reduce((s, p) => s + (Number(p.recurring_amount) || 0), 0);
+                  const grpAmt = [
+                    grpOnce > 0 ? `$${grpOnce.toLocaleString()} one-time` : null,
+                    grpMo   > 0 ? `$${grpMo.toLocaleString()}/mo` : null,
+                  ].filter(Boolean).join(' \u00b7 ') || '$0';
 
                   return (
                     <React.Fragment key={project.id}>
                     {showHeader && (
                       <tr>
                         <td colSpan={9} style={{ padding: '16px 12px 6px' }}>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{kind === 'retainer' ? 'Retainers · Ongoing' : 'Builds · One-time'}</span>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{phase}</span>
                           <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 10 }}>{grp.length} · {grpAmt}</span>
                         </td>
                       </tr>
@@ -715,7 +713,7 @@ export default function Projects() {
                       <td>
                         <TextCell value={project.name} weight={700} size={13.5} />
                       </td>
-                      <td><PersonCell name={project.client} /></td>
+                      <td><PersonCell name={clientNameOf(project, clients)} /></td>
                       <td onClick={e => e.stopPropagation()}>
                         <StatusBadge status={project.status} options={statusesFor(project)} onChange={s => handleStatusChange(project, s)} />
                       </td>

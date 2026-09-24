@@ -33,7 +33,7 @@ const STATUS = {
   missed:   { color: '#dc2626', label: 'Missed' },
   // Light blue: readable on the dark surface (the old #334155 slate all but
   // disappeared, especially the time text on calendar chips).
-  upcoming: { color: '#60a5fa', label: 'Upcoming' },
+  upcoming: { color: 'var(--blue)', label: 'Upcoming' },
 };
 
 // Personal commitments (school etc.) that hard-block time like an OOO does.

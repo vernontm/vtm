@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Eye, EyeOff, MessageSquare, FileText, Loader, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { Plus, Trash2, Eye, EyeOff, MessageSquare, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import {
   getProjectBoard, seedProjectBoard, addProjectItem, updateProjectItem,
-  deleteProjectItem, addProjectComment, buildProjectReport,
+  deleteProjectItem, addProjectComment,
 } from '../api';
 import { toast } from './Toast';
+import { BOARD_REFRESH_EVENT } from './ProgressReport';
 
 // Phases and the steps inside them, for one project. Clicking a step's marker
 // cycles it todo -> doing -> done; the server stamps completed_at, which is what
@@ -16,12 +17,6 @@ import { toast } from './Toast';
 // Comments are internal by default. A note only reaches a client when it is
 // deliberately marked shared.
 
-const RANGES = [
-  { key: 'this-week', label: 'This week' },
-  { key: 'this-month', label: 'This month' },
-  { key: 'last-month', label: 'Last month' },
-  { key: 'custom', label: 'Custom' },
-];
 
 const STATUS_NEXT = { todo: 'doing', doing: 'done', done: 'todo' };
 // Clicking a marker cycles it. The in-progress mark is a bar rather than a
@@ -34,7 +29,6 @@ const STATUS_MARK = {
 };
 const STATUS_ORDER = ['todo', 'doing', 'done'];
 
-const lbl = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 };
 
 const pad = (n) => String(n).padStart(2, '0');
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -60,11 +54,6 @@ export default function ProjectBoard({ project }) {
   const [commentShared, setCommentShared] = useState(false);
   const [editingId, setEditingId] = useState(null);   // item being renamed
   const [editText, setEditText] = useState('');
-  const [range, setRange] = useState('this-month');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [clientFacing, setClientFacing] = useState(true);
-  const [reporting, setReporting] = useState(false);
   // Preview of what a client would see. Same two rules the client-safe report
   // applies: a step hidden from the client disappears, and an internal comment
   // disappears. Editing controls go too, because a client cannot change
@@ -85,6 +74,16 @@ export default function ProjectBoard({ project }) {
     finally { if (!silent) setLoading(false); }
   }, [project.id]);
   useEffect(() => { load(); }, [load]);
+
+  // The progress report lives in the sidebar now; reload when it finishes so
+  // anything it stamped shows up here without a page refresh.
+  useEffect(() => {
+    const onReport = (e) => {
+      if (!e.detail?.projectId || e.detail.projectId === project.id) load({ silent: true });
+    };
+    window.addEventListener(BOARD_REFRESH_EVENT, onReport);
+    return () => window.removeEventListener(BOARD_REFRESH_EVENT, onReport);
+  }, [load, project.id]);
 
   // Structural changes (add, delete, seed) still refetch, but silently.
   const guard = async (fn) => { setBusy(true); try { await fn(); await load({ silent: true }); } catch (e) { toast('error', e.message); } finally { setBusy(false); } };
@@ -153,18 +152,6 @@ export default function ProjectBoard({ project }) {
       await addProjectComment(project.id, { item_id: commentFor, body, internal: !commentShared });
       setCommentText(''); setCommentFor(null); setCommentShared(false);
     });
-  };
-
-  const runReport = async () => {
-    if (range === 'custom' && (!from || !to)) { toast('error', 'Pick both dates for a custom range.'); return; }
-    setReporting(true);
-    try {
-      const r = await buildProjectReport(project.id, { range, from, to, client_facing: clientFacing });
-      toast('success', `Report ready for ${r.range?.label || 'the period'}`);
-      if (r.url) window.open(r.url, '_blank', 'noopener');
-      await load({ silent: true });
-    } catch (e) { toast('error', e.message); }
-    finally { setReporting(false); }
   };
 
   const commentsFor = (itemId) => (data?.comments || [])
@@ -401,42 +388,6 @@ export default function ProjectBoard({ project }) {
         </>
       )}
 
-      {/* Period report. Hidden in client view: it is your tool, not theirs. */}
-      {!clientView && (
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <FileText size={15} style={{ color: 'var(--accent)' }} />
-          <div style={{ fontSize: 13, fontWeight: 800 }}>Progress report</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
-          <div>
-            <div style={lbl}>Period</div>
-            <select className="form-input" value={range} onChange={e => setRange(e.target.value)} style={{ width: 150 }}>
-              {RANGES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-            </select>
-          </div>
-          {range === 'custom' && (
-            <>
-              <div><div style={lbl}>From</div><input className="form-input" type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 150 }} /></div>
-              <div><div style={lbl}>To</div><input className="form-input" type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 150 }} /></div>
-            </>
-          )}
-          <label style={{ fontSize: 12.5, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 9 }}>
-            <input type="checkbox" checked={clientFacing} onChange={e => setClientFacing(e.target.checked)} />
-            Client-safe version
-          </label>
-          <button className="btn-primary" onClick={runReport} disabled={reporting} style={{ padding: '9px 16px' }}>
-            {reporting ? <><Loader size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Building…</> : <><FileText size={14} /> Generate PDF</>}
-          </button>
-        </div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
-          {clientFacing
-            ? 'Leaves out internal notes and any step hidden from the client. Safe to send.'
-            : 'Includes internal notes and hidden steps. For your eyes only.'}
-          {' '}The PDF is also filed on the client’s Documents.
-        </div>
-      </div>
-      )}
     </div>
   );
 }

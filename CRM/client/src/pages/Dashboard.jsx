@@ -356,7 +356,7 @@ export default function Dashboard() {
     <div style={{
       background: 'linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.5))',
       backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-      border: '1px solid rgba(255,255,255,0.85)', borderRadius: 16, padding: '16px 18px',
+      border: '1px solid var(--border)', borderRadius: 16, padding: '16px 18px',
       boxShadow: '0 8px 24px rgba(37,99,235,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
     }}>
       <div style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>

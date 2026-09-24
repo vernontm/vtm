@@ -103,7 +103,7 @@ export default function RenderEditModal({ render, avatar, onClose, onSaved, onTe
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 10px', color: '#fca5a5', fontSize: 12, marginBottom: 12 }}>{error}</div>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 10px', color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{error}</div>
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr 1fr', gap: 14 }}>

@@ -11,7 +11,7 @@ const CAT_COLORS = {
   'Cold Call':           { bg: 'rgba(120,75,209,0.18)', fg: '#b38cff' },
   'Follow Up':           { bg: 'rgba(253,171,61,0.18)', fg: '#fdab3d' },
   'Discovery':           { bg: 'rgba(0,209,209,0.18)',  fg: '#4de3e3' },
-  'Closing':             { bg: 'rgba(34,197,94,0.18)',  fg: '#4ade80' },
+  'Closing':             { bg: 'rgba(34,197,94,0.18)',  fg: 'var(--green)' },
   'Objection Handling':  { bg: 'rgba(255,92,92,0.18)',  fg: '#ff8484' },
   'Other':               { bg: 'rgba(107,114,128,0.18)', fg: '#b5bbc7' },
 };
@@ -142,7 +142,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
           <button
             onClick={handleCopy}
             title="Copy script"
-            style={{ background: copied ? 'rgba(34,197,94,0.1)' : 'var(--surface-2)', border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 9px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: copied ? '#4ade80' : 'var(--muted)', fontWeight: 600, transition: 'all 0.15s' }}
+            style={{ background: copied ? 'rgba(34,197,94,0.1)' : 'var(--surface-2)', border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 9px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: copied ? 'var(--green)' : 'var(--muted)', fontWeight: 600, transition: 'all 0.15s' }}
           >
             {copied ? <Check size={11} /> : <Copy size={11} />}
             {copied ? 'Copied!' : 'Copy'}
@@ -181,7 +181,7 @@ function ScriptRow({ script, isOwner, onEdit, onDelete }) {
           <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               onClick={handleCopy}
-              style={{ padding: '6px 14px', borderRadius: 7, border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, background: copied ? 'rgba(34,197,94,0.1)' : 'var(--surface-2)', color: copied ? '#4ade80' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+              style={{ padding: '6px 14px', borderRadius: 7, border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, background: copied ? 'rgba(34,197,94,0.1)' : 'var(--surface-2)', color: copied ? 'var(--green)' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? 'Copied to clipboard!' : 'Copy full script'}

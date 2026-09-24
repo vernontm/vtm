@@ -19,7 +19,14 @@ module.exports = async function handler(req, res) {
       const rows = await supaFetch(`crm_clients?contact_id=eq.${contact_id}`);
       return res.json(rows[0] || null);
     }
-    const rows = await supaFetch('crm_clients?order=created_at.desc');
+    // Team members (employees/contractors who signed through the CRM) live in
+    // the same table so their agreement history is preserved, but they are not
+    // clients. `?record_type=team` opts in to seeing them.
+    const wantType = req.query?.record_type;
+    const filter = wantType
+      ? `&record_type=eq.${encodeURIComponent(wantType)}`
+      : '&or=(record_type.is.null,record_type.eq.client)';
+    const rows = await supaFetch(`crm_clients?order=created_at.desc${filter}`);
     return res.json(rows);
   }
 

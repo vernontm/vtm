@@ -4,35 +4,35 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Brand accent — now BLUE (was orange). Token name kept as --orange so the
-     ~40 files that reference var(--orange) all pick up the new color. Used for
-     accents/chips/active states; primary buttons stay near-black. */
+  /* Brand accent: VTM blue. Token name stays --orange so the ~40 files that
+     reference var(--orange) keep working. */
   --orange:      #2563eb;
   --orange-dark: #1d4ed8;
 
-  /* Primary buttons — the blue accent gradient. */
+  /* Primary buttons carry the accent, the way the reference uses black. */
   --btn-black:       linear-gradient(135deg, #3b82f6, #1d4ed8);
-  --btn-black-hover: linear-gradient(135deg, #4f8ff7, #2563eb);
-  --link:            #f0f0f0;
+  --btn-black-hover: linear-gradient(135deg, #2f7bf5, #1e40af);
+  --link:            #1d4fd7;
 
-  /* Backgrounds (DARK crimson theme like the reference) */
-  --bg:        #111112;
-  --surface:   #1a1a1c;
-  --surface-2: #222226;
-  --surface-3: #2a2a2f;
+  /* Grounds. Neutrals carry a slight blue bias so they read as chosen
+     alongside the accent rather than as default grey. */
+  --bg:        #F1F3F7;
+  --surface:   #FFFFFF;
+  --surface-2: #F7F8FA;
+  --surface-3: #EDEFF4;
 
-  /* Borders (subtle light-on-dark) */
-  --border:       rgba(255,255,255,0.07);
-  --border-light: rgba(255,255,255,0.12);
+  /* Hairline borders */
+  --border:       #E6E9EF;
+  --border-light: #DCE1EA;
 
-  /* Text */
-  --text:  #f0f0f0;
-  --muted: #6b6b72;
+  /* Ink */
+  --text:  #15181F;
+  --muted: #6B7280;
 
-  /* Status */
-  --green:  #16a34a;
-  --red:    #dc2626;
-  --yellow: #ca8a04;
+  /* Status, tuned for light grounds */
+  --green:  #11683E;
+  --red:    #B42318;
+  --yellow: #8A6212;
   --blue:   #2563eb;
 
   /* Fonts */
@@ -41,21 +41,21 @@
 
   /* Legacy aliases */
   --accent:      #2563eb;
-  --accent-dim:  rgba(37,99,235,0.10);
-  --accent-mid:  rgba(37,99,235,0.20);
-  --text-muted:  #6b6b72;
+  --accent-dim:  rgba(37,99,235,0.07);
+  --accent-mid:  rgba(37,99,235,0.14);
+  --text-muted:  #6B7280;
 
-  /* Sidebar — matched to the reference: a raised surface panel. */
-  --side-bg:     #1a1a1c;
-  --side-text:   rgba(255,255,255,0.92);
-  --side-muted:  rgba(255,255,255,0.50);
-  --side-border: rgba(255,255,255,0.07);
-  --side-hover:  rgba(255,255,255,0.04);
+  /* Sidebar: quiet chrome panel, one step off the page ground. */
+  --side-bg:     #FFFFFF;
+  --side-text:   #15181F;
+  --side-muted:  #5B6472;
+  --side-border: #E6E9EF;
+  --side-hover:  #EDEFF3;
 
-  /* Deep shadows for dark surfaces */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 6px 20px rgba(0,0,0,0.45);
-  --shadow-lg: 0 20px 60px rgba(0,0,0,0.6);
+  /* Soft shadows for light surfaces */
+  --shadow-sm: 0 1px 2px rgba(21,24,31,0.05);
+  --shadow-md: 0 6px 20px rgba(21,24,31,0.08);
+  --shadow-lg: 0 20px 60px rgba(21,24,31,0.14);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────── */
@@ -82,7 +82,7 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(16,24,40,0.18); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(16,24,40,0.3); }
 /* dark sidebar keeps a light thumb */
-.app-sidebar ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
+.app-sidebar ::-webkit-scrollbar-thumb { background: rgba(21,24,31,0.16); }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
@@ -160,7 +160,7 @@ button:focus, input:focus, select:focus, textarea:focus {
   box-shadow: var(--shadow-sm);
   transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
-.card:hover { transform: translateY(-4px); border-color: rgba(37,99,235,0.25); box-shadow: 0 12px 32px rgba(0,0,0,0.35); }
+.card:hover { transform: translateY(-4px); border-color: rgba(37,99,235,0.25); box-shadow: 0 12px 28px rgba(21,24,31,0.10); }
 
 /* Compact table — tighter rows/columns for dense lists (e.g. contacts). */
 .compact-table td, .compact-table th { padding: 6px 12px; font-size: 12.5px; }
@@ -206,10 +206,10 @@ button:focus, input:focus, select:focus, textarea:focus {
   font-family: var(--font-display); text-decoration: none;
   transition: background 0.15s, color 0.15s, border-color 0.15s; cursor: pointer;
 }
-.sidebar-item:hover { background: var(--side-hover); color: #fff; }
+.sidebar-item:hover { background: var(--side-hover); color: var(--text); }
 .sidebar-item.active {
-  background: linear-gradient(135deg, rgba(37,99,235,0.2), rgba(29,78,216,0.15));
-  border-color: rgba(37,99,235,0.4); color: #fff; font-weight: 600;
+  background: rgba(37,99,235,0.08);
+  border-color: rgba(37,99,235,0.18); color: #1D4FD7; font-weight: 600;
 }
 
 /* ── Main / App Layout ──────────────────────────────────────────────────────── */
@@ -330,7 +330,7 @@ textarea:focus, select:focus {
 
 /* ── Modals ─────────────────────────────────────────────────────────────────── */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000;
+  position: fixed; inset: 0; background: rgba(21,24,31,0.45); z-index: 1000;
   display: flex; align-items: center; justify-content: center; padding: 20px;
   backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
@@ -363,11 +363,11 @@ textarea:focus, select:focus {
 
 /* ── Badges / Pills ─────────────────────────────────────────────────────────── */
 .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; font-family: var(--font-display); }
-.pill-green  { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
-.pill-red    { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
-.pill-yellow { background: rgba(234,179,8,0.12);  color: #facc15; border: 1px solid rgba(234,179,8,0.2); }
-.pill-blue   { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
-.pill-orange { background: rgba(37,99,235,0.12); color: var(--orange); border: 1px solid rgba(37,99,235,0.25); }
+.pill-green { background: rgba(17,104,62,0.09); color: #11683E; border: 1px solid rgba(17,104,62,0.18); }
+.pill-red { background: rgba(180,35,24,0.08); color: #B42318; border: 1px solid rgba(180,35,24,0.18); }
+.pill-yellow { background: rgba(138,98,18,0.10); color: #8A6212; border: 1px solid rgba(138,98,18,0.20); }
+.pill-blue { background: rgba(37,99,235,0.08); color: #1D4FD7; border: 1px solid rgba(37,99,235,0.18); }
+.pill-orange { background: rgba(37,99,235,0.08); color: #1D4FD7; border: 1px solid rgba(37,99,235,0.20); }
 .pill-muted  { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
 
 /* ── Dropdown menus ─────────────────────────────────────────────────────────── */
@@ -383,7 +383,7 @@ textarea:focus, select:focus {
   border: none; background: transparent; width: 100%; text-align: left;
 }
 .dropdown-item:hover { background: var(--surface-2); }
-.dropdown-item.danger { color: #f87171; }
+.dropdown-item.danger { color: #B42318; }
 .dropdown-item.danger:hover { background: rgba(239,68,68,0.1); }
 
 /* ── Grid / Flex utilities ──────────────────────────────────────────────────── */
@@ -510,11 +510,11 @@ textarea:focus, select:focus {
   background: none; border: none; cursor: pointer; color: var(--muted);
   padding: 4px; border-radius: 6px; transition: color 0.1s, background 0.1s;
 }
-.email-trash-btn:hover { color: #f87171; background: rgba(239,68,68,0.1); }
+.email-trash-btn:hover { color: #B42318; background: rgba(180,35,24,0.07); }
 .compose-popup {
   position: fixed; bottom: 0; right: 24px;
   width: 560px; background: var(--surface); border: 1px solid var(--border-light);
-  border-radius: 12px 12px 0 0; box-shadow: 0 -8px 40px rgba(0,0,0,0.5); z-index: 500;
+  border-radius: 12px 12px 0 0; box-shadow: 0 -8px 40px rgba(21,24,31,0.16); z-index: 500;
 }
 
 /* ── Mobile hamburger / overlay ─────────────────────────────────────────────── */
@@ -522,7 +522,7 @@ textarea:focus, select:focus {
 .header-hamburger { display: none; }
 .sidebar-overlay {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6); z-index: 99; backdrop-filter: blur(2px);
+  background: rgba(21,24,31,0.42); z-index: 99; backdrop-filter: blur(2px);
 }
 
 @media (max-width: 768px) {
@@ -562,12 +562,12 @@ textarea:focus, select:focus {
     position: fixed !important; top: 0; left: 0; bottom: 0;
     width: 274px !important; max-width: 82vw;
     transform: translateX(-100%); transition: transform 0.2s ease;
-    z-index: 130; box-shadow: 0 0 40px rgba(0,0,0,0.45); overflow-y: auto;
+    z-index: 130; box-shadow: 0 0 40px rgba(21,24,31,0.18); overflow-y: auto;
   }
   .email-sidebar.open { transform: translateX(0); }
   .email-sidebar-overlay.open {
     display: block; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5); z-index: 129;
+    background: rgba(21,24,31,0.42); z-index: 129;
   }
   .email-folders-btn { display: inline-flex; }
   .email-detail-content { padding: 16px !important; }

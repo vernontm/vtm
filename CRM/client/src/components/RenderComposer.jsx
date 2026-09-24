@@ -168,7 +168,7 @@ export default function RenderComposer({ avatar, onClose, onCreated }) {
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 12px', color: '#fca5a5', fontSize: 12, marginBottom: 12 }}>{error}</div>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 12px', color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{error}</div>
         )}
 
         {outfits.length === 0 ? (

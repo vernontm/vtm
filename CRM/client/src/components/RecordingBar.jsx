@@ -18,7 +18,7 @@ export default function RecordingBar() {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9000,
-      background: isSaving ? '#1a1a2e' : '#f87171',
+      background: isSaving ? '#1a1a2e' : 'var(--red)',
       color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 20px', height: 44,
@@ -54,7 +54,7 @@ export default function RecordingBar() {
           onClick={stopRecording}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)',
+            background: 'rgba(255,255,255,0.2)', border: '1px solid var(--border)',
             color: '#fff', borderRadius: 6, padding: '5px 14px',
             fontSize: 12, fontWeight: 700, cursor: 'pointer',
           }}

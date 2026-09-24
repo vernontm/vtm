@@ -896,9 +896,9 @@ export default function EmailMarketing() {
         </div>
 
         {error && (
-          <div style={{ padding: '10px 24px', background: 'rgba(220,38,38,0.1)', color: '#f87171', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '10px 24px', background: 'rgba(220,38,38,0.1)', color: 'var(--red)', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{error}</span>
-            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171' }}><X size={14} /></button>
+            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)' }}><X size={14} /></button>
           </div>
         )}
 
@@ -1268,7 +1268,7 @@ export default function EmailMarketing() {
           />
 
           {bulkError && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}>{bulkError}</div>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--red)' }}>{bulkError}</div>
           )}
 
           {bulkPreview.length > 0 && (
@@ -1694,8 +1694,8 @@ export default function EmailMarketing() {
               {/* Template chip */}
               {campTemplateHtml && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid #1e3a5f', borderRadius: 8, fontSize: 12 }}>
-                  <FileText size={13} color="#60a5fa" />
-                  <span style={{ color: '#60a5fa' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
+                  <FileText size={13} color="var(--blue)" />
+                  <span style={{ color: 'var(--blue)' }}>Using template: <strong>{campTemplateName || 'Template'}</strong></span>
                   <span style={{ color: 'var(--muted)', fontSize: 11 }}>— only body slot editable (AI edits apply to full HTML).</span>
                   <button type="button" onClick={() => { setCampTemplateId(''); setCampTemplateHtml(null); setCampTemplateName(''); }} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}><X size={11} /> Remove</button>
                 </div>
@@ -1745,7 +1745,7 @@ export default function EmailMarketing() {
               <Sparkles size={15} color="var(--orange)" />
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>AI Editor</div>
               {hasBrandBible && (
-                <span title="This client's brand bible is loaded — AI responses will match their voice" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: '#4ade80', background: 'rgba(34,197,94,0.1)', padding: '3px 8px', borderRadius: 12 }}>
+                <span title="This client's brand bible is loaded — AI responses will match their voice" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--green)', background: 'rgba(34,197,94,0.1)', padding: '3px 8px', borderRadius: 12 }}>
                   <BookOpenCheck size={10} /> Brand bible
                 </span>
               )}
@@ -1777,7 +1777,7 @@ export default function EmailMarketing() {
                   borderRadius: 10,
                   fontSize: 12, lineHeight: 1.5,
                   background: m.role === 'user' ? 'var(--orange)' : m.role === 'system' ? 'rgba(239,68,68,0.08)' : 'var(--surface)',
-                  color: m.role === 'user' ? 'var(--surface)' : m.role === 'system' ? '#fca5a5' : 'var(--text)',
+                  color: m.role === 'user' ? 'var(--surface)' : m.role === 'system' ? 'var(--red)' : 'var(--text)',
                   border: m.role !== 'user' ? '1px solid var(--border)' : 'none',
                   whiteSpace: 'pre-wrap',
                 }}>
@@ -1859,7 +1859,7 @@ export default function EmailMarketing() {
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
             Broadcasts <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: 16 }}>{campaigns.length}</span>
           </div>
-          <button onClick={() => { setShowComposer(true); }} style={{ ...btnPrimary, background: 'var(--surface)', color: '#fff', padding: '10px 18px' }}>
+          <button onClick={() => { setShowComposer(true); }} style={{ ...btnPrimary, background: 'var(--surface)', color: 'var(--text)', padding: '10px 18px' }}>
             <Plus size={14} /> New Broadcast
           </button>
         </div>

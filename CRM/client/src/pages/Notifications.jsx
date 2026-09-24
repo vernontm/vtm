@@ -16,7 +16,7 @@ const TYPE_CONFIG = {
   project_due_soon: { label: 'Due Soon',           icon: Clock,         color: '#fdab3d' },
   stale_lead:       { label: 'Stale Lead',         icon: Users,         color: 'var(--muted)' },
   followup_due:     { label: 'Follow-Up Due',      icon: PhoneCall,     color: 'var(--orange)' },
-  no_answer_retry:  { label: 'No Answer — Retry',  icon: PhoneOff,      color: '#f87171' },
+  no_answer_retry:  { label: 'No Answer — Retry',  icon: PhoneOff,      color: 'var(--red)' },
   invoice_unpaid:   { label: 'Invoice Unpaid',     icon: CreditCard,    color: '#fdab3d' },
   deal_cold:        { label: 'Deal Going Cold',    icon: TrendingDown,  color: 'var(--orange)' },
 };

@@ -607,7 +607,7 @@ export default function GlobalAgent() {
                   </button>
                   <button onClick={handleDeny} style={{
                     padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', cursor: 'pointer',
-                    color: '#f87171', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3,
+                    color: 'var(--red)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3,
                   }}>
                     <X size={10} /> Deny
                   </button>

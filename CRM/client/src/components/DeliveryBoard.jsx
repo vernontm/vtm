@@ -180,7 +180,7 @@ export default function DeliveryBoard({ onOpen }) {
                                 <span style={{ flex: 1 }}>Posts {card.progress.posts}/{q.posts}</span>
                                 {card.progress.source === 'manual' && <button onClick={() => bump(card, 'posts')} title="+1 post" style={{ border: 'none', background: 'var(--surface-3)', color: 'var(--text)', borderRadius: 5, cursor: 'pointer', padding: '1px 6px', fontSize: 11 }}>+1</button>}
                               </div>
-                              <Bar done={card.progress.posts} total={q.posts} color="#60a5fa" />
+                              <Bar done={card.progress.posts} total={q.posts} color="var(--blue)" />
                             </div>
                           )}
                           {q.reels > 0 && (

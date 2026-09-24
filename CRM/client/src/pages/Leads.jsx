@@ -24,8 +24,8 @@ const LEAD_STATUSES = ['New', 'Interested', 'Not Interested', 'Follow Up', 'Call
 
 const STATUS_STYLES = {
   'New':            { bg: 'rgba(3,105,161,0.2)', fg: '#38bdf8' }, // sky blue
-  'Interested':     { bg: 'rgba(21,128,61,0.2)', fg: '#4ade80' }, // green
-  'Not Interested': { bg: 'rgba(185,28,28,0.2)', fg: '#f87171' }, // red
+  'Interested':     { bg: 'rgba(21,128,61,0.2)', fg: 'var(--green)' }, // green
+  'Not Interested': { bg: 'rgba(185,28,28,0.2)', fg: 'var(--red)' }, // red
   'Follow Up':      { bg: 'rgba(180,83,9,0.2)', fg: '#fbbf24' }, // amber
   'Call Scheduled': { bg: 'rgba(109,40,217,0.2)', fg: '#a78bfa' }, // violet
   'Called':         { bg: 'rgba(15,118,110,0.2)', fg: '#2dd4bf' }, // teal
@@ -435,13 +435,13 @@ function CollapsibleSection({ title, defaultOpen = true, children }) {
 
 // ─── Activity Timeline ────────────────────────────────────────────────────────
 const ACTIVITY_ICONS = {
-  call:      { icon: '📞', color: '#f87171', bg: 'rgba(37,99,235,0.15)' },
+  call:      { icon: '📞', color: 'var(--red)', bg: 'rgba(37,99,235,0.15)' },
   email:     { icon: '✉️',  color: 'var(--orange)', bg: 'rgba(59,130,246,0.15)' },
   recording: { icon: '🎙️', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)' },
   meeting:   { icon: '📅', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
   note:      { icon: '📝', color: '#fbbf24', bg: 'rgba(234,179,8,0.15)' },
   status:    { icon: '🔄', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
-  created:   { icon: '✅', color: '#4ade80', bg: 'rgba(34,197,94,0.15)' },
+  created:   { icon: '✅', color: 'var(--green)', bg: 'rgba(34,197,94,0.15)' },
   default:   { icon: '💬', color: 'var(--muted)', bg: 'rgba(107,114,128,0.15)' },
 };
 
@@ -510,7 +510,7 @@ function ActivityTimeline({ lead, convos, recordings, onRecordingDeleted }) {
   }, [lead, convos, recordings]);
 
   const INTEREST_STYLES = {
-    hot:            { bg: 'rgba(185,28,28,0.2)', fg: '#f87171', label: '🔥 Hot' },
+    hot:            { bg: 'rgba(185,28,28,0.2)', fg: 'var(--red)', label: '🔥 Hot' },
     warm:           { bg: 'rgba(180,83,9,0.2)', fg: '#fbbf24', label: '☀️ Warm' },
     cold:           { bg: 'rgba(3,105,161,0.2)', fg: '#38bdf8', label: '❄️ Cold' },
     not_interested: { bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af', label: '👎 Not interested' },
@@ -737,7 +737,7 @@ function RecordingCard({ recording: rawR, onDeleted }) {
       {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#f87171', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Mic size={10} /> Call
           </span>
           {r.duration_seconds > 0 && <span style={{ fontSize: 10, color: 'var(--muted)' }}>{fmt(r.duration_seconds)}</span>}
@@ -781,7 +781,7 @@ function RecordingCard({ recording: rawR, onDeleted }) {
           <span style={{
             fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 700, textTransform: 'uppercase',
             background: r.transcript_status === 'done' ? 'rgba(34,197,94,0.15)' : r.transcript_status === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
-            color: r.transcript_status === 'done' ? '#4ade80' : r.transcript_status === 'error' ? '#f87171' : '#fbbf24',
+            color: r.transcript_status === 'done' ? 'var(--green)' : r.transcript_status === 'error' ? 'var(--red)' : '#fbbf24',
           }}>
             {r.transcript_status === 'done' ? 'Transcribed' : r.transcript_status === 'error' ? 'Error' : 'Processing…'}
           </span>
@@ -792,7 +792,7 @@ function RecordingCard({ recording: rawR, onDeleted }) {
             style={{
               background: 'none', border: '1px solid var(--border)', borderRadius: 6,
               padding: '3px 6px', cursor: deleting ? 'wait' : 'pointer',
-              color: deleting ? 'var(--muted)' : '#f87171',
+              color: deleting ? 'var(--muted)' : 'var(--red)',
               display: 'flex', alignItems: 'center',
             }}
           >
@@ -853,7 +853,7 @@ function RecordingCard({ recording: rawR, onDeleted }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
             {summary.interest_level && (() => {
               const iMap = {
-                hot:           { bg: 'rgba(185,28,28,0.2)', fg: '#f87171', label: '🔥 Hot' },
+                hot:           { bg: 'rgba(185,28,28,0.2)', fg: 'var(--red)', label: '🔥 Hot' },
                 warm:          { bg: 'rgba(180,83,9,0.2)', fg: '#fbbf24', label: '☀️ Warm' },
                 cold:          { bg: 'rgba(3,105,161,0.2)', fg: '#38bdf8', label: '❄️ Cold' },
                 not_interested:{ bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af', label: '👎 Not Interested' },
@@ -867,9 +867,9 @@ function RecordingCard({ recording: rawR, onDeleted }) {
             })()}
             {summary.sentiment && (() => {
               const sMap = {
-                positive: { bg: 'rgba(21,128,61,0.2)', fg: '#4ade80', label: '😊 Positive' },
+                positive: { bg: 'rgba(21,128,61,0.2)', fg: 'var(--green)', label: '😊 Positive' },
                 neutral:  { bg: 'rgba(107,114,128,0.15)', fg: '#9ca3af', label: '😐 Neutral' },
-                negative: { bg: 'rgba(185,28,28,0.2)', fg: '#f87171', label: '😟 Negative' },
+                negative: { bg: 'rgba(185,28,28,0.2)', fg: 'var(--red)', label: '😟 Negative' },
               };
               const s = sMap[summary.sentiment] || sMap.neutral;
               return (
@@ -1313,8 +1313,8 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                         minWidth: 180, overflow: 'hidden',
                       }}>
                         {[
-                          { key: 'answered',  label: 'Answered',    icon: PhoneCall,  color: '#4ade80' },
-                          { key: 'no_answer', label: 'No Answer',   icon: PhoneOff,   color: '#f87171' },
+                          { key: 'answered',  label: 'Answered',    icon: PhoneCall,  color: 'var(--green)' },
+                          { key: 'no_answer', label: 'No Answer',   icon: PhoneOff,   color: 'var(--red)' },
                           { key: 'voicemail', label: 'Left Voicemail', icon: Voicemail, color: '#fdab3d' },
                           { key: 'declined',  label: 'Declined',    icon: PhoneOff,   color: 'var(--muted)' },
                         ].map(({ key, label, icon: Icon, color }) => (
@@ -1928,7 +1928,7 @@ export default function Leads() {
           { label: 'Calls (24h)',      value: recordingStats.calls_24h,  icon: '📞', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
           { label: 'Calls (7d)',       value: recordingStats.calls_7d,   icon: '📞', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)' },
           { label: 'Calls (30d)',      value: recordingStats.calls_30d,  icon: '📞', color: '#a78bfa', bg: 'rgba(139,92,246,0.12)' },
-          { label: 'Meets This Week',  value: meetingStats.meets_7d,     icon: '📅', color: '#60a5fa', bg: 'rgba(59,130,246,0.12)' },
+          { label: 'Meets This Week',  value: meetingStats.meets_7d,     icon: '📅', color: 'var(--blue)', bg: 'rgba(59,130,246,0.12)' },
           { label: 'Meets (30d)',      value: meetingStats.meets_30d,    icon: '📅', color: '#38bdf8', bg: 'rgba(14,165,233,0.12)' },
           { label: 'Leads Won',        value: won,                      icon: '🏆', color: '#34d399', bg: 'rgba(4,120,87,0.12)' },
         ];
@@ -2107,13 +2107,13 @@ export default function Leads() {
                               width: 28, height: 28, borderRadius: '50%', border: 'none',
                               cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
                               background: active ? '#FEE2E2' : 'var(--surface-3)',
-                              color: active ? '#f87171' : '#8e8ea0',
+                              color: active ? 'var(--red)' : '#8e8ea0',
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                               transition: 'all 0.15s',
                               boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
                               animation: active ? 'recPulse 1.2s infinite' : 'none',
                             }}
-                            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = '#f87171'; } }}
+                            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = 'var(--red)'; } }}
                             onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'var(--surface-3)'; e.currentTarget.style.color = '#8e8ea0'; } }}
                           >
                             {active ? <MicOff size={12} /> : <Mic size={12} />}
@@ -2485,7 +2485,7 @@ export default function Leads() {
             position: 'fixed', bottom: 24, right: 24, zIndex: 9000,
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '11px 18px', borderRadius: 30, fontWeight: 700, fontSize: 13,
-            background: 'var(--surface)', color: '#fff', border: 'none', cursor: 'pointer',
+            background: 'var(--surface)', color: 'var(--text)', border: 'none', cursor: 'pointer',
             boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
           }}
         >
@@ -2518,7 +2518,7 @@ export default function Leads() {
       <div style={{ position: 'fixed', bottom: 24, right: detailLead ? 24 : 140, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
         {processedNotifs.map(n => (
           <div key={n.id} style={{
-            background: 'var(--surface)', color: '#fff', borderRadius: 10,
+            background: 'var(--surface)', color: 'var(--text)', borderRadius: 10,
             padding: '12px 16px', minWidth: 260, maxWidth: 340,
             boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
             display: 'flex', alignItems: 'flex-start', gap: 12,

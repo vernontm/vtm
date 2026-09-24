@@ -118,7 +118,7 @@ function HeyGenImportModal({ open, onClose, onImported }) {
     <Modal onClose={onClose} title="Import avatar from HeyGen">
       <div style={{ minWidth: 520, maxWidth: 680 }}>
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 12px', color: '#fca5a5', fontSize: 12, marginBottom: 12 }}>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 12px', color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>
             {error}
           </div>
         )}
@@ -638,10 +638,10 @@ const RENDER_PILL = {
   draft:              { bg: 'rgba(142,142,160,0.15)', text: '#8e8ea0', label: 'Draft' },
   pending:            { bg: 'rgba(2,132,199,0.15)', text: '#38bdf8',  label: 'Queued' },
   generating_audio:   { bg: 'rgba(161,98,7,0.15)',  text: '#fbbf24',  label: 'Audio…' },
-  generating_clips:   { bg: 'rgba(202,138,4,0.15)', text: '#facc15',  label: 'HeyGen…' },
+  generating_clips:   { bg: 'rgba(202,138,4,0.15)', text: 'var(--yellow)',  label: 'HeyGen…' },
   stitching:          { bg: 'rgba(124,58,237,0.15)', text: '#a78bfa', label: 'Stitching…' },
-  done:               { bg: 'rgba(21,128,61,0.15)', text: '#4ade80',  label: 'Ready' },
-  failed:             { bg: 'rgba(220,38,38,0.15)', text: '#f87171',  label: 'Failed' },
+  done:               { bg: 'rgba(21,128,61,0.15)', text: 'var(--green)',  label: 'Ready' },
+  failed:             { bg: 'rgba(220,38,38,0.15)', text: 'var(--red)',  label: 'Failed' },
 };
 
 function RenderStrip({ avatar, refreshKey, onOpen }) {
@@ -908,7 +908,7 @@ const btn = {
   iconDanger: {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     width: 30, height: 30, borderRadius: 8, cursor: 'pointer',
-    background: 'transparent', border: '1px solid var(--border)', color: '#f87171',
+    background: 'transparent', border: '1px solid var(--border)', color: 'var(--red)',
   },
   iconPrimary: {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

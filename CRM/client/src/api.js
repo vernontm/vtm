@@ -45,6 +45,38 @@ export const updateAdminUser  = (id, data) => request(`/admin-users?id=${id}`, {
 export const deleteAdminUser  = (id) => request(`/admin-users?id=${id}`, { method: 'DELETE' });
 
 // Admin: who gets which push notifications (mobile app)
+// Client files: folders, uploads, drag-to-organize
+const fileToB64 = (file) => new Promise((res, rej) => {
+  const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file);
+});
+export const listClientFiles = (clientId, path = '') => request(`/client-files?action=list&client_id=${clientId}&path=${encodeURIComponent(path)}`);
+export const listClientFolders = (clientId) => request(`/client-files?action=tree&client_id=${clientId}`);
+export const createClientFolder = (clientId, path, name) => request('/client-files?action=mkdir', { method: 'POST', body: JSON.stringify({ client_id: clientId, path, name }) });
+export const renameClientFile = (id, name) => request('/client-files?action=rename', { method: 'POST', body: JSON.stringify({ id, name }) });
+export const moveClientFile = (id, toPath) => request('/client-files?action=move', { method: 'POST', body: JSON.stringify({ id, to_path: toPath }) });
+export const deleteClientFile = (id) => request('/client-files?action=delete', { method: 'POST', body: JSON.stringify({ id }) });
+export const uploadClientFile = async (clientId, file, path = '') => {
+  // Direct-to-storage upload. The bytes never pass through our API, so this
+  // skips Vercel's ~4.5MB request-body cap and is much faster for big files.
+  const signed = await request('/client-files?action=sign-upload', {
+    method: 'POST',
+    body: JSON.stringify({ client_id: clientId, path, filename: file.name, size: file.size }),
+  });
+  const put = await fetch(signed.upload_url, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+    body: file,
+  });
+  if (!put.ok) throw new Error(`Upload failed (${put.status}): ${await put.text().catch(() => '')}`.slice(0, 200));
+  return request('/client-files?action=register', {
+    method: 'POST',
+    body: JSON.stringify({
+      client_id: clientId, path: signed.path, filename: signed.name,
+      key: signed.key, mime: file.type || 'application/octet-stream', size: file.size,
+    }),
+  });
+};
+
 export const getPushPrefs = () => request('/push?action=prefs');
 export const setPushPrefs = (userId, prefs) => request('/push?action=set-prefs', { method: 'POST', body: JSON.stringify({ user_id: userId, prefs }) });
 export const resetUserPassword = (id, password) => request(`/admin-users?id=${id}&action=reset-password`, { method: 'PUT', body: JSON.stringify({ password }) });
@@ -868,3 +900,7 @@ export const updateRender    = (id, data)   => request(`/avatar-renders?id=${id}
 export const deleteRender    = (id)         => request(`/avatar-renders?id=${id}`, { method: 'DELETE' });
 export const scheduleRender  = (id, data)   => request(`/avatar-renders?id=${id}&action=schedule`, { method: 'POST', body: JSON.stringify(data) });
 export const suggestTitle    = (script)     => request('/avatar-renders?action=suggest-title', { method: 'POST', body: JSON.stringify({ script }) });
+
+// Claude Code workspaces available to link to a project. Published from a local
+// machine by tools/claude-sync.mjs; the server cannot enumerate them itself.
+export const getClaudeWorkspaces = () => request('/claude-workspaces');

@@ -83,7 +83,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: 13, fontFamily: 'var(--font-display)' }}>
+            <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--red)', fontSize: 13, fontFamily: 'var(--font-display)' }}>
               {error}
             </div>
           )}

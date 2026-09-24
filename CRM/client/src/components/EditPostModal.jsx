@@ -423,7 +423,7 @@ export default function EditPostModal({ post, client, onClose, onSave, onDelete 
               <button
                 onClick={() => { if (confirm('Delete this post?')) { onDelete(); onClose(); } }}
                 style={{
-                  ...btnIcon, color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.1)',
+                  ...btnIcon, color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.1)',
                   marginLeft: 8,
                 }}
                 title="Delete post"

@@ -475,7 +475,7 @@ function ComposePopup({ replyTo, draft, onDraftChange, contacts, gmailContacts, 
           <div style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderTop:'1px solid var(--border)', position:'relative', flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'stretch', borderRadius:8, overflow:'hidden' }}>
               <button onClick={handleSend} disabled={sending||!to||!subject||uploading}
-                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject||uploading)?0.5:1, borderRight:'1px solid rgba(255,255,255,0.2)' }}>
+                style={{ padding:'7px 16px', cursor:sending?'wait':'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, opacity:(sending||!to||!subject||uploading)?0.5:1, borderRight:'1px solid var(--border)' }}>
                 <Send size={12} /> {sending?'Sending...':'Send'}
               </button>
               <button onClick={() => setShowSchedule(!showSchedule)} style={{ padding:'7px 8px', cursor:'pointer', background:'linear-gradient(135deg,var(--orange),#2563eb)', border:'none', color:'#fff', display:'flex', alignItems:'center' }}>
@@ -1180,7 +1180,7 @@ export default function EmailPage() {
                     <LabelButton key={lbl} labelKey={lbl} active={(selected.crmLabels||[]).includes(lbl)} onClick={() => toggleLabel(selected,lbl)} size={16} />
                   ))}
                   <button onClick={() => toggleLabel(selected,'spam')} title={(selected.crmLabels||[]).includes('spam')?'Remove from spam':'Mark as spam'}
-                    style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:(selected.crmLabels||[]).includes('spam')?'#f87171':'var(--muted)', display:'flex' }}><Ban size={16} /></button>
+                    style={{ background:'none', border:'none', cursor:'pointer', padding:4, color:(selected.crmLabels||[]).includes('spam')?'var(--red)':'var(--muted)', display:'flex' }}><Ban size={16} /></button>
                 </div>
               )}
               <span style={{ fontSize:12, color:'var(--muted)' }}>{currentIdx+1} of {filtered.length}</span>

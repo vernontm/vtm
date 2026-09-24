@@ -3,14 +3,13 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, LayoutDashboard,
   Mail, Calendar, Settings, LogOut,
-  Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock, BookOpen, CheckSquare, RotateCcw,
+  Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock, BookOpen, CheckSquare, RotateCcw, Megaphone, Briefcase,
 } from 'lucide-react';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../context/TeamContext';
 import { useClient } from '../context/ClientContext';
 import { useMobile } from '../App';
-import { getGmailInbox } from '../api';
 
 // ── Nav definitions ───────────────────────────────────────────────────────────
 // Naming rewrite (audit item #9): trimmed to a mental model that reads as a
@@ -20,7 +19,7 @@ const nav = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Home',         slug: 'dashboard' },
   { to: '/leads',        icon: UserPlus,        label: 'Leads',        slug: 'leads' },
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
-  { to: '/email',        icon: Mail,            label: 'Inbox',        slug: 'email' },
+  { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
   { to: '/appointments', icon: Calendar,        label: 'Calendar',     slug: 'appointments' },
 ];
 
@@ -30,6 +29,7 @@ const navWork = [
 ];
 
 const navMarketing = [
+  { to: '/marketing',     icon: Megaphone,  label: 'Marketing',     slug: 'marketing' },
   { to: '/contacts',      icon: Users,      label: 'Contacts',      slug: 'contacts' },
 ];
 
@@ -59,13 +59,12 @@ const FOOTER_BTN = (active = false) => ({
   width: '100%', padding: '8px 0', borderRadius: 10, cursor: 'pointer',
   background: active ? 'rgba(37,99,235,0.16)' : 'var(--side-hover)',
   border: active ? '1px solid rgba(37,99,235,0.35)' : '1px solid var(--side-border)',
-  color: active ? '#60a5fa' : 'var(--side-muted)',
+  color: active ? 'var(--blue)' : 'var(--side-muted)',
   fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
   fontFamily: 'var(--font-display)',
 });
 
 export default function Sidebar() {
-  const [emailCount, setEmailCount] = useState(0);
 
   const { hasPermission, isOwner, viewingAs, clearViewingAs } = useTeam();
   const { isAdmin, canAccess, user } = useClient();
@@ -74,22 +73,6 @@ export default function Sidebar() {
   // Admins bypass both.
   const canSee = (slug) => hasPermission(slug) && canAccess(slug);
 
-  // Only fetch email count — notifications + search live in Header now
-  useEffect(() => {
-    const fetchCounts = () => {
-      getGmailInbox({ maxResults: '10' }).then(d => {
-        const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-        const recent = (d?.messages || []).filter(m => {
-          const date = new Date(m.date);
-          return date.getTime() > dayAgo && !(m.crmLabels || []).includes('spam');
-        });
-        setEmailCount(recent.length);
-      }).catch(() => {});
-    };
-    fetchCounts();
-    const interval = setInterval(fetchCounts, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const { privacyMode, togglePrivacy } = usePrivacy();
   const { signOut } = useAuth();
@@ -153,7 +136,7 @@ export default function Sidebar() {
               />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', lineHeight: 1.2, fontFamily: 'var(--font-display)' }}>Vernon Tech</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--side-text)', lineHeight: 1.2, fontFamily: 'var(--font-display)' }}>Vernon Tech</div>
               <div style={{ fontSize: 10, color: 'var(--side-muted)', fontFamily: 'var(--font-display)' }}>&amp; Media CRM</div>
             </div>
           </div>
@@ -169,11 +152,6 @@ export default function Sidebar() {
                 <NavLink key={to} to={to} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
                   <Icon size={15} />
                   <span style={{ flex: 1 }}>{label}</span>
-                  {to === '/email' && emailCount > 0 && (
-                    <span style={{ background: 'var(--orange)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, lineHeight: '15px', fontFamily: 'var(--font-display)' }}>
-                      {emailCount}
-                    </span>
-                  )}
                 </NavLink>
               ))}
             </>
@@ -237,12 +215,12 @@ export default function Sidebar() {
                 width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
                 background: 'rgba(37,99,235,0.16)', border: '1px solid rgba(37,99,235,0.35)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#60a5fa', fontSize: 12, fontWeight: 800, fontFamily: 'var(--font-display)',
+                color: 'var(--blue)', fontSize: 12, fontWeight: 800, fontFamily: 'var(--font-display)',
               }}>
                 {user.email[0].toUpperCase()}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--side-text)', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {user.email.split('@')[0]}
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--side-muted)', fontFamily: 'var(--font-display)' }}>

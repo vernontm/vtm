@@ -86,7 +86,7 @@ function PortfolioCard({ item, onToggle, onEdit, onDelete }) {
               display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px',
               borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
               background: item.visible ? 'rgba(37,99,235,0.1)' : 'rgba(255,92,92,0.1)',
-              color: item.visible ? 'var(--orange)' : '#f87171',
+              color: item.visible ? 'var(--orange)' : 'var(--red)',
             }}
           >
             {item.visible ? <Eye size={12} /> : <EyeOff size={12} />}

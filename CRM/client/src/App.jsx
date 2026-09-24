@@ -25,7 +25,7 @@ const LANDING_ORDER = [
   ['dashboard', '/dashboard'], ['leads', '/leads'], ['clients', '/clients'],
   ['projects', '/projects'], ['appointments', '/appointments'], ['todos', '/todos'],
   ['routines', '/routines'], ['email', '/email'], ['time', '/time'],
-  ['employee-resources', '/employee-resources'], ['contacts', '/contacts'], ['settings', '/settings'],
+  ['employee-resources', '/employee-resources'], ['contacts', '/contacts'], ['marketing', '/marketing'], ['settings', '/settings'],
 ];
 function Landing() {
   const { loading, canAccess } = useClient();
@@ -66,6 +66,7 @@ import Header from './components/Header';
 import RecordingBar from './components/RecordingBar';
 import Login from './pages/Login';
 import Contacts from './pages/Contacts';
+import Marketing from './pages/Marketing';
 import Deals from './pages/Deals';
 import Clients from './pages/Clients';
 import Projects from './pages/Projects';
@@ -80,7 +81,6 @@ import MeetingDetail from './pages/MeetingDetail';
 import Notifications from './pages/Notifications';
 import QuickNotes from './pages/QuickNotes';
 import Blog from './pages/Blog';
-import EmailPage from './pages/Email';
 import Portfolio from './pages/Portfolio';
 import Subscribers from './pages/Subscribers';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -160,13 +160,13 @@ function AppLayout() {
               <Route path="/employee-resources" element={<Gated slug="employee-resources"><EmployeeResources /></Gated>} />
               {/* ── Legacy routes (hidden from nav, kept reachable) ── */}
               <Route path="/contacts" element={<Gated slug="contacts"><Contacts /></Gated>} />
+              <Route path="/marketing" element={<Gated slug="marketing"><Marketing /></Gated>} />
               <Route path="/deals" element={<Gated slug="projects"><Deals /></Gated>} />
               <Route path="/meetings/:eventId" element={<Gated slug="meetings"><MeetingDetail /></Gated>} />
               <Route path="/meetings" element={<Gated slug="meetings"><Meetings /></Gated>} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/quick-notes" element={<Gated slug="quick-notes"><QuickNotes /></Gated>} />
               <Route path="/blog" element={<Gated slug="blog"><Blog /></Gated>} />
-              <Route path="/email" element={<Gated slug="email"><EmailPage /></Gated>} />
               <Route path="/portfolio" element={<Gated slug="portfolio"><Portfolio /></Gated>} />
               <Route path="/content-scheduler" element={<Gated slug="content-scheduler"><ContentScheduler /></Gated>} />
               <Route path="/avatars" element={<Gated slug="avatars"><Avatars /></Gated>} />

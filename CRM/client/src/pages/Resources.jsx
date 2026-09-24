@@ -290,7 +290,7 @@ function CategoryEditor({ initial, onCancel, onSaved }) {
           </Field>
           <Field label="Published" width={140}>
             <button onClick={() => setCat({ ...cat, published: !cat.published })}
-              style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', color: cat.published ? '#4ade80' : 'var(--muted)' }}>
+              style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', color: cat.published ? 'var(--green)' : 'var(--muted)' }}>
               {cat.published ? <><Eye size={13} /> Live</> : <><EyeOff size={13} /> Draft</>}
             </button>
           </Field>
@@ -520,7 +520,7 @@ function ResourceEditor({ initial, category, onCancel, onSaved }) {
           </Field>
           <Field label="Published" width={110}>
             <button onClick={() => setR({ ...r, published: !r.published })}
-              style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', color: r.published ? '#4ade80' : 'var(--muted)' }}>
+              style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', color: r.published ? 'var(--green)' : 'var(--muted)' }}>
               {r.published ? <><Eye size={13} /> Live</> : <><EyeOff size={13} /> Draft</>}
             </button>
           </Field>

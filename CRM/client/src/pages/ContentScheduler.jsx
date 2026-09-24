@@ -3332,7 +3332,7 @@ export default function ContentScheduler() {
                     disabled={carouselIndex === 0}
                     style={{
                       position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                      background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff',
+                      background: 'rgba(0,0,0,0.7)', border: '1px solid var(--border)', color: '#fff',
                       borderRadius: '50%', width: 40, height: 40, cursor: carouselIndex === 0 ? 'default' : 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       opacity: carouselIndex === 0 ? 0.3 : 1,
@@ -3344,7 +3344,7 @@ export default function ContentScheduler() {
                     disabled={carouselIndex === showMediaModal.media_urls.length - 1}
                     style={{
                       position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                      background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff',
+                      background: 'rgba(0,0,0,0.7)', border: '1px solid var(--border)', color: '#fff',
                       borderRadius: '50%', width: 40, height: 40, cursor: carouselIndex >= showMediaModal.media_urls.length - 1 ? 'default' : 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       opacity: carouselIndex >= showMediaModal.media_urls.length - 1 ? 0.3 : 1,
@@ -3688,7 +3688,7 @@ export default function ContentScheduler() {
       <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
         {publishedNotifs.map(n => (
           <div key={n.id} style={{
-            background: 'var(--surface)', color: '#fff', borderRadius: 10,
+            background: 'var(--surface)', color: 'var(--text)', borderRadius: 10,
             padding: '12px 16px', minWidth: 260, maxWidth: 340,
             boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
             border: '1px solid var(--border)',

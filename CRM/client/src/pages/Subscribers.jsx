@@ -128,7 +128,7 @@ export default function Subscribers() {
     return <div style={{ padding: 32, color: 'var(--muted)' }}>Loading subscribers…</div>;
   }
   if (err) {
-    return <div style={{ padding: 32, color: '#f87171' }}>{err}</div>;
+    return <div style={{ padding: 32, color: 'var(--red)' }}>{err}</div>;
   }
 
   return (

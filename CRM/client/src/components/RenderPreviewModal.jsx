@@ -78,18 +78,18 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 10px', color: '#fca5a5', fontSize: 12, marginBottom: 12 }}>{error}</div>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 10px', color: 'var(--red)', fontSize: 12, marginBottom: 12 }}>{error}</div>
         )}
 
         {render.status === 'failed' && render.error && (
-          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '10px 12px', color: '#fca5a5', fontSize: 12, marginBottom: 12, whiteSpace: 'pre-wrap' }}>
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '10px 12px', color: 'var(--red)', fontSize: 12, marginBottom: 12, whiteSpace: 'pre-wrap' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 12 }}>
               <div style={{ fontWeight: 700 }}>Render failed</div>
               <button onClick={handleRetry} disabled={retrying}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)',
-                  color: '#fca5a5', fontSize: 11, fontWeight: 700,
+                  color: 'var(--red)', fontSize: 11, fontWeight: 700,
                   padding: '4px 10px', borderRadius: 6, cursor: retrying ? 'default' : 'pointer',
                 }}>
                 {retrying ? <Loader size={11} className="spin" /> : <RefreshCw size={11} />}
@@ -97,7 +97,7 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
               </button>
             </div>
             {render.error}
-            <div style={{ marginTop: 6, fontSize: 10, color: '#fca5a5', opacity: 0.7 }}>
+            <div style={{ marginTop: 6, fontSize: 10, color: 'var(--red)', opacity: 0.7 }}>
               Resume skips any step that already completed — cached audio, HeyGen clips, etc. — so you don't re-burn credits.
             </div>
           </div>
@@ -187,7 +187,7 @@ export default function RenderPreviewModal({ render, avatar, onClose, onSchedule
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-          <button onClick={onDelete} className="btn-ghost" style={{ color: '#f87171', fontSize: 12 }}>
+          <button onClick={onDelete} className="btn-ghost" style={{ color: 'var(--red)', fontSize: 12 }}>
             Delete render
           </button>
           <button onClick={onClose} className="btn-ghost">Close</button>
@@ -238,7 +238,7 @@ function LogsPane({ logs }) {
           return (
             <div key={i} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               <span style={{ opacity: 0.5 }}>{ts}</span>{' '}
-              <span style={{ color: isErr ? '#f87171' : isDone ? '#4ade80' : '#e5e5e5' }}>{entry.m}</span>
+              <span style={{ color: isErr ? 'var(--red)' : isDone ? 'var(--green)' : '#e5e5e5' }}>{entry.m}</span>
             </div>
           );
         })}

@@ -30,15 +30,17 @@ export default function InlineEdit({
   useEffect(() => { setVal(value ?? ''); }, [value]);
 
   useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-      if (inputRef.current.select) inputRef.current.select();
-    }
-  }, [editing]);
+    if (!editing || !inputRef.current) return;
+    const el = inputRef.current;
+    el.focus();
+    // select() throws InvalidStateError on a date input.
+    if (type !== 'date' && el.select) el.select();
+  }, [editing, type]);
 
-  const commit = () => {
+  const commit = (next) => {
     setEditing(false);
-    const trimmed = typeof val === 'string' ? val.trim() : val;
+    const raw = next === undefined ? val : next;
+    const trimmed = typeof raw === 'string' ? raw.trim() : raw;
     if (trimmed !== (value ?? '')) {
       onSave(trimmed);
       setSaved(true);
@@ -70,6 +72,36 @@ export default function InlineEdit({
     boxShadow: '0 0 0 2px rgba(37,99,235,0.15)',
   };
 
+  // Dates never go through click-to-edit. The field is always live, and a
+  // click anywhere on it opens the native calendar — showPicker() only works
+  // when it is called straight from the user's gesture, not from an effect.
+  if (type === 'date') {
+    return (
+      <input
+        type="date"
+        value={val || ''}
+        onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch (_) { /* field still works */ } }}
+        onChange={(e) => { setVal(e.target.value); commit(e.target.value); }}
+        onKeyDown={handleKey}
+        style={{
+          background: 'transparent',
+          border: '1px solid transparent',
+          borderRadius: 4,
+          color: val ? 'var(--text)' : 'var(--muted)',
+          padding: '2px 6px',
+          fontSize: 13,
+          outline: 'none',
+          width: '100%',
+          minHeight: 22,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--orange)'; e.currentTarget.style.background = 'var(--surface)'; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent'; }}
+      />
+    );
+  }
+
   if (editing) {
     if (options) {
       return (
@@ -77,7 +109,7 @@ export default function InlineEdit({
           ref={inputRef}
           value={val}
           onChange={(e) => setVal(e.target.value)}
-          onBlur={commit}
+          onBlur={() => commit()}
           onKeyDown={handleKey}
           style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }}
         >
@@ -93,7 +125,7 @@ export default function InlineEdit({
         type={type}
         value={val}
         onChange={(e) => setVal(e.target.value)}
-        onBlur={commit}
+        onBlur={() => commit()}
         onKeyDown={handleKey}
         style={inputStyle}
       />

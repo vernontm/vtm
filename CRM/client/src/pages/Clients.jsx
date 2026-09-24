@@ -7,6 +7,7 @@ import {
   FileSignature, Sparkles, DollarSign, Download, TrendingUp, Repeat,
   StickyNote, Phone, CheckSquare, PhoneIncoming, PhoneOutgoing, Flag, Activity, X, Mail,
   ChevronLeft, ChevronRight, ChevronDown, Loader, FolderOpen,
+  Folder, FolderPlus, Upload, File as FileIcon, MoreHorizontal, CornerLeftUp,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import {
@@ -19,6 +20,8 @@ import {
   getDeals, createDeal, updateDeal, deleteDeal, createDealInvoice,
   getAgreements, getAgreementFileUrl, updatePayment, sendAgreementForSignature,
   agreementChat, analyzeDeal, generateAgreement, saveAgreementDoc, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent, startMaintenance,
+  listClientFiles, listClientFolders, createClientFolder, renameClientFile,
+  moveClientFile, deleteClientFile, uploadClientFile,
 } from '../api';
 import Modal from '../components/Modal';
 import InlineEdit from '../components/InlineEdit';
@@ -202,18 +205,18 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFol
               transition: 'background 0.12s, border-color 0.12s',
             }}
           >
-            <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.10)', flexShrink: 0 }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: col.color, boxShadow: `0 0 8px ${col.color}` }} />
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', fontFamily: 'var(--font-display)' }}>{col.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{col.label}</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: col.color, borderRadius: 999, padding: '0 8px', marginLeft: 'auto' }}>{colLeads.length}</span>
               </div>
               {/* Explainer under each column */}
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 5, lineHeight: 1.35 }}>{col.blurb}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#4ade80', marginTop: 6 }}>{fmtUsd(colOneTime)}{colMonthly > 0 ? ` + ${fmtUsd(colMonthly)}/mo` : ''}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.35 }}>{col.blurb}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginTop: 6 }}>{fmtUsd(colOneTime)}{colMonthly > 0 ? ` + ${fmtUsd(colMonthly)}/mo` : ''}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10, flex: 1, overflowY: 'auto', minHeight: 60 }}>
-              {colLeads.length === 0 && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', padding: '16px 0' }}>Drop a lead here</div>}
+              {colLeads.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '16px 0' }}>Drop a lead here</div>}
               {colLeads.map(l => {
                 const initial = (l.owner_name || l.business_name || '?')[0].toUpperCase();
                 const tags = Array.isArray(l.lead_tags) && l.lead_tags.length ? l.lead_tags
@@ -278,7 +281,7 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFol
                     </div>
                     {/* Last contact line */}
                     {l.last_contact_at && (
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ color: 'var(--muted)' }}>Last touch:</span>
                         <span style={{ color: 'var(--text)', fontWeight: 600 }}>{l.last_contact_channel || 'contact'} · {timeSince(l.last_contact_at)}</span>
                       </div>
@@ -344,6 +347,19 @@ export default function Clients({ kind = 'client' }) {
   // Money and project counts per client, so the list answers "how is this
   // relationship doing" without opening anyone.
   const [projByClient, setProjByClient] = useState({});
+
+  // True client MRR comes from the CRM's own retainers, not Stripe's account-wide
+  // subscription list (which mixes in other products and misses schedules that
+  // have not started billing yet).
+  const clientMrr = useMemo(() => {
+    let total = 0, count = 0;
+    for (const b of Object.values(projByClient || {})) {
+      const r = Number(b.recurring) || 0;
+      if (r > 0) { total += r; count += 1; }
+    }
+    return { total, count };
+  }, [projByClient]);
+
   useEffect(() => {
     if (isLeadView) return;
     getDashboardStats().then(d => setRevStats(d?.stripeRevenue || null)).catch(() => {});
@@ -351,9 +367,12 @@ export default function Clients({ kind = 'client' }) {
       const by = {};
       for (const p of ps || []) {
         if (!p.client_id || p.archived) continue;
-        const b = by[p.client_id] || (by[p.client_id] = { count: 0, value: 0, paid: 0, names: [] });
+        const b = by[p.client_id] || (by[p.client_id] = { count: 0, value: 0, recurring: 0, paid: 0, names: [] });
         b.count += 1;
         b.value += Number(p.value) || 0;
+        // Retainers carry their money in recurring_amount, not value. Without
+        // this the Value column reads "—" for every monthly client.
+        b.recurring += Number(p.recurring_amount) || 0;
         b.paid += Number(p.amount_paid) || 0;
         if (p.name) b.names.push(p.name);
       }
@@ -400,8 +419,19 @@ export default function Clients({ kind = 'client' }) {
       .filter(c => !search ||
         (c.business_name || '').toLowerCase().includes(search.toLowerCase()) ||
         (c.owner_name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (c.industry || '').toLowerCase().includes(search.toLowerCase())),
-    [scoped, search, isLeadView, tempFilter]
+        (c.industry || '').toLowerCase().includes(search.toLowerCase()))
+      // Clients view: anyone with money attached (retainer or build) sorts to
+      // the top, highest first. Clients with no value fall to the bottom.
+      .sort((a, b) => {
+        if (isLeadView) return 0;
+        const val = (c) => {
+          const bk = projByClient[c.id];
+          return bk ? (Number(bk.recurring) || 0) * 12 + (Number(bk.value) || 0) : 0;
+        };
+        const d = val(b) - val(a);
+        return d !== 0 ? d : (a.business_name || '').localeCompare(b.business_name || '');
+      }),
+    [scoped, search, isLeadView, tempFilter, projByClient]
   );
 
   // Persist a temperature / rank change on a lead (optimistic).
@@ -535,7 +565,7 @@ export default function Clients({ kind = 'client' }) {
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '14px 24px 2px' }}>
           {[
             { label: 'Revenue · last 30 days', value: money(revStats.windows?.['30d']?.revenue ?? revStats.last30Days), sub: `${revStats.windows?.['30d']?.count ?? revStats.last30Count ?? 0} payments`, color: '#2563eb', Icon: TrendingUp },
-            { label: 'Monthly recurring (MRR)', value: money(revStats.mrr), sub: `${revStats.activeSubCount || 0} active subscriptions`, color: '#16a34a', Icon: Repeat },
+            { label: 'Client MRR', value: money(clientMrr.total), sub: `${clientMrr.count} client${clientMrr.count === 1 ? '' : 's'} on retainer`, color: '#16a34a', Icon: Repeat },
             { label: 'This month', value: money(revStats.thisMonth), sub: `${revStats.thisMonthCount || 0} payments`, color: '#7c3aed', Icon: DollarSign },
           ].map((s, i) => (
             <div key={i} style={{
@@ -670,11 +700,18 @@ export default function Clients({ kind = 'client' }) {
                           </span>
                         ) : <span style={{ color: 'var(--muted)' }}>None</span>}
                       </td>
-                      <td style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', color: b && b.value ? 'var(--text)' : 'var(--muted)' }}>
-                        {b && b.value ? fmtUsd(b.value) : '—'}
+                      <td style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', color: b && (b.value || b.recurring) ? 'var(--text)' : 'var(--muted)' }}>
+                        {b && (b.value || b.recurring) ? (
+                          <span>
+                            {b.recurring > 0 && <span style={{ fontWeight: 600 }}>{fmtUsd(b.recurring)}<span style={{ color: 'var(--muted)', fontWeight: 400 }}>/mo</span></span>}
+                            {b.recurring > 0 && b.value > 0 && <span style={{ color: 'var(--muted)' }}> + </span>}
+                            {b.value > 0 && <span>{fmtUsd(b.value)}</span>}
+                          </span>
+                        ) : '—'}
                       </td>
                       <td style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', fontWeight: outstanding > 0 ? 700 : 400, color: outstanding > 0 ? '#b45309' : 'var(--muted)' }}>
-                        {b && b.value ? (outstanding > 0 ? fmtUsd(outstanding) : 'Paid up') : '—'}
+                        {b && b.value ? (outstanding > 0 ? fmtUsd(outstanding) : 'Paid up')
+                          : (b && b.recurring > 0 ? <span style={{ color: 'var(--muted)' }}>Recurring</span> : '—')}
                       </td>
                       <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
                     </>
@@ -808,15 +845,26 @@ export default function Clients({ kind = 'client' }) {
 
 // ── Client detail ──────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'overview',  label: 'Overview',   icon: Building2 },
-  { key: 'activity',  label: 'Activity',   icon: Activity },
-  { key: 'deals',     label: 'Deals',      icon: DollarSign },
-  { key: 'agreement', label: 'Agreement',  icon: FileSignature },
-  { key: 'vault',     label: 'Vault',      icon: Lock },
-  { key: 'access',    label: 'Platforms & Access', icon: KeyRound },
-  { key: 'tasks',     label: 'Onboarding Tasks',   icon: ListChecks },
-  { key: 'projects',  label: 'Projects',   icon: Briefcase },
+  { key: 'overview', label: 'Overview', icon: Building2 },
+  { key: 'work',     label: 'Work',     icon: Briefcase },
+  { key: 'money',    label: 'Money',    icon: DollarSign },
+  { key: 'vault',    label: 'Vault',    icon: Lock },
 ];
+
+// A small titled divider so two former tabs can share one panel without the
+// content running together.
+function Section({ title, icon: Icon, children, first }) {
+  return (
+    <div style={{ marginTop: first ? 0 : 26 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        {Icon && <Icon size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
+        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>{title}</span>
+        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+      </div>
+      {children}
+    </div>
+  );
+}
 
 function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
   const [tab, setTab] = useState('overview');
@@ -860,23 +908,20 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
       </div>
 
       {/* Two-column: vertical sidebar + content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', gap: 24, padding: '0 28px 40px', alignItems: 'start' }}>
-        {/* Vertical tab rail */}
-        <nav style={{ position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ padding: '0 28px 40px' }}>
+        {/* Horizontal tabs: four groups, not eight flat items */}
+        <nav style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
           {TABS.map(t => {
             const on = tab === t.key;
             return (
               <button key={t.key} onClick={() => setTab(t.key)} style={{
-                display: 'flex', alignItems: 'center', gap: 11, padding: '11px 14px', borderRadius: 12,
-                background: on ? 'var(--btn-black)' : 'transparent',
-                border: '1px solid ' + (on ? 'transparent' : 'transparent'),
-                cursor: 'pointer', textAlign: 'left', width: '100%',
-                color: on ? '#fff' : 'var(--muted)', fontSize: 13.5, fontWeight: on ? 700 : 600, fontFamily: 'var(--font-display)',
-                transition: 'background 0.15s, color 0.15s',
-              }}
-              onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'var(--surface-2)'; }}
-              onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
-                <t.icon size={16} style={{ flexShrink: 0 }} /> <span style={{ flex: 1 }}>{t.label}</span>
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px',
+                background: 'none', border: 'none', borderBottom: `2px solid ${on ? 'var(--orange)' : 'transparent'}`,
+                marginBottom: -1, cursor: 'pointer', whiteSpace: 'nowrap',
+                color: on ? 'var(--text)' : 'var(--muted)', fontSize: 13.5, fontWeight: on ? 700 : 600,
+                fontFamily: 'var(--font-display)', transition: 'color 0.15s, border-color 0.15s',
+              }}>
+                <t.icon size={15} style={{ flexShrink: 0 }} /> {t.label}
               </button>
             );
           })}
@@ -884,14 +929,22 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
 
         {/* Content panel */}
         <div style={{ minWidth: 0 }}>
-          {tab === 'overview'  && <OverviewTab client={client} saveField={saveField} />}
-          {tab === 'activity'  && <ActivityTab clientId={client.id} />}
-          {tab === 'deals'     && <DealsTab client={client} />}
-          {tab === 'agreement' && <AgreementTab client={client} />}
-          {tab === 'vault'     && <VaultTab clientId={client.id} />}
-          {tab === 'access'    && <AccessTab clientId={client.id} />}
-          {tab === 'tasks'     && <TasksTab clientId={client.id} />}
-          {tab === 'projects'  && <ProjectsTab client={client} />}
+          {tab === 'overview' && (<>
+            <OverviewTab client={client} saveField={saveField} />
+            <Section title="Activity" icon={Activity}><ActivityTab clientId={client.id} /></Section>
+          </>)}
+          {tab === 'work' && (<>
+            <Section title="Projects" icon={Briefcase} first><ProjectsTab client={client} /></Section>
+            <Section title="Onboarding tasks" icon={ListChecks}><TasksTab clientId={client.id} /></Section>
+          </>)}
+          {tab === 'money' && (<>
+            <Section title="Agreement" icon={FileSignature} first><AgreementTab client={client} /></Section>
+            <Section title="Deals" icon={DollarSign}><DealsTab client={client} /></Section>
+          </>)}
+          {tab === 'vault' && (<>
+            <Section title="Files" icon={Lock} first><VaultTab clientId={client.id} /></Section>
+            <Section title="Platforms & access" icon={KeyRound}><AccessTab clientId={client.id} /></Section>
+          </>)}
         </div>
       </div>
       {children}
@@ -2564,95 +2617,245 @@ function LeadActivity({ client, onRestart }) {
   );
 }
 
-// Documents tab — drag-and-drop AI file processing + the list of everything
-// that's been uploaded for this lead. Files are stored as activity notes with
-// an attachment, so this reads the same source the timeline does.
+// Documents tab — a real file manager per client: folders, drag-and-drop
+// upload (files AND whole folders), drag-to-move, rename, delete. Files live in
+// the `client-documents` bucket; folder structure is logical (parent_path), so
+// moving or renaming never rewrites storage.
 function LeadDocuments({ client }) {
   const clientId = client.id;
-  const [files, setFiles] = useState([]);
+  const [path, setPath] = useState('');
+  const [items, setItems] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [aiUploading, setAiUploading] = useState([]);
+  const [uploads, setUploads] = useState([]);
   const [dragOver, setDragOver] = useState(false);
-  const inputRef = useRef(null);
+  const [dragId, setDragId] = useState(null);
+  const [overFolder, setOverFolder] = useState(null);
+  const [menuFor, setMenuFor] = useState(null);
+  const fileRef = useRef(null);
+  const dirRef = useRef(null);
 
-  const load = async () => {
+  const load = async (p = path) => {
+    setLoading(true);
     try {
-      const rows = await getClientActivity(clientId);
-      setFiles((rows || []).filter(a => a.attachment_url).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')));
+      const [res, tree] = await Promise.all([listClientFiles(clientId, p), listClientFolders(clientId)]);
+      setItems(res.items || []);
+      setFolders(tree.folders || []);
     } catch (e) { toast('error', e.message); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [clientId]);
+  useEffect(() => { load(path); /* eslint-disable-next-line */ }, [clientId, path]);
 
-  const runAiUpload = async (fileList) => {
-    const list = Array.from(fileList || []).filter(Boolean);
+  const crumbs = path ? path.split('/') : [];
+  const goTo = (i) => setPath(i < 0 ? '' : crumbs.slice(0, i + 1).join('/'));
+
+  // Walk a dropped folder so nested files keep their structure.
+  const readEntry = (entry, prefix, out) => new Promise((resolve) => {
+    if (!entry) return resolve();
+    if (entry.isFile) {
+      entry.file(f => { out.push({ file: f, rel: prefix }); resolve(); }, () => resolve());
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const next = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const readBatch = () => reader.readEntries(async (ents) => {
+        if (!ents.length) return resolve();
+        for (const e of ents) await readEntry(e, next, out);
+        readBatch();
+      }, () => resolve());
+      readBatch();
+    } else resolve();
+  });
+
+  const runUpload = async (list) => {
     if (!list.length) return;
-    setAiUploading(list.map(f => ({ name: f.name, status: 'uploading' })));
+    setUploads(list.map(x => ({ name: x.file.name, status: 'uploading' })));
     for (let i = 0; i < list.length; i++) {
-      try { await uploadClientDocument(clientId, list[i]); setAiUploading(prev => prev.map((x, idx) => idx === i ? { ...x, status: 'done' } : x)); }
-      catch (err) { setAiUploading(prev => prev.map((x, idx) => idx === i ? { ...x, status: 'error' } : x)); toast('error', `${list[i].name}: ${err.message}`); }
+      const { file, rel } = list[i];
+      const dest = [path, rel].filter(Boolean).join('/');
+      try {
+        await uploadClientFile(clientId, file, dest);
+        setUploads(p => p.map((u, idx) => idx === i ? { ...u, status: 'done' } : u));
+      } catch (err) {
+        setUploads(p => p.map((u, idx) => idx === i ? { ...u, status: 'error' } : u));
+        toast('error', `${file.name}: ${err.message}`);
+      }
     }
     await load();
-    setTimeout(() => setAiUploading([]), 2500);
+    setTimeout(() => setUploads([]), 2000);
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 'calc(100vh - 168px)' }}>
-      <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Documents</span>
+  const onDrop = async (e) => {
+    e.preventDefault(); setDragOver(false);
+    if (dragId) return;
+    const out = [];
+    const its = Array.from(e.dataTransfer.items || []);
+    const entries = its.map(it => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+    if (entries.length) { for (const en of entries) await readEntry(en, '', out); }
+    else Array.from(e.dataTransfer.files || []).forEach(f => out.push({ file: f, rel: '' }));
+    runUpload(out);
+  };
 
-      {/* Drop files to auto-process with AI */}
+  const pickFiles = (fl) => runUpload(Array.from(fl || []).map(f => ({
+    file: f, rel: (f.webkitRelativePath || '').split('/').slice(0, -1).join('/'),
+  })));
+
+  const dropOnFolder = async (e, folder) => {
+    e.preventDefault(); e.stopPropagation(); setOverFolder(null);
+    if (!dragId || dragId === folder.id) return;
+    const dest = folder.parent_path ? `${folder.parent_path}/${folder.name}` : folder.name;
+    try { await moveClientFile(dragId, dest); toast('success', 'Moved'); await load(); }
+    catch (err) { toast('error', err.message); }
+    setDragId(null);
+  };
+
+  const doRename = async (it) => {
+    const name = prompt('Rename to:', it.name);
+    if (!name || name === it.name) return;
+    try { await renameClientFile(it.id, name); await load(); } catch (e) { toast('error', e.message); }
+  };
+  const doDelete = async (it) => {
+    if (!confirm(it.is_folder ? `Delete folder "${it.name}" and everything inside it?` : `Delete "${it.name}"?`)) return;
+    try { await deleteClientFile(it.id); toast('success', 'Deleted'); await load(); } catch (e) { toast('error', e.message); }
+  };
+  const doMkdir = async () => {
+    const name = prompt('Folder name:');
+    if (!name) return;
+    try { await createClientFolder(clientId, path, name); await load(); } catch (e) { toast('error', e.message); }
+  };
+  const moveTo = async (it, dest) => {
+    setMenuFor(null);
+    try { await moveClientFile(it.id, dest); toast('success', 'Moved'); await load(); }
+    catch (e) { toast('error', e.message); }
+  };
+
+  const fmtSize = (n) => !n ? '' : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+  const btn = { padding: '7px 12px', borderRadius: 9, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: 'calc(100vh - 168px)' }}>
+      {/* Toolbar + breadcrumbs */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Documents</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--muted)', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+          <button onClick={() => goTo(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: path ? 'var(--orange)' : 'var(--muted)', fontWeight: 700, fontSize: 12.5, padding: 0 }}>All files</button>
+          {crumbs.map((c, i) => (
+            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <ChevronRight size={12} />
+              <button onClick={() => goTo(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: i === crumbs.length - 1 ? 'var(--text)' : 'var(--orange)', fontWeight: 700, fontSize: 12.5, padding: 0 }}>{c}</button>
+            </span>
+          ))}
+        </div>
+        <button style={btn} onClick={doMkdir}><FolderPlus size={14} /> New folder</button>
+        <button style={btn} onClick={() => fileRef.current?.click()}><Upload size={14} /> Upload files</button>
+        <button style={btn} onClick={() => dirRef.current?.click()}><FolderOpen size={14} /> Upload folder</button>
+        <input ref={fileRef} type="file" multiple hidden onChange={e => { pickFiles(e.target.files); e.target.value = ''; }} />
+        <input ref={dirRef} type="file" webkitdirectory="" directory="" multiple hidden onChange={e => { pickFiles(e.target.files); e.target.value = ''; }} />
+      </div>
+
+      {/* Drop zone */}
       <div
-        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={e => { e.preventDefault(); if (!dragId) setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={e => { e.preventDefault(); setDragOver(false); runAiUpload(e.dataTransfer.files); }}
-        onClick={() => inputRef.current?.click()}
+        onDrop={onDrop}
+        onClick={() => fileRef.current?.click()}
         style={{
-          padding: '26px 20px', borderRadius: 14,
+          padding: '18px 20px', borderRadius: 14,
           background: dragOver ? 'rgba(37,99,235,0.06)' : 'var(--surface)',
           border: `2px dashed ${dragOver ? 'var(--orange)' : 'var(--border)'}`,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, transition: 'all 0.15s', flexShrink: 0,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0,
         }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,155,38,0.10)', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Sparkles size={22} />
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: 'rgba(255,155,38,0.10)', color: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Upload size={19} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Drop files to auto-process with AI</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>Contracts, briefs, meeting notes, receipts. We store the file, generate a summary + key points, and log it to the timeline.</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+            Drop files or folders {path ? <>into <span style={{ color: 'var(--orange)' }}>{crumbs[crumbs.length - 1]}</span></> : 'here'}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>Nested folders keep their structure. Drag a row onto a folder to move it. Up to 500MB per file.</div>
         </div>
-        <input ref={inputRef} type="file" multiple hidden onChange={e => { runAiUpload(e.target.files); e.target.value = ''; }} />
       </div>
-      {aiUploading.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, fontSize: 12, flexShrink: 0 }}>
-          {aiUploading.map((u, i) => (
+
+      {uploads.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, fontSize: 12, flexShrink: 0, maxHeight: 130, overflowY: 'auto' }}>
+          {uploads.map((u, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, color: u.status === 'error' ? '#ef4444' : u.status === 'done' ? '#22c55e' : 'var(--muted)' }}>
               {u.status === 'uploading' && <Loader size={11} style={{ animation: 'spin 1s linear infinite' }} />}
               {u.status === 'done' && <CheckCircle2 size={11} />}
               {u.status === 'error' && <X size={11} />}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{u.name}</span>
-              <span>{u.status === 'uploading' ? 'Processing…' : u.status === 'done' ? 'Done' : 'Failed'}</span>
+              <span>{u.status === 'uploading' ? 'Uploading…' : u.status === 'done' ? 'Done' : 'Failed'}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Uploaded files list */}
+      {/* Listing */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Files{files.length ? ` (${files.length})` : ''}</div>
         {loading ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
-          : files.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>No documents yet. Drop a file above to add one.</div>
-          : <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {files.map(f => (
-              <a key={f.id} href={f.attachment_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', textDecoration: 'none' }}>
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <FolderOpen size={16} style={{ color: 'var(--orange)' }} />
+          : items.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>{path ? 'This folder is empty.' : 'No documents yet. Drop files or folders above.'}</div>
+          : <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {path && (
+              <div
+                onDragOver={e => { e.preventDefault(); setOverFolder('..'); }}
+                onDragLeave={() => setOverFolder(null)}
+                onDrop={e => { e.preventDefault(); if (dragId) { moveClientFile(dragId, crumbs.slice(0, -1).join('/')).then(() => load()).catch(err => toast('error', err.message)); setDragId(null); } setOverFolder(null); }}
+                onClick={() => goTo(crumbs.length - 2)}
+                style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', background: overFolder === '..' ? 'rgba(255,155,38,0.10)' : 'transparent', border: `1px solid ${overFolder === '..' ? 'var(--orange)' : 'transparent'}` }}>
+                <CornerLeftUp size={16} style={{ color: 'var(--muted)' }} />
+                <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Up a level</span>
+              </div>
+            )}
+            {items.map(it => {
+              const isOver = overFolder === it.id;
+              return (
+                <div key={it.id}
+                  draggable
+                  onDragStart={() => setDragId(it.id)}
+                  onDragEnd={() => { setDragId(null); setOverFolder(null); }}
+                  onDragOver={it.is_folder ? (e => { e.preventDefault(); if (dragId && dragId !== it.id) setOverFolder(it.id); }) : undefined}
+                  onDragLeave={it.is_folder ? (() => setOverFolder(null)) : undefined}
+                  onDrop={it.is_folder ? (e => dropOnFolder(e, it)) : undefined}
+                  onClick={() => { if (it.is_folder) setPath(path ? `${path}/${it.name}` : it.name); else if (it.url) window.open(it.url, '_blank'); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 11, padding: '10px 13px', borderRadius: 10,
+                    background: isOver ? 'rgba(255,155,38,0.10)' : 'var(--surface)',
+                    border: `1px solid ${isOver ? 'var(--orange)' : 'var(--border)'}`,
+                    cursor: 'pointer', opacity: dragId === it.id ? 0.45 : 1, position: 'relative',
+                  }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {it.is_folder ? <Folder size={16} style={{ color: 'var(--orange)' }} /> : <FileIcon size={15} style={{ color: 'var(--muted)' }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
+                      {it.is_folder ? 'Folder' : [fmtSize(it.size), actDate(it.created_at)].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                  {!it.is_folder && it.url && (
+                    <a href={it.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} title="Download"
+                       style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}><Download size={15} /></a>
+                  )}
+                  <button title="More" onClick={e => { e.stopPropagation(); setMenuFor(menuFor === it.id ? null : it.id); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 2, flexShrink: 0 }}>
+                    <MoreHorizontal size={16} />
+                  </button>
+                  {menuFor === it.id && (
+                    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', right: 8, top: 44, zIndex: 40, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md, 0 8px 24px rgba(0,0,0,0.3))', padding: 6, minWidth: 190, maxHeight: 260, overflowY: 'auto' }}>
+                      <button onClick={() => { setMenuFor(null); doRename(it); }} style={{ ...btn, width: '100%', justifyContent: 'flex-start', background: 'none', border: 'none' }}><Pencil size={13} /> Rename</button>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 10px 4px' }}>Move to</div>
+                      {path !== '' && <button onClick={() => moveTo(it, '')} style={{ ...btn, width: '100%', justifyContent: 'flex-start', background: 'none', border: 'none' }}>All files</button>}
+                      {folders.filter(f => f.id !== it.id && f.path !== path && !(it.is_folder && (f.path === (path ? `${path}/${it.name}` : it.name) || f.path.startsWith((path ? `${path}/${it.name}` : it.name) + '/')))).map(f => (
+                        <button key={f.id} onClick={() => moveTo(it, f.path)} style={{ ...btn, width: '100%', justifyContent: 'flex-start', background: 'none', border: 'none' }}>
+                          <Folder size={13} style={{ color: 'var(--orange)' }} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.path}</span>
+                        </button>
+                      ))}
+                      <div style={{ height: 1, background: 'var(--border)', margin: '6px 0' }} />
+                      <button onClick={() => { setMenuFor(null); doDelete(it); }} style={{ ...btn, width: '100%', justifyContent: 'flex-start', background: 'none', border: 'none', color: '#ef4444' }}><Trash2 size={13} /> Delete</button>
+                    </div>
+                  )}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.attachment_name || 'Document'}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{actDate(f.created_at)}</div>
-                </div>
-                <Download size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-              </a>
-            ))}
+              );
+            })}
           </div>}
       </div>
     </div>
