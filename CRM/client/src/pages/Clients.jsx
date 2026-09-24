@@ -865,8 +865,10 @@ export default function Clients({ kind = 'client' }) {
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">First note (what you learned)</label>
-            <textarea className="form-input" rows={3} value={form.firstNote} onChange={e => setForm(f => ({ ...f, firstNote: e.target.value }))} placeholder="Met at the restaurant — wants a site with online ordering, follow up Friday…" style={{ resize: 'vertical' }} />
+            <label className="form-label">Add a note (optional)</label>
+            <input className="form-input" value={form.firstNote} onChange={e => setForm(f => ({ ...f, firstNote: e.target.value }))}
+              placeholder="e.g. Met at the restaurant, wants online ordering, follow up Friday" />
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>Saved as the first entry in this lead's activity timeline. On the lead you can add more notes anytime, press Enter to save each one.</div>
           </div>
         </Modal>
       )}
