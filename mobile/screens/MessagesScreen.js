@@ -220,9 +220,9 @@ export default function MessagesScreen({ navigation, route }) {
 
       {/* New team chat */}
       <Sheet visible={newOpen} title="New team chat" onClose={() => setNewOpen(false)}>
-        <Text style={T.sub}>Pick one person for a direct message, or several for a group.</Text>
+        <Text style={T.sub}>Teammates only. Pick one for a direct message, or several for a group. To reach a customer, use their conversation under Clients.</Text>
         <View style={{ gap: 8 }}>
-          <Label>Who</Label>
+          <Label>Team</Label>
           {people.length === 0 ? <ActivityIndicator color={C.ink} /> : others.length === 0 ? <Text style={T.sub}>No teammates with app access yet.</Text> : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {others.map(p => <Chip key={p.id} label={firstName(p.name)} active={pick.includes(p.id)} onPress={() => setPick(s => s.includes(p.id) ? s.filter(x => x !== p.id) : [...s, p.id])} />)}
