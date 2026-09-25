@@ -291,6 +291,8 @@ export default function ConversationScreen({ route, navigation }) {
         attendees: email ? [email] : [],
         addMeetLink: a.kind === 'online', location: a.kind === 'in_person' ? (a.location || '') : '',
         reminderMinutes: 10,
+        // For an in-person meetup the API schedules the next-morning thank-you text to this number.
+        phone, client_id: rec?.id || null,
       });
       const link = a.kind === 'online' ? (m?.meet_link || '') : (a.location || '');
       let text = String(a.message || 'You are set for {when}. {link}').replace(/\{when\}/g, a.when).replace(/\{link\}/g, link);

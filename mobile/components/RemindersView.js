@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getReminders, updateReminder, deleteReminder } from '../lib/api';
+import { getReminders, updateReminder, deleteReminder, getFollowups, cancelFollowup } from '../lib/api';
 import { C, T, F } from '../lib/theme';
 import { Label, Check, Avatar, Empty, DOCK_SPACE } from './ui';
 import { firstName } from '../lib/imsg';
@@ -17,6 +17,7 @@ const fmtDayLong = (iso) => new Date(iso).toLocaleDateString('en-US', { month: '
 
 export default function RemindersView({ me, onAdd }) {
   const [items, setItems] = useState([]);
+  const [followups, setFollowups] = useState([]);
   const [needsMigration, setNeedsMigration] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,12 +25,18 @@ export default function RemindersView({ me, onAdd }) {
   const load = useCallback(async (quiet) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
-      const r = await getReminders();
+      const [r, f] = await Promise.all([getReminders().catch(() => null), getFollowups().catch(() => null)]);
       setItems(r?.reminders || []);
       setNeedsMigration(!!r?.needs_migration);
+      setFollowups((f?.followups || []).filter(x => x.status === 'scheduled'));
     } catch (e) { setItems([]); }
     finally { setLoading(false); setRefreshing(false); }
   }, []);
+
+  const cancelText = (f) => Alert.alert('Cancel this text?', `The thank-you for ${f.meeting_title || 'the meetup'} will not go out.`, [
+    { text: 'Keep it', style: 'cancel' },
+    { text: 'Cancel text', style: 'destructive', onPress: async () => { try { await cancelFollowup(f.id); load(true); } catch (e) { Alert.alert('Could not cancel', e.message); } } },
+  ]);
   useFocusEffect(useCallback(() => { load(true); }, [load]));
 
   const today = dayKey(new Date());
@@ -89,9 +96,29 @@ export default function RemindersView({ me, onAdd }) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.ink} />}>
       {needsMigration ? (
         <Empty icon="notifications-outline" title="Reminders are almost ready" sub="One database table still needs to be created (docs/sql/reminders.sql). Everything else is wired." />
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && followups.length === 0 ? (
         <Empty icon="notifications-outline" title="No reminders yet" sub={'Tap the plus, or tell the assistant "remind me Tuesday at 7:30 to prep for the call".'} />
       ) : null}
+
+      {followups.length > 0 && (
+        <View style={{ gap: 6 }}>
+          <Label right="Sent by the assistant">Scheduled texts</Label>
+          {followups.map(f => (
+            <TouchableOpacity key={f.id} onLongPress={() => cancelText(f)} activeOpacity={0.85}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: C.tile }}>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={C.violet} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={[T.body, { fontFamily: F.semi }]}>Thank-you text{f.meeting_title ? ` after ${f.meeting_title}` : ''}</Text>
+                <Text numberOfLines={1} style={T.sub}>To {f.phone} · hold to cancel</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[T.title, { fontSize: 14 }]}>{fmtClock(f.send_at)}</Text>
+                <Text style={T.meta}>{fmtDay(f.send_at)} {fmtDayLong(f.send_at)}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {todayList.length > 0 && (
         <View style={{ gap: 6 }}>

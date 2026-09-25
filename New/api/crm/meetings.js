@@ -2,6 +2,7 @@ import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
 import { getGmailAuth, getSetting, setSetting } from '../_lib/gmail.js';
 import { fetchTranscriptForMeeting } from '../_lib/meet.js';
 import { summarizeAndStore } from '../_lib/meeting-summary.js';
+import { scheduleThankYou, cancelForMeeting, moveForMeeting, phoneForAttendees } from '../_lib/followups.js';
 
 // Pull events from Google Calendar (primary) into crm_meetings. Uses the stored
 // Gmail/Calendar OAuth token. Upserts on the Google event id so re-syncs update
@@ -283,6 +284,18 @@ export default async function handler(req, res) {
         });
         const saved = (dbResult || [])[0] || row;
 
+        // In-person meetups get a thank-you text the next morning at 8 AM
+        // Central. The number comes with the request (booked from a
+        // conversation) or from the invited lead's record.
+        if (eventLocation) {
+          try {
+            const target = req.body.phone
+              ? { phone: req.body.phone, clientId: req.body.client_id || null }
+              : await phoneForAttendees(attendees);
+            if (target?.phone) await scheduleThankYou({ meetingId: saved.id, title: summary, endTime: end, phone: target.phone, clientId: target.clientId, createdBy: null });
+          } catch (e) { console.error('thank-you scheduling failed:', e.message); }
+        }
+
         return res.status(201).json(normalize({
           ...saved,
           title:        summary,
@@ -452,6 +465,8 @@ export default async function handler(req, res) {
         headers: { 'Prefer': 'return=representation' },
         body: JSON.stringify(localPatch),
       });
+      // A moved meetup moves its thank-you text with it.
+      if (end_time) moveForMeeting(id, end_time).catch(() => {});
       return res.json({ ok: true, gcalSynced: gcalPatched, meeting: result?.[0] || result });
     }
 
@@ -488,6 +503,7 @@ export default async function handler(req, res) {
       }
 
       await supaFetch(`crm_meetings?id=eq.${id}`, { method: 'DELETE' });
+      cancelForMeeting(id).catch(() => {});
       return res.json({ success: true, gcalDeleted });
     }
 

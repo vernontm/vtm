@@ -62,6 +62,10 @@ export const getReminders = () => request('/reminders');
 export const addReminder = (data) => request('/reminders', { method: 'POST', body: JSON.stringify(data) });
 export const updateReminder = (id, data) => request(`/reminders?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteReminder = (id) => request(`/reminders?id=${id}`, { method: 'DELETE' });
+// Scheduled follow-up texts (thank-you the morning after an in-person meetup):
+// { followups: [{ id, meeting_title, phone, client_id, kind, send_at, status, body, sent_at }] }
+export const getFollowups = () => request('/followups');
+export const cancelFollowup = (id) => request(`/followups?id=${id}`, { method: 'DELETE' });
 
 // ── Contacts (everyone: people we talk to) ──
 // The contacts endpoint is workspace-scoped via the X-Client-Id header; the
