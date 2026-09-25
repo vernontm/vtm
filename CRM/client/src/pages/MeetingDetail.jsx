@@ -12,6 +12,7 @@ import {
   getLeads, createMeetingLeadLink,
   updateMeeting, deleteMeeting,
 } from '../api';
+import LocationInput from '../components/LocationInput';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['var(--orange)', 'var(--orange)', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
@@ -92,7 +93,7 @@ export default function MeetingDetail() {
   // Schedule Meeting composer) that syncs changes both to the CRM row AND the
   // underlying Google Calendar event.
   const [editOpen,      setEditOpen]      = useState(false);
-  const [editDraft,     setEditDraft]     = useState({ title: '', start: '', end: '', attendees: '', notes: '' });
+  const [editDraft,     setEditDraft]     = useState({ title: '', start: '', end: '', attendees: '', location: '', notes: '' });
   const [savingEdit,    setSavingEdit]    = useState(false);
   const [deleting,      setDeleting]      = useState(false);
 
@@ -253,6 +254,7 @@ export default function MeetingDetail() {
       start: toLocalInput(meeting.start_time),
       end:   toLocalInput(meeting.end_time),
       attendees: (meeting.participants || []).map(p => p.email).filter(Boolean).join(', '),
+      location: meeting.location || '',
       notes: notes || '',
     });
     setEditOpen(true);
@@ -269,6 +271,7 @@ export default function MeetingDetail() {
         start_time: new Date(editDraft.start).toISOString(),
         end_time:   new Date(editDraft.end).toISOString(),
         attendees:  editDraft.attendees.split(',').map(s => s.trim()).filter(Boolean),
+        location:   editDraft.location.trim(),
         notes:      editDraft.notes,
       };
       await updateMeeting(eventId, patch);
@@ -513,6 +516,13 @@ export default function MeetingDetail() {
                   placeholder="ray@vernontm.com, other@example.com"
                   style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} />
               </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Location</span>
+                <LocationInput value={editDraft.location} onChange={v => setEditDraft(d => ({ ...d, location: v }))}
+                  placeholder="Business or address (Google Maps)"
+                  style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, width: '100%', boxSizing: 'border-box' }} />
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Syncs to the Google Calendar event so attendees see it.</span>
+              </div>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private notes / agenda 🔒</span>
                 <textarea value={editDraft.notes} onChange={e => setEditDraft(d => ({ ...d, notes: e.target.value }))} rows={5}

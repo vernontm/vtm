@@ -397,7 +397,7 @@ export default async function handler(req, res) {
     // failed Google patch aborts before we diverge from reality), then written
     // back to Supabase.
     if (req.method === 'PUT' && id) {
-      const { id: _, title, summary, start_time, end_time, description, attendees, notes, ...rest } = req.body;
+      const { id: _, title, summary, start_time, end_time, description, location, attendees, notes, ...rest } = req.body;
 
       // Skip Google sync entirely for locally-created rows (id starts with "vtm-").
       const isGoogleEvent = !String(id).startsWith('vtm-');
@@ -409,6 +409,7 @@ export default async function handler(req, res) {
           const summaryVal = summary || title;
           if (summaryVal) patchBody.summary = summaryVal;
           if (description !== undefined) patchBody.description = description; // synced description field
+          if (location !== undefined)    patchBody.location    = location;    // shows on the invite / in Maps
           if (start_time) patchBody.start = { dateTime: start_time, timeZone: 'UTC' };
           if (end_time)   patchBody.end   = { dateTime: end_time,   timeZone: 'UTC' };
           if (Array.isArray(attendees)) {
@@ -439,6 +440,7 @@ export default async function handler(req, res) {
       if (start_time)         localPatch.start_time = start_time;
       if (end_time)           localPatch.end_time   = end_time;
       if (description !== undefined) localPatch.description = description;
+      if (location !== undefined)    localPatch.location = location;
       if (notes !== undefined)       localPatch.notes = notes;
       if (Array.isArray(attendees))  localPatch.attendees = JSON.stringify(attendees.map(a => typeof a === 'string' ? { email: a } : { email: a.email }).filter(x => x.email));
       if (start_time && end_time) {
