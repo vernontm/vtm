@@ -16,6 +16,7 @@ import ClientDetailScreen from './screens/ClientDetailScreen';
 import MessagesScreen from './screens/MessagesScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import NewMessageScreen from './screens/NewMessageScreen';
+import AssistantScreen from './screens/AssistantScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
@@ -117,6 +118,7 @@ export default function App() {
           <Tab.Screen name="Time" component={TimeScreen} options={{ tabBarIcon: icon('stopwatch') }} />
           <Tab.Screen name="Clients" component={ClientsStack} options={{ headerShown: false, tabBarIcon: icon('people') }} />
           <Tab.Screen name="Inbox" component={MessagesStack} options={{ headerShown: false, tabBarIcon: icon('chatbubbles') }} />
+          <Tab.Screen name="Assistant" component={AssistantScreen} options={{ tabBarIcon: icon('sparkles') }} />
           <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: icon('settings') }} />
         </Tab.Navigator>
       )}

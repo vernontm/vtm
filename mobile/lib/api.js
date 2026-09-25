@@ -66,5 +66,12 @@ export const getAssignees     = () => request('/assignees');
 // Temperature lives on the linked lead (crm_clients.lead_temperature).
 export const setClientTemperature = (id, lead_temperature) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify({ lead_temperature }) });
 
+// CRM assistant (Claude with tools) + availability finder.
+export const askAssistant = (prompt, conversation = []) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, conversation }) });
+export const getAvailability = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request(`/availability${qs ? '?' + qs : ''}`);
+};
+
 export const SIGN_BASE = 'https://vernontm.com/sign?token=';
 export const PAY_BASE = 'https://vernontm.com/api/crm/pay-deposit?token=';

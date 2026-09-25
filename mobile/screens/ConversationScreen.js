@@ -4,8 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import Sheet from '../components/Sheet';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
-  getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead,
+  getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability,
 } from '../lib/api';
+
+// Rough detector for "this conversation is about setting up a time".
+const SCHED_RE = /\b(meet|meeting|meet ?up|schedule|scheduling|availab|appointment|calendar|what time|when (are|can|could|is|works?|would)|free|book|sit ?down|come in|stop by|get together|reschedul)\b/i;
 import { C } from '../lib/theme';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, tempOf, colorForEmployee } from '../lib/imsg';
 
@@ -19,6 +22,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [assignees, setAssignees] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [suggestSlots, setSuggestSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [assignOpen, setAssignOpen] = useState(false);
   const [kindOpen, setKindOpen] = useState(false);
@@ -68,6 +72,32 @@ export default function ConversationScreen({ route, navigation }) {
     items.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
     return items;
   }, [messages, events]);
+
+  // Scheduling suggestions when the conversation is about setting up a time.
+  const lastMsgId = messages.length ? messages[messages.length - 1].id : null;
+  useEffect(() => {
+    if (!messages.length) { setSuggestSlots([]); return; }
+    const recent = messages.slice(-8).map(m => m.body || '').join(' ');
+    if (!SCHED_RE.test(recent)) { setSuggestSlots([]); return; }
+    let cancelled = false;
+    getAvailability({ duration: 60, days: 10, limit: 30 }).then(r => {
+      if (cancelled) return;
+      const tz = r?.tz || 'America/Chicago';
+      const seen = new Set(); const pick = [];
+      for (const s of (r?.slots || [])) {
+        const day = new Date(s.start).toLocaleDateString('en-US', { timeZone: tz });
+        if (seen.has(day)) continue;
+        seen.add(day); pick.push(s);
+        if (pick.length >= 2) break;
+      }
+      setSuggestSlots(pick);
+    }).catch(() => setSuggestSlots([]));
+    return () => { cancelled = true; };
+  }, [lastMsgId]);
+
+  const proposeTime = (s) => {
+    setInput(prev => { const b = (prev || '').trim(); return b ? `${b} Or ${s.label}?` : `Would ${s.label} work for you?`; });
+  };
 
   const send = async () => {
     const body = input.trim();
@@ -189,6 +219,19 @@ export default function ConversationScreen({ route, navigation }) {
           );
         })}
       </ScrollView>
+
+      {/* Scheduling suggestions */}
+      {suggestSlots.length > 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingHorizontal: 10, paddingTop: 8, backgroundColor: C.surface }}>
+          <Ionicons name="sparkles" size={13} color={C.blue} />
+          {suggestSlots.map(s => (
+            <TouchableOpacity key={s.start} onPress={() => proposeTime(s)}
+              style={{ paddingVertical: 5, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(37,99,235,0.4)', backgroundColor: 'rgba(37,99,235,0.12)' }}>
+              <Text style={{ color: C.blue, fontSize: 12, fontWeight: '700' }}>{s.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* Input */}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 10, borderTopColor: C.border, borderTopWidth: 1, backgroundColor: C.surface }}>
