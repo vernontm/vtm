@@ -66,21 +66,27 @@ export default function MessagesScreen({ navigation }) {
         renderItem={({ item: t }) => {
           const kind = kindOf(t.phone);
           const temp = tempOf(tempKeyOf(t.phone));
+          const unread = (t.unread || 0) > 0;
           return (
             <TouchableOpacity onPress={() => navigation.navigate('Conversation', { phone: t.phone })}
               style={{ backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 {temp && <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: temp.color }} />}
-                <Text numberOfLines={1} style={{ flex: 1, color: C.text, fontWeight: '700', fontSize: 15 }}>{nameOf(t.phone)}</Text>
+                <Text numberOfLines={1} style={{ flex: 1, color: C.text, fontWeight: unread ? '800' : '700', fontSize: 15 }}>{nameOf(t.phone)}</Text>
                 {kind && (
                   <View style={{ paddingVertical: 2, paddingHorizontal: 8, borderRadius: 999, backgroundColor: `${KIND[kind].color}22`, borderWidth: 1, borderColor: `${KIND[kind].color}55` }}>
                     <Text style={{ color: KIND[kind].color, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }}>{KIND[kind].label}</Text>
                   </View>
                 )}
+                {unread && (
+                  <View style={{ minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{t.unread}</Text>
+                  </View>
+                )}
                 <Text style={{ color: C.muted, fontSize: 11 }}>{fmtTime(t.last?.created_at)}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <Text numberOfLines={1} style={{ flex: 1, color: C.muted, fontSize: 13 }}>
+                <Text numberOfLines={1} style={{ flex: 1, color: unread ? C.text : C.muted, fontSize: 13 }}>
                   {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || ''}
                 </Text>
                 {t.assigned_to_name ? (

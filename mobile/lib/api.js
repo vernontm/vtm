@@ -56,6 +56,7 @@ export const getImsgThreads   = () => request('/imessage');
 export const getImsgThread    = (phone) => request(`/imessage?phone=${encodeURIComponent(phone)}`);
 export const sendImsg         = (phone, body) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
 export const getImsgDirectory = () => request('/imessage?action=directory');
+export const markImsgRead     = (phone) => request('/imessage?action=read', { method: 'POST', body: JSON.stringify({ phone }) });
 export const getImsgNotes     = (phone) => request(`/imessage?action=notes&phone=${encodeURIComponent(phone)}`);
 export const addImsgNote      = (phone, body) => request('/imessage?action=note', { method: 'POST', body: JSON.stringify({ phone, body }) });
 export const getImsgEvents    = (phone) => request(`/imessage?action=events&phone=${encodeURIComponent(phone)}`);

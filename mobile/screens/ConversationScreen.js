@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Sheet from '../components/Sheet';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
-  getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees,
+  getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead,
 } from '../lib/api';
 import { C } from '../lib/theme';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, tempOf, colorForEmployee } from '../lib/imsg';
@@ -51,7 +51,8 @@ export default function ConversationScreen({ route, navigation }) {
       getAssignees().then(r => setAssignees(Array.isArray(r) ? r : (r?.employees || []))).catch(() => {});
       setLoading(false);
     })();
-    const t = setInterval(() => { loadMsgs(); loadEvents(); }, 6000);
+    markImsgRead(phone).catch(() => {});
+    const t = setInterval(() => { loadMsgs(); loadEvents(); markImsgRead(phone).catch(() => {}); }, 6000);
     return () => clearInterval(t);
   }, [phone]);
 

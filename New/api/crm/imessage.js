@@ -35,7 +35,7 @@ function normalizePhone(raw) {
 // PostgREST error into something a person can act on.
 function needsMigration(e) {
   const m = String((e && e.message) || '');
-  return /(channel|imsg_guid|crm_imessage_threads|crm_imessage_notes|crm_imessage_events)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
+  return /(channel|imsg_guid|crm_imessage_threads|crm_imessage_notes|crm_imessage_events|crm_imessage_reads)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
 }
 const MIGRATION_MSG = 'The iMessage inbox needs its one-time database update. Run the SQL from imessage-bridge/README.md.';
 
@@ -260,11 +260,26 @@ module.exports = async function handler(req, res) {
       const rows = await supaFetch(
         `crm_sms_messages?channel=eq.${CHANNEL}&order=created_at.desc&limit=1000`
       );
-      // Collapse to one thread per phone: latest message + count.
+
+      // This user's per-conversation last-read markers. If the table is not
+      // migrated yet, skip unread entirely so nothing floods as unread.
+      const lastRead = {};
+      let readsOk = false;
+      try {
+        const reads = await supaFetch(`crm_imessage_reads?user_id=eq.${me.id}&select=phone,last_read_at`);
+        for (const r of reads || []) lastRead[r.phone] = r.last_read_at;
+        readsOk = true;
+      } catch (_) { readsOk = false; }
+
+      // Collapse to one thread per phone: latest message, count, and unread
+      // (inbound messages newer than this user's last read of that thread).
       const threads = {};
       for (const m of rows || []) {
-        if (!threads[m.phone]) threads[m.phone] = { phone: m.phone, last: m, count: 0, client_id: m.client_id };
+        if (!threads[m.phone]) threads[m.phone] = { phone: m.phone, last: m, count: 0, unread: 0, client_id: m.client_id };
         threads[m.phone].count++;
+        if (readsOk && m.direction === 'in' && (!lastRead[m.phone] || m.created_at > lastRead[m.phone])) {
+          threads[m.phone].unread++;
+        }
       }
       const list = Object.values(threads);
       // Merge in each thread's employee assignment (best effort: the assignment
@@ -393,6 +408,18 @@ module.exports = async function handler(req, res) {
         } catch (_) { /* events table not migrated yet */ }
       }
       return res.json(first(saved) || { ok: true });
+    }
+
+    // Mark a conversation read up to now for the current user (clears unread).
+    if (req.method === 'POST' && action === 'read') {
+      const phone = normalizePhone((req.body || {}).phone);
+      if (!phone) return res.status(400).json({ error: 'phone required' });
+      await supaFetch('crm_imessage_reads?on_conflict=user_id,phone', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ user_id: me.id, phone, last_read_at: new Date().toISOString() }),
+      });
+      return res.json({ ok: true });
     }
 
     // Add an internal note to a conversation, attributed to the current user.

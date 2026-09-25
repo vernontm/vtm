@@ -55,6 +55,8 @@ export const assignImsgThread = (phone, assigned_to, assigned_to_name) =>
   request('/imessage?action=assign', { method: 'POST', body: JSON.stringify({ phone, assigned_to, assigned_to_name }) });
 // Change a conversation's type: 'lead' | 'client' | 'contact'.
 export const setImsgKind  = (phone, kind) => request('/imessage?action=set-kind', { method: 'POST', body: JSON.stringify({ phone, kind }) });
+// Mark a conversation read for the current user (clears its unread badge).
+export const markImsgRead = (phone) => request('/imessage?action=read', { method: 'POST', body: JSON.stringify({ phone }) });
 // Internal notes on a conversation, attributed to the logged-in employee.
 export const getImsgNotes = (phone) => request(`/imessage?action=notes&phone=${encodeURIComponent(phone)}`);
 export const addImsgNote  = (phone, body) => request('/imessage?action=note', { method: 'POST', body: JSON.stringify({ phone, body }) });

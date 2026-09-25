@@ -3,7 +3,7 @@ import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, Stick
 import { toast } from '../components/Toast';
 import {
   getImsgThreads, getImsgThread, sendImsg, getImsgDirectory, assignImsgThread,
-  getImsgNotes, addImsgNote, getImsgEvents, createClient, createContact, updateClient, setImsgKind, getAssignees,
+  getImsgNotes, addImsgNote, getImsgEvents, markImsgRead, createClient, createContact, updateClient, setImsgKind, getAssignees,
 } from '../api';
 import { useClient } from '../context/ClientContext';
 
@@ -144,6 +144,9 @@ export default function Inbox() {
 
   const openThread = async (phone) => {
     setActive(phone); setMessages([]); setNotes([]); setEvents([]);
+    // Clear this thread's unread badge for me, optimistically then on the server.
+    setThreads(ts => ts.map(t => last10(t.phone) === last10(phone) ? { ...t, unread: 0 } : t));
+    markImsgRead(phone).catch(() => {});
     try { setMessages(await getImsgThread(phone) || []); } catch (e) { toast('error', e.message); }
     loadNotes(phone); loadEvents(phone);
   };
@@ -152,6 +155,7 @@ export default function Inbox() {
     const t = setInterval(async () => {
       try { setMessages(await getImsgThread(active) || []); } catch (_) {}
       getImsgEvents(active).then(r => setEvents(r || [])).catch(() => {});
+      markImsgRead(active).catch(() => {}); // keep it read while you're looking at it
     }, 6000);
     return () => clearInterval(t);
   }, [active]);
@@ -302,25 +306,31 @@ export default function Inbox() {
               <div style={{ color: 'var(--muted)', fontSize: 13, padding: 16 }}>Loading…</div>
             ) : visibleThreads.length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>No conversations yet.</div>
-            ) : visibleThreads.map(t => (
+            ) : visibleThreads.map(t => {
+              const unread = (t.unread || 0) > 0;
+              return (
               <div key={t.phone} onClick={() => openThread(t.phone)}
                 style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: last10(active) === last10(t.phone) ? 'var(--surface-2)' : 'transparent' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     <TempDot temp={displayTemp(t.phone)} />
-                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(t.phone)}</span>
+                    <span style={{ fontSize: 13.5, fontWeight: unread ? 800 : 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(t.phone)}</span>
                     <KindBadge kind={displayKind(t.phone)} />
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{fmtTime(t.last?.created_at)}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {unread && <span style={{ minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: 'var(--orange)', color: '#fff', fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{t.unread}</span>}
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtTime(t.last?.created_at)}</span>
+                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                  <div style={{ flex: 1, fontSize: 12.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ flex: 1, fontSize: 12.5, color: unread ? 'var(--text)' : 'var(--muted)', fontWeight: unread ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || ''}
                   </div>
                   <AssigneePill assignedTo={t.assigned_to} name={t.assigned_to_name} />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

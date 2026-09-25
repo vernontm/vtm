@@ -57,6 +57,14 @@ ways:
      created_at timestamptz default now()
    );
    create index if not exists crm_imessage_events_phone_idx on crm_imessage_events (phone);
+
+   -- Per-user read markers, for unread badges on conversations.
+   create table if not exists crm_imessage_reads (
+     user_id uuid not null,
+     phone text not null,
+     last_read_at timestamptz default now(),
+     primary key (user_id, phone)
+   );
    ```
 
 2. **Shared secret on Vercel:** add an environment variable
