@@ -48,6 +48,8 @@ export const sendSms       = (phone, body) => request('/sms?action=send', { meth
 export const getImsgThreads = () => request('/imessage');
 export const getImsgThread  = (phone) => request(`/imessage?phone=${encodeURIComponent(phone)}`);
 export const sendImsg       = (phone, body) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
+// People you can text (leads + clients + contacts), for the Inbox To picker.
+export const getImsgDirectory = () => request('/imessage?action=directory');
 
 // Tasks / priorities (assignable to a client)
 export const getTasks   = (status) => request(`/tasks${status ? `?status=${status}` : ''}`);

@@ -163,6 +163,28 @@ module.exports = async function handler(req, res) {
   if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
+    // People you can text: leads + clients (crm_clients) and contacts
+    // (crm_contacts), each with a phone, tagged by kind. Powers the To picker.
+    if (req.method === 'GET' && action === 'directory') {
+      const [clients, contacts] = await Promise.all([
+        supaFetch('crm_clients?select=id,business_name,owner_name,contact_phone,stage&contact_phone=not.is.null&or=(record_type.is.null,record_type.eq.client)'),
+        supaFetch('crm_contacts?select=id,name,phone,company&phone=not.is.null'),
+      ]);
+      const people = [];
+      const seen = new Set();
+      const add = (p) => { const k = last10(p.phone); if (k.length < 10 || seen.has(k)) return; seen.add(k); people.push(p); };
+      for (const c of clients || []) {
+        const phone = normalizePhone(c.contact_phone);
+        if (phone) add({ id: c.id, kind: c.stage === 'lead' ? 'lead' : 'client', name: c.business_name || c.owner_name || phone, subtitle: (c.business_name && c.owner_name) ? c.owner_name : '', phone });
+      }
+      for (const c of contacts || []) {
+        const phone = normalizePhone(c.phone);
+        if (phone) add({ id: c.id, kind: 'contact', name: c.name || phone, subtitle: c.company || '', phone });
+      }
+      people.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      return res.json(people);
+    }
+
     if (req.method === 'GET') {
       // ?phone= returns one thread (chronological); otherwise thread summaries.
       const phone = req.query.phone ? normalizePhone(req.query.phone) : null;
