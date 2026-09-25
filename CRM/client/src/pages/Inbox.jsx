@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, StickyNote } from 'lucide-react';
+import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, StickyNote, ChevronDown } from 'lucide-react';
 import { toast } from '../components/Toast';
 import {
   getImsgThreads, getImsgThread, sendImsg, getImsgDirectory, assignImsgThread,
-  getImsgNotes, addImsgNote, createClient, createContact, updateClient, getAssignees,
+  getImsgNotes, addImsgNote, createClient, createContact, updateClient, setImsgKind, getAssignees,
 } from '../api';
 import { useClient } from '../context/ClientContext';
 
@@ -27,6 +27,12 @@ const fmtTime = (t) => {
   return d.toDateString() === now.toDateString()
     ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+// Full date + time, for note stamps (the thread uses the shorter fmtTime).
+const fmtDateTime = (t) => {
+  if (!t) return '';
+  const d = new Date(t);
+  return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 };
 const STATUS_LABEL = { queued: 'queued', sending: 'sending', sent: 'sent', failed: 'failed' };
 const KIND = {
@@ -207,6 +213,22 @@ export default function Inbox() {
     finally { setNoteBusy(false); }
   };
 
+  // Switch a conversation's type. Lead<->client is in place; demoting a
+  // lead/client to a contact removes the pipeline record, so confirm it first.
+  const changeKind = async (target) => {
+    if (!active) return;
+    const cur = personFor(active)?.kind || null;
+    if (target === cur) return;
+    if (target === 'contact' && (cur === 'lead' || cur === 'client')) {
+      if (!window.confirm('Make this just a contact? It removes the lead/client record and its pipeline data (stage, temperature). The conversation and its notes stay.')) return;
+    }
+    try {
+      await setImsgKind(active, target);
+      await loadDirectory();
+      toast('success', `Now a ${target}.`);
+    } catch (e) { toast('error', e.message); }
+  };
+
   const afterCompose = async (phone) => {
     setComposing(false);
     await Promise.all([loadThreads(), loadDirectory()]);
@@ -295,7 +317,7 @@ export default function Inbox() {
                   <button onClick={() => setActive(null)} className="inbox-back" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'none' }}><ArrowLeft size={18} /></button>
                   <TempDot temp={displayTemp(active)} />
                   <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{displayName(active)}</span>
-                  <KindBadge kind={displayKind(active)} />
+                  {displayKind(active) && <KindMenu kind={displayKind(active)} onChange={changeKind} />}
                   {displayName(active) !== fmtPhone(active) && (
                     <span style={{ fontSize: 12, color: 'var(--muted)' }}>{fmtPhone(active)}</span>
                   )}
@@ -416,7 +438,7 @@ export default function Inbox() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)' }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: colorForEmployee(n.author_email || n.author_name), flexShrink: 0 }} />
                     <span style={{ fontWeight: 700 }}>{n.author_name || 'Someone'}</span>
-                    <span>· {fmtTime(n.created_at)}</span>
+                    <span>· {fmtDateTime(n.created_at)}</span>
                   </div>
                 </div>
               ))}
@@ -438,6 +460,41 @@ const INPUT = {
   fontFamily: 'var(--font-display)', boxSizing: 'border-box',
 };
 const LABEL = { fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4, display: 'block' };
+
+// Type switcher for a conversation: the kind badge, clickable, to move a number
+// between Lead / Client / Contact after the fact.
+function KindMenu({ kind, onChange }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [open]);
+  const k = KIND[kind];
+  return (
+    <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer',
+          color: k ? k.color : 'var(--muted)', background: k ? `${k.color}18` : 'var(--surface)', border: `1px solid ${k ? k.color + '40' : 'var(--border)'}`, borderRadius: 999, padding: '2px 7px' }}>
+        {k ? k.label : 'Set type'} <ChevronDown size={11} />
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 20, marginTop: 6, minWidth: 150, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 12px 30px rgba(0,0,0,0.3)', padding: 6 }}>
+          {['lead', 'client', 'contact'].map(t => (
+            <div key={t} onClick={() => { setOpen(false); onChange(t); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, color: 'var(--text)', textTransform: 'capitalize' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: KIND[t].color, flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>{t}</span>
+              {kind === t && <Check size={14} style={{ color: 'var(--orange)' }} />}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Assign-to-employee control: a colored pill that opens a small menu.
 function AssignMenu({ assignees, current, onAssign }) {

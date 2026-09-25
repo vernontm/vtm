@@ -255,6 +255,50 @@ module.exports = async function handler(req, res) {
       return res.status(201).json(first(saved) || row);
     }
 
+    // Change what a conversation's number is: lead, client, or contact.
+    // Leads and clients are the same crm_clients row (distinguished by stage),
+    // so lead<->client is an in-place stage change. Contact is a separate
+    // crm_contacts row, so promoting a contact creates the client record and
+    // demoting a lead/client to a contact removes it (detaching its messages
+    // first so the foreign key does not block the delete).
+    if (req.method === 'POST' && action === 'set-kind') {
+      const phone = normalizePhone((req.body || {}).phone);
+      const kind = String((req.body || {}).kind || '');
+      if (!phone) return res.status(400).json({ error: 'phone required' });
+      if (!['lead', 'client', 'contact'].includes(kind)) return res.status(400).json({ error: 'bad kind' });
+      const d10 = last10(phone);
+      const [clients, contacts] = await Promise.all([
+        supaFetch('crm_clients?contact_phone=not.is.null&select=id,business_name,owner_name,stage,contact_phone'),
+        supaFetch('crm_contacts?phone=not.is.null&select=id,name,phone'),
+      ]);
+      const clientRow = (clients || []).find((c) => last10(c.contact_phone) === d10);
+      const contactRow = (contacts || []).find((c) => last10(c.phone) === d10);
+      const nameGuess = clientRow?.business_name || clientRow?.owner_name || contactRow?.name || phone;
+
+      if (kind === 'lead' || kind === 'client') {
+        const stage = kind === 'lead' ? 'lead' : 'onboarding';
+        if (clientRow) {
+          await supaFetch(`crm_clients?id=eq.${clientRow.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ stage, updated_at: new Date().toISOString() }) });
+        } else {
+          await supaFetch('crm_clients', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ business_name: nameGuess, contact_phone: phone, stage }) });
+        }
+        return res.json({ ok: true, kind });
+      }
+
+      // kind === 'contact'
+      if (!contactRow) {
+        let wsId = null;
+        try { wsId = first(await supaFetch('crm_content_clients?select=id&order=business_name.asc&limit=1'))?.id || null; } catch (_) {}
+        await supaFetch('crm_contacts', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ name: nameGuess, phone, client_id: wsId }) });
+      }
+      if (clientRow) {
+        // Detach this thread's messages, then remove the lead/client record.
+        await supaFetch(`crm_sms_messages?client_id=eq.${clientRow.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ client_id: null }) });
+        await supaFetch(`crm_clients?id=eq.${clientRow.id}`, { method: 'DELETE' });
+      }
+      return res.json({ ok: true, kind });
+    }
+
     // Assign (or unassign) a conversation to an employee. Keyed by phone so it
     // survives across the messages in the thread.
     if (req.method === 'POST' && action === 'assign') {

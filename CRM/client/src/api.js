@@ -53,6 +53,8 @@ export const getImsgDirectory = () => request('/imessage?action=directory');
 // Assign a conversation (by phone) to an employee, or unassign with nulls.
 export const assignImsgThread = (phone, assigned_to, assigned_to_name) =>
   request('/imessage?action=assign', { method: 'POST', body: JSON.stringify({ phone, assigned_to, assigned_to_name }) });
+// Change a conversation's type: 'lead' | 'client' | 'contact'.
+export const setImsgKind  = (phone, kind) => request('/imessage?action=set-kind', { method: 'POST', body: JSON.stringify({ phone, kind }) });
 // Internal notes on a conversation, attributed to the logged-in employee.
 export const getImsgNotes = (phone) => request(`/imessage?action=notes&phone=${encodeURIComponent(phone)}`);
 export const addImsgNote  = (phone, body) => request('/imessage?action=note', { method: 'POST', body: JSON.stringify({ phone, body }) });
