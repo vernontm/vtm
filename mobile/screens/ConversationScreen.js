@@ -6,14 +6,17 @@ import Sheet, { SheetRow } from '../components/Sheet';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
   getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability, askAssistant,
-  getClients, getAgreements, getTeamTodos, getUpcomingMeetings,
+  getClients, getAgreements, getTeamTodos, getUpcomingMeetings, proposeActions, createMeeting, updateClient,
 } from '../lib/api';
 import { C, T, F } from '../lib/theme';
-import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, TEMP, KIND_COLOR } from '../components/ui';
+import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, Button, TEMP, KIND_COLOR } from '../components/ui';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, colorForEmployee } from '../lib/imsg';
 
 // Rough detector for "this conversation is about setting up a time".
 const SCHED_RE = /\b(meet|meeting|meet ?up|schedule|scheduling|availab|appointment|calendar|what time|when (are|can|could|is|works?|would)|free|book|sit ?down|come in|stop by|get together|reschedul)\b/i;
+// A reply that sounds like the customer just agreed to a time: worth asking
+// the assistant whether there is something to book.
+const CONFIRM_RE = /\b(\d{1,2}(:\d{2})?\s*(a\.?m\.?|p\.?m\.?)|works for me|that works|sounds good|let'?s do (it|that)|book it|perfect|see you (then|at)|confirm(ed)?|yes,? (that|the)|i'?ll take|either (one|works))\b/i;
 
 export default function ConversationScreen({ route, navigation }) {
   const phone = route.params?.phone;
@@ -41,6 +44,11 @@ export default function ConversationScreen({ route, navigation }) {
   const [draftNote, setDraftNote] = useState('');
   const draftHistory = useRef([]);
   const dossier = useRef(null);   // what we know about this person, built once per visit
+  const personRecord = useRef(null);
+  const [actions, setActions] = useState([]);       // smart actions the assistant proposed
+  const [actionsBusy, setActionsBusy] = useState(false);
+  const [acting, setActing] = useState(null);       // the action being carried out
+  const analyzedId = useRef(null);                  // last inbound message we asked about
   const scrollRef = useRef(null);
 
   const loadPerson = useCallback(async () => {
@@ -181,6 +189,7 @@ export default function ConversationScreen({ route, navigation }) {
         record = (clients || []).find(c => c.id === person.id) || null;
       }
     } catch (_) {}
+    personRecord.current = record;
     if (record) {
       const money = record.potential_value ? `$${Number(record.potential_value).toLocaleString()}${record.potential_value_type === 'monthly' ? '/mo' : ''}` : null;
       lines.push(`Record: ${record.business_name || ''}${record.owner_name ? ` (${record.owner_name})` : ''}, ${person.kind}, stage ${record.stage || 'unknown'}${record.lead_temperature ? `, heat ${record.lead_temperature}` : ''}${record.source ? `, source ${record.source}` : ''}${money ? `, value ${money}` : ''}${record.follow_up_due_date ? `, follow-up due ${record.follow_up_due_date}` : ''}.`);
@@ -244,12 +253,66 @@ export default function ConversationScreen({ route, navigation }) {
     } catch (e) { setDraftNote(`Could not reach the assistant: ${e.message}`); }
     finally { setDraftBusy(false); }
   };
+  const ensureDossier = async () => {
+    if (dossier.current !== null) return;
+    try { dossier.current = await buildDossier(); } catch (_) { dossier.current = ''; }
+  };
+
+  // Ask the assistant whether the thread calls for an action (a booking, for
+  // now). Runs when the sheet opens and when a reply sounds like a yes.
+  const detectActions = async () => {
+    if (actionsBusy) return;
+    setActionsBusy(true);
+    try {
+      await ensureDossier();
+      const r = await proposeActions(contextPrompt());
+      setActions(Array.isArray(r?.actions) ? r.actions : []);
+    } catch (_) { /* keep whatever we had */ }
+    finally { setActionsBusy(false); }
+  };
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (!last || last.direction === 'out' || analyzedId.current === last.id) return;
+    if (!CONFIRM_RE.test(last.body || '')) return;
+    analyzedId.current = last.id;
+    detectActions();
+  }, [lastMsgId]);
+
+  // Carry an action out: book it on the calendar with them invited, then text
+  // them the details. Only ever runs from the person's tap.
+  const runAction = async (a) => {
+    if (acting) return;
+    setActing(a);
+    try {
+      const rec = personRecord.current;
+      const email = rec?.contact_email || rec?.email || null;
+      const m = await createMeeting({
+        summary: a.title, start: a.start, end: a.end,
+        attendees: email ? [email] : [],
+        addMeetLink: a.kind === 'online', location: a.kind === 'in_person' ? (a.location || '') : '',
+        reminderMinutes: 10,
+      });
+      const link = a.kind === 'online' ? (m?.meet_link || '') : (a.location || '');
+      let text = String(a.message || 'You are set for {when}. {link}').replace(/\{when\}/g, a.when).replace(/\{link\}/g, link);
+      if (!link) text = text.replace(/\b(here(?:'|’)s|here is)\s+(the|your)\s+(google meet |meet )?link:?\s*/i, '');
+      text = text.replace(/\s{2,}/g, ' ').replace(/\s+([.,!?])/g, '$1').trim();
+      await sendImsg(phone, text);
+      if (rec?.id && rec.stage === 'lead') updateClient(rec.id, { follow_up_status: 'scheduled' }).catch(() => {});
+      setActions(prev => prev.filter(x => x !== a));
+      setDraftOpen(false);
+      await loadMsgs();
+      Alert.alert('Booked and texted', `${a.when} is on the calendar${email ? ` with ${email} invited` : ''}, and ${name} has the details.`);
+    } catch (e) { Alert.alert('Could not book it', e.message); }
+    finally { setActing(null); }
+  };
+
   const openDrafts = async () => {
     setDraftOpen(true);
+    if (!actions.length && !actionsBusy) detectActions();
     if (drafts.length || draftBusy) return;
     if (dossier.current === null) {
       setDraftBusy(true);
-      try { dossier.current = await buildDossier(); } catch (_) { dossier.current = ''; }
+      try { await ensureDossier(); }
       finally { setDraftBusy(false); }
     }
     runDraft('Write three different replies we could send next: one that directly continues or answers their last message, one that moves things to the next step (a time to meet, a proposal, a payment, whatever fits what we know), and one short and casual. If they asked for a call or meeting, or mentioned a service they want, use find_availability and put two specific times inside our work hours into the next-step option, and name the service back to them. Each one to three sentences, warm and natural, no sign-off, no placeholders. Reply with exactly three options, one per line, no numbering, no quotes, nothing else.', true);
@@ -328,9 +391,10 @@ export default function ConversationScreen({ route, navigation }) {
 
         {/* Suggestions + composer */}
         <View style={{ gap: 10, paddingHorizontal: 18, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 16) + 6, backgroundColor: C.bg }}>
-          {suggestSlots.length > 0 && (
+          {(actions.length > 0 || suggestSlots.length > 0) && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
-              <Text style={[T.meta, { color: C.violet }]}>Free times</Text>
+              {actions.map((a, i) => <GradientChip key={`a${i}`} label={`Create meeting · ${a.when}`} onPress={openDrafts} />)}
+              {suggestSlots.length > 0 ? <Text style={[T.meta, { color: C.violet }]}>Free times</Text> : null}
               {suggestSlots.map(s => <GradientChip key={s.start} label={s.label} onPress={() => proposeTime(s)} />)}
             </ScrollView>
           )}
@@ -350,6 +414,43 @@ export default function ConversationScreen({ route, navigation }) {
         {/* Drafting sheet */}
         <Sheet visible={draftOpen} title="Draft with the assistant" onClose={() => setDraftOpen(false)}>
           <Text style={T.sub}>Tap a draft to put it in your message, or tell the assistant what to write or do. Nothing sends until you tap send.</Text>
+          {(actions.length > 0 || actionsBusy) && (
+            <View style={{ gap: 8 }}>
+              <Text style={T.label}>Smart actions</Text>
+              {actionsBusy && actions.length === 0 ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: C.line }}>
+                  <ActivityIndicator color={C.violet} size="small" />
+                  <Text style={T.sub}>Checking whether there is something to book</Text>
+                </View>
+              ) : null}
+              {actions.map((a, i) => {
+                const rec = personRecord.current;
+                const email = rec?.contact_email || rec?.email || null;
+                const busy = acting === a;
+                return (
+                  <View key={`act${i}`} style={{ gap: 10, padding: 14, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: C.line }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.tile, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="calendar-outline" size={18} color={C.ink} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text numberOfLines={2} style={T.title}>{a.title}</Text>
+                        <Text style={T.sub}>{a.when} · {a.duration_minutes} min · {a.kind === 'in_person' ? (a.location || 'in person') : 'Google Meet'}</Text>
+                      </View>
+                    </View>
+                    <Text style={T.sub}>{email ? `Invites ${email} and puts it on the calendar, then texts ${name} the details${a.kind === 'online' ? ' and the Meet link' : ''}.` : `Puts it on the calendar (no email on file for an invite), then texts ${name} the details${a.kind === 'online' ? ' and the Meet link' : ''}.`}</Text>
+                    <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.tile }}>
+                      <Text style={[T.body, { fontSize: 14 }]}>{String(a.message || '').replace(/\{when\}/g, a.when).replace(/\{link\}/g, a.kind === 'online' ? '(Meet link)' : (a.location || ''))}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <Button label="Not now" kind="soft" small onPress={() => setActions(prev => prev.filter(x => x !== a))} disabled={busy} />
+                      <Button label="Create meeting and text them" small busy={busy} onPress={() => runAction(a)} style={{ flex: 1 }} />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
           {draftBusy && drafts.length === 0 ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 16, backgroundColor: C.tile }}>
               <ActivityIndicator color={C.violet} size="small" />

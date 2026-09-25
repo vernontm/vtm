@@ -42,6 +42,7 @@ export const addTimeEntry = (data) => request('/time-entries?action=add', { meth
 
 // ── Clients + invoicing pipeline ──
 export const getClients = () => request('/clients');
+export const updateClient = (id, data) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const createClient = (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) });
 
 // ── Tasks: recurring checklists (routines) + the shared to-do list ──
@@ -94,6 +95,8 @@ export const getPlaceDetail = (placeId) => request(`/places?place_id=${encodeURI
 
 // CRM assistant (Claude with tools) + availability finder.
 export const askAssistant = (prompt, conversation = []) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, conversation }) });
+// Actions mode: { actions: [{ type:'create_meeting', title, start, end, when, duration_minutes, kind, location, summary, message, confidence, reason }] }
+export const proposeActions = (prompt) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, mode: 'actions' }) });
 export const getAvailability = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return request(`/availability${qs ? '?' + qs : ''}`);
