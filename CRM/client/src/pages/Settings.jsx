@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Mail, CheckCircle, AlertCircle, Loader, ExternalLink } from 'lucide-react';
+import { Settings as SettingsIcon, Mail, CheckCircle, AlertCircle, Loader, ExternalLink, Clock } from 'lucide-react';
 import { getSettings, bulkUpdateSettings, getGmailStatus, connectGmail, disconnectGmail } from '../api';
 import { toast } from '../components/Toast';
 
@@ -61,6 +61,63 @@ const INPUT_STYLE = {
 const TEXTAREA_STYLE = {
   ...INPUT_STYLE, resize: 'vertical', minHeight: 80, lineHeight: 1.5, fontFamily: 'inherit',
 };
+
+// Work hours that gate what times the assistant offers for meetings. Stored as
+// the JSON setting 'scheduling_hours'; self-contained so it does not depend on
+// the flat settings map.
+const WH_DEFAULT = { days: [1, 2, 3, 4], start: '08:00', end: '20:00', tz: 'America/Chicago' };
+const WH_DAYS = [['Sun', 0], ['Mon', 1], ['Tue', 2], ['Wed', 3], ['Thu', 4], ['Fri', 5], ['Sat', 6]];
+const WH_ZONES = ['America/Chicago', 'America/New_York', 'America/Denver', 'America/Los_Angeles', 'America/Phoenix'];
+const whParse = (s) => { try { return JSON.parse(s); } catch { return null; } };
+
+function WorkHoursSection() {
+  const [wh, setWh] = useState(WH_DEFAULT);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    getSettings().then(s => {
+      let v;
+      if (Array.isArray(s)) v = s.find(r => r.key === 'scheduling_hours')?.value;
+      else if (s && typeof s === 'object') v = s.scheduling_hours;
+      const parsed = typeof v === 'string' ? whParse(v) : v;
+      if (parsed && Array.isArray(parsed.days)) setWh({ ...WH_DEFAULT, ...parsed });
+    }).catch(() => {});
+  }, []);
+  const toggleDay = (d) => setWh(w => ({ ...w, days: w.days.includes(d) ? w.days.filter(x => x !== d) : [...w.days, d].sort((a, b) => a - b) }));
+  const save = async () => {
+    setSaving(true); setMsg('');
+    try { await bulkUpdateSettings([{ key: 'scheduling_hours', value: JSON.stringify(wh) }]); setMsg('saved'); setTimeout(() => setMsg(''), 3000); }
+    catch { setMsg('error'); setTimeout(() => setMsg(''), 4000); }
+    finally { setSaving(false); }
+  };
+  return (
+    <Section title="Scheduling / Work Hours" icon={Clock}>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>
+        The assistant only offers meeting times inside these hours. A meeting's last start is the end time minus its length, so a 1 hour meeting ending by 8pm starts by 7.
+      </p>
+      <FormRow label="Days available">
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {WH_DAYS.map(([lbl, d]) => { const on = wh.days.includes(d); return (
+            <button key={d} type="button" onClick={() => toggleDay(d)}
+              style={{ padding: '7px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, border: `1.5px solid ${on ? 'var(--orange)' : 'var(--border)'}`, background: on ? 'rgba(37,99,235,0.12)' : 'var(--surface)', color: on ? 'var(--orange)' : 'var(--muted)' }}>{lbl}</button>
+          ); })}
+        </div>
+      </FormRow>
+      <FormRow label="Start time"><input type="time" style={INPUT_STYLE} value={wh.start} onChange={e => setWh(w => ({ ...w, start: e.target.value }))} /></FormRow>
+      <FormRow label="End time" hint="Latest a meeting can finish"><input type="time" style={INPUT_STYLE} value={wh.end} onChange={e => setWh(w => ({ ...w, end: e.target.value }))} /></FormRow>
+      <FormRow label="Timezone">
+        <select style={INPUT_STYLE} value={wh.tz} onChange={e => setWh(w => ({ ...w, tz: e.target.value }))}>
+          {WH_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+        </select>
+      </FormRow>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+        <button className="btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save work hours'}</button>
+        {msg === 'saved' && <span style={{ fontSize: 13, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CheckCircle size={15} /> Saved</span>}
+        {msg === 'error' && <span style={{ fontSize: 13, color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: 5 }}><AlertCircle size={15} /> Failed to save</span>}
+      </div>
+    </Section>
+  );
+}
 
 export default function Settings() {
   const [searchParams] = useSearchParams();
@@ -197,6 +254,8 @@ export default function Settings() {
         </Section>
 
         {/* ── Email Signature ───────────────────────────────────────────────── */}
+        <WorkHoursSection />
+
         <Section title="Email Signature" icon={Mail}>
           <FormRow label="Signature" hint="Appended to every email">
             <textarea
