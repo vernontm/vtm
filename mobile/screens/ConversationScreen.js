@@ -7,8 +7,6 @@ import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
   getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability, askAssistant,
 } from '../lib/api';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GRAD } from '../lib/theme';
 import { C, T, F } from '../lib/theme';
 import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, TEMP, KIND_COLOR } from '../components/ui';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, colorForEmployee } from '../lib/imsg';
@@ -35,7 +33,12 @@ export default function ConversationScreen({ route, navigation }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
-  const [drafting, setDrafting] = useState(false);
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [drafts, setDrafts] = useState([]);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftInput, setDraftInput] = useState('');
+  const [draftNote, setDraftNote] = useState('');
+  const draftHistory = useRef([]);
   const scrollRef = useRef(null);
 
   const loadPerson = useCallback(async () => {
@@ -151,25 +154,51 @@ export default function ConversationScreen({ route, navigation }) {
   const temp = person?.temperature ? TEMP[person.temperature] : null;
   const name = person?.name || fmtPhone(phone);
   const subLine = [person?.kind ? KIND[person.kind].label : null, fmtPhone(phone)].filter(Boolean).join(' · ');
-  // The orb in the composer: the assistant writes the next text and it lands
-  // in the box to edit and send. Nothing is sent on its own.
-  const draftWithAssistant = async () => {
-    if (drafting) return;
-    setDrafting(true);
+  // The orb in the composer opens the drafting sheet: smart drafts to tap into
+  // the message box, plus a line to tell the assistant what to write or do.
+  // Nothing is ever sent to the customer from here.
+  const threadText = () => messages.slice(-10).map(m => `${m.direction === 'out' ? 'Us' : name}: ${m.body}`).join('\n') || '(no messages yet)';
+  const contextPrompt = () => `You are helping write iMessages from us (Vernon Tech & Media) to ${name}${person?.kind ? ` (a ${person.kind})` : ''}. The thread so far:\n${threadText()}`;
+  const parseDrafts = (text) => String(text || '').split(/\n+/)
+    .map(l => l.replace(/^\s*(?:[-*•]|\d+[.)]|option\s*\d+:?)\s*/i, '').replace(/^["“]+|["”]+$/g, '').trim())
+    .filter(l => l.length >= 4).slice(0, 4);
+  const wantsDraft = (s) => /\b(draft|write|reply|respond|say|text|message|shorter|longer|warmer|friendlier|formal|casual|rewrite|propose|suggest|follow[- ]?up|nudge|ask)\b/i.test(s);
+
+  const runDraft = async (instruction, initial = false) => {
+    if (draftBusy) return;
+    setDraftBusy(true);
+    setDraftNote('');
     try {
-      const thread = messages.slice(-8).map(m => `${m.direction === 'out' ? 'Us' : name}: ${m.body}`).join('\n');
-      const r = await askAssistant(
-        `Write the next text message from us to ${name}${person?.kind ? ` (a ${person.kind})` : ''} in this iMessage thread. Keep it short, warm and natural: one to three sentences, no sign-off, no placeholders. Reply with ONLY the message text. No quotes, no preamble, no options.\n\nThread:\n${thread || '(no messages yet)'}`
-      );
-      let text = String(r?.answer || '').trim();
-      // If it still wrapped the message in prose, keep the quoted part.
-      const quoted = text.match(/["“]([^"”]{8,})["”]/);
-      if (quoted && text.length > quoted[1].length + 20) text = quoted[1];
-      text = text.replace(/^["“]+|["”]+$/g, '').trim();
-      if (text) setInput(prev => (prev.trim() ? `${prev.trim()} ${text}` : text));
-    } catch (e) { Alert.alert('Could not draft a reply', e.message); }
-    finally { setDrafting(false); }
+      const prompt = initial
+        ? `${contextPrompt()}\n\n${instruction}`
+        : `${contextPrompt()}\n\nInstruction from us: ${instruction}\n${wantsDraft(instruction) ? 'Reply with ONLY the message text we should send (or up to three options, one per line). No numbering, no quotes, no preamble.' : 'Answer briefly and plainly.'}`;
+      const r = await askAssistant(prompt, draftHistory.current);
+      const answer = String(r?.answer || '').trim();
+      draftHistory.current = [...draftHistory.current, { role: 'user', content: instruction }, { role: 'assistant', content: answer }].slice(-10);
+      if (initial || wantsDraft(instruction)) {
+        const opts = parseDrafts(answer);
+        if (opts.length) setDrafts(opts); else setDraftNote(answer || 'No draft came back.');
+      } else {
+        setDraftNote(answer || 'No answer.');
+      }
+    } catch (e) { setDraftNote(`Could not reach the assistant: ${e.message}`); }
+    finally { setDraftBusy(false); }
   };
+  const openDrafts = () => {
+    setDraftOpen(true);
+    if (!drafts.length && !draftBusy) {
+      runDraft('Write three different short replies we could send next. Each one to three sentences, warm and natural, no sign-off, no placeholders. Reply with exactly three options, one per line, no numbering, no quotes, nothing else.', true);
+    }
+  };
+  const useDraft = (text) => { setInput(prev => (prev.trim() ? `${prev.trim()} ${text}` : text)); setDraftOpen(false); };
+  const sendDraftInstruction = () => { const s = draftInput.trim(); if (!s) return; setDraftInput(''); runDraft(s); };
+  const DRAFT_CHIPS = [
+    ['Shorter', 'Make it shorter.'],
+    ['Warmer', 'Make it warmer and more personal.'],
+    ['More formal', 'Make it more professional.'],
+    ['Propose times', 'Write a reply proposing two times to meet next week inside our work hours, using my real availability.'],
+    ['Follow up', 'Write a friendly follow-up nudge, since they have not replied.'],
+  ];
 
   return (
     <Screen>
@@ -243,13 +272,7 @@ export default function ConversationScreen({ route, navigation }) {
           )}
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 50, borderRadius: 25, backgroundColor: C.tile, paddingLeft: 8, paddingRight: 14, paddingVertical: 8 }}>
-              {drafting ? (
-                <LinearGradient colors={GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}>
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                </LinearGradient>
-              ) : (
-                <Orb size={34} icon="sparkles" label="Write a reply with the assistant" onPress={draftWithAssistant} style={{ shadowOpacity: 0 }} />
-              )}
+              <Orb size={34} icon="sparkles" label="Draft with the assistant" onPress={openDrafts} style={{ shadowOpacity: 0 }} />
               <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 16, color: C.ink, paddingHorizontal: 10, paddingVertical: 6, maxHeight: 120 }}
                 placeholder="Message" placeholderTextColor={C.slate} value={input} onChangeText={setInput} multiline />
             </View>
@@ -259,6 +282,51 @@ export default function ConversationScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Drafting sheet */}
+        <Sheet visible={draftOpen} title="Draft with the assistant" onClose={() => setDraftOpen(false)}>
+          <Text style={T.sub}>Tap a draft to put it in your message, or tell the assistant what to write or do. Nothing sends until you tap send.</Text>
+          {draftBusy && drafts.length === 0 ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 16, backgroundColor: C.tile }}>
+              <ActivityIndicator color={C.violet} size="small" />
+              <Text style={T.sub}>Reading the thread and writing drafts</Text>
+            </View>
+          ) : null}
+          {drafts.map((d, i) => (
+            <TouchableOpacity key={`${i}-${d.slice(0, 12)}`} onPress={() => useDraft(d)} activeOpacity={0.8} accessibilityLabel={`Use draft ${i + 1}`}
+              style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14, borderRadius: 16, backgroundColor: C.tile, opacity: draftBusy ? 0.6 : 1 }}>
+              <Ionicons name="sparkles" size={16} color={C.violet} style={{ marginTop: 3 }} />
+              <Text style={[T.body, { flex: 1 }]}>{d}</Text>
+              <Text style={[T.meta, { color: C.violet, marginTop: 3 }]}>Use</Text>
+            </TouchableOpacity>
+          ))}
+          {draftNote ? (
+            <View style={{ padding: 14, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: C.line, gap: 10 }}>
+              <Text style={T.body}>{draftNote}</Text>
+              <TouchableOpacity onPress={() => useDraft(draftNote)} accessibilityLabel="Use this text"><Text style={[T.meta, { color: C.violet }]}>Use as my message</Text></TouchableOpacity>
+            </View>
+          ) : null}
+          {draftBusy && drafts.length > 0 ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}>
+              <ActivityIndicator color={C.violet} size="small" />
+              <Text style={T.sub}>Working on it</Text>
+            </View>
+          ) : null}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
+            {DRAFT_CHIPS.map(([label, instruction]) => <GradientChip key={label} label={label} onPress={() => runDraft(instruction)} />)}
+          </ScrollView>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+            <View style={{ flex: 1, minHeight: 48, borderRadius: 24, backgroundColor: C.tile, paddingHorizontal: 16, paddingVertical: 6, justifyContent: 'center' }}>
+              <TextInput style={{ fontFamily: F.body, fontSize: 16, color: C.ink, paddingVertical: 6, maxHeight: 100 }}
+                placeholder="Tell it what to write or do" placeholderTextColor={C.slate} value={draftInput} onChangeText={setDraftInput} multiline
+                onSubmitEditing={sendDraftInstruction} blurOnSubmit />
+            </View>
+            <TouchableOpacity onPress={sendDraftInstruction} disabled={draftBusy || !draftInput.trim()} accessibilityLabel="Ask the assistant"
+              style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', opacity: (draftBusy || !draftInput.trim()) ? 0.5 : 1 }}>
+              <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </Sheet>
 
         {/* Assign sheet */}
         <Sheet visible={assignOpen} title="Assign conversation" onClose={() => setAssignOpen(false)}>
