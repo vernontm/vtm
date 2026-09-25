@@ -135,5 +135,30 @@ export const getAvailability = (params = {}) => {
   return request(`/availability${qs ? '?' + qs : ''}`);
 };
 
+// ── Role homes, money, nudges, agreements (docs/engineer/role-homes-contracts.md) ──
+export const getHome = (role) => request(`/home${role ? `?role=${encodeURIComponent(role)}` : ''}`);
+export const getHomeRoles = () => request('/settings').then(rows => {
+  const list = Array.isArray(rows) ? rows : (rows?.settings || rows?.rows || []);
+  const raw = list.find(r => r.key === 'home_roles')?.value;
+  try { return raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {}; } catch (_) { return {}; }
+});
+export const setHomeRoles = (map) => bulkUpdateSettings([{ key: 'home_roles', value: JSON.stringify(map || {}) }]);
+export const draftNudge = (data) => request('/nudges?action=draft', { method: 'POST', body: JSON.stringify(data) });
+export const sendNudge = logged('nudge_sent', (data) => request('/nudges', { method: 'POST', body: JSON.stringify(data) }));
+export const getNudges = (kind, id) => request(`/nudges?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(id)}`);
+// view=overview returns the merged overview (files, activity, balance, plan);
+// the plain GET stays the raw activity list the web CRM reads.
+export const getClientActivity = (client_id) => request(`/client-activity?client_id=${encodeURIComponent(client_id)}&view=overview`);
+export const agreementAnalyze = (client_id) => request('/agreement-ai?action=analyze', { method: 'POST', body: JSON.stringify({ client_id }) });
+export const agreementGenerate = (data) => request('/agreement-ai?action=generate', { method: 'POST', body: JSON.stringify(data) });
+// Creating the agreement row from a draft is agreement-ai's approve; the
+// agreements endpoint's approve only links the deal on the pipeline.
+export const agreementApprove = logged('agreement_finalized', (client_id, draft) => request('/agreement-ai?action=approve', { method: 'POST', body: JSON.stringify({ client_id, draft }) }));
+export const linkAgreementDeal = (id) => request(`/agreements?action=approve&id=${encodeURIComponent(id)}`, { method: 'POST', body: '{}' });
+export const markAgreementSent = (id) => request(`/agreements?action=mark-sent&id=${encodeURIComponent(id)}`, { method: 'POST', body: '{}' });
+export const sendAgreement = logged('agreement_sent', (id) => request(`/agreements?action=send&id=${encodeURIComponent(id)}`, { method: 'POST', body: '{}' }));
+export const textSignLink = (id) => request(`/agreements?action=text-sign-link&id=${encodeURIComponent(id)}`, { method: 'POST', body: '{}' });
+export const countRoutineItem = logged('routine_counted', (routine_id, item_id, period_key, count) => request('/routines?action=count', { method: 'POST', body: JSON.stringify({ routine_id, item_id, period_key, count }) }));
+
 export const SIGN_BASE = 'https://vernontm.com/sign?token=';
 export const PAY_BASE = 'https://vernontm.com/api/crm/pay-deposit?token=';

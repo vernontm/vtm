@@ -77,6 +77,9 @@ export default function AutomationsScreen({ navigation }) {
               </View>
             ))}
             {card('meeting_confirmation', 'Meeting confirmation', 'Texted when you tap Create meeting in a conversation. {link} becomes the Meet link, or the address for in-person.', null)}
+            {card('invoice_reminder', 'Invoice nudge', 'What Nudge sends for an unpaid invoice, by text and email. {link} is the pay link.', null)}
+            {card('agreement_reminder', 'Agreement nudge', 'What Nudge sends for an agreement that has not been signed. {link} is the sign link.', null)}
+            {card('plan_past_due', 'Plan past due', 'What Nudge sends when a client plan payment fails. {link} lets them update the card.', null)}
             <Button label="Save templates" onPress={save} busy={saving} />
           </ScrollView>
         )}

@@ -4,6 +4,7 @@ import Sheet from '../components/Sheet';
 import LocationInput from '../components/LocationInput';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../lib/supabase';
 import { getUpcomingMeetings, getPastMeetings, createMeeting, updateMeeting, deleteMeeting, getClients } from '../lib/api';
 import { C, T, F } from '../lib/theme';
 import { Screen, HeaderBar, IconButton, Tile, Label, Chip, Button, Dot, Empty, DOCK_SPACE } from '../components/ui';
@@ -19,6 +20,11 @@ const DURATIONS = [15, 30, 45, 60];
 const fmtDur = (d) => (d >= 1380 ? 'All day' : d < 60 ? `${d}m` : d % 60 === 0 ? `${d / 60}h` : `${Math.floor(d / 60)}h ${d % 60}m`);
 // Invitee emails on a meeting, whatever shape the API returned them in.
 const emailsOf = (m) => (m?.participants || []).map(p => String((typeof p === 'string' ? p : p?.email) || '').toLowerCase()).filter(Boolean);
+// Whether a meeting includes an email, reading both guest lists the API may send.
+const includesEmail = (m, email) => {
+  const list = [...(Array.isArray(m?.participants) ? m.participants : []), ...(Array.isArray(m?.attendees) ? m.attendees : [])];
+  return list.some(p => String((typeof p === 'string' ? p : p?.email) || '').toLowerCase() === email);
+};
 // Alert.alert is a no-op on web, so the browser demo gets the browser dialogs.
 const notify = (title, message) => (Platform.OS === 'web' ? window.alert([title, message].filter(Boolean).join('\n')) : Alert.alert(title, message));
 const confirmDelete = (title, message, onYes) => {
@@ -49,13 +55,22 @@ const CAL_THEME = {
   textDayHeaderFontSize: 11,
 };
 
-export default function CalendarScreen({ navigation }) {
+export default function CalendarScreen({ navigation, route }) {
+  // The sales home opens the calendar with role 'sales': only events that
+  // include the signed-in person's email show.
+  const mineOnly = route?.params?.role === 'sales';
+  const [myEmail, setMyEmail] = useState(null);
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState(dstr(new Date()));
   const [showNew, setShowNew] = useState(false);
   const [editing, setEditing] = useState(null);   // the event being edited (tap a tile)
+
+  useEffect(() => {
+    if (!mineOnly) return;
+    supabase.auth.getUser().then(({ data: { user } }) => setMyEmail(String(user?.email || '').toLowerCase())).catch(() => setMyEmail(''));
+  }, [mineOnly]);
 
   const load = useCallback(async (quiet) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
@@ -67,10 +82,13 @@ export default function CalendarScreen({ navigation }) {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // What this person sees: everything, or only the events they are on.
+  const visible = useMemo(() => (mineOnly ? (myEmail ? meetings.filter(m => includesEmail(m, myEmail)) : []) : meetings), [meetings, mineOnly, myEmail]);
+
   // Meetings bucketed per local day (blocks span every day they cover).
   const byDay = useMemo(() => {
     const map = {};
-    for (const m of meetings) {
+    for (const m of visible) {
       const start = new Date(m.start_time);
       const end = new Date(m.end_time || m.start_time);
       const endAdj = end > start ? new Date(end.getTime() - 1) : end;
@@ -80,7 +98,7 @@ export default function CalendarScreen({ navigation }) {
     }
     Object.values(map).forEach(a => a.sort((x, y) => new Date(x.start_time) - new Date(y.start_time)));
     return map;
-  }, [meetings]);
+  }, [visible]);
 
   const marked = useMemo(() => {
     const out = {};
@@ -105,7 +123,7 @@ export default function CalendarScreen({ navigation }) {
 
   return (
     <Screen>
-      <HeaderBar title="Calendar" sub={dateWords} onBack={() => navigation.goBack()}
+      <HeaderBar title="Calendar" sub={mineOnly ? `${dateWords} · Your events only` : dateWords} onBack={() => navigation.goBack()}
         right={<IconButton icon="add" dark label="New appointment" onPress={() => setShowNew(true)} />} />
       {loading ? <ActivityIndicator color={C.ink} style={{ marginTop: 40 }} /> : (
       <ScrollView contentContainerStyle={{ padding: 18, paddingTop: 4, paddingBottom: DOCK_SPACE, gap: 14 }}
@@ -122,7 +140,7 @@ export default function CalendarScreen({ navigation }) {
 
         <View style={{ gap: 10 }}>
           <Label right={countLabel}>{listTitle}</Label>
-          {dayItems.length === 0 && <Empty icon="calendar-outline" title="Nothing scheduled" sub="Tap the plus to add an appointment." />}
+          {dayItems.length === 0 && <Empty icon="calendar-outline" title="Nothing scheduled" sub={mineOnly ? 'Only events that include your email show here. Tap the plus to add one.' : 'Tap the plus to add an appointment.'} />}
           {dayItems.map(m => {
             const block = isBlock(m);
             const when = block && m.duration_minutes >= 1380 ? 'All day' : `${fmtTime(m.start_time)} to ${fmtTime(m.end_time || m.start_time)}`;

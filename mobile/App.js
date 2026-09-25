@@ -28,6 +28,8 @@ import AssistantScreen from './screens/AssistantScreen';
 import TasksScreen from './screens/TasksScreen';
 import AutomationsScreen from './screens/AutomationsScreen';
 import NewTaskScreen from './screens/NewTaskScreen';
+import MoneyScreen from './screens/MoneyScreen';
+import AgreementDraftScreen from './screens/AgreementDraftScreen';
 import { openSpace } from './lib/nav';
 
 // Aura navigation: a root stack holds the tabs and the full-screen spaces
@@ -54,6 +56,8 @@ function HomeStack() {
       <HomeNav.Screen name="Time" component={TimeScreen} />
       <HomeNav.Screen name="Settings" component={SettingsScreen} />
       <HomeNav.Screen name="Automations" component={AutomationsScreen} />
+      <HomeNav.Screen name="Money" component={MoneyScreen} />
+      <HomeNav.Screen name="AgreementDraft" component={AgreementDraftScreen} />
     </HomeNav.Navigator>
   );
 }

@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { getRoutines, checkRoutineItem, getTeamTodos, updateTeamTodo } from '../lib/api';
+import { getRoutines, checkRoutineItem, countRoutineItem, getTeamTodos, updateTeamTodo } from '../lib/api';
 import { C, T, F } from '../lib/theme';
-import { Screen, HeaderBar, IconButton, Tile, Label, Progress, Check, Dot, Avatar, Empty, FloatingSwitch, DOCK_SPACE } from '../components/ui';
-import { routineRows, myTodos, CADENCE_LABEL } from '../lib/tasks';
+import { Screen, HeaderBar, IconButton, Tile, Label, Progress, Check, Dot, Avatar, Button, Empty, FloatingSwitch, DOCK_SPACE } from '../components/ui';
+import { myTodos, CADENCE_LABEL } from '../lib/tasks';
+import { countedRows, PlusOne } from '../components/homes/shared';
+import Sheet from '../components/Sheet';
 import RemindersView from '../components/RemindersView';
 import { firstName } from '../lib/imsg';
 
 // Tasks: three groups on one page. The recurring lists (routines: the role's
 // daily list, weekly and monthly ones), and the one-offs anyone adds (team
 // to-dos, assignable). The switch above the dock flips to Reminders.
+// A routine item with a numeric target is a count ("32 of 50"): +1 adds one,
+// a long press sets the number, and it is done once the count reaches the target.
+const field = { minHeight: 48, backgroundColor: C.tile, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, fontFamily: F.body, fontSize: 16, color: C.ink };
 export default function TasksScreen({ navigation, route }) {
   const [view, setView] = useState(route.params?.view === 'reminders' ? 'reminders' : 'tasks');
   const [me, setMe] = useState(null);
@@ -20,6 +25,8 @@ export default function TasksScreen({ navigation, route }) {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [counting, setCounting] = useState(null);   // the count row being set by hand
+  const [countText, setCountText] = useState('');
 
   useEffect(() => { supabase.auth.getUser().then(({ data: { user } }) => setMe(user)).catch(() => {}); }, []);
   useEffect(() => { if (route.params?.view) setView(route.params.view === 'reminders' ? 'reminders' : 'tasks'); }, [route.params?.view]);
@@ -34,7 +41,7 @@ export default function TasksScreen({ navigation, route }) {
   }, []);
   useFocusEffect(useCallback(() => { load(true); }, [load]));
 
-  const rows = useMemo(() => routineRows(routines), [routines]);
+  const rows = useMemo(() => countedRows(routines), [routines]);
   const mine = useMemo(() => myTodos(todos, me?.id), [todos, me?.id]);
   const total = rows.length + mine.length;
   const done = rows.filter(r => r.done).length + mine.filter(t => t.done).length;
@@ -62,6 +69,19 @@ export default function TasksScreen({ navigation, route }) {
     try { await updateTeamTodo(t.id, { done: next }); }
     catch (e) { Alert.alert('Could not update', e.message); load(true); }
   };
+  // Count rows: write the number into the check row now, tell the server, reload if that fails.
+  const setCount = async (row, count) => {
+    const n = Math.max(0, Math.round(Number(count) || 0));
+    setRoutines(prev => {
+      const checks = (prev?.checks || []).filter(c => !(c.item_id === row.itemId && c.period_key === row.periodKey));
+      checks.push({ item_id: row.itemId, period_key: row.periodKey, count: n, done_by_name: 'You', done_at: new Date().toISOString() });
+      return { ...prev, checks };
+    });
+    try { await countRoutineItem(row.routineId, row.itemId, row.periodKey, n); }
+    catch (e) { Alert.alert('Could not update', e.message); load(true); }
+  };
+  const openCount = (row) => { setCountText(String(row.count || 0)); setCounting(row); };
+  const saveCount = () => { if (counting) setCount(counting, countText); setCounting(null); };
 
   const dateLine = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   const myFirst = firstName(me?.user_metadata?.name || me?.user_metadata?.full_name || (me?.email || '').split('@')[0]);
@@ -87,7 +107,19 @@ export default function TasksScreen({ navigation, route }) {
           {groups.map(g => (
             <View key={g.routine.id} style={{ gap: 6 }}>
               <Label right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Ionicons name="repeat" size={12} color={C.slate} /><Text style={T.meta}>{CADENCE_LABEL[g.routine.cadence] || 'Repeats'}</Text></View>}>{g.routine.title}</Label>
-              {g.rows.map(r => (
+              {g.rows.map(r => r.target ? (
+                <TouchableOpacity key={r.id} activeOpacity={0.85} onLongPress={() => openCount(r)} accessibilityLabel={`${r.text}, ${r.count} of ${r.target}. Hold to set the number`}
+                  style={{ gap: 8, minHeight: 48, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, backgroundColor: C.tile }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Check done={r.done} onPress={() => openCount(r)} label={r.text} />
+                    <Text numberOfLines={2} style={[T.body, { flex: 1, fontFamily: F.semi, color: r.done ? C.slate : C.ink }]}>
+                      {r.text} · <Text style={{ color: r.done ? C.green : C.ink }}>{r.count} of {r.target}</Text>
+                    </Text>
+                    <PlusOne size={36} onPress={() => setCount(r, r.count + 1)} onLongPress={() => openCount(r)} label={`Add one to ${r.text}`} />
+                  </View>
+                  <Progress value={r.target ? r.count / r.target : 0} height={4} fill={r.done ? C.green : C.ink} />
+                </TouchableOpacity>
+              ) : (
                 <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: C.tile }}>
                   <Check done={r.done} onPress={() => toggleRoutine(r)} label={r.text} />
                   <Text style={[T.body, { flex: 1, fontFamily: F.semi, color: r.done ? C.slate : C.ink, textDecorationLine: r.done ? 'line-through' : 'none' }]}>{r.text}</Text>
@@ -126,6 +158,17 @@ export default function TasksScreen({ navigation, route }) {
       )}
 
       <FloatingSwitch value={view} onChange={setView} options={[{ value: 'tasks', label: 'Tasks' }, { value: 'reminders', label: 'Reminders' }]} />
+
+      {/* Set a count by hand (long press on a count row) */}
+      <Sheet visible={!!counting} title="Set the count" onClose={() => setCounting(null)}>
+        <Text style={T.sub}>{counting?.text} · target {counting?.target}</Text>
+        <TextInput style={field} keyboardType="number-pad" placeholder="0" placeholderTextColor={C.slate} value={countText} onChangeText={setCountText}
+          autoFocus selectTextOnFocus returnKeyType="done" onSubmitEditing={saveCount} />
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+          <Button label="Cancel" kind="soft" onPress={() => setCounting(null)} style={{ flex: 1 }} />
+          <Button label="Save" onPress={saveCount} style={{ flex: 1 }} />
+        </View>
+      </Sheet>
     </Screen>
   );
 }
