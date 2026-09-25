@@ -6,8 +6,9 @@ import Sheet, { SheetRow } from '../components/Sheet';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
   getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability, askAssistant,
-  getClients, getAgreements, getTeamTodos, getUpcomingMeetings, proposeActions, createMeeting, updateClient,
+  getClients, getAgreements, getTeamTodos, getUpcomingMeetings, proposeActions, createMeeting, updateClient, getSettings,
 } from '../lib/api';
+import { parseAutomations, fillTemplate } from '../lib/templates';
 import { C, T, F } from '../lib/theme';
 import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, Button, TEMP, KIND_COLOR } from '../components/ui';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, colorForEmployee } from '../lib/imsg';
@@ -295,8 +296,22 @@ export default function ConversationScreen({ route, navigation }) {
         phone, client_id: rec?.id || null,
       });
       const link = a.kind === 'online' ? (m?.meet_link || '') : (a.location || '');
-      let text = String(a.message || 'You are set for {when}. {link}').replace(/\{when\}/g, a.when).replace(/\{link\}/g, link);
-      if (!link) text = text.replace(/\b(here(?:'|’)s|here is)\s+(the|your)\s+(google meet |meet )?link:?\s*/i, '');
+      // The confirmation text: the Automations template when it is in
+      // template mode, otherwise the assistant's own wording.
+      let auto = null;
+      try { auto = parseAutomations(await getSettings()); } catch (_) {}
+      const conf = auto?.meeting_confirmation;
+      const linkLine = link ? (a.kind === 'online' ? `Here's the Google Meet link: ${link}` : `Address: ${link}`) : '';
+      let text;
+      if (conf && conf.mode !== 'assistant' && conf.template) {
+        text = fillTemplate(conf.template, {
+          first_name: firstName(rec?.owner_name || name), when: a.when, service: a.service || '',
+          service_clause: a.service ? ` to go over ${a.service}` : '', link: linkLine, location: a.location || '',
+        });
+      } else {
+        text = String(a.message || 'You are set for {when}. {link}').replace(/\{when\}/g, a.when).replace(/\{link\}/g, link);
+        if (!link) text = text.replace(/\b(here(?:'|’)s|here is)\s+(the|your)\s+(google meet |meet )?link:?\s*/i, '');
+      }
       text = text.replace(/\s{2,}/g, ' ').replace(/\s+([.,!?])/g, '$1').trim();
       await sendImsg(phone, text);
       if (rec?.id && rec.stage === 'lead') updateClient(rec.id, { follow_up_status: 'scheduled' }).catch(() => {});

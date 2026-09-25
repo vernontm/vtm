@@ -1,4 +1,5 @@
 const { supaFetch } = require('./supabase.js');
+const { getAutomations } = require('./automations.js');
 
 // Automated follow-up texts. Today: the thank-you the morning after an
 // in-person meetup (content shoots, coffee, walk-throughs), 8:00 AM Central.
@@ -47,6 +48,9 @@ function nextMorningCentral(after, hour = THANK_YOU_HOUR) {
 async function scheduleThankYou({ meetingId, title, endTime, phone, clientId, createdBy }) {
   const to = normalizePhone(phone);
   if (!to || !endTime) return null;
+  const auto = await getAutomations();
+  if (auto.thank_you.enabled === false) return null;
+  const hour = Math.min(20, Math.max(5, parseInt(auto.thank_you.send_hour, 10) || THANK_YOU_HOUR));
   try {
     // One per meeting: replace anything already scheduled for it.
     if (meetingId) await supaFetch(`crm_followups?meeting_id=eq.${encodeURIComponent(meetingId)}&status=eq.scheduled`, { method: 'DELETE' });
@@ -58,7 +62,7 @@ async function scheduleThankYou({ meetingId, title, endTime, phone, clientId, cr
         phone: to,
         client_id: clientId || null,
         kind: 'thank_you',
-        send_at: nextMorningCentral(endTime).toISOString(),
+        send_at: nextMorningCentral(endTime, hour).toISOString(),
         status: 'scheduled',
         created_by: createdBy || null,
       }),

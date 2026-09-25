@@ -33,6 +33,10 @@ export const deleteMeeting = (id) => request(`/meetings?id=${encodeURIComponent(
 // ── Team (admin) ──
 export const getAdminUsers = () => request('/admin-users');
 
+// ── App settings (work hours, automation templates) ──
+export const getSettings = () => request('/settings');
+export const bulkUpdateSettings = (settings) => request('/settings?action=bulk', { method: 'POST', body: JSON.stringify({ settings }) });
+
 // ── Time clock ──
 export const getTimeEntries = (userId) => request(`/time-entries${userId ? `?user_id=${userId}` : ''}`);
 export const payTimeRange = (data) => request('/time-entries?action=pay-range', { method: 'POST', body: JSON.stringify(data) });

@@ -27,6 +27,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const rows = [
+    ...(isAdmin ? [{ icon: 'flash-outline', label: 'Automations', sub: 'Thank-you texts and meeting confirmations', onPress: () => navigation.navigate('Automations') }] : []),
     { icon: 'globe-outline', label: 'Open the web CRM', sub: 'vernontm.com/admin', onPress: () => Linking.openURL('https://www.vernontm.com/admin') },
     { icon: 'chatbubble-outline', label: 'Report a problem', sub: 'Email Ray', onPress: () => Linking.openURL('mailto:ray@vernontm.com') },
   ];

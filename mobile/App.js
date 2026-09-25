@@ -24,6 +24,7 @@ import NewMessageScreen from './screens/NewMessageScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import AssistantScreen from './screens/AssistantScreen';
 import TasksScreen from './screens/TasksScreen';
+import AutomationsScreen from './screens/AutomationsScreen';
 import NewTaskScreen from './screens/NewTaskScreen';
 import { openSpace } from './lib/nav';
 
@@ -50,6 +51,7 @@ function HomeStack() {
       <HomeNav.Screen name="Tasks" component={TasksScreen} />
       <HomeNav.Screen name="Time" component={TimeScreen} />
       <HomeNav.Screen name="Settings" component={SettingsScreen} />
+      <HomeNav.Screen name="Automations" component={AutomationsScreen} />
     </HomeNav.Navigator>
   );
 }

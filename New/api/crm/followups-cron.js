@@ -1,5 +1,6 @@
 const { supaFetch } = require('../_lib/supabase.js');
 const { missingTable } = require('../_lib/followups.js');
+const { getAutomations, fillTemplate } = require('../_lib/automations.js');
 
 // Every few minutes (New/vercel.json): send every follow-up whose time has
 // come. The text is drafted fresh by the assistant model (first name and the
@@ -22,18 +23,19 @@ async function draft(model, system, prompt) {
   return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
 }
 
-async function thankYouText(f, person) {
+async function thankYouText(f, person, auto) {
   const name = firstName(person?.owner_name || person?.business_name);
   const business = person?.business_name && person.business_name !== person.owner_name ? person.business_name : '';
-  const about = f.meeting_title ? ` about "${f.meeting_title}"` : '';
-  const fallback = `${name ? `Hey ${name}, ` : 'Hey, '}thanks again for meeting up yesterday${about}. Really enjoyed it. If any questions come up, just text me here.`;
-  if (!ANTHROPIC_API_KEY) return fallback;
+  const vars = { first_name: name, business, meeting_title: f.meeting_title || '', meeting_clause: f.meeting_title ? ` about ${f.meeting_title}` : '' };
+  // The template is the message (template mode) or the style guide (assistant mode).
+  const templated = fillTemplate(auto.thank_you.template, vars).replace(/^Hey\s*,/i, 'Hey,');
+  if (auto.thank_you.mode !== 'assistant' || !ANTHROPIC_API_KEY) return templated;
   const system = 'You write short, warm iMessages from Ray at Vernon Tech & Media, a Katy, Texas web and media agency. One to three sentences, natural, no sign-off, no hashtags, no emoji, no placeholders. Reply with only the message text. Never use em dashes or en dashes.';
-  const prompt = `Write the morning-after thank-you text for an in-person meetup we had yesterday.${name ? ` Their first name: ${name}.` : ''}${business ? ` Their business: ${business}.` : ''}${f.meeting_title ? ` The meeting was titled: ${f.meeting_title}.` : ''} Thank them for their time, mention you enjoyed it, and leave the door open for questions or next steps. Keep it human, not salesy.`;
-  try { return stripDashes(await draft(MODEL, system, prompt)) || fallback; }
+  const prompt = `Write the morning-after thank-you text for an in-person meetup we had yesterday.${name ? ` Their first name: ${name}.` : ''}${business ? ` Their business: ${business}.` : ''}${f.meeting_title ? ` The meeting was titled: ${f.meeting_title}.` : ''} Match the tone and length of this example, without copying it: "${templated}". Thank them for their time and leave the door open for questions or next steps. Keep it human, not salesy.`;
+  try { return stripDashes(await draft(MODEL, system, prompt)) || templated; }
   catch (e) {
-    if (/model/i.test(String(e.message))) { try { return stripDashes(await draft(FALLBACK_MODEL, system, prompt)) || fallback; } catch (_) {} }
-    return fallback;
+    if (/model/i.test(String(e.message))) { try { return stripDashes(await draft(FALLBACK_MODEL, system, prompt)) || templated; } catch (_) {} }
+    return templated;
   }
 }
 
@@ -44,8 +46,14 @@ module.exports = async function handler(req, res) {
   try {
     const now = new Date().toISOString();
     const due = await supaFetch(`crm_followups?status=eq.scheduled&send_at=lte.${encodeURIComponent(now)}&select=*&order=send_at.asc&limit=50`) || [];
+    const auto = await getAutomations();
     let sent = 0;
     for (const f of due) {
+      // Switched off on the Automations page since it was scheduled: let it go quietly.
+      if (auto.thank_you.enabled === false) {
+        await supaFetch(`crm_followups?id=eq.${f.id}&status=eq.scheduled`, { method: 'PATCH', body: JSON.stringify({ status: 'cancelled' }) });
+        continue;
+      }
       // Claim it first so two overlapping runs never double-text.
       const claimed = await supaFetch(`crm_followups?id=eq.${f.id}&status=eq.scheduled`, {
         method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'sending' }),
@@ -53,7 +61,7 @@ module.exports = async function handler(req, res) {
       if (!claimed || !claimed.length) continue;
       let person = null;
       if (f.client_id) { try { [person] = await supaFetch(`crm_clients?id=eq.${f.client_id}&select=owner_name,business_name`); } catch (_) {} }
-      const body = (await thankYouText(f, person)).slice(0, 600);
+      const body = (await thankYouText(f, person, auto)).slice(0, 600);
       const [msg] = await supaFetch('crm_sms_messages', {
         method: 'POST', headers: { Prefer: 'return=representation' },
         body: JSON.stringify({ client_id: f.client_id || null, direction: 'out', channel: 'imessage', phone: f.phone, body, status: 'queued' }),

@@ -68,6 +68,7 @@ const PROPOSE_TOOL = {
           properties: {
             type: { type: 'string', enum: ['create_meeting'] },
             title: { type: 'string', description: 'Calendar title, e.g. "Marketing services call with Marcus Bell"' },
+            service: { type: 'string', description: 'What the meeting is about, in a few words, e.g. "marketing services" or "the website redesign"' },
             start: { type: 'string', description: 'Start in ISO 8601 with the America/Chicago offset, e.g. 2026-09-28T14:30:00-05:00' },
             duration_minutes: { type: 'integer', description: '30 for a call unless they asked for longer; 60 for an in-person meetup' },
             kind: { type: 'string', enum: ['online', 'in_person'] },
@@ -112,6 +113,7 @@ function normalizeActions(list) {
     out.push({
       type: 'create_meeting',
       title: stripDashes(String(a.title || 'Call').slice(0, 120)),
+      service: stripDashes(String(a.service || '').slice(0, 80)),
       start: start.toISOString(),
       end: end.toISOString(),
       when: fmtCentral(start),
