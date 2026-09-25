@@ -1,4 +1,4 @@
-const { setCors, supaFetch, requireAuth } = require('../_lib/supabase.js');
+const { setCors, supaFetch, requireCrmUser } = require('../_lib/supabase.js');
 
 // iMessage inbox.
 //
@@ -34,7 +34,7 @@ function normalizePhone(raw) {
 // PostgREST error into something a person can act on.
 function needsMigration(e) {
   const m = String((e && e.message) || '');
-  return /(channel|imsg_guid|crm_imessage_threads)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
+  return /(channel|imsg_guid|crm_imessage_threads|crm_imessage_notes)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
 }
 const MIGRATION_MSG = 'The iMessage inbox needs its one-time database update. Run the SQL from imessage-bridge/README.md.';
 
@@ -159,15 +159,17 @@ module.exports = async function handler(req, res) {
   // Any signed-in CRM user, the same access model as the leads/clients
   // endpoint. This is VTM's own texting, so it is deliberately NOT scoped by
   // the selected workspace: that id lives in crm_content_clients and is not a
-  // crm_clients id, which is what crm_sms_messages.client_id references.
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  // crm_clients id, which is what crm_sms_messages.client_id references. We
+  // resolve WHO is calling so internal notes can be attributed to them.
+  const me = await requireCrmUser(req);
+  if (!me) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     // People you can text: leads + clients (crm_clients) and contacts
     // (crm_contacts), each with a phone, tagged by kind. Powers the To picker.
     if (req.method === 'GET' && action === 'directory') {
       const [clients, contacts] = await Promise.all([
-        supaFetch('crm_clients?select=id,business_name,owner_name,contact_phone,stage&contact_phone=not.is.null&or=(record_type.is.null,record_type.eq.client)'),
+        supaFetch('crm_clients?select=id,business_name,owner_name,contact_phone,stage,lead_temperature&contact_phone=not.is.null&or=(record_type.is.null,record_type.eq.client)'),
         supaFetch('crm_contacts?select=id,name,phone,company&phone=not.is.null'),
       ]);
       const people = [];
@@ -175,7 +177,7 @@ module.exports = async function handler(req, res) {
       const add = (p) => { const k = last10(p.phone); if (k.length < 10 || seen.has(k)) return; seen.add(k); people.push(p); };
       for (const c of clients || []) {
         const phone = normalizePhone(c.contact_phone);
-        if (phone) add({ id: c.id, kind: c.stage === 'lead' ? 'lead' : 'client', name: c.business_name || c.owner_name || phone, subtitle: (c.business_name && c.owner_name) ? c.owner_name : '', phone });
+        if (phone) add({ id: c.id, kind: c.stage === 'lead' ? 'lead' : 'client', name: c.business_name || c.owner_name || phone, subtitle: (c.business_name && c.owner_name) ? c.owner_name : '', phone, temperature: c.lead_temperature || null });
       }
       for (const c of contacts || []) {
         const phone = normalizePhone(c.phone);
@@ -183,6 +185,15 @@ module.exports = async function handler(req, res) {
       }
       people.sort((a, b) => String(a.name).localeCompare(String(b.name)));
       return res.json(people);
+    }
+
+    // Internal notes on a conversation (kept per phone, attributed to the
+    // employee who wrote them). Separate from the message thread.
+    if (req.method === 'GET' && action === 'notes') {
+      const phone = normalizePhone(req.query.phone);
+      if (!phone) return res.json([]);
+      const rows = await supaFetch(`crm_imessage_notes?phone=eq.${encodeURIComponent(phone)}&order=created_at.desc`);
+      return res.json(rows || []);
     }
 
     if (req.method === 'GET') {
@@ -260,6 +271,26 @@ module.exports = async function handler(req, res) {
         }),
       });
       return res.json(first(saved) || { ok: true });
+    }
+
+    // Add an internal note to a conversation, attributed to the current user.
+    if (req.method === 'POST' && action === 'note') {
+      const phone = normalizePhone((req.body || {}).phone);
+      const body = String((req.body || {}).body || '').trim().slice(0, 4000);
+      if (!phone) return res.status(400).json({ error: 'phone required' });
+      if (!body) return res.status(400).json({ error: 'note body required' });
+      // Prefer the employee's roster name; fall back to their email local part.
+      let author_name = me.email ? me.email.split('@')[0] : null;
+      try {
+        const tm = await supaFetch(`crm_team_members?email=eq.${encodeURIComponent((me.email || '').toLowerCase())}&select=name&limit=1`);
+        if (first(tm)?.name) author_name = first(tm).name;
+      } catch (_) {}
+      const saved = await supaFetch('crm_imessage_notes', {
+        method: 'POST',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ phone, body, author_email: me.email || null, author_name, created_at: new Date().toISOString() }),
+      });
+      return res.status(201).json(first(saved));
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

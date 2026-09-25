@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check } from 'lucide-react';
+import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, StickyNote } from 'lucide-react';
 import { toast } from '../components/Toast';
 import {
   getImsgThreads, getImsgThread, sendImsg, getImsgDirectory, assignImsgThread,
-  createClient, createContact, getAssignees,
+  getImsgNotes, addImsgNote, createClient, createContact, updateClient, getAssignees,
 } from '../api';
 import { useClient } from '../context/ClientContext';
 
-// Two-way iMessage inbox for the business number. Threads are grouped by the
-// contact's phone. Sends are queued and delivered by the bridge on the Mac
-// signed into the business Apple ID (imessage-bridge/), which also forwards
-// replies from known clients and leads. Conversations can be assigned to an
-// employee, shown as a colored pill.
+// Two-way iMessage inbox for the business number. Threads group by phone. Sends
+// are queued and delivered by the bridge on the Mac signed into the business
+// Apple ID (imessage-bridge/); it also forwards replies. Each conversation can
+// be assigned to an employee (colored pill), tagged cold/warm/hot when it maps
+// to a lead, and carries internal notes attributed to the employee who wrote them.
 
 const last10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
 const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
@@ -34,6 +34,13 @@ const KIND = {
   client:  { label: 'Client',  color: '#15803d' },
   contact: { label: 'Contact', color: '#2563eb' },
 };
+// Lead temperature shown/settable on a conversation.
+const TEMPS = [
+  { key: 'cold', label: 'Cold', color: '#1d4ed8' },
+  { key: 'warm', label: 'Warm', color: '#b45309' },
+  { key: 'hot',  label: 'Hot',  color: '#b91c1c' },
+];
+const tempOf = (k) => TEMPS.find(t => t.key === k);
 
 // A stable, distinct color per employee (same id always maps to the same hue).
 const EMP_COLORS = ['#2563eb', '#7c3aed', '#c026d3', '#db2777', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0891b2', '#4f46e5'];
@@ -50,8 +57,10 @@ function KindBadge({ kind }) {
     <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: k.color, background: `${k.color}18`, border: `1px solid ${k.color}40`, borderRadius: 999, padding: '1px 7px', flexShrink: 0 }}>{k.label}</span>
   );
 }
-
-// Small colored pill showing who a conversation is assigned to.
+function TempDot({ temp }) {
+  const t = tempOf(temp); if (!t) return null;
+  return <span title={`${t.label} lead`} style={{ width: 9, height: 9, borderRadius: '50%', background: t.color, flexShrink: 0, display: 'inline-block' }} />;
+}
 function AssigneePill({ assignedTo, name }) {
   if (!name) return null;
   const c = colorForEmployee(assignedTo || name);
@@ -74,26 +83,30 @@ export default function Inbox() {
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [composing, setComposing] = useState(false);
-  // Add-to-CRM panel in the conversation header, for an unknown number.
+  // Header add-to-CRM panel (unknown number).
   const [addOpen, setAddOpen] = useState(false);
-  const [addKind, setAddKind] = useState(null);
+  const [addKind, setAddKind] = useState('lead');
   const [addName, setAddName] = useState('');
   const [addBusy, setAddBusy] = useState(false);
+  // Internal notes for the open conversation.
+  const [notes, setNotes] = useState([]);
+  const [noteText, setNoteText] = useState('');
+  const [noteBusy, setNoteBusy] = useState(false);
   const scrollRef = useRef(null);
 
-  // last-10 -> { name, kind } so threads and the header show a person.
   const byPhone = useMemo(() => {
     const m = {};
     for (const p of directory) m[last10(p.phone)] = p;
     return m;
   }, [directory]);
-  const displayName = (phone) => byPhone[last10(phone)]?.name || fmtPhone(phone);
-  const displayKind = (phone) => byPhone[last10(phone)]?.kind || null;
+  const personFor = (phone) => byPhone[last10(phone)] || null;
+  const displayName = (phone) => personFor(phone)?.name || fmtPhone(phone);
+  const displayKind = (phone) => personFor(phone)?.kind || null;
+  const displayTemp = (phone) => personFor(phone)?.temperature || null;
   const threadFor = (phone) => threads.find(t => last10(t.phone) === last10(phone));
 
-  // The people you can assign a conversation to: the Employees roster, plus the
-  // signed-in user themselves (so you can self-assign even if you are not on the
-  // roster). Skip the self entry when the roster already includes that email.
+  // Assignable people: the Employees roster plus the signed-in user (so you can
+  // self-assign even when you are not on the roster).
   const assignOptions = useMemo(() => {
     const list = [...assignees];
     const meEmail = (user?.email || '').toLowerCase();
@@ -114,6 +127,7 @@ export default function Inbox() {
   const loadAssignees = async () => {
     try { const r = await getAssignees(); setAssignees(Array.isArray(r) ? r : (r?.employees || [])); } catch (_) {}
   };
+  const loadNotes = async (phone) => { try { setNotes(await getImsgNotes(phone) || []); } catch (_) {} };
   useEffect(() => {
     loadThreads(); loadDirectory(); loadAssignees();
     const t = setInterval(loadThreads, 20000);
@@ -121,9 +135,9 @@ export default function Inbox() {
   }, []);
 
   const openThread = async (phone) => {
-    setActive(phone); setMessages([]);
-    try { setMessages(await getImsgThread(phone) || []); }
-    catch (e) { toast('error', e.message); }
+    setActive(phone); setMessages([]); setNotes([]);
+    try { setMessages(await getImsgThread(phone) || []); } catch (e) { toast('error', e.message); }
+    loadNotes(phone);
   };
   useEffect(() => {
     if (!active) return;
@@ -133,7 +147,7 @@ export default function Inbox() {
     return () => clearInterval(t);
   }, [active]);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
-  useEffect(() => { setAddOpen(false); setAddKind(null); setAddName(''); }, [active]);
+  useEffect(() => { setAddOpen(false); setAddKind('lead'); setAddName(''); setNoteText(''); }, [active]);
 
   const doSend = async () => {
     const body = reply.trim();
@@ -156,13 +170,12 @@ export default function Inbox() {
       if (addKind === 'contact') await createContact({ name, phone: active });
       else await createClient({ business_name: name, contact_phone: active, stage: addKind === 'lead' ? 'lead' : 'onboarding' });
       await loadDirectory();
-      setAddOpen(false); setAddKind(null); setAddName('');
+      setAddOpen(false); setAddName('');
       toast('success', `Added as ${addKind}.`);
     } catch (e) { toast('error', e.message); }
     finally { setAddBusy(false); }
   };
 
-  // Assign the active conversation (optimistic: patch the thread locally, then save).
   const assignActive = async (emp) => {
     if (!active) return;
     const assigned_to = emp?.id || null;
@@ -174,6 +187,24 @@ export default function Inbox() {
     });
     try { await assignImsgThread(active, assigned_to, assigned_to_name); }
     catch (e) { toast('error', e.message); loadThreads(); }
+  };
+
+  // cold/warm/hot updates the linked lead's temperature (naturally syncs both ways).
+  const setTemperature = async (key) => {
+    const p = personFor(active);
+    if (!p?.id) return;
+    setDirectory(dir => dir.map(x => x.id === p.id ? { ...x, temperature: key } : x));
+    try { await updateClient(p.id, { lead_temperature: key }); }
+    catch (e) { toast('error', e.message); loadDirectory(); }
+  };
+
+  const addNote = async () => {
+    const body = noteText.trim();
+    if (!body || !active) return;
+    setNoteBusy(true);
+    try { await addImsgNote(active, body); setNoteText(''); await loadNotes(active); }
+    catch (e) { toast('error', e.message); }
+    finally { setNoteBusy(false); }
   };
 
   const afterCompose = async (phone) => {
@@ -197,7 +228,9 @@ export default function Inbox() {
   }, [threads, search, byPhone]);
 
   const activeThread = active ? threadFor(active) : null;
+  const activePerson = active ? personFor(active) : null;
   const isUnknown = active ? !displayKind(active) : false;
+  const canTemp = !!activePerson?.id && activePerson.kind !== 'contact';
 
   return (
     <div style={{ padding: 24, fontFamily: 'var(--font-display)', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -215,7 +248,7 @@ export default function Inbox() {
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, marginTop: 12 }}>
         {/* Threads */}
-        <div style={{ width: 330, flexShrink: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ width: 320, flexShrink: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ position: 'relative', padding: 12, borderBottom: '1px solid var(--border)' }}>
             <Search size={15} style={{ position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
             <input placeholder="Search conversations…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...INPUT, paddingLeft: 32 }} />
@@ -225,27 +258,25 @@ export default function Inbox() {
               <div style={{ color: 'var(--muted)', fontSize: 13, padding: 16 }}>Loading…</div>
             ) : visibleThreads.length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>No conversations yet.</div>
-            ) : visibleThreads.map(t => {
-              const name = displayName(t.phone);
-              return (
-                <div key={t.phone} onClick={() => openThread(t.phone)}
-                  style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: last10(active) === last10(t.phone) ? 'var(--surface-2)' : 'transparent' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                      <KindBadge kind={displayKind(t.phone)} />
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{fmtTime(t.last?.created_at)}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                    <div style={{ flex: 1, fontSize: 12.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || ''}
-                    </div>
-                    <AssigneePill assignedTo={t.assigned_to} name={t.assigned_to_name} />
-                  </div>
+            ) : visibleThreads.map(t => (
+              <div key={t.phone} onClick={() => openThread(t.phone)}
+                style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: last10(active) === last10(t.phone) ? 'var(--surface-2)' : 'transparent' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    <TempDot temp={displayTemp(t.phone)} />
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(t.phone)}</span>
+                    <KindBadge kind={displayKind(t.phone)} />
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{fmtTime(t.last?.created_at)}</span>
                 </div>
-              );
-            })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                  <div style={{ flex: 1, fontSize: 12.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || ''}
+                  </div>
+                  <AssigneePill assignedTo={t.assigned_to} name={t.assigned_to_name} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -262,6 +293,7 @@ export default function Inbox() {
               <div style={{ borderBottom: '1px solid var(--border)' }}>
                 <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button onClick={() => setActive(null)} className="inbox-back" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'none' }}><ArrowLeft size={18} /></button>
+                  <TempDot temp={displayTemp(active)} />
                   <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{displayName(active)}</span>
                   <KindBadge kind={displayKind(active)} />
                   {displayName(active) !== fmtPhone(active) && (
@@ -270,7 +302,7 @@ export default function Inbox() {
                   <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <AssignMenu assignees={assignOptions} current={activeThread} onAssign={assignActive} />
                     {isUnknown && (
-                      <button onClick={() => setAddOpen(o => !o)}
+                      <button onClick={() => { setAddOpen(o => !o); setAddKind('lead'); }}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: addOpen ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)' }}>
                         <UserPlus size={13} /> Add
                       </button>
@@ -284,19 +316,17 @@ export default function Inbox() {
                       {['lead', 'client', 'contact'].map(k => {
                         const on = addKind === k;
                         return (
-                          <button key={k} onClick={() => setAddKind(on ? null : k)}
+                          <button key={k} onClick={() => setAddKind(k)}
                             style={{ flex: 1, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, textTransform: 'capitalize',
                               border: `1.5px solid ${on ? KIND[k].color : 'var(--border)'}`, background: on ? `${KIND[k].color}18` : 'var(--surface)', color: on ? KIND[k].color : 'var(--text)' }}>{k}</button>
                         );
                       })}
                     </div>
-                    {addKind && (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input style={INPUT} value={addName} autoFocus placeholder={addKind === 'contact' ? 'Contact name' : 'Business or person name'}
-                          onChange={e => setAddName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addActivePerson(); }} />
-                        <button className="btn-primary" onClick={addActivePerson} disabled={addBusy} style={{ flexShrink: 0 }}>{addBusy ? 'Saving…' : 'Save'}</button>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input style={INPUT} value={addName} autoFocus placeholder={addKind === 'contact' ? 'Contact name' : 'Business or person name'}
+                        onChange={e => setAddName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addActivePerson(); }} />
+                      <button className="btn-primary" onClick={addActivePerson} disabled={addBusy} style={{ flexShrink: 0 }}>{addBusy ? 'Saving…' : 'Save'}</button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -330,6 +360,69 @@ export default function Inbox() {
             </>
           )}
         </div>
+
+        {/* Activity / notes */}
+        {active && (
+          <div style={{ width: 300, flexShrink: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <StickyNote size={15} style={{ color: 'var(--muted)' }} />
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Activity</span>
+            </div>
+
+            {/* Lead temperature */}
+            {canTemp ? (
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>Lead status</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {TEMPS.map(t => {
+                    const on = displayTemp(active) === t.key;
+                    return (
+                      <button key={t.key} onClick={() => setTemperature(t.key)}
+                        style={{ flex: 1, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 800,
+                          border: `1.5px solid ${on ? t.color : 'var(--border)'}`, background: on ? t.color : 'var(--surface)', color: on ? '#fff' : 'var(--muted)' }}>
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : isUnknown ? (
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--muted)' }}>
+                Add this number as a lead to set cold / warm / hot.
+              </div>
+            ) : null}
+
+            {/* Add note */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>Internal note</div>
+              <textarea value={noteText} onChange={e => setNoteText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } }}
+                placeholder="Note for the team (only they see this). Enter to save." rows={2}
+                style={{ ...INPUT, resize: 'none', lineHeight: 1.45 }} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                <button className="btn-primary" onClick={addNote} disabled={noteBusy || !noteText.trim()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Plus size={13} /> {noteBusy ? 'Saving…' : 'Add note'}
+                </button>
+              </div>
+            </div>
+
+            {/* Notes list */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {notes.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>No notes yet.</div>
+              ) : notes.map(n => (
+                <div key={n.id} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.body}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)' }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: colorForEmployee(n.author_email || n.author_name), flexShrink: 0 }} />
+                    <span style={{ fontWeight: 700 }}>{n.author_name || 'Someone'}</span>
+                    <span>· {fmtTime(n.created_at)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {composing && (
@@ -396,11 +489,11 @@ function AssignMenu({ assignees, current, onAssign }) {
 }
 
 // New-message composer: pick a lead/client/contact from the directory, or type
-// a raw number and optionally add it as a lead, client, or contact.
+// a raw number and add it (defaults to a new lead) before sending.
 function Composer({ directory, onClose, onSent }) {
   const [pick, setPick] = useState('');
   const [selected, setSelected] = useState(null);
-  const [addKind, setAddKind] = useState(null);
+  const [addKind, setAddKind] = useState('lead');
   const [addName, setAddName] = useState('');
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
@@ -459,7 +552,7 @@ function Composer({ directory, onClose, onSent }) {
             {matches.length > 0 && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 5, marginTop: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 12px 30px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
                 {matches.map(p => (
-                  <div key={p.kind + p.id} onClick={() => { setSelected(p); setPick(p.name); setAddKind(null); }}
+                  <div key={p.kind + p.id} onClick={() => { setSelected(p); setPick(p.name); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{p.name}</span>
@@ -474,24 +567,22 @@ function Composer({ directory, onClose, onSent }) {
           {showQuickAdd && (
             <div style={{ border: '1px dashed var(--border)', borderRadius: 12, padding: 12, background: 'var(--surface-2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--muted)', marginBottom: 8 }}>
-                <UserPlus size={14} /> {fmtPhone(pick)} is not in your CRM. Add it, or just text it.
+                <UserPlus size={14} /> New number. It will be added as a:
               </div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: addKind ? 10 : 0 }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
                 {['lead', 'client', 'contact'].map(k => {
                   const on = addKind === k;
                   return (
-                    <button key={k} type="button" onClick={() => setAddKind(on ? null : k)}
+                    <button key={k} type="button" onClick={() => setAddKind(k)}
                       style={{ flex: 1, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, textTransform: 'capitalize',
                         border: `1.5px solid ${on ? KIND[k].color : 'var(--border)'}`, background: on ? `${KIND[k].color}18` : 'var(--surface)', color: on ? KIND[k].color : 'var(--text)' }}>
-                      Add as {k}
+                      {k}
                     </button>
                   );
                 })}
               </div>
-              {addKind && (
-                <input style={INPUT} value={addName} autoFocus placeholder={addKind === 'contact' ? 'Contact name' : 'Business or person name'}
-                  onChange={e => setAddName(e.target.value)} />
-              )}
+              <input style={INPUT} value={addName} placeholder={addKind === 'contact' ? 'Contact name' : 'Business or person name'}
+                onChange={e => setAddName(e.target.value)} />
             </div>
           )}
 
@@ -510,7 +601,7 @@ function Composer({ directory, onClose, onSent }) {
             style={{ padding: '9px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           <button className="btn-primary" onClick={send} disabled={busy || !targetPhone || !body.trim()}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Send size={14} /> {busy ? 'Sending…' : (showQuickAdd && addKind ? 'Add & send' : 'Send')}
+            <Send size={14} /> {busy ? 'Sending…' : (showQuickAdd ? 'Add & send' : 'Send')}
           </button>
         </div>
       </div>

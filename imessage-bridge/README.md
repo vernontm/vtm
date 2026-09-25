@@ -32,6 +32,17 @@ ways:
      assigned_to_name text,
      updated_at timestamptz default now()
    );
+
+   -- Internal notes on a conversation, attributed to the employee who wrote them.
+   create table if not exists crm_imessage_notes (
+     id uuid primary key default gen_random_uuid(),
+     phone text not null,
+     body text not null,
+     author_email text,
+     author_name text,
+     created_at timestamptz default now()
+   );
+   create index if not exists crm_imessage_notes_phone_idx on crm_imessage_notes (phone);
    ```
 
 2. **Shared secret on Vercel:** add an environment variable
