@@ -84,6 +84,20 @@ async function loadWorkHours() {
   return DEFAULT_HOURS;
 }
 
+// Reusable: load work hours + booked calendar and return open slots. Shared by
+// this endpoint and the assistant's find_availability tool.
+async function findAvailability({ durationMin = 60, days = 7, stepMin = 30, limit = 12 } = {}) {
+  const workHours = await loadWorkHours();
+  const now = new Date();
+  const to = new Date(now.getTime() + days * 24 * 60 * 60000);
+  const meetings = await supaFetch(
+    `crm_meetings?start_time=gte.${encodeURIComponent(now.toISOString())}&start_time=lte.${encodeURIComponent(to.toISOString())}&select=start_time,end_time,status`
+  ).catch(() => []);
+  const active = (meetings || []).filter(m => String(m.status || '') !== 'cancelled');
+  const slots = computeSlots({ now, days, durationMin, stepMin, workHours, meetings: active, limit });
+  return { tz: workHours.tz || DEFAULT_HOURS.tz, duration_minutes: durationMin, work_hours: workHours, slots };
+}
+
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -94,17 +108,7 @@ module.exports = async function handler(req, res) {
     const days = Math.min(21, Math.max(1, parseInt(req.query.days, 10) || 7));
     const stepMin = Math.min(120, Math.max(15, parseInt(req.query.step, 10) || 30));
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 12));
-
-    const workHours = await loadWorkHours();
-    const now = new Date();
-    const to = new Date(now.getTime() + days * 24 * 60 * 60000);
-    const meetings = await supaFetch(
-      `crm_meetings?start_time=gte.${encodeURIComponent(now.toISOString())}&start_time=lte.${encodeURIComponent(to.toISOString())}&select=start_time,end_time,status`
-    ).catch(() => []);
-    const active = (meetings || []).filter(m => String(m.status || '') !== 'cancelled');
-
-    const slots = computeSlots({ now, days, durationMin, stepMin, workHours, meetings: active, limit });
-    return res.json({ tz: workHours.tz || DEFAULT_HOURS.tz, duration_minutes: durationMin, work_hours: workHours, slots });
+    return res.json(await findAvailability({ durationMin, days, stepMin, limit }));
   } catch (e) {
     return res.status(500).json({ error: e.message || 'Server error' });
   }
@@ -112,4 +116,5 @@ module.exports = async function handler(req, res) {
 
 // Exposed for the assistant tool + unit testing.
 module.exports.computeSlots = computeSlots;
+module.exports.findAvailability = findAvailability;
 module.exports.DEFAULT_HOURS = DEFAULT_HOURS;

@@ -55,6 +55,8 @@ export const assignImsgThread = (phone, assigned_to, assigned_to_name) =>
   request('/imessage?action=assign', { method: 'POST', body: JSON.stringify({ phone, assigned_to, assigned_to_name }) });
 // Change a conversation's type: 'lead' | 'client' | 'contact'.
 export const setImsgKind  = (phone, kind) => request('/imessage?action=set-kind', { method: 'POST', body: JSON.stringify({ phone, kind }) });
+// CRM assistant (Claude with tools: availability, follow-ups, people, agenda).
+export const askAssistant = (prompt, conversation = []) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, conversation }) });
 // Google Places location search for the meeting scheduler (server-proxied key).
 export const searchPlaces = (q) => request(`/places?q=${encodeURIComponent(q)}`);
 export const getPlaceDetail = (placeId) => request(`/places?place_id=${encodeURIComponent(placeId)}`);

@@ -21,6 +21,7 @@ const PAGE_GROUPS = [
     { slug: 'clients',      name: 'Clients' },
     { slug: 'projects',     name: 'Projects' },
     { slug: 'appointments', name: 'Appointments' },
+    { slug: 'assistant',    name: 'Assistant' },
     { slug: 'tasks',        name: 'Tasks' },
     { slug: 'todos',        name: 'To-Do' },
     { slug: 'routines',     name: 'Routines' },
