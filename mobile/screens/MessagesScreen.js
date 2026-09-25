@@ -14,6 +14,15 @@ import { last10, firstName, fmtPhone, fmtTime, colorForEmployee } from '../lib/i
 // Team (internal direct messages and group chats). Same list, same unread
 // dot on the dock, separate worlds.
 const BUSINESS_NUMBER = '(714) 713-3409';
+// What a media-only text reads as in the list.
+const mediaLabel = (atts) => {
+  const types = (atts || []).map(a => a.type);
+  if (!types.length) return '';
+  if (types.every(t => t === 'image')) return types.length === 1 ? 'Photo' : `${types.length} photos`;
+  if (types.every(t => t === 'video')) return types.length === 1 ? 'Video' : `${types.length} videos`;
+  if (types.every(t => t === 'audio')) return 'Voice memo';
+  return 'Attachment';
+};
 
 export default function MessagesScreen({ navigation, route }) {
   const [mode, setMode] = useState(route.params?.mode === 'team' ? 'team' : 'clients');
@@ -101,7 +110,9 @@ export default function MessagesScreen({ navigation, route }) {
     setNewOpen(true); setPick([]); setGroupName('');
     if (!people.length) getChatPeople().then(r => setPeople(r?.people || [])).catch(() => {});
   };
-  const others = people.filter(p => p.id !== me?.id);
+  // Only teammates signed into the app: they are the ones who get the pushes.
+  const others = people.filter(p => p.id !== me?.id && p.on_app);
+  const notOnApp = people.filter(p => p.id !== me?.id && !p.on_app);
   const startChat = async () => {
     if (!pick.length) return;
     setStarting(true);
@@ -120,7 +131,7 @@ export default function MessagesScreen({ navigation, route }) {
           ? <IconButton icon="add" dark label="New team chat" onPress={openNew} />
           : <IconButton icon="create-outline" dark label="New message" onPress={() => navigation.navigate('NewMessage')} />} />
       <View style={{ paddingHorizontal: 18, gap: 12 }}>
-        <Segmented value={mode} onChange={setMode} options={[{ value: 'clients', label: unread ? `Clients · ${unread}` : 'Clients' }, { value: 'team', label: teamUnread ? `Team · ${teamUnread}` : 'Team' }]} />
+        <Segmented value={mode} onChange={setMode} options={[{ value: 'clients', label: 'Clients', badge: unread, badgeColor: C.ink }, { value: 'team', label: 'Team', badge: teamUnread, badgeColor: C.violet }]} />
         {mode === 'clients' ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {[['mine', 'Mine'], ['unassigned', 'Unassigned'], ['all', 'All']].map(([v, l]) => <Chip key={v} label={l} active={filter === v} onPress={() => setFilter(v)} />)}
@@ -191,7 +202,7 @@ export default function MessagesScreen({ navigation, route }) {
                       <Text style={T.meta}>{fmtTime(t.last?.created_at)}</Text>
                     </View>
                     <Text numberOfLines={1} style={[T.body, { fontSize: 14, color: isUnread ? C.ink : C.slate }]}>
-                      {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || ''}
+                      {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || mediaLabel(t.last?.attachments)}
                     </Text>
                   </View>
                 </View>
@@ -223,11 +234,12 @@ export default function MessagesScreen({ navigation, route }) {
         <Text style={T.sub}>Teammates only. Pick one for a direct message, or several for a group. To reach a customer, use their conversation under Clients.</Text>
         <View style={{ gap: 8 }}>
           <Label>Team</Label>
-          {people.length === 0 ? <ActivityIndicator color={C.ink} /> : others.length === 0 ? <Text style={T.sub}>No teammates with app access yet.</Text> : (
+          {people.length === 0 ? <ActivityIndicator color={C.ink} /> : others.length === 0 ? <Text style={T.sub}>No teammates on the app yet. Once they sign in on their phone they show up here.</Text> : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {others.map(p => <Chip key={p.id} label={firstName(p.name)} active={pick.includes(p.id)} onPress={() => setPick(s => s.includes(p.id) ? s.filter(x => x !== p.id) : [...s, p.id])} />)}
             </View>
           )}
+          {notOnApp.length > 0 ? <Text style={T.sub}>Not on the app yet: {notOnApp.map(p => firstName(p.name)).join(', ')}. They can join once they sign in on their phone.</Text> : null}
         </View>
         {pick.length > 1 ? (
           <View style={{ gap: 8 }}>

@@ -84,7 +84,16 @@ export const getAgreements = (clientId) => request(`/agreements?client_id=${clie
 // by the bridge on the Mac; replies are forwarded back.
 export const getImsgThreads   = () => request('/imessage');
 export const getImsgThread    = (phone) => request(`/imessage?phone=${encodeURIComponent(phone)}`);
-export const sendImsg         = (phone, body) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
+export const sendImsg         = (phone, body, attachments) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body, attachments: attachments || undefined }) });
+// Media: ask for a signed upload spot, PUT the bytes there, then send with { url, type, name, mime, size, width, height }.
+export const getImsgUploadUrl = (name) => request('/imessage?action=upload-url', { method: 'POST', body: JSON.stringify({ name }) });
+export async function uploadFile(localUri, name, mime) {
+  const { uploadUrl, publicUrl } = await getImsgUploadUrl(name);
+  const blob = await (await fetch(localUri)).blob();
+  const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime || blob.type || 'application/octet-stream' }, body: blob });
+  if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+  return { url: publicUrl, size: blob.size, mime: mime || blob.type || '' };
+}
 export const getImsgDirectory = () => request('/imessage?action=directory');
 export const markImsgRead     = (phone) => request('/imessage?action=read', { method: 'POST', body: JSON.stringify({ phone }) });
 export const getImsgNotes     = (phone) => request(`/imessage?action=notes&phone=${encodeURIComponent(phone)}`);

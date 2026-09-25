@@ -22,19 +22,21 @@ const uuidRe = /^[0-9a-f-]{36}$/i;
 // The team: admins, anyone with CRM access grants, and anyone on the roster.
 // Client portal logins live in the same auth table and are left out.
 async function listPeople() {
-  const [r, grants, roster] = await Promise.all([
+  const [r, grants, roster, tokens] = await Promise.all([
     fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }),
     supaFetch('crm_user_access?select=user_id').catch(() => []),
     supaFetch('crm_team_members?or=(status.is.null,status.eq.active)&select=user_id,email').catch(() => []),
+    supaFetch('crm_push_tokens?select=user_id').catch(() => []),
   ]);
   const j = await r.json().catch(() => ({}));
   const ids = new Set([...(grants || []).map(g => g.user_id), ...(roster || []).map(m => m.user_id)].filter(Boolean));
   const emails = new Set((roster || []).map(m => String(m.email || '').toLowerCase()).filter(Boolean));
+  const onApp = new Set((tokens || []).map(t => t.user_id).filter(Boolean));   // signed into the app, can get pushes
   const isAdmin = (u) => !!(u.user_metadata?.is_admin || u.app_metadata?.is_admin);
   return (Array.isArray(j?.users) ? j.users : [])
     .filter(u => u.email && (isAdmin(u) || ids.has(u.id) || emails.has(String(u.email).toLowerCase())))
-    .map(u => ({ id: u.id, name: nameOf(u), email: u.email, is_admin: isAdmin(u) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map(u => ({ id: u.id, name: nameOf(u), email: u.email, is_admin: isAdmin(u), on_app: onApp.has(u.id) }))
+    .sort((a, b) => Number(b.on_app) - Number(a.on_app) || a.name.localeCompare(b.name));
 }
 
 async function membership(roomId, userId) {

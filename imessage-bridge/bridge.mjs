@@ -5,28 +5,33 @@
 // piece of the CRM that can touch Messages.app, so it does two jobs on a loop:
 //
 //   1. Outbound: pull texts the CRM queued (POST /api/crm/imessage?action=pending),
-//      send each through Messages via AppleScript, and report sent/failed.
+//      send each through Messages via AppleScript (text, then any photos or
+//      videos), and report sent/failed.
 //   2. Inbound: watch ~/Library/Messages/chat.db for new incoming messages and
-//      forward the ones from known clients/leads to the CRM. Anything from a
-//      number the CRM does not know is personal and never leaves this Mac.
+//      forward the ones from known clients/leads to the CRM, photos and videos
+//      included (uploaded to the CRM's storage first). Anything from a number
+//      the CRM does not know is personal and never leaves this Mac.
 //
 // Requirements on this Mac: Messages signed in, Automation access to Messages
-// (prompted on first send), and Full Disk Access for the terminal running this
-// (needed to read chat.db). Keep the Mac awake and logged in.
+// (prompted on first send), and Full Disk Access for the node binary running
+// this (needed to read chat.db and the Attachments folder). Keep the Mac awake
+// and logged in.
 //
 // Config: imessage-bridge/config.json (gitignored) or env CRM_URL and
 // IMESSAGE_BRIDGE_TOKEN. See README.md.
 
 import { execFile } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, statSync, mkdirSync, unlinkSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { dirname, join, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = join(HERE, 'config.json');
 const STATE_PATH = join(HERE, 'state.json');
 const CHAT_DB = join(homedir(), 'Library', 'Messages', 'chat.db');
+const TMP = join(tmpdir(), 'vtm-imessage-bridge');
+const MAX_ATTACHMENT_BYTES = 40 * 1024 * 1024;   // bigger than this stays on the Mac
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a);
 
@@ -69,6 +74,13 @@ async function api(action, { method = 'POST', body } = {}) {
   return data;
 }
 
+const run = (cmd, args, opts = {}) => new Promise((resolve, reject) => {
+  execFile(cmd, args, { timeout: 60000, maxBuffer: 8 * 1024 * 1024, ...opts }, (err, stdout, stderr) => {
+    if (err) return reject(new Error(`${cmd} failed: ${(stderr || err.message).trim()}`));
+    resolve(stdout);
+  });
+});
+
 // ── Sending (mirrors the proven Scalesolo watchdog sender) ──────────────────
 // Normalize a US 10-digit number to +1XXXXXXXXXX. Leave +country and email
 // handles untouched.
@@ -98,6 +110,20 @@ const APPLESCRIPT = `on run {targetHandle, msg}
   end tell
 end run`;
 
+// Same routing for a file (photo, video, audio): Messages attaches it.
+const APPLESCRIPT_FILE = `on run {targetHandle, filePath}
+  set theFile to POSIX file filePath
+  tell application "Messages"
+    try
+      set svc to 1st account whose service type = iMessage
+      set toRecipient to participant targetHandle of svc
+      send theFile to toRecipient
+    on error
+      send theFile to participant targetHandle
+    end try
+  end tell
+end run`;
+
 function sendIMessage({ to, text }) {
   const handle = normalizeHandle(to);
   return new Promise((resolve, reject) => {
@@ -106,6 +132,57 @@ function sendIMessage({ to, text }) {
       resolve({ to: handle });
     });
   });
+}
+function sendIMessageFile({ to, path }) {
+  const handle = normalizeHandle(to);
+  return new Promise((resolve, reject) => {
+    execFile('osascript', ['-e', APPLESCRIPT_FILE, handle, path], { timeout: 60000 }, (err, stdout, stderr) => {
+      if (err) return reject(new Error(`osascript (file) failed: ${stderr || err.message}`));
+      resolve({ to: handle });
+    });
+  });
+}
+
+// ── Media helpers ───────────────────────────────────────────────────────────
+const MIME_BY_EXT = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif', mov: 'video/quicktime', mp4: 'video/mp4', m4v: 'video/x-m4v', m4a: 'audio/mp4', caf: 'audio/x-caf', mp3: 'audio/mpeg', pdf: 'application/pdf' };
+const mimeOf = (path, fallback) => fallback || MIME_BY_EXT[extname(path).slice(1).toLowerCase()] || 'application/octet-stream';
+const kindOf = (mime) => mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : mime.startsWith('audio/') ? 'audio' : 'file';
+const expandHome = (p) => (p && p.startsWith('~') ? join(homedir(), p.slice(1)) : p);
+const tmpPath = (name) => { mkdirSync(TMP, { recursive: true }); return join(TMP, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${basename(name)}`); };
+const cleanup = (p) => { try { if (p && p.startsWith(TMP)) unlinkSync(p); } catch {} };
+
+// Photos and videos on an inbound message: read them from Messages' store,
+// turn HEIC into JPEG so every screen can show it, upload each to the CRM's
+// storage through a signed URL, and hand back what the app needs to render.
+async function attachmentsFor(rowid) {
+  const rows = await sqliteJson(
+    `SELECT a.filename AS filename, a.mime_type AS mime, a.transfer_name AS name, a.total_bytes AS bytes
+       FROM message_attachment_join j JOIN attachment a ON a.ROWID = j.attachment_id
+      WHERE j.message_id = ${Number(rowid) || 0} ORDER BY a.ROWID ASC;`
+  );
+  const out = [];
+  for (const a of rows) {
+    let path = expandHome(a.filename);
+    if (!path || !existsSync(path)) { log(`attachment missing on disk, skipped: ${a.name || a.filename}`); continue; }
+    const size = statSync(path).size;
+    if (size > MAX_ATTACHMENT_BYTES) { log(`attachment too large (${Math.round(size / 1048576)} MB), skipped: ${a.name || basename(path)}`); continue; }
+    let mime = mimeOf(path, a.mime && a.mime !== 'application/octet-stream' ? a.mime : null);
+    let name = a.name || basename(path);
+    let converted = null;
+    if (/heic|heif/i.test(mime) || /\.hei[cf]$/i.test(path)) {
+      converted = tmpPath(name.replace(/\.hei[cf]$/i, '') + '.jpg');
+      await run('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', path, '--out', converted]);
+      path = converted; mime = 'image/jpeg'; name = name.replace(/\.hei[cf]$/i, '.jpg');
+    }
+    try {
+      const { uploadUrl, publicUrl } = await api('upload-url', { body: { name } });
+      const bytes = readFileSync(path);
+      const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: bytes });
+      if (!put.ok) throw new Error(`upload ${put.status}: ${(await put.text()).slice(0, 200)}`);
+      out.push({ url: publicUrl, type: kindOf(mime), name, mime, size: bytes.length });
+    } finally { cleanup(converted); }
+  }
+  return out;
 }
 
 // ── State (inbound high-water mark) ─────────────────────────────────────────
@@ -143,8 +220,10 @@ function decodeAttributedBody(hex) {
   if (len === 0x81) { if (i + 2 > buf.length) return ''; len = buf.readUInt16LE(i); i += 2; }
   else if (len === 0x82) { if (i + 4 > buf.length) return ''; len = buf.readUInt32LE(i); i += 4; }
   if (!len || i + len > buf.length) return '';
-  return buf.subarray(i, i + len).toString('utf8').replace(/\u0000/g, '').trim();
+  return buf.subarray(i, i + len).toString('utf8').replace(/ /g, '').trim();
 }
+// Messages puts an object-replacement character where an attachment sits.
+const stripPlaceholders = (s) => String(s || '').replace(/￼/g, '').trim();
 
 // Only forward inbound from numbers the CRM knows (clients + leads).
 let allowed = new Set();
@@ -165,13 +244,28 @@ async function pumpOutbound() {
   try {
     const { messages } = await api('pending');
     for (const m of messages || []) {
+      const files = [];
       try {
-        await sendIMessage({ to: m.phone, text: m.body });
+        const text = String(m.body || '').trim();
+        if (text) await sendIMessage({ to: m.phone, text });
+        // Then the media: download each to a temp file and let Messages attach it.
+        for (const a of (Array.isArray(m.attachments) ? m.attachments : [])) {
+          if (!a?.url) continue;
+          const res = await fetch(a.url);
+          if (!res.ok) throw new Error(`media download ${res.status}`);
+          const p = tmpPath(a.name || `file${extname(new URL(a.url).pathname) || ''}`);
+          writeFileSync(p, Buffer.from(await res.arrayBuffer()));
+          files.push(p);
+          await sendIMessageFile({ to: m.phone, path: p });
+        }
         await api('mark', { body: { id: m.id, status: 'sent' } });
-        log(`sent -> ${m.phone}`);
+        log(`sent -> ${m.phone}${files.length ? ` (+${files.length} file${files.length === 1 ? '' : 's'})` : ''}`);
       } catch (e) {
         await api('mark', { body: { id: m.id, status: 'failed', error: e.message } }).catch(() => {});
         log(`FAILED -> ${m.phone}: ${e.message}`);
+      } finally {
+        // Messages reads the file during send; give it a moment before deleting.
+        setTimeout(() => files.forEach(cleanup), 60000);
       }
     }
   } catch (e) {
@@ -203,6 +297,7 @@ async function pumpInbound() {
     // very old installs); convert either to unix seconds.
     const rows = await sqliteJson(
       `SELECT m.ROWID AS rowid, m.guid AS guid, m.text AS text, hex(m.attributedBody) AS abhex, h.id AS handle,
+              m.cache_has_attachments AS has_att,
               (CASE WHEN m.date > 1000000000000 THEN m.date / 1000000000 ELSE m.date END) + 978307200 AS ts
          FROM message m JOIN handle h ON m.handle_id = h.ROWID
         WHERE m.is_from_me = 0 AND m.ROWID > ${Number(state.lastRowid) || 0}
@@ -213,11 +308,16 @@ async function pumpInbound() {
       state.lastRowid = r.rowid;
       const from = r.handle;
       if (!allowed.has(last10(from))) continue; // personal: stays on this Mac
-      const body = (r.text && r.text.trim()) || decodeAttributedBody(r.abhex);
-      if (!body) { log(`inbound from ${from} had no readable text, skipped`); continue; }
+      const body = stripPlaceholders((r.text && r.text.trim()) || decodeAttributedBody(r.abhex));
+      let attachments = [];
+      if (r.has_att) {
+        try { attachments = await attachmentsFor(r.rowid); }
+        catch (e) { log(`attachment upload failed (${from}): ${e.message}`); }
+      }
+      if (!body && !attachments.length) { log(`inbound from ${from} had no readable text or media, skipped`); continue; }
       try {
-        await api('inbound', { body: { from, body, guid: r.guid, ts: r.ts ? Math.round(r.ts * 1000) : Date.now() } });
-        log(`inbound <- ${from}`);
+        await api('inbound', { body: { from, body, guid: r.guid, ts: r.ts ? Math.round(r.ts * 1000) : Date.now(), attachments } });
+        log(`inbound <- ${from}${attachments.length ? ` (+${attachments.length} media)` : ''}`);
       } catch (e) {
         log(`inbound post failed (${from}): ${e.message}`);
       }

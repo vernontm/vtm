@@ -144,16 +144,24 @@ export function Chip({ label, active, onPress, icon, color, style }) {
   );
 }
 
-// Segmented control inside a tile track (Mine / Unassigned / All).
+// Segmented control inside a tile track (Mine / Unassigned / All). An option
+// may carry `badge` (a count) and `badgeColor`; the count sits in a small
+// colored circle next to the label.
 export function Segmented({ options, value, onChange, style }) {
   return (
     <View style={[{ flexDirection: 'row', gap: 4, padding: 4, borderRadius: 18, backgroundColor: C.tile }, style]}>
       {options.map(o => {
         const on = o.value === value;
+        const badge = Number(o.badge) || 0;
         return (
           <TouchableOpacity key={o.value} onPress={() => onChange(o.value)} activeOpacity={0.8}
-            style={{ flex: 1, height: 38, borderRadius: 14, backgroundColor: on ? '#FFFFFF' : 'transparent', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: on ? 0.08 : 0, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: on ? 1 : 0 }}>
+            style={{ flex: 1, height: 38, borderRadius: 14, backgroundColor: on ? '#FFFFFF' : 'transparent', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, shadowColor: '#000', shadowOpacity: on ? 0.08 : 0, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: on ? 1 : 0 }}>
             <Text style={{ fontFamily: F.bold, fontSize: 14, color: on ? C.ink : C.slate }}>{o.label}</Text>
+            {badge > 0 ? (
+              <View style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, backgroundColor: o.badgeColor || C.ink, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontFamily: F.bold, fontSize: 11, color: '#FFFFFF' }}>{badge > 99 ? '99+' : badge}</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         );
       })}

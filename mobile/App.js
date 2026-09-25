@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
 import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { supabase } from './lib/supabase';
-import { registerForPush } from './lib/push';
+import { registerForPush, nudgeIfPushDenied } from './lib/push';
 import { navigationRef, goToConversation, goToTeamChat } from './lib/nav';
 import TeamChatScreen from './screens/TeamChatScreen';
 import { C } from './lib/theme';
@@ -108,8 +108,20 @@ export default function App() {
   }, []);
 
   // Register this device for pushes whenever a session exists (no-op in the
-  // web demo / Expo Go; real builds get the permission prompt + token).
-  useEffect(() => { if (session) registerForPush(); }, [session?.user?.id]);
+  // web demo / Expo Go; real builds get the permission prompt + token). If
+  // pushes were declined earlier, remind now and then (Settings has the switch).
+  useEffect(() => {
+    if (!session) return;
+    registerForPush().then(r => { if (!r.ok && r.reason === 'denied') nudgeIfPushDenied(); });
+  }, [session?.user?.id]);
+
+  // Coming back from iOS Settings with notifications newly switched on:
+  // register the token right away, without another prompt.
+  useEffect(() => {
+    if (!session) return;
+    const sub = AppState.addEventListener('change', st => { if (st === 'active') registerForPush({ ask: false }); });
+    return () => sub.remove();
+  }, [session?.user?.id]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setBooting(false); });

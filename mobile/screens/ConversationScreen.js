@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Linking, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Sheet, { SheetRow } from '../components/Sheet';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
   getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability, askAssistant,
-  getClients, getAgreements, getTeamTodos, getUpcomingMeetings, proposeActions, createMeeting, updateClient, getSettings,
+  getClients, getAgreements, getTeamTodos, getUpcomingMeetings, proposeActions, createMeeting, updateClient, getSettings, uploadFile,
 } from '../lib/api';
 import { parseAutomations, fillTemplate } from '../lib/templates';
+import { openAppSettings } from '../lib/push';
 import { C, T, F } from '../lib/theme';
 import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, Button, TEMP, KIND_COLOR } from '../components/ui';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, colorForEmployee } from '../lib/imsg';
@@ -30,6 +32,8 @@ export default function ConversationScreen({ route, navigation }) {
   const [assignees, setAssignees] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [pendingMedia, setPendingMedia] = useState(null);   // a picked photo or video, not sent yet
+  const [viewer, setViewer] = useState(null);               // full-screen image url
   const [suggestSlots, setSuggestSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [assignOpen, setAssignOpen] = useState(false);
@@ -119,13 +123,49 @@ export default function ConversationScreen({ route, navigation }) {
     setInput(prev => { const b = (prev || '').trim(); return b ? `${b} Or ${s.label}?` : `Would ${s.label} work for you?`; });
   };
 
+  // Photos and videos: pick from the library, upload straight to storage, then
+  // the message goes out with the media attached (the bridge sends the file).
+  const pickMedia = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        // iOS asks for photo access once; after that the switch lives in Settings.
+        return Alert.alert('Photos access is off', 'Open Settings, tap Photos, and allow access so you can send photos and videos.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: openAppSettings },
+        ]);
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.85, allowsMultipleSelection: false });
+      if (res.canceled || !res.assets?.length) return;
+      const a = res.assets[0];
+      if (a.fileSize && a.fileSize > 40 * 1024 * 1024) return Alert.alert('Too big', 'Keep photos and videos under 40 MB.');
+      setPendingMedia(a);
+    } catch (e) { Alert.alert('Could not open your photos', e.message); }
+  };
   const send = async () => {
     const body = input.trim();
-    if (!body) return;
+    if (!body && !pendingMedia) return;
     setSending(true);
-    try { await sendImsg(phone, body); setInput(''); await loadMsgs(); }
+    try {
+      let attachments;
+      if (pendingMedia) {
+        const a = pendingMedia;
+        const isVideo = a.type === 'video' || /^video\//.test(a.mimeType || '');
+        const name = a.fileName || `${isVideo ? 'video' : 'photo'}-${Date.now()}.${isVideo ? 'mov' : 'jpg'}`;
+        const up = await uploadFile(a.uri, name, a.mimeType || (isVideo ? 'video/quicktime' : 'image/jpeg'));
+        attachments = [{ url: up.url, type: isVideo ? 'video' : 'image', name, mime: up.mime, size: up.size, width: a.width || null, height: a.height || null }];
+      }
+      await sendImsg(phone, body, attachments);
+      setInput(''); setPendingMedia(null);
+      await loadMsgs();
+    }
     catch (e) { Alert.alert('Could not send', e.message); }
     finally { setSending(false); }
+  };
+  const mediaBox = (w, h, max = 220) => {
+    if (!w || !h) return { width: max, height: max * 0.75 };
+    const r = Math.min(max / w, max / h, 1);
+    return { width: Math.max(120, Math.round(w * r)), height: Math.max(90, Math.round(h * r)) };
   };
 
   const setTemp = async (key) => {
@@ -395,11 +435,30 @@ export default function ConversationScreen({ route, navigation }) {
               const m = it.m;
               const out = m.direction === 'out';
               const failed = out && m.status === 'failed';
+              const atts = Array.isArray(m.attachments) ? m.attachments : [];
               return (
                 <View key={it.key} style={{ alignSelf: out ? 'flex-end' : 'flex-start', maxWidth: '82%', gap: 3 }}>
-                  <View style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 22, borderBottomRightRadius: out ? 6 : 22, borderBottomLeftRadius: out ? 22 : 6, backgroundColor: out ? (failed ? C.red : C.ink) : C.tile }}>
-                    <Text style={[T.message, { color: out ? '#FFFFFF' : C.ink }]}>{m.body}</Text>
-                  </View>
+                  {atts.map((a, ai) => (
+                    a.type === 'image' ? (
+                      <TouchableOpacity key={ai} onPress={() => setViewer(a.url)} activeOpacity={0.9} accessibilityLabel="Open photo"
+                        style={{ alignSelf: out ? 'flex-end' : 'flex-start', borderRadius: 20, overflow: 'hidden', backgroundColor: C.tile }}>
+                        <Image source={{ uri: a.url }} style={mediaBox(a.width, a.height)} resizeMode="cover" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity key={ai} onPress={() => Linking.openURL(a.url)} activeOpacity={0.85} accessibilityLabel={a.type === 'video' ? 'Play video' : 'Open file'}
+                        style={{ alignSelf: out ? 'flex-end' : 'flex-start', width: 220, height: a.type === 'video' ? 140 : 56, borderRadius: 20, backgroundColor: out ? C.ink : C.tile, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10 }}>
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: out ? 'rgba(255,255,255,0.18)' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name={a.type === 'video' ? 'play' : a.type === 'audio' ? 'mic' : 'document-outline'} size={20} color={out ? '#FFFFFF' : C.ink} />
+                        </View>
+                        <Text style={[T.meta, { color: out ? '#FFFFFF' : C.ink }]}>{a.type === 'video' ? 'Video' : a.type === 'audio' ? 'Voice memo' : (a.name || 'File')}</Text>
+                      </TouchableOpacity>
+                    )
+                  ))}
+                  {m.body ? (
+                    <View style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 22, borderBottomRightRadius: out ? 6 : 22, borderBottomLeftRadius: out ? 22 : 6, backgroundColor: out ? (failed ? C.red : C.ink) : C.tile }}>
+                      <Text style={[T.message, { color: out ? '#FFFFFF' : C.ink }]}>{m.body}</Text>
+                    </View>
+                  ) : null}
                   <Text style={[T.meta, { fontSize: 11, color: failed ? C.red : C.slate, textAlign: out ? 'right' : 'left' }]}>
                     {fmtDateTime(m.created_at)}{out && m.status ? ` · ${m.status}` : ''}
                   </Text>
@@ -418,18 +477,43 @@ export default function ConversationScreen({ route, navigation }) {
               {suggestSlots.map(s => <GradientChip key={s.start} label={s.label} onPress={() => proposeTime(s)} />)}
             </ScrollView>
           )}
+          {pendingMedia ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 14, overflow: 'hidden', backgroundColor: C.tile, alignItems: 'center', justifyContent: 'center' }}>
+                {pendingMedia.type === 'video' ? <Ionicons name="videocam" size={22} color={C.ink} /> : <Image source={{ uri: pendingMedia.uri }} style={{ width: 64, height: 64 }} resizeMode="cover" />}
+              </View>
+              <Text style={[T.sub, { flex: 1 }]}>{pendingMedia.type === 'video' ? 'Video' : 'Photo'} ready to send{sending ? ', uploading' : ''}.</Text>
+              <IconButton icon="close" size={36} label="Remove attachment" onPress={() => setPendingMedia(null)} />
+            </View>
+          ) : null}
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 50, borderRadius: 25, backgroundColor: C.tile, paddingLeft: 8, paddingRight: 14, paddingVertical: 8 }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 50, borderRadius: 25, backgroundColor: C.tile, paddingLeft: 8, paddingRight: 6, paddingVertical: 8 }}>
               <Orb size={34} icon="sparkles" label="Draft with the assistant" onPress={openDrafts} style={{ shadowOpacity: 0 }} />
               <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 16, color: C.ink, paddingHorizontal: 10, paddingVertical: 6, maxHeight: 120 }}
                 placeholder="Message" placeholderTextColor={C.slate} value={input} onChangeText={setInput} multiline />
+              <TouchableOpacity onPress={pickMedia} accessibilityLabel="Attach a photo or video" style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="image-outline" size={22} color={pendingMedia ? C.ink : C.slate} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={send} disabled={sending || !input.trim()} accessibilityLabel="Send"
-              style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', opacity: (sending || !input.trim()) ? 0.5 : 1 }}>
-              <Ionicons name="arrow-up" size={22} color="#FFFFFF" />
+            <TouchableOpacity onPress={send} disabled={sending || (!input.trim() && !pendingMedia)} accessibilityLabel="Send"
+              style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', opacity: (sending || (!input.trim() && !pendingMedia)) ? 0.5 : 1 }}>
+              {sending ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Ionicons name="arrow-up" size={22} color="#FFFFFF" />}
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Full-screen photo */}
+        <Modal visible={!!viewer} animationType="fade" transparent onRequestClose={() => setViewer(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.96)', justifyContent: 'center' }}>
+            {viewer ? <Image source={{ uri: viewer }} style={{ width: '100%', height: '80%' }} resizeMode="contain" /> : null}
+            <TouchableOpacity onPress={() => setViewer(null)} accessibilityLabel="Close photo" style={{ position: 'absolute', top: insets.top + 12, right: 18, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => viewer && Linking.openURL(viewer)} accessibilityLabel="Open in browser" style={{ position: 'absolute', bottom: insets.bottom + 24, alignSelf: 'center', height: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={[T.meta, { color: '#FFFFFF' }]}>Open full size</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
 
         {/* Drafting sheet */}
         <Sheet visible={draftOpen} title="Draft with the assistant" onClose={() => setDraftOpen(false)}>

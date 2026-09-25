@@ -17,7 +17,17 @@ const { pushUser, pushAdmins } = require('../_lib/push.js');
 // X-Bridge-Token, which must equal IMESSAGE_BRIDGE_TOKEN in the environment.
 const BRIDGE_TOKEN = process.env.IMESSAGE_BRIDGE_TOKEN;
 const CHANNEL = 'imessage';
-const BRIDGE_ACTIONS = new Set(['contacts', 'pending', 'mark', 'inbound']);
+const BRIDGE_ACTIONS = new Set(['contacts', 'pending', 'mark', 'inbound', 'upload-url']);
+const { signedUpload, cleanAttachments } = require('../_lib/storage.js');
+// What a text with only media reads as in previews and pushes.
+const mediaLabel = (atts) => {
+  const types = (atts || []).map(a => a.type);
+  if (!types.length) return '';
+  if (types.every(t => t === 'image')) return types.length === 1 ? 'Photo' : `${types.length} photos`;
+  if (types.every(t => t === 'video')) return types.length === 1 ? 'Video' : `${types.length} videos`;
+  if (types.every(t => t === 'audio')) return 'Voice memo';
+  return 'Attachment';
+};
 
 const last10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
 
@@ -35,7 +45,7 @@ function normalizePhone(raw) {
 // PostgREST error into something a person can act on.
 function needsMigration(e) {
   const m = String((e && e.message) || '');
-  return /(channel|imsg_guid|crm_imessage_threads|crm_imessage_notes|crm_imessage_events|crm_imessage_reads)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
+  return /(channel|imsg_guid|attachments|crm_imessage_threads|crm_imessage_notes|crm_imessage_events|crm_imessage_reads)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
 }
 const MIGRATION_MSG = 'The iMessage inbox needs its one-time database update. Run the SQL from imessage-bridge/README.md.';
 
@@ -155,13 +165,20 @@ module.exports = async function handler(req, res) {
         return res.json(first(upd) || { ok: true });
       }
 
+      // The bridge asks where to put a photo or video it read from Messages.
+      if (action === 'upload-url' && req.method === 'POST') {
+        const { name } = req.body || {};
+        return res.json(await signedUpload('imessage/in', name));
+      }
+
       // Bridge forwards a reply it read from Messages.
       if (action === 'inbound' && req.method === 'POST') {
         const { from, body, guid, ts } = req.body || {};
         const phone = normalizePhone(from);
         if (!phone) return res.status(400).json({ error: 'from required' });
+        const attachments = cleanAttachments((req.body || {}).attachments);
         const text = String(body || '').trim().slice(0, 2000);
-        if (!text) return res.status(400).json({ error: 'body required' });
+        if (!text && !attachments.length) return res.status(400).json({ error: 'body required' });
 
         // Idempotent on the Messages guid so a bridge restart never double-posts.
         if (guid) {
@@ -182,13 +199,14 @@ module.exports = async function handler(req, res) {
           imsg_guid: guid ? String(guid).slice(0, 120) : null,
           created_at: (isNaN(when) ? new Date() : when).toISOString(),
         };
+        if (attachments.length) row.attachments = attachments;
         const saved = await supaFetch('crm_sms_messages', {
           method: 'POST',
           headers: { Prefer: 'return=representation' },
           body: JSON.stringify(row),
         });
         // Alert the conversation's assignee (or admins if unassigned).
-        await notifyInbound(phone, text);
+        await notifyInbound(phone, text || mediaLabel(attachments));
         return res.status(201).json(first(saved) || row);
       }
 
@@ -299,11 +317,18 @@ module.exports = async function handler(req, res) {
     // Queue an outbound iMessage. The Mac bridge picks it up within seconds.
     // No campaign prefix or opt-out line: this is a personal 1:1 conversation
     // from the business number, not A2P traffic.
+    // Where the app puts a photo or video before sending it.
+    if (req.method === 'POST' && action === 'upload-url') {
+      const { name } = req.body || {};
+      return res.json(await signedUpload('imessage/out', name));
+    }
+
     if (req.method === 'POST' && action === 'send') {
       const to = normalizePhone((req.body || {}).phone);
       const body = String((req.body || {}).body || '').trim().slice(0, 2000);
+      const attachments = cleanAttachments((req.body || {}).attachments);
       if (!to) return res.status(400).json({ error: 'Valid phone required.' });
-      if (!body) return res.status(400).json({ error: 'Message body required.' });
+      if (!body && !attachments.length) return res.status(400).json({ error: 'Message body required.' });
 
       // Thread to a lead/client by phone; unknown numbers simply have no link.
       const row = {
@@ -314,6 +339,7 @@ module.exports = async function handler(req, res) {
         body,
         status: 'queued',
       };
+      if (attachments.length) row.attachments = attachments;
       const saved = await supaFetch('crm_sms_messages', {
         method: 'POST',
         headers: { Prefer: 'return=representation' },

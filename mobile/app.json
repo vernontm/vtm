@@ -10,7 +10,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.vernontm.crm",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Lets you send photos and videos from your library to customers and teammates."
       }
     },
     "android": {
@@ -28,7 +29,13 @@
     "plugins": [
       "@react-native-community/datetimepicker",
       "expo-notifications",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Lets you send photos and videos from your library to customers and teammates."
+        }
+      ]
     ],
     "extra": {
       "eas": {
