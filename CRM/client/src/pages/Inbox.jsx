@@ -313,14 +313,12 @@ export default function Inbox() {
                 style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: last10(active) === last10(t.phone) ? 'var(--surface-2)' : 'transparent' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    {unread && <span style={{ minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: 'var(--orange)', color: '#fff', fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{t.unread}</span>}
                     <TempDot temp={displayTemp(t.phone)} />
                     <span style={{ fontSize: 13.5, fontWeight: unread ? 800 : 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(t.phone)}</span>
                     <KindBadge kind={displayKind(t.phone)} />
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {unread && <span style={{ minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: 'var(--orange)', color: '#fff', fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{t.unread}</span>}
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtTime(t.last?.created_at)}</span>
-                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{fmtTime(t.last?.created_at)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
                   <div style={{ flex: 1, fontSize: 12.5, color: unread ? 'var(--text)' : 'var(--muted)', fontWeight: unread ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
