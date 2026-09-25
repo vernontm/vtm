@@ -9,6 +9,7 @@ import { useFonts, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold }
 import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { supabase } from './lib/supabase';
 import { registerForPush, nudgeIfPushDenied } from './lib/push';
+import { trackScreen, flushTrack } from './lib/track';
 import { navigationRef, goToConversation, goToTeamChat } from './lib/nav';
 import TeamChatScreen from './screens/TeamChatScreen';
 import { C } from './lib/theme';
@@ -119,7 +120,10 @@ export default function App() {
   // register the token right away, without another prompt.
   useEffect(() => {
     if (!session) return;
-    const sub = AppState.addEventListener('change', st => { if (st === 'active') registerForPush({ ask: false }); });
+    const sub = AppState.addEventListener('change', st => {
+      if (st === 'active') registerForPush({ ask: false });
+      else flushTrack(); // going to the background: send what was logged
+    });
     return () => sub.remove();
   }, [session?.user?.id]);
 
@@ -140,7 +144,8 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer theme={navTheme} ref={navigationRef}
-        onReady={() => { if (pendingConvo.current) { goToConversation(pendingConvo.current); pendingConvo.current = null; } }}>
+        onReady={() => { trackScreen(navigationRef.getCurrentRoute()?.name); if (pendingConvo.current) { goToConversation(pendingConvo.current); pendingConvo.current = null; } }}
+        onStateChange={() => trackScreen(navigationRef.getCurrentRoute()?.name)}>
         <StatusBar style="dark" />
         {!session ? (
           <LoginScreen />

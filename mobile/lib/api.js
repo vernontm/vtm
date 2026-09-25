@@ -1,8 +1,12 @@
 // Thin API client for the VTM CRM backend. Same endpoints the web CRM uses,
 // authenticated with the Supabase session token.
 import { supabase } from './supabase';
+import { trackAction } from './track';
 
 const BASE = 'https://www.vernontm.com/api/crm';
+
+// Logs a named action once the call succeeds (usage tracking; names only).
+const logged = (name, fn) => async (...args) => { const r = await fn(...args); trackAction(name); return r; };
 
 async function request(path, options = {}) {
   const { data: { session } } = await supabase.auth.getSession();
@@ -25,7 +29,7 @@ async function request(path, options = {}) {
 // ── Meetings / calendar ──
 export const getUpcomingMeetings = () => request('/meetings?action=upcoming');
 export const getPastMeetings = () => request('/meetings?action=past');
-export const createMeeting = (data) => request('/meetings?action=create', { method: 'POST', body: JSON.stringify(data) });
+export const createMeeting = logged('meeting_created', (data) => request('/meetings?action=create', { method: 'POST', body: JSON.stringify(data) }));
 // Edit / delete an existing event (syncs to Google Calendar server-side).
 export const updateMeeting = (id, data) => request(`/meetings?id=${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteMeeting = (id) => request(`/meetings?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -40,30 +44,30 @@ export const bulkUpdateSettings = (settings) => request('/settings?action=bulk',
 // ── Time clock ──
 export const getTimeEntries = (userId) => request(`/time-entries${userId ? `?user_id=${userId}` : ''}`);
 export const payTimeRange = (data) => request('/time-entries?action=pay-range', { method: 'POST', body: JSON.stringify(data) });
-export const clockIn = () => request('/time-entries?action=clock-in', { method: 'POST', body: '{}' });
-export const clockOut = () => request('/time-entries?action=clock-out', { method: 'POST', body: '{}' });
+export const clockIn = logged('clock_in', () => request('/time-entries?action=clock-in', { method: 'POST', body: '{}' }));
+export const clockOut = logged('clock_out', () => request('/time-entries?action=clock-out', { method: 'POST', body: '{}' }));
 export const addTimeEntry = (data) => request('/time-entries?action=add', { method: 'POST', body: JSON.stringify(data) });
 
 // ── Clients + invoicing pipeline ──
 export const getClients = () => request('/clients');
 export const updateClient = (id, data) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const createClient = (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) });
+export const createClient = logged('lead_created', (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) }));
 
 // ── Tasks: recurring checklists (routines) + the shared to-do list ──
 // Routines: { routines: [{ id, title, cadence, items:[{id,text}], position }], checks: [{ item_id, period_key, done_by_name, done_at }] }
 export const getRoutines = () => request('/routines');
-export const checkRoutineItem = (routine_id, item_id, period_key, done) => request('/routines?action=check', { method: 'POST', body: JSON.stringify({ routine_id, item_id, period_key, done }) });
+export const checkRoutineItem = logged('routine_checked', (routine_id, item_id, period_key, done) => request('/routines?action=check', { method: 'POST', body: JSON.stringify({ routine_id, item_id, period_key, done }) }));
 export const createRoutine = (data) => request('/routines', { method: 'POST', body: JSON.stringify(data) });
 export const updateRoutine = (id, data) => request(`/routines?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 // Team to-dos: [{ id, title, urgent, done, created_by, created_by_name, assigned_to, assigned_to_name, done_at, link_* }]
 export const getTeamTodos = () => request('/team-todos');
 export const getTeamMembers = () => request('/team-todos?members=1');
-export const addTeamTodo = (data) => request('/team-todos', { method: 'POST', body: JSON.stringify(data) });
+export const addTeamTodo = logged('task_created', (data) => request('/team-todos', { method: 'POST', body: JSON.stringify(data) }));
 export const updateTeamTodo = (id, data) => request(`/team-todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteTeamTodo = (id) => request(`/team-todos?id=${id}`, { method: 'DELETE' });
 // Reminders: { reminders: [{ id, title, remind_at, for_user, for_user_name, created_by, created_by_name, task_type, task_id, source, status, done_at }], needs_migration? }
 export const getReminders = () => request('/reminders');
-export const addReminder = (data) => request('/reminders', { method: 'POST', body: JSON.stringify(data) });
+export const addReminder = logged('reminder_created', (data) => request('/reminders', { method: 'POST', body: JSON.stringify(data) }));
 export const updateReminder = (id, data) => request(`/reminders?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteReminder = (id) => request(`/reminders?id=${id}`, { method: 'DELETE' });
 // Scheduled follow-up texts (thank-you the morning after an in-person meetup):
@@ -84,7 +88,7 @@ export const getAgreements = (clientId) => request(`/agreements?client_id=${clie
 // by the bridge on the Mac; replies are forwarded back.
 export const getImsgThreads   = () => request('/imessage');
 export const getImsgThread    = (phone) => request(`/imessage?phone=${encodeURIComponent(phone)}`);
-export const sendImsg         = (phone, body, attachments) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body, attachments: attachments || undefined }) });
+export const sendImsg         = logged('text_sent', (phone, body, attachments) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body, attachments: attachments || undefined }) }));
 // Media: ask for a signed upload spot, PUT the bytes there, then send with { url, type, name, mime, size, width, height }.
 export const getImsgUploadUrl = (name) => request('/imessage?action=upload-url', { method: 'POST', body: JSON.stringify({ name }) });
 export async function uploadFile(localUri, name, mime) {
@@ -115,17 +119,17 @@ export const getPlaceDetail = (placeId) => request(`/places?place_id=${encodeURI
 export const getChatRooms    = () => request('/chat?action=rooms');
 export const getChatPeople   = () => request('/chat?action=people');
 export const getChatMessages = (room, after) => request(`/chat?action=messages&room=${encodeURIComponent(room)}${after ? `&after=${encodeURIComponent(after)}` : ''}`);
-export const createChat      = (data) => request('/chat?action=create', { method: 'POST', body: JSON.stringify(data) });
-export const sendChat        = (room, body) => request('/chat?action=send', { method: 'POST', body: JSON.stringify({ room, body }) });
+export const createChat      = logged('chat_created', (data) => request('/chat?action=create', { method: 'POST', body: JSON.stringify(data) }));
+export const sendChat        = logged('chat_sent', (room, body) => request('/chat?action=send', { method: 'POST', body: JSON.stringify({ room, body }) }));
 export const renameChat      = (room, name) => request('/chat?action=rename', { method: 'POST', body: JSON.stringify({ room, name }) });
 export const changeChatMembers = (room, add, remove) => request('/chat?action=members', { method: 'POST', body: JSON.stringify({ room, add, remove }) });
 export const markChatRead    = (room) => request('/chat?action=read', { method: 'POST', body: JSON.stringify({ room }) });
 export const leaveChat       = (room) => request('/chat?action=leave', { method: 'POST', body: JSON.stringify({ room }) });
 
 // CRM assistant (Claude with tools) + availability finder.
-export const askAssistant = (prompt, conversation = []) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, conversation }) });
+export const askAssistant = logged('assistant_asked', (prompt, conversation = []) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, conversation }) }));
 // Actions mode: { actions: [{ type:'create_meeting', title, start, end, when, duration_minutes, kind, location, summary, message, confidence, reason }] }
-export const proposeActions = (prompt) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, mode: 'actions' }) });
+export const proposeActions = logged('smart_actions_checked', (prompt) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, mode: 'actions' }) }));
 export const getAvailability = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return request(`/availability${qs ? '?' + qs : ''}`);
