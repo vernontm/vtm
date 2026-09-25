@@ -71,8 +71,10 @@ export default function MessagesScreen({ navigation, route }) {
   // My roster id (threads are assigned to roster ids, not auth ids).
   const myRosterId = useMemo(() => assignees.find(a => a.user_id === me?.id || (a.email && me?.email && a.email.toLowerCase() === me.email.toLowerCase()))?.id || null, [assignees, me]);
 
-  const load = useCallback(async (quiet) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
+  // how: undefined = first load (full spinner), 'pull' = pull-to-refresh
+  // spinner, 'silent' = background refresh with no spinner at all.
+  const load = useCallback(async (how) => {
+    if (!how) setLoading(true); else if (how === 'pull') setRefreshing(true);
     try {
       const [th, dir, ch] = await Promise.all([getImsgThreads().catch(() => []), getImsgDirectory().catch(() => []), getChatRooms().catch(() => null)]);
       setThreads(th || []);
@@ -83,7 +85,14 @@ export default function MessagesScreen({ navigation, route }) {
       setInboxUnread(unreadOf(th) + rs.filter(r => (r.unread || 0) > 0).length);
     } finally { setLoading(false); setRefreshing(false); }
   }, []);
-  useFocusEffect(useCallback(() => { load(true); }, [load]));
+  useFocusEffect(useCallback(() => { load('pull'); }, [load]));
+  // New texts and unread counts show up on their own while the list is on
+  // screen: a quiet reload every 10 seconds, no spinner. The conversation
+  // screen already polls every 6 seconds.
+  useEffect(() => {
+    const t = setInterval(() => { if (navigation.isFocused()) load('silent').catch(() => {}); }, 10000);
+    return () => clearInterval(t);
+  }, [navigation, load]);
 
   const list = useMemo(() => {
     let arr = (threads || []).slice().sort((a, b) => new Date(b.last?.created_at || 0) - new Date(a.last?.created_at || 0));
@@ -156,7 +165,7 @@ export default function MessagesScreen({ navigation, route }) {
           data={roomList}
           keyExtractor={r => r.id}
           contentContainerStyle={{ padding: 18, paddingBottom: DOCK_SPACE, gap: 10 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.ink} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} tintColor={C.ink} />}
           ListEmptyComponent={chatNeedsMigration
             ? <Empty icon="people-outline" title="Team chat is almost ready" sub="One database file still needs to run (docs/sql/team-chat.sql)." />
             : <Empty icon="people-outline" title="No team chats yet" sub="Tap the plus to message a teammate or start a group." />}
@@ -192,7 +201,7 @@ export default function MessagesScreen({ navigation, route }) {
           data={list}
           keyExtractor={t => t.phone}
           contentContainerStyle={{ padding: 18, paddingBottom: DOCK_SPACE, gap: 10 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.ink} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} tintColor={C.ink} />}
           ListEmptyComponent={<Empty icon="chatbubbles-outline" title={filter === 'mine' ? 'Nothing assigned to you' : 'No conversations yet'} sub={filter === 'all' ? 'Texts to the business number land here.' : null} />}
           renderItem={({ item: t }) => {
             const p = personOf(t.phone);
