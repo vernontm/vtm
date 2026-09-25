@@ -98,8 +98,11 @@ async function notifyInbound(phone, text) {
     } catch (_) {}
 
     const payload = { title: name || fmtUS(phone), body: String(text || '').slice(0, 180), data: { type: 'imessage', phone } };
-    if (assigneeUserId) await pushUser(assigneeUserId, payload);
-    else await pushAdmins(payload);
+    let sent = 0;
+    if (assigneeUserId) sent = await pushUser(assigneeUserId, payload);
+    // No device for the assignee (not on the app yet, or a roster row that is
+    // not linked to a login): admins get it instead, so a text is never silent.
+    if (!sent) await pushAdmins(payload);
   } catch (_) { /* never break inbound on a push failure */ }
 }
 

@@ -22,8 +22,11 @@ function notifications() {
     if (!Device.isDevice) return null;
     if (!mod) {
       mod = require('expo-notifications');
+      // Show pushes while the app is open too (banner at the top, and in the
+      // notification list). SDK 57 wants these two flags; the old
+      // shouldShowAlert is deprecated.
       mod.setNotificationHandler({
-        handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: false }),
+        handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
       });
     }
     return mod;

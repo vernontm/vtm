@@ -11,20 +11,44 @@ const PUSH_EVENTS = {
   paid: 'Payment received',
 };
 
+// Optional: set EXPO_ACCESS_TOKEN in Vercel if push security is ever turned
+// on for the Expo project. Without it Expo still accepts sends today.
+const EXPO_TOKEN = process.env.EXPO_ACCESS_TOKEN || '';
+
+// Returns how many pushes Expo accepted. Ticket errors go to the function
+// logs, and a token Apple no longer knows (app deleted, reinstalled) is
+// forgotten so it stops eating a send every time.
 async function sendExpoPush(tokens, { title, body, data }) {
-  if (!tokens.length) return;
+  if (!tokens.length) return 0;
   const messages = tokens.map(to => ({ to, title, body, data: data || {}, sound: 'default' }));
+  let sent = 0;
   try {
     // Expo accepts up to 100 messages per request.
     for (let i = 0; i < messages.length; i += 100) {
-      await fetch('https://exp.host/--/api/v2/push/send', {
+      const batch = messages.slice(i, i + 100);
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(messages.slice(i, i + 100)),
+        headers: { 'Content-Type': 'application/json', ...(EXPO_TOKEN ? { Authorization: `Bearer ${EXPO_TOKEN}` } : {}) },
+        body: JSON.stringify(batch),
         signal: AbortSignal.timeout(8000),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { console.error('push send rejected:', res.status, JSON.stringify(json).slice(0, 300)); continue; }
+      const tickets = Array.isArray(json.data) ? json.data : [];
+      tickets.forEach((t, k) => {
+        if (t.status === 'ok') { sent++; return; }
+        const code = t.details?.error || '';
+        console.error(`push ticket error (${code || 'unknown'}) for ${batch[k].to}: ${t.message || ''}`);
+        if (code === 'DeviceNotRegistered') forgetToken(batch[k].to);
       });
     }
   } catch (e) { console.error('push send failed:', e.message); }
+  return sent;
+}
+
+async function forgetToken(token) {
+  try { await supaFetch(`crm_push_tokens?token=eq.${encodeURIComponent(token)}`, { method: 'DELETE' }); }
+  catch (e) { console.error('forgetToken failed:', e.message); }
 }
 
 // Send one named event to every device whose owner is opted in. A saved pref
@@ -51,16 +75,18 @@ async function pushEvent(type, payload) {
 async function pushAdmins(payload) {
   try {
     const rows = await supaFetch('crm_push_tokens?is_admin=eq.true&select=token') || [];
-    await sendExpoPush(rows.map(r => r.token), payload);
-  } catch (e) { console.error('pushAdmins failed:', e.message); }
+    return await sendExpoPush(rows.map(r => r.token), payload);
+  } catch (e) { console.error('pushAdmins failed:', e.message); return 0; }
 }
 
 // Push to one user's devices (e.g. Naqiya when a revision comes back).
+// Resolves to the number of pushes accepted, so callers can fall back when
+// the person has no device on the app yet.
 async function pushUser(userId, payload) {
   try {
     const rows = await supaFetch(`crm_push_tokens?user_id=eq.${userId}&select=token`) || [];
-    await sendExpoPush(rows.map(r => r.token), payload);
-  } catch (e) { console.error('pushUser failed:', e.message); }
+    return await sendExpoPush(rows.map(r => r.token), payload);
+  } catch (e) { console.error('pushUser failed:', e.message); return 0; }
 }
 
 module.exports = { PUSH_EVENTS, pushEvent, pushAdmins, pushUser };
