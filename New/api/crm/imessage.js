@@ -1,4 +1,4 @@
-const { setCors, supaFetch, requireClientScope } = require('../_lib/supabase.js');
+const { setCors, supaFetch, requireAuth } = require('../_lib/supabase.js');
 
 // iMessage inbox.
 //
@@ -147,9 +147,11 @@ module.exports = async function handler(req, res) {
   }
 
   // ── User actions ────────────────────────────────────────────────────────
-  const scope = await requireClientScope(req);
-  if (!scope.ok) return res.status(scope.status).json({ error: scope.error });
-  const scopeFilter = scope.all ? '' : `&client_id=eq.${scope.clientId}`;
+  // Any signed-in CRM user, the same access model as the leads/clients
+  // endpoint. This is VTM's own texting, so it is deliberately NOT scoped by
+  // the selected workspace: that id lives in crm_content_clients and is not a
+  // crm_clients id, which is what crm_sms_messages.client_id references.
+  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     if (req.method === 'GET') {
@@ -157,12 +159,12 @@ module.exports = async function handler(req, res) {
       const phone = req.query.phone ? normalizePhone(req.query.phone) : null;
       if (phone) {
         const rows = await supaFetch(
-          `crm_sms_messages?channel=eq.${CHANNEL}&phone=eq.${encodeURIComponent(phone)}${scopeFilter}&order=created_at.asc`
+          `crm_sms_messages?channel=eq.${CHANNEL}&phone=eq.${encodeURIComponent(phone)}&order=created_at.asc`
         );
         return res.json(rows || []);
       }
       const rows = await supaFetch(
-        `crm_sms_messages?channel=eq.${CHANNEL}${scopeFilter}&order=created_at.desc&limit=1000`
+        `crm_sms_messages?channel=eq.${CHANNEL}&order=created_at.desc&limit=1000`
       );
       // Collapse to one thread per phone: latest message + count.
       const threads = {};
@@ -182,8 +184,9 @@ module.exports = async function handler(req, res) {
       if (!to) return res.status(400).json({ error: 'Valid phone required.' });
       if (!body) return res.status(400).json({ error: 'Message body required.' });
 
+      // Thread to a lead/client by phone; unknown numbers simply have no link.
       const row = {
-        client_id: (req.body || {}).client_id || (await clientIdFor(to)) || (scope.all ? null : scope.clientId) || null,
+        client_id: (req.body || {}).client_id || (await clientIdFor(to)) || null,
         direction: 'out',
         channel: CHANNEL,
         phone: to,
