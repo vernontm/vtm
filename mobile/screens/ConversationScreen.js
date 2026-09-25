@@ -6,6 +6,7 @@ import Sheet, { SheetRow } from '../components/Sheet';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
   getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability, askAssistant,
+  getClients, getAgreements, getTeamTodos, getUpcomingMeetings,
 } from '../lib/api';
 import { C, T, F } from '../lib/theme';
 import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, TEMP, KIND_COLOR } from '../components/ui';
@@ -39,6 +40,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [draftInput, setDraftInput] = useState('');
   const [draftNote, setDraftNote] = useState('');
   const draftHistory = useRef([]);
+  const dossier = useRef(null);   // what we know about this person, built once per visit
   const scrollRef = useRef(null);
 
   const loadPerson = useCallback(async () => {
@@ -157,8 +159,66 @@ export default function ConversationScreen({ route, navigation }) {
   // The orb in the composer opens the drafting sheet: smart drafts to tap into
   // the message box, plus a line to tell the assistant what to write or do.
   // Nothing is ever sent to the customer from here.
-  const threadText = () => messages.slice(-10).map(m => `${m.direction === 'out' ? 'Us' : name}: ${m.body}`).join('\n') || '(no messages yet)';
-  const contextPrompt = () => `You are helping write iMessages from us (Vernon Tech & Media) to ${name}${person?.kind ? ` (a ${person.kind})` : ''}. The thread so far:\n${threadText()}`;
+  const fmtWhen = (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const threadText = () => {
+    const recent = messages.slice(-15);
+    if (!recent.length) return '(no messages yet)';
+    const cut = Math.max(0, recent.length - 4);
+    return recent.map((m, i) => `${i === cut ? '[most recent from here]\n' : ''}${fmtWhen(m.created_at)} ${m.direction === 'out' ? 'Us' : name}: ${m.body}`).join('\n');
+  };
+
+  // Everything the CRM knows about this person, in a few lines: their record,
+  // money status (clients), internal notes, who owns the thread, open tasks
+  // about them, meetings with them. Fetched once when the sheet first opens.
+  const buildDossier = async () => {
+    const lines = [];
+    const key = String(name || '').toLowerCase().split(/\s+/)[0];
+    const mentions = (s) => key && key.length > 2 && String(s || '').toLowerCase().includes(key);
+    let record = null;
+    try {
+      if (person?.id && person.kind !== 'contact') {
+        const clients = await getClients();
+        record = (clients || []).find(c => c.id === person.id) || null;
+      }
+    } catch (_) {}
+    if (record) {
+      const money = record.potential_value ? `$${Number(record.potential_value).toLocaleString()}${record.potential_value_type === 'monthly' ? '/mo' : ''}` : null;
+      lines.push(`Record: ${record.business_name || ''}${record.owner_name ? ` (${record.owner_name})` : ''}, ${person.kind}, stage ${record.stage || 'unknown'}${record.lead_temperature ? `, heat ${record.lead_temperature}` : ''}${record.source ? `, source ${record.source}` : ''}${money ? `, value ${money}` : ''}${record.follow_up_due_date ? `, follow-up due ${record.follow_up_due_date}` : ''}.`);
+      if (record.notes) lines.push(`Record notes: ${String(record.notes).slice(0, 400)}`);
+      if (person.kind === 'client') {
+        try {
+          const ag = await getAgreements(record.id);
+          const a = (ag?.agreements || [])[0];
+          const pays = ag?.payments || [];
+          const next = pays.find(p => p.status !== 'paid');
+          if (a) lines.push(`Agreement: ${a.title || 'Service agreement'}, ${a.status}${a.signed_at ? ` (signed ${fmtWhen(a.signed_at)})` : ''}; ${pays.filter(p => p.status === 'paid').length} of ${pays.length} payments paid${next ? `; next due: ${next.label || 'payment'} $${Number(next.amount || 0).toLocaleString()} (${next.due_condition || 'pending'})` : ''}.`);
+        } catch (_) {}
+      }
+      const [todos, meetings] = await Promise.all([getTeamTodos().catch(() => []), getUpcomingMeetings().catch(() => [])]);
+      const related = (todos || []).filter(t => !t.done && ((t.link_id && t.link_id === record.id) || mentions(t.title) || mentions(t.link_label)));
+      if (related.length) lines.push(`Open tasks about them: ${related.slice(0, 5).map(t => `${t.title}${t.assigned_to_name ? ` (${t.assigned_to_name})` : ''}`).join('; ')}.`);
+      const email = String(record.contact_email || '').toLowerCase();
+      const withThem = (meetings || []).filter(m => mentions(m.title) || (email && (m.participants || []).some(p => String(p?.email || p || '').toLowerCase() === email)));
+      if (withThem.length) lines.push(`Upcoming meetings with them: ${withThem.slice(0, 3).map(m => `${m.title || 'meeting'} on ${fmtWhen(m.start_time)}${m.location ? ` at ${m.location}` : m.meet_link ? ' (Google Meet)' : ''}`).join('; ')}.`);
+    } else {
+      const [todos, meetings] = await Promise.all([getTeamTodos().catch(() => []), getUpcomingMeetings().catch(() => [])]);
+      const related = (todos || []).filter(t => !t.done && (mentions(t.title) || mentions(t.link_label)));
+      if (related.length) lines.push(`Open tasks about them: ${related.slice(0, 5).map(t => t.title).join('; ')}.`);
+      const withThem = (meetings || []).filter(m => mentions(m.title));
+      if (withThem.length) lines.push(`Upcoming meetings with them: ${withThem.slice(0, 3).map(m => `${m.title} on ${fmtWhen(m.start_time)}`).join('; ')}.`);
+    }
+    if (assignment?.assigned_to_name) lines.push(`This conversation is assigned to ${assignment.assigned_to_name}.`);
+    const handoffs = events.filter(e => e.type === 'handoff').slice(-2);
+    if (handoffs.length) lines.push(`Recent handoffs: ${handoffs.map(e => `${e.from_name || 'someone'} to ${e.to_name} on ${fmtWhen(e.created_at)}`).join('; ')}.`);
+    if (notes.length) lines.push(`Internal notes on this thread (not visible to them): ${notes.slice(-5).map(n => `${n.author_name || 'team'}: ${n.body}`).join(' | ')}`);
+    return lines.length ? lines.join('\n') : 'Nothing on file beyond the thread.';
+  };
+  const contextPrompt = () => [
+    `You are helping write iMessages from us (Vernon Tech & Media) to ${name}${person?.kind ? ` (a ${person.kind})` : ''}. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`,
+    `What we know about them:\n${dossier.current || 'Nothing on file beyond the thread.'}`,
+    `The thread, oldest to newest (the most recent messages matter most; reply to what they last said, answer any question they asked, and bring in a task, meeting or payment only when it is genuinely relevant):\n${threadText()}`,
+    'Match their tone and message length. Never invent facts, prices or dates that are not above. Never mention internal notes as such.',
+  ].join('\n\n');
   const parseDrafts = (text) => String(text || '').split(/\n+/)
     .map(l => l.replace(/^\s*(?:[-*•]|\d+[.)]|option\s*\d+:?)\s*/i, '').replace(/^["“]+|["”]+$/g, '').trim())
     .filter(l => l.length >= 4).slice(0, 4);
@@ -184,11 +244,15 @@ export default function ConversationScreen({ route, navigation }) {
     } catch (e) { setDraftNote(`Could not reach the assistant: ${e.message}`); }
     finally { setDraftBusy(false); }
   };
-  const openDrafts = () => {
+  const openDrafts = async () => {
     setDraftOpen(true);
-    if (!drafts.length && !draftBusy) {
-      runDraft('Write three different short replies we could send next. Each one to three sentences, warm and natural, no sign-off, no placeholders. Reply with exactly three options, one per line, no numbering, no quotes, nothing else.', true);
+    if (drafts.length || draftBusy) return;
+    if (dossier.current === null) {
+      setDraftBusy(true);
+      try { dossier.current = await buildDossier(); } catch (_) { dossier.current = ''; }
+      finally { setDraftBusy(false); }
     }
+    runDraft('Write three different replies we could send next: one that directly continues or answers their last message, one that moves things to the next step (a time to meet, a proposal, a payment, whatever fits what we know), and one short and casual. If they asked for a call or meeting, or mentioned a service they want, use find_availability and put two specific times inside our work hours into the next-step option, and name the service back to them. Each one to three sentences, warm and natural, no sign-off, no placeholders. Reply with exactly three options, one per line, no numbering, no quotes, nothing else.', true);
   };
   const useDraft = (text) => { setInput(prev => (prev.trim() ? `${prev.trim()} ${text}` : text)); setDraftOpen(false); };
   const sendDraftInstruction = () => { const s = draftInput.trim(); if (!s) return; setDraftInput(''); runDraft(s); };
