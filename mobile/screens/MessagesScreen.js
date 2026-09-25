@@ -93,6 +93,16 @@ export default function MessagesScreen({ navigation, route }) {
     const t = setInterval(() => { if (navigation.isFocused()) load('silent').catch(() => {}); }, 10000);
     return () => clearInterval(t);
   }, [navigation, load]);
+  // A push arriving while the app is open (new text, team chat) refreshes the
+  // list right away, so the badge on the other tab lights up within a second.
+  useEffect(() => {
+    let sub;
+    try {
+      const N = require('expo-notifications');
+      sub = N.addNotificationReceivedListener?.(() => { if (navigation.isFocused()) load('silent').catch(() => {}); });
+    } catch (_) {}
+    return () => { try { sub?.remove?.(); } catch (_) {} };
+  }, [navigation, load]);
 
   const list = useMemo(() => {
     let arr = (threads || []).slice().sort((a, b) => new Date(b.last?.created_at || 0) - new Date(a.last?.created_at || 0));
