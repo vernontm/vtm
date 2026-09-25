@@ -1,4 +1,5 @@
 const { setCors, supaFetch, requireCrmUser } = require('../_lib/supabase.js');
+const { pushUser, pushAdmins } = require('../_lib/push.js');
 
 // iMessage inbox.
 //
@@ -49,6 +50,47 @@ async function clientIdFor(phone) {
   } catch {
     return null;
   }
+}
+
+const fmtUS = (p) => {
+  const d = last10(p);
+  return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : (p || '');
+};
+
+// Push an inbound reply to whoever owns the conversation: the assigned employee
+// only, or all admins when it is unassigned. Best-effort: a push must never
+// break the inbound flow.
+async function notifyInbound(phone, text) {
+  try {
+    const d10 = last10(phone);
+
+    // Who is it assigned to? assigned_to is a roster id (crm_team_members.id) or
+    // an auth user id (self-assign). Resolve to an auth user_id for push tokens.
+    let assigneeUserId = null;
+    try {
+      const t = first(await supaFetch(`crm_imessage_threads?phone=eq.${encodeURIComponent(phone)}&select=assigned_to&limit=1`));
+      if (t?.assigned_to) {
+        const tm = first(await supaFetch(`crm_team_members?id=eq.${encodeURIComponent(t.assigned_to)}&select=user_id`));
+        assigneeUserId = tm?.user_id || t.assigned_to;
+      }
+    } catch (_) {}
+
+    // A friendly sender name for the notification title.
+    let name = null;
+    try {
+      const [clients, contacts] = await Promise.all([
+        supaFetch('crm_clients?select=business_name,owner_name,contact_phone&contact_phone=not.is.null'),
+        supaFetch('crm_contacts?select=name,phone&phone=not.is.null'),
+      ]);
+      const c = (clients || []).find((x) => last10(x.contact_phone) === d10);
+      const ct = (contacts || []).find((x) => last10(x.phone) === d10);
+      name = c?.business_name || c?.owner_name || ct?.name || null;
+    } catch (_) {}
+
+    const payload = { title: name || fmtUS(phone), body: String(text || '').slice(0, 180), data: { type: 'imessage', phone } };
+    if (assigneeUserId) await pushUser(assigneeUserId, payload);
+    else await pushAdmins(payload);
+  } catch (_) { /* never break inbound on a push failure */ }
 }
 
 module.exports = async function handler(req, res) {
@@ -145,6 +187,8 @@ module.exports = async function handler(req, res) {
           headers: { Prefer: 'return=representation' },
           body: JSON.stringify(row),
         });
+        // Alert the conversation's assignee (or admins if unassigned).
+        await notifyInbound(phone, text);
         return res.status(201).json(first(saved) || row);
       }
 
