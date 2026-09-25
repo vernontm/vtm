@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, StickyNote, ChevronDown } from 'lucide-react';
+import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, StickyNote, ChevronDown, Sparkles } from 'lucide-react';
 import { toast } from '../components/Toast';
 import {
   getImsgThreads, getImsgThread, sendImsg, getImsgDirectory, assignImsgThread,
   getImsgNotes, addImsgNote, getImsgEvents, markImsgRead, createClient, createContact, updateClient, setImsgKind, getAssignees,
+  getAvailability,
 } from '../api';
 import { useClient } from '../context/ClientContext';
+import AssistantChat from '../components/AssistantChat';
 
 // Two-way iMessage inbox for the business number. Threads group by phone. Sends
 // are queued and delivered by the bridge on the Mac signed into the business
@@ -47,6 +49,10 @@ const TEMPS = [
   { key: 'hot',  label: 'Hot',  color: '#b91c1c' },
 ];
 const tempOf = (k) => TEMPS.find(t => t.key === k);
+
+// Rough detector for "this conversation is about setting up a time" so the
+// Inbox can offer availability suggestions.
+const SCHED_RE = /\b(meet|meeting|meet ?up|schedule|scheduling|availab|appointment|calendar|what time|when (are|can|could|is|works?|would)|free|book|sit ?down|come in|stop by|get together|reschedul)\b/i;
 
 // A stable, distinct color per employee (same id always maps to the same hue).
 const EMP_COLORS = ['#2563eb', '#7c3aed', '#c026d3', '#db2777', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0891b2', '#4f46e5'];
@@ -99,6 +105,8 @@ export default function Inbox() {
   const [events, setEvents] = useState([]); // handoff events
   const [noteText, setNoteText] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
+  const [assistOpen, setAssistOpen] = useState(false);   // assistant popup
+  const [suggestSlots, setSuggestSlots] = useState([]);  // scheduling suggestions
   const scrollRef = useRef(null);
 
   const byPhone = useMemo(() => {
@@ -161,6 +169,34 @@ export default function Inbox() {
   }, [active]);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
   useEffect(() => { setAddOpen(false); setAddKind('lead'); setAddName(''); setNoteText(''); }, [active]);
+
+  // Scheduling suggestions: when the open conversation is about setting up a
+  // time, surface the next open slots on two upcoming days as one-tap chips.
+  const lastMsgId = messages.length ? messages[messages.length - 1].id : null;
+  useEffect(() => {
+    if (!active || messages.length === 0) { setSuggestSlots([]); return; }
+    const recent = messages.slice(-8).map(m => m.body || '').join(' ');
+    if (!SCHED_RE.test(recent)) { setSuggestSlots([]); return; }
+    let cancelled = false;
+    getAvailability({ duration: 60, days: 10, limit: 30 }).then(r => {
+      if (cancelled) return;
+      const tz = r?.tz || 'America/Chicago';
+      const seen = new Set(); const pick = [];
+      for (const s of (r?.slots || [])) {
+        const day = new Date(s.start).toLocaleDateString('en-US', { timeZone: tz });
+        if (seen.has(day)) continue;
+        seen.add(day); pick.push(s);
+        if (pick.length >= 2) break;
+      }
+      setSuggestSlots(pick);
+    }).catch(() => setSuggestSlots([]));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, lastMsgId]);
+
+  const proposeTime = (s) => {
+    setReply(prev => { const b = (prev || '').trim(); return b ? `${b} Or ${s.label}?` : `Would ${s.label} work for you?`; });
+  };
 
   const doSend = async () => {
     const body = reply.trim();
@@ -289,9 +325,15 @@ export default function Inbox() {
             Text your clients over iMessage from your business number. Replies land here.
           </div>
         </div>
-        <button className="btn-primary" onClick={() => setComposing(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Plus size={15} /> New message
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setAssistOpen(o => !o)} title="Ask the assistant"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--border)', background: assistOpen ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)', fontSize: 13, fontWeight: 700 }}>
+            <Sparkles size={15} style={{ color: 'var(--orange)' }} /> Assistant
+          </button>
+          <button className="btn-primary" onClick={() => setComposing(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={15} /> New message
+          </button>
+        </div>
       </div>
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, marginTop: 12 }}>
@@ -414,14 +456,27 @@ export default function Inbox() {
                   );
                 })}
               </div>
-              <div style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
-                <textarea value={reply} onChange={e => setReply(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } }}
-                  placeholder="Type a message…" rows={1} style={{ ...INPUT, resize: 'none', minHeight: 40, maxHeight: 120 }} />
-                <button className="btn-primary" onClick={doSend} disabled={sending || !reply.trim()}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                  <Send size={14} /> {sending ? 'Sending…' : 'Send'}
-                </button>
+              <div style={{ borderTop: '1px solid var(--border)' }}>
+                {suggestSlots.length > 0 && (
+                  <div style={{ padding: '9px 12px 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Sparkles size={12} style={{ color: 'var(--orange)' }} /> Suggest a time:</span>
+                    {suggestSlots.map(s => (
+                      <button key={s.start} onClick={() => proposeTime(s)}
+                        style={{ padding: '5px 10px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 700, border: '1px solid rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.10)', color: 'var(--orange)' }}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div style={{ padding: 12, display: 'flex', gap: 8 }}>
+                  <textarea value={reply} onChange={e => setReply(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } }}
+                    placeholder="Type a message…" rows={1} style={{ ...INPUT, resize: 'none', minHeight: 40, maxHeight: 120 }} />
+                  <button className="btn-primary" onClick={doSend} disabled={sending || !reply.trim()}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <Send size={14} /> {sending ? 'Sending…' : 'Send'}
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -501,6 +556,19 @@ export default function Inbox() {
 
       {composing && (
         <Composer directory={directory} onClose={() => setComposing(false)} onSent={afterCompose} />
+      )}
+
+      {assistOpen && (
+        <div style={{ position: 'fixed', bottom: 20, right: 20, width: 380, height: 520, maxWidth: '92vw', maxHeight: '80vh', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: '0 18px 50px rgba(0,0,0,0.35)', zIndex: 1200, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Sparkles size={16} style={{ color: 'var(--orange)' }} />
+            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Assistant</span>
+            <button onClick={() => setAssistOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)' }}><X size={18} /></button>
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <AssistantChat compact starters={['Availability next week for a 1 hour meetup', 'Which leads need follow-up?']} />
+          </div>
+        </div>
       )}
     </div>
   );
