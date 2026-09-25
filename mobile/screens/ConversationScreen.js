@@ -69,6 +69,9 @@ export default function ConversationScreen({ route, navigation }) {
   const loadEvents = useCallback(async () => { try { setEvents(await getImsgEvents(phone) || []); } catch (_) {} }, [phone]);
   const loadNotes = useCallback(async () => { try { setNotes(await getImsgNotes(phone) || []); } catch (_) {} }, [phone]);
 
+  // A draft handed over from elsewhere (a team chat action) lands in the box.
+  useEffect(() => { if (route.params?.draft) setInput(route.params.draft); }, [route.params?.draftAt]);
+
   useEffect(() => {
     (async () => {
       setLoading(true);

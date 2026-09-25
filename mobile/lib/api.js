@@ -101,6 +101,18 @@ export const setClientTemperature = (id, lead_temperature) => request(`/clients?
 export const searchPlaces = (q) => request(`/places?q=${encodeURIComponent(q)}`);
 export const getPlaceDetail = (placeId) => request(`/places?place_id=${encodeURIComponent(placeId)}`);
 
+// ── Team chat (internal: direct messages and group chats) ──
+// rooms: { rooms: [{ id, kind, name, members:[{user_id,user_name,role}], unread, last_message_at, last_message_preview, last_sender_name }], needs_migration? }
+export const getChatRooms    = () => request('/chat?action=rooms');
+export const getChatPeople   = () => request('/chat?action=people');
+export const getChatMessages = (room, after) => request(`/chat?action=messages&room=${encodeURIComponent(room)}${after ? `&after=${encodeURIComponent(after)}` : ''}`);
+export const createChat      = (data) => request('/chat?action=create', { method: 'POST', body: JSON.stringify(data) });
+export const sendChat        = (room, body) => request('/chat?action=send', { method: 'POST', body: JSON.stringify({ room, body }) });
+export const renameChat      = (room, name) => request('/chat?action=rename', { method: 'POST', body: JSON.stringify({ room, name }) });
+export const changeChatMembers = (room, add, remove) => request('/chat?action=members', { method: 'POST', body: JSON.stringify({ room, add, remove }) });
+export const markChatRead    = (room) => request('/chat?action=read', { method: 'POST', body: JSON.stringify({ room }) });
+export const leaveChat       = (room) => request('/chat?action=leave', { method: 'POST', body: JSON.stringify({ room }) });
+
 // CRM assistant (Claude with tools) + availability finder.
 export const askAssistant = (prompt, conversation = []) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, conversation }) });
 // Actions mode: { actions: [{ type:'create_meeting', title, start, end, when, duration_minutes, kind, location, summary, message, confidence, reason }] }

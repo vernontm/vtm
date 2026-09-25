@@ -66,19 +66,21 @@ const PROPOSE_TOOL = {
         items: {
           type: 'object',
           properties: {
-            type: { type: 'string', enum: ['create_meeting'] },
-            title: { type: 'string', description: 'Calendar title, e.g. "Marketing services call with Marcus Bell"' },
+            type: { type: 'string', enum: ['create_meeting', 'text_client'] },
+            client_name: { type: 'string', description: 'text_client: the customer to text, as named in the CRM' },
+            phone: { type: 'string', description: 'text_client: their phone from search_people, empty if not on file' },
+            message: { type: 'string', description: 'The text to send. text_client: the full message in our voice, no placeholders. create_meeting: the confirmation, with {when} and {link} placeholders.' },
+            title: { type: 'string', description: 'create_meeting: calendar title, e.g. "Marketing services call with Marcus Bell"' },
             service: { type: 'string', description: 'What the meeting is about, in a few words, e.g. "marketing services" or "the website redesign"' },
             start: { type: 'string', description: 'Start in ISO 8601 with the America/Chicago offset, e.g. 2026-09-28T14:30:00-05:00' },
             duration_minutes: { type: 'integer', description: '30 for a call unless they asked for longer; 60 for an in-person meetup' },
             kind: { type: 'string', enum: ['online', 'in_person'] },
             location: { type: 'string', description: 'Address for an in-person meeting, otherwise empty' },
             summary: { type: 'string', description: 'One short line for the person tapping: what will happen' },
-            message: { type: 'string', description: 'The text to send them once it is booked. Use {when} where the day and time go and {link} where the Google Meet link (or address) goes. One to three sentences, warm, no sign-off.' },
             confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
             reason: { type: 'string', description: 'Which message made this actionable' },
           },
-          required: ['type', 'title', 'start', 'duration_minutes', 'kind', 'summary', 'message', 'confidence'],
+          required: ['type', 'summary', 'message', 'confidence'],
         },
       },
     },
@@ -105,7 +107,22 @@ function parseStart(s) {
 function normalizeActions(list) {
   const out = [];
   for (const a of (Array.isArray(list) ? list : [])) {
-    if (!a || a.type !== 'create_meeting') continue;
+    if (!a) continue;
+    if (a.type === 'text_client') {
+      const message = stripDashes(String(a.message || '').trim().slice(0, 800));
+      if (!message) continue;
+      out.push({
+        type: 'text_client',
+        client_name: stripDashes(String(a.client_name || '').slice(0, 120)),
+        phone: last10(a.phone) ? `+1${last10(a.phone)}` : '',
+        message,
+        summary: stripDashes(String(a.summary || '').slice(0, 200)),
+        confidence: ['high', 'medium', 'low'].includes(a.confidence) ? a.confidence : 'medium',
+        reason: stripDashes(String(a.reason || '').slice(0, 200)),
+      });
+      continue;
+    }
+    if (a.type !== 'create_meeting') continue;
     const start = parseStart(a.start);
     if (!start || start.getTime() < Date.now() - 5 * 60000) continue;
     const duration = Math.min(240, Math.max(15, parseInt(a.duration_minutes, 10) || 30));
@@ -211,8 +228,10 @@ module.exports = async function handler(req, res) {
       ? `You read one customer conversation for the Vernon Tech & Media team (signed in: ${user.email}) and decide what concrete action it calls for right now.
 Right now it is ${nowCentral} (America/Chicago). Resolve every relative date and time from this, in America/Chicago, and write starts as ISO 8601 with the Chicago offset.
 
-Propose create_meeting only when the customer has agreed to a specific day and time (for example "2:30 works for me" after we offered Monday 2:30 PM), or clearly asked to book one specific slot. The time must be inside the team's work hours; call find_availability to confirm the slot is open when you are not sure. A call is 30 minutes online (Google Meet) unless they asked to meet in person or for longer. The title names the service and the person, like "Marketing services call with Marcus Bell". The message is what we text them after booking: warm, one to three sentences, with {when} and {link} placeholders, no sign-off.
-If the time is still ambiguous or nothing was agreed, hand back an empty list. Never invent names, prices or dates. Always finish by calling propose_actions exactly once.
+Two kinds of action exist.
+create_meeting: only when a customer has agreed to a specific day and time in their own thread (for example "2:30 works for me" after we offered Monday 2:30 PM), or clearly asked to book one specific slot. The time must be inside the team's work hours; call find_availability to confirm the slot is open when you are not sure. A call is 30 minutes online (Google Meet) unless they asked to meet in person or for longer. The title names the service and the person, like "Marketing services call with Marcus Bell". The message is what we text them after booking: warm, one to three sentences, with {when} and {link} placeholders, no sign-off.
+text_client: when the conversation is an internal team chat and the team has decided (or clearly needs) to reach a customer: reschedule, confirm, follow up, answer a question, send a reminder. Use search_people to find the customer and their phone; if no phone is on file still propose it with the phone empty. Write the full text in our voice, warm and specific, one to three sentences, no placeholders, no sign-off. One text_client per customer.
+If the thread is still ambiguous, or nothing needs doing yet, hand back an empty list. Never invent names, prices or dates. Always finish by calling propose_actions exactly once.
 
 Never use em dashes or en dashes. Use commas, periods, or plain hyphens.`
       : `You are the assistant inside the Vernon Tech & Media CRM, helping ${user.email}.

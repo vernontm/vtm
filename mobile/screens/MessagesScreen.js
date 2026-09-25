@@ -1,27 +1,38 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { getImsgThreads, getImsgDirectory, getAssignees } from '../lib/api';
+import { getImsgThreads, getImsgDirectory, getAssignees, getChatRooms, getChatPeople, createChat } from '../lib/api';
 import { C, T, F } from '../lib/theme';
-import { Screen, HeaderBar, IconButton, Segmented, Avatar, Dot, Empty, TEMP, KIND_COLOR, DOCK_SPACE } from '../components/ui';
+import { Screen, HeaderBar, IconButton, Segmented, Avatar, Dot, Empty, Chip, Button, Label, TEMP, KIND_COLOR, DOCK_SPACE } from '../components/ui';
+import Sheet from '../components/Sheet';
 import { setInboxUnread, unreadOf } from '../lib/inboxBadge';
 import { last10, firstName, fmtPhone, fmtTime, colorForEmployee } from '../lib/imsg';
 
-// The iMessage inbox: one tile per conversation from the business number.
-// Names, type, temperature and assignee come from the directory + thread.
+// The Inbox: Clients (iMessage conversations from the business number) and
+// Team (internal direct messages and group chats). Same list, same unread
+// dot on the dock, separate worlds.
 const BUSINESS_NUMBER = '(714) 713-3409';
 
-export default function MessagesScreen({ navigation }) {
+export default function MessagesScreen({ navigation, route }) {
+  const [mode, setMode] = useState(route.params?.mode === 'team' ? 'team' : 'clients');
   const [threads, setThreads] = useState([]);
   const [directory, setDirectory] = useState([]);
   const [assignees, setAssignees] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [chatNeedsMigration, setChatNeedsMigration] = useState(false);
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  // New team chat
+  const [newOpen, setNewOpen] = useState(false);
+  const [people, setPeople] = useState([]);
+  const [pick, setPick] = useState([]);
+  const [groupName, setGroupName] = useState('');
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     // Admins land on All; everyone else on their own conversations.
@@ -32,6 +43,7 @@ export default function MessagesScreen({ navigation }) {
     }).catch(() => {});
     getAssignees().then(r => setAssignees(Array.isArray(r) ? r : (r?.employees || []))).catch(() => {});
   }, []);
+  useEffect(() => { if (route.params?.mode) setMode(route.params.mode === 'team' ? 'team' : 'clients'); }, [route.params?.mode]);
 
   const byPhone = useMemo(() => {
     const m = {};
@@ -46,10 +58,13 @@ export default function MessagesScreen({ navigation }) {
   const load = useCallback(async (quiet) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
-      const [th, dir] = await Promise.all([getImsgThreads().catch(() => []), getImsgDirectory().catch(() => [])]);
+      const [th, dir, ch] = await Promise.all([getImsgThreads().catch(() => []), getImsgDirectory().catch(() => []), getChatRooms().catch(() => null)]);
       setThreads(th || []);
       setDirectory(dir || []);
-      setInboxUnread(unreadOf(th));
+      const rs = ch?.rooms || [];
+      setRooms(rs);
+      setChatNeedsMigration(!!ch?.needs_migration);
+      setInboxUnread(unreadOf(th) + rs.filter(r => (r.unread || 0) > 0).length);
     } finally { setLoading(false); setRefreshing(false); }
   }, []);
   useFocusEffect(useCallback(() => { load(true); }, [load]));
@@ -67,22 +82,92 @@ export default function MessagesScreen({ navigation }) {
       (t.last?.body || '').toLowerCase().includes(needle));
   }, [threads, q, byPhone, filter, myRosterId]);
 
+  const roomTitle = (r) => {
+    const others = (r.members || []).filter(m => m.user_id !== me?.id);
+    if (r.kind === 'group' || others.length > 1) return r.name || others.map(m => firstName(m.user_name)).join(', ') || 'Group chat';
+    return others[0]?.user_name || r.name || 'Chat';
+  };
+  const roomList = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const arr = rooms.slice().sort((a, b) => new Date(b.last_message_at || b.created_at || 0) - new Date(a.last_message_at || a.created_at || 0));
+    if (!needle) return arr;
+    return arr.filter(r => roomTitle(r).toLowerCase().includes(needle) || (r.last_message_preview || '').toLowerCase().includes(needle));
+  }, [rooms, q, me?.id]);
+
   const unread = threads.filter(t => (t.unread || 0) > 0).length;
+  const teamUnread = rooms.filter(r => (r.unread || 0) > 0).length;
+
+  const openNew = () => {
+    setNewOpen(true); setPick([]); setGroupName('');
+    if (!people.length) getChatPeople().then(r => setPeople((r?.people || []).filter(p => p.id !== me?.id))).catch(() => {});
+  };
+  const startChat = async () => {
+    if (!pick.length) return;
+    setStarting(true);
+    try {
+      const r = await createChat({ kind: pick.length > 1 ? 'group' : 'dm', name: groupName.trim(), member_ids: pick });
+      setNewOpen(false);
+      navigation.navigate('TeamChat', { room: r.room });
+    } catch (e) { Alert.alert('Could not start the chat', e.message); }
+    finally { setStarting(false); }
+  };
 
   return (
     <Screen>
-      <HeaderBar title="Inbox" sub={`${unread} unread · ${BUSINESS_NUMBER}`}
-        right={<IconButton icon="create-outline" dark label="New message" onPress={() => navigation.navigate('NewMessage')} />} />
+      <HeaderBar title="Inbox" sub={mode === 'team' ? `${teamUnread} unread · team chat` : `${unread} unread · ${BUSINESS_NUMBER}`}
+        right={mode === 'team'
+          ? <IconButton icon="add" dark label="New team chat" onPress={openNew} />
+          : <IconButton icon="create-outline" dark label="New message" onPress={() => navigation.navigate('NewMessage')} />} />
       <View style={{ paddingHorizontal: 18, gap: 12 }}>
-        <Segmented value={filter} onChange={setFilter} options={[{ value: 'mine', label: 'Mine' }, { value: 'unassigned', label: 'Unassigned' }, { value: 'all', label: 'All' }]} />
+        <Segmented value={mode} onChange={setMode} options={[{ value: 'clients', label: unread ? `Clients · ${unread}` : 'Clients' }, { value: 'team', label: teamUnread ? `Team · ${teamUnread}` : 'Team' }]} />
+        {mode === 'clients' ? (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {[['mine', 'Mine'], ['unassigned', 'Unassigned'], ['all', 'All']].map(([v, l]) => <Chip key={v} label={l} active={filter === v} onPress={() => setFilter(v)} />)}
+          </View>
+        ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 46, paddingHorizontal: 16, borderRadius: 23, backgroundColor: C.tile }}>
           <Ionicons name="search" size={18} color={C.slate} />
-          <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 15, color: C.ink, paddingVertical: 0 }} placeholder="Search conversations" placeholderTextColor={C.slate} value={q} onChangeText={setQ} />
+          <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 15, color: C.ink, paddingVertical: 0 }} placeholder={mode === 'team' ? 'Search team chats' : 'Search conversations'} placeholderTextColor={C.slate} value={q} onChangeText={setQ} />
           {q ? <TouchableOpacity onPress={() => setQ('')} accessibilityLabel="Clear search"><Ionicons name="close-circle" size={18} color={C.slate} /></TouchableOpacity> : null}
         </View>
       </View>
 
-      {loading ? <ActivityIndicator color={C.ink} style={{ marginTop: 40 }} /> : (
+      {loading ? <ActivityIndicator color={C.ink} style={{ marginTop: 40 }} /> : mode === 'team' ? (
+        <FlatList
+          data={roomList}
+          keyExtractor={r => r.id}
+          contentContainerStyle={{ padding: 18, paddingBottom: DOCK_SPACE, gap: 10 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.ink} />}
+          ListEmptyComponent={chatNeedsMigration
+            ? <Empty icon="people-outline" title="Team chat is almost ready" sub="One database file still needs to run (docs/sql/team-chat.sql)." />
+            : <Empty icon="people-outline" title="No team chats yet" sub="Tap the plus to message a teammate or start a group." />}
+          renderItem={({ item: r }) => {
+            const isUnread = (r.unread || 0) > 0;
+            const group = r.kind === 'group' || (r.members || []).length > 2;
+            const title = roomTitle(r);
+            return (
+              <TouchableOpacity onPress={() => navigation.navigate('TeamChat', { room: r.id })} activeOpacity={0.75}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingHorizontal: 16, borderRadius: 22, backgroundColor: isUnread ? C.tile : C.bg, borderWidth: isUnread ? 0 : 1, borderColor: C.line }}>
+                {group ? (
+                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isUnread ? '#FFFFFF' : C.tile, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="people" size={20} color={C.ink} />
+                  </View>
+                ) : <Avatar name={title} size={44} tone={isUnread ? 'white' : 'tile'} />}
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <Text numberOfLines={1} style={[T.title, { flex: 1 }]}>{title}</Text>
+                    <Text style={T.meta}>{fmtTime(r.last_message_at)}</Text>
+                  </View>
+                  <Text numberOfLines={1} style={[T.body, { fontSize: 14, color: isUnread ? C.ink : C.slate }]}>
+                    {r.last_message_preview ? `${r.last_sender_name ? `${firstName(r.last_sender_name)}: ` : ''}${r.last_message_preview}` : (group ? `${(r.members || []).length} people` : 'Say hello')}
+                  </Text>
+                </View>
+                {isUnread ? <Dot /> : null}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      ) : (
         <FlatList
           data={list}
           keyExtractor={t => t.phone}
@@ -101,7 +186,7 @@ export default function MessagesScreen({ navigation }) {
                   <Avatar name={nameOf(t.phone)} size={44} tone={isUnread ? 'white' : 'tile'} />
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <Text numberOfLines={1} style={[T.title, { flex: 1, fontFamily: isUnread ? F.displayBold : F.displayBold }]}>{nameOf(t.phone)}</Text>
+                      <Text numberOfLines={1} style={[T.title, { flex: 1 }]}>{nameOf(t.phone)}</Text>
                       <Text style={T.meta}>{fmtTime(t.last?.created_at)}</Text>
                     </View>
                     <Text numberOfLines={1} style={[T.body, { fontSize: 14, color: isUnread ? C.ink : C.slate }]}>
@@ -131,6 +216,27 @@ export default function MessagesScreen({ navigation }) {
           }}
         />
       )}
+
+      {/* New team chat */}
+      <Sheet visible={newOpen} title="New team chat" onClose={() => setNewOpen(false)}>
+        <Text style={T.sub}>Pick one person for a direct message, or several for a group.</Text>
+        <View style={{ gap: 8 }}>
+          <Label>Who</Label>
+          {people.length === 0 ? <ActivityIndicator color={C.ink} /> : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {people.map(p => <Chip key={p.id} label={firstName(p.name)} active={pick.includes(p.id)} onPress={() => setPick(s => s.includes(p.id) ? s.filter(x => x !== p.id) : [...s, p.id])} />)}
+            </View>
+          )}
+        </View>
+        {pick.length > 1 ? (
+          <View style={{ gap: 8 }}>
+            <Label>Group name</Label>
+            <TextInput style={{ height: 48, borderRadius: 16, backgroundColor: C.tile, paddingHorizontal: 16, fontFamily: F.body, fontSize: 16, color: C.ink }}
+              value={groupName} onChangeText={setGroupName} placeholder="VTM team, Content crew" placeholderTextColor={C.slate} />
+          </View>
+        ) : null}
+        <Button label={pick.length > 1 ? 'Start group chat' : 'Start chat'} onPress={startChat} busy={starting} disabled={!pick.length} />
+      </Sheet>
     </Screen>
   );
 }

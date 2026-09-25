@@ -9,7 +9,8 @@ import { useFonts, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold }
 import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { supabase } from './lib/supabase';
 import { registerForPush } from './lib/push';
-import { navigationRef, goToConversation } from './lib/nav';
+import { navigationRef, goToConversation, goToTeamChat } from './lib/nav';
+import TeamChatScreen from './screens/TeamChatScreen';
 import { C } from './lib/theme';
 import Dock from './components/Dock';
 import LoginScreen from './screens/LoginScreen';
@@ -62,6 +63,7 @@ function InboxStack() {
       <InboxNav.Screen name="MessagesList" component={MessagesScreen} />
       <InboxNav.Screen name="Conversation" component={ConversationScreen} />
       <InboxNav.Screen name="NewMessage" component={NewMessageScreen} />
+      <InboxNav.Screen name="TeamChat" component={TeamChatScreen} />
     </InboxNav.Navigator>
   );
 }
@@ -91,6 +93,7 @@ export default function App() {
       sub = Notifications.addNotificationResponseReceivedListener(resp => {
         const d = resp?.notification?.request?.content?.data;
         if (d?.type === 'imessage' && d.phone) goToConversation(d.phone);
+        else if (d?.type === 'chat' && d.room) goToTeamChat(d.room);
         else if (d?.type === 'task' || d?.type === 'reminder') openSpace('Tasks', { view: d.type === 'reminder' ? 'reminders' : 'tasks' });
       });
       Notifications.getLastNotificationResponseAsync?.().then(resp => {

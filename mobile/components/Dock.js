@@ -11,7 +11,7 @@ import { useInboxUnread } from '../lib/inboxBadge';
 // floats over the page; screens keep DOCK_SPACE of bottom padding so their
 // last row scrolls clear of it. Screens with their own bottom composer (a
 // conversation, a new message, a sheet) hide it.
-const HIDE_ON = new Set(['Conversation', 'NewMessage', 'ClientDetail', 'NewTask']);
+const HIDE_ON = new Set(['Conversation', 'NewMessage', 'TeamChat', 'ClientDetail', 'NewTask']);
 
 const focusedLeaf = (route) => {
   let r = route;
