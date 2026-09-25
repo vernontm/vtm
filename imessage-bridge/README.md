@@ -99,3 +99,27 @@ awake and logged in; if it sleeps, texting pauses and resumes when it wakes
 
 `sent` means Messages accepted it. Delivery to Android depends on the paired
 iPhone being on with forwarding enabled.
+
+## Keep it running for good (launchd)
+
+Running `npm start` in a Terminal works, but the bridge dies when the window
+closes. To have it start at login and relaunch itself if it ever crashes,
+install it as a LaunchAgent. A ready plist lives at
+`~/Library/LaunchAgents/com.vernontm.imessage-bridge.plist` (runs
+`/opt/homebrew/bin/node bridge.mjs`, `RunAtLoad` + `KeepAlive`, logs to
+`~/Library/Logs/vtm-imessage-bridge.log`).
+
+```bash
+# load / reload it
+launchctl bootout gui/$(id -u)/com.vernontm.imessage-bridge 2>/dev/null
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.vernontm.imessage-bridge.plist
+launchctl kickstart -k gui/$(id -u)/com.vernontm.imessage-bridge   # (re)start now
+tail -f ~/Library/Logs/vtm-imessage-bridge.log                     # watch it
+```
+
+Inbound (reading replies) needs Full Disk Access for the node that launchd
+runs: System Settings > Privacy & Security > Full Disk Access > `+` >
+`/opt/homebrew/bin/node` > on, then `launchctl kickstart -k` the agent. Until
+then, outbound still works; the log just warns it can't read the Messages
+history. The Mac must be awake and signed into the business Apple ID in
+Messages for anything to send.

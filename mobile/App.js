@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
@@ -20,6 +20,13 @@ import SettingsScreen from './screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+
+// Lets a push-notification tap jump straight to the right conversation.
+export const navigationRef = createNavigationContainerRef();
+function goToConversation(phone) {
+  if (!phone || !navigationRef.isReady()) return;
+  navigationRef.navigate('Inbox', { screen: 'Conversation', params: { phone } });
+}
 
 const navTheme = {
   ...DarkTheme,
@@ -52,6 +59,29 @@ function MessagesStack() {
 export default function App() {
   const [session, setSession] = useState(null);
   const [booting, setBooting] = useState(true);
+  // A conversation to open once navigation is ready (from a cold-start tap).
+  const pendingConvo = useRef(null);
+
+  // Tapping a message push opens that conversation. Works foreground and from a
+  // cold start; harmless in Expo Go / on web where notifications are a no-op.
+  useEffect(() => {
+    let sub;
+    try {
+      const Notifications = require('expo-notifications');
+      sub = Notifications.addNotificationResponseReceivedListener(resp => {
+        const d = resp?.notification?.request?.content?.data;
+        if (d?.type === 'imessage' && d.phone) goToConversation(d.phone);
+      });
+      Notifications.getLastNotificationResponseAsync?.().then(resp => {
+        const d = resp?.notification?.request?.content?.data;
+        if (d?.type === 'imessage' && d.phone) {
+          if (navigationRef.isReady()) goToConversation(d.phone);
+          else pendingConvo.current = d.phone;
+        }
+      }).catch(() => {});
+    } catch (_) {}
+    return () => { try { sub?.remove?.(); } catch (_) {} };
+  }, []);
 
   // Register this device for pushes whenever a session exists (no-op in the
   // web demo / Expo Go; real builds get the permission prompt + token).
@@ -72,7 +102,8 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} ref={navigationRef}
+      onReady={() => { if (pendingConvo.current) { goToConversation(pendingConvo.current); pendingConvo.current = null; } }}>
       <StatusBar style="light" />
       {!session ? (
         <LoginScreen />
