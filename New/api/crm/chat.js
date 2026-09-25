@@ -19,12 +19,22 @@ const needsMigration = (e) => /crm_chat_rooms|crm_chat_members|crm_chat_messages
 const nameOf = (u) => u?.user_metadata?.name || u?.user_metadata?.full_name || (u?.email || '').split('@')[0] || 'Someone';
 const uuidRe = /^[0-9a-f-]{36}$/i;
 
+// The team: admins, anyone with CRM access grants, and anyone on the roster.
+// Client portal logins live in the same auth table and are left out.
 async function listPeople() {
-  const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+  const [r, grants, roster] = await Promise.all([
+    fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }),
+    supaFetch('crm_user_access?select=user_id').catch(() => []),
+    supaFetch('crm_team_members?or=(status.is.null,status.eq.active)&select=user_id,email').catch(() => []),
+  ]);
   const j = await r.json().catch(() => ({}));
+  const ids = new Set([...(grants || []).map(g => g.user_id), ...(roster || []).map(m => m.user_id)].filter(Boolean));
+  const emails = new Set((roster || []).map(m => String(m.email || '').toLowerCase()).filter(Boolean));
+  const isAdmin = (u) => !!(u.user_metadata?.is_admin || u.app_metadata?.is_admin);
   return (Array.isArray(j?.users) ? j.users : [])
-    .filter(u => u.email && !u.user_metadata?.portal_only && !u.app_metadata?.portal_only)
-    .map(u => ({ id: u.id, name: nameOf(u), email: u.email }));
+    .filter(u => u.email && (isAdmin(u) || ids.has(u.id) || emails.has(String(u.email).toLowerCase())))
+    .map(u => ({ id: u.id, name: nameOf(u), email: u.email, is_admin: isAdmin(u) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function membership(roomId, userId) {

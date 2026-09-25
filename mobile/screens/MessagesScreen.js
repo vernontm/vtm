@@ -99,8 +99,9 @@ export default function MessagesScreen({ navigation, route }) {
 
   const openNew = () => {
     setNewOpen(true); setPick([]); setGroupName('');
-    if (!people.length) getChatPeople().then(r => setPeople((r?.people || []).filter(p => p.id !== me?.id))).catch(() => {});
+    if (!people.length) getChatPeople().then(r => setPeople(r?.people || [])).catch(() => {});
   };
+  const others = people.filter(p => p.id !== me?.id);
   const startChat = async () => {
     if (!pick.length) return;
     setStarting(true);
@@ -222,9 +223,9 @@ export default function MessagesScreen({ navigation, route }) {
         <Text style={T.sub}>Pick one person for a direct message, or several for a group.</Text>
         <View style={{ gap: 8 }}>
           <Label>Who</Label>
-          {people.length === 0 ? <ActivityIndicator color={C.ink} /> : (
+          {people.length === 0 ? <ActivityIndicator color={C.ink} /> : others.length === 0 ? <Text style={T.sub}>No teammates with app access yet.</Text> : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {people.map(p => <Chip key={p.id} label={firstName(p.name)} active={pick.includes(p.id)} onPress={() => setPick(s => s.includes(p.id) ? s.filter(x => x !== p.id) : [...s, p.id])} />)}
+              {others.map(p => <Chip key={p.id} label={firstName(p.name)} active={pick.includes(p.id)} onPress={() => setPick(s => s.includes(p.id) ? s.filter(x => x !== p.id) : [...s, p.id])} />)}
             </View>
           )}
         </View>

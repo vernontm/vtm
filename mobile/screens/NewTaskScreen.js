@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TextInput, KeyboardAvoidingView, Platform, Aler
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { getTeamMembers, getRoutines, createRoutine, updateRoutine, addTeamTodo, addReminder } from '../lib/api';
+import { getChatPeople, getRoutines, createRoutine, updateRoutine, addTeamTodo, addReminder } from '../lib/api';
 import { C, T, F } from '../lib/theme';
 import { Screen, IconButton, Label, Chip, Segmented, Button, Check, Avatar } from '../components/ui';
 import DateField from '../components/DateField';
@@ -39,7 +39,8 @@ export default function NewTaskScreen({ navigation, route }) {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setMe(user)).catch(() => {});
-    getTeamMembers().then(m => setMembers(Array.isArray(m) ? m : [])).catch(() => {});
+    // Teammates only (admins, CRM access, roster), never client portal logins.
+    getChatPeople().then(r => setMembers(r?.people || [])).catch(() => {});
     getRoutines().then(r => setRoutines(r?.routines || [])).catch(() => {});
   }, []);
 
