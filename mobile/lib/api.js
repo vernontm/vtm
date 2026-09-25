@@ -69,6 +69,11 @@ export const getAssignees     = () => request('/assignees');
 // Temperature lives on the linked lead (crm_clients.lead_temperature).
 export const setClientTemperature = (id, lead_temperature) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify({ lead_temperature }) });
 
+// Places lookup for location fields (Google Places via the server when the key
+// is set, OpenStreetMap otherwise). { configured, results:[{main, secondary, description}] }
+export const searchPlaces = (q) => request(`/places?q=${encodeURIComponent(q)}`);
+export const getPlaceDetail = (placeId) => request(`/places?place_id=${encodeURIComponent(placeId)}`);
+
 // CRM assistant (Claude with tools) + availability finder.
 export const askAssistant = (prompt, conversation = []) => request('/assistant', { method: 'POST', body: JSON.stringify({ prompt, conversation }) });
 export const getAvailability = (params = {}) => {

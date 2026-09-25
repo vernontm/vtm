@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect } fro
 import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert, Platform } from 'react-native';
 import Sheet from '../components/Sheet';
 import HeaderButton from '../components/HeaderButton';
+import LocationInput from '../components/LocationInput';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { getUpcomingMeetings, getPastMeetings, createMeeting, updateMeeting, deleteMeeting, getClients } from '../lib/api';
@@ -225,7 +226,7 @@ function AppointmentSheet({ visible, defaultDate, meeting, onClose, onSaved }) {
             <TouchableOpacity style={chip(kind === 'online')} onPress={() => setKind('online')}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="videocam-outline" size={15} color={kind === 'online' ? C.blue : C.muted} /><Text style={{ color: kind === 'online' ? C.blue : C.muted, fontWeight: '700' }}>Online</Text></View></TouchableOpacity>
             <TouchableOpacity style={chip(kind === 'in_person')} onPress={() => setKind('in_person')}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="location-outline" size={15} color={kind === 'in_person' ? C.blue : C.muted} /><Text style={{ color: kind === 'in_person' ? C.blue : C.muted, fontWeight: '700' }}>In person</Text></View></TouchableOpacity>
           </View>
-          {kind === 'in_person' && <TextInput style={input} placeholder="Address" placeholderTextColor={C.muted} value={location} onChangeText={setLocation} />}
+          {kind === 'in_person' && <LocationInput style={input} placeholder="Business or address" value={location} onChange={setLocation} />}
           {editing && meeting?.meet_link ? <Text style={{ color: C.muted, fontSize: 12.5 }}>The Google Meet link stays on the invite.</Text> : null}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1, minWidth: 0 }}><DateField value={date} onChange={setDate} /></View>
