@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileText, CreditCard, Trash2, XCircle, ExternalLink,
-  RefreshCw, ChevronDown, ChevronUp, Search, Plus, X,
+  RefreshCw, ChevronDown, ChevronUp, Search, Plus, X, Send, Check,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import { toast } from '../components/Toast';
+import NudgeModal from '../components/NudgeModal';
 import {
   getInvoices, getManualInvoices, deleteInvoice, voidInvoice,
   deleteManualInvoice, updateManualInvoice, refreshInvoice,
@@ -139,7 +140,7 @@ function CreateInvoiceModal({ onClose, onCreated, deals, contacts }) {
               <label style={labelStyle}>Link to Deal (optional)</label>
               <select value={form.deal_id} onChange={e => handleDealSelect(e.target.value)} style={inputStyle}>
                 <option value="">No deal</option>
-                {deals.map(d => <option key={d.id} value={d.id}>{d.name} — {d.contact_name || d.account_name || ''}</option>)}
+                {deals.map(d => <option key={d.id} value={d.id}>{d.name} · {d.contact_name || d.account_name || ''}</option>)}
               </select>
             </div>
           )}
@@ -267,6 +268,11 @@ export default function Invoices() {
   const [showCreate, setShowCreate]         = useState(false);
   const [deals, setDeals]                   = useState([]);
   const [allContacts, setAllContacts]       = useState([]);
+  // Nudge (payment reminder by text / email). `nudge` is the open modal's
+  // target; `nudged` remembers which rows went out this session so the row
+  // can say so until the page reloads.
+  const [nudge, setNudge]                   = useState(null);    // { kind, id, key }
+  const [nudged, setNudged]                 = useState({});      // { [key]: 'sent' | 'scheduled' }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -365,21 +371,27 @@ export default function Invoices() {
     setRefreshingId(null);
   };
 
+  // Anything still collectable can be nudged: not paid, and not closed out.
+  const CLOSED = ['paid', 'void', 'cancelled', 'uncollectible'];
+  const isUnpaid = (inv) => !CLOSED.includes(String(inv.status || '').toLowerCase());
+  const rowKey = (inv) => `${inv._type}:${inv.id}`;
+  const openNudge = (inv) => setNudge({ kind: inv._type === 'stripe' ? 'invoice' : 'manual_invoice', id: inv.id, key: rowKey(inv) });
+
   // ── Build unified list ────────────────────────────────────────────────────────
   const allRows = [
     ...stripeInvoices.map(i => ({
       ...i,
       _type:       'stripe',
-      _number:     i.stripe_invoice_id?.slice(-8).toUpperCase() || '—',
-      _client:     i.customer_name || i.email || '—',
+      _number:     i.stripe_invoice_id?.slice(-8).toUpperCase() || '-',
+      _client:     i.customer_name || i.email || '-',
       _amount:     i.amount || 0,
       _date:       i.created_at,
     })),
     ...manualInvoices.map(i => ({
       ...i,
       _type:   'manual',
-      _number: i.invoice_number || '—',
-      _client: i.bill_to_name  || i.bill_to_email || '—',
+      _number: i.invoice_number || '-',
+      _client: i.bill_to_name  || i.bill_to_email || '-',
       _amount: i.total || 0,
       _date:   i.created_at,
     })),
@@ -538,7 +550,7 @@ export default function Invoices() {
 
                     {/* Date */}
                     <td style={{ ...tdStyle, color: 'var(--muted)', fontSize: 12 }}>
-                      {inv._date ? new Date(inv._date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      {inv._date ? new Date(inv._date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                       {inv.status === 'paid' && inv.paid_at && (
                         <div style={{ fontSize: 11, color: 'var(--orange)', marginTop: 2 }}>
                           Paid {new Date(inv.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -549,6 +561,23 @@ export default function Invoices() {
                     {/* Actions */}
                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {/* Nudge: payment reminder by text / email (any unpaid row) */}
+                        {isUnpaid(inv) && (
+                          nudged[rowKey(inv)] ? (
+                            <span title="A reminder went out from this page" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#16a34a', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              <Check size={12} /> {nudged[rowKey(inv)] === 'scheduled' ? 'Nudge scheduled' : 'Nudged just now'}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => openNudge(inv)}
+                              title="Send a payment reminder by text or email"
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: 'rgba(37,99,235,0.1)', border: '1px solid var(--orange)40', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              <Send size={12} /> Nudge
+                            </button>
+                          )
+                        )}
+
                         {/* Stripe-specific */}
                         {inv._type === 'stripe' && (
                           <>
@@ -630,6 +659,16 @@ export default function Invoices() {
           onCreated={load}
           deals={deals}
           contacts={allContacts}
+        />
+      )}
+
+      {/* Nudge modal */}
+      {nudge && (
+        <NudgeModal
+          kind={nudge.kind}
+          id={nudge.id}
+          onClose={() => setNudge(null)}
+          onSent={(_reply, { scheduled } = {}) => setNudged(prev => ({ ...prev, [nudge.key]: scheduled ? 'scheduled' : 'sent' }))}
         />
       )}
 

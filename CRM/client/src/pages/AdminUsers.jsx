@@ -1,19 +1,33 @@
 // Admin-only page to manage CRM user accounts + per-client page access.
 // Non-admins see a friendly "not authorized" card instead.
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound, Bell, Smartphone, Mail, Copy } from 'lucide-react';
+import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound, Bell, Smartphone, Mail, Copy, LayoutDashboard, BarChart2 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { useToast } from '../components/Toast';
 import {
   getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   upsertUserGrant, revokeUserGrant, resetUserPassword,
   getPushPrefs, setPushPrefs, inviteUser,
+  getHomeRoles, setHomeRoles, getAppEvents,
 } from '../api';
 
-// Canonical list of page slugs that can be toggled per grant — only the pages
+// Which home the iPhone app opens to. Stored in the settings key home_roles as
+// { <auth user id>: role }; a missing entry is "Auto" (admins get the CEO home,
+// everyone else is resolved from their roster title on the server).
+const HOME_ROLES = [
+  { key: '',          name: 'Auto' },
+  { key: 'ceo',       name: 'CEO' },
+  { key: 'hr',        name: 'HR' },
+  { key: 'assistant', name: 'Assistant' },
+  { key: 'sales',     name: 'Sales' },
+  { key: 'general',   name: 'General' },
+];
+const USAGE_DAYS = 30;
+
+// Canonical list of page slugs that can be toggled per grant, only the pages
 // the CRM actually has now. Keep in sync with Sidebar.jsx nav + supabase.js
-// ALL_PAGES. (Legacy pages — Contacts, Resources, Content, Avatars, Email
-// Marketing, Blog, Portfolio, Deals, Scripts, Training, Products… — purged.)
+// ALL_PAGES. (Legacy pages purged: Contacts, Resources, Content, Avatars, Email
+// Marketing, Blog, Portfolio, Deals, Scripts, Training, Products…)
 const PAGE_GROUPS = [
   { label: 'Workspace', pages: [
     { slug: 'dashboard',    name: 'Dashboard' },
@@ -50,7 +64,7 @@ const ADMIN_PAGE_GROUPS = [
   ]},
 ];
 
-// Role presets — one-click bundles of page access. "Custom" = whatever's
+// Role presets, one-click bundles of page access. "Custom" = whatever's
 // checked. Roles are a convenience on top of the per-page checkboxes below.
 const ROLES = [
   { key: 'full',            name: 'Full access',     pages: ['dashboard','leads','clients','projects','appointments','todos','tasks','routines','employees','time','employee-resources','contacts','marketing','inbox','email','settings'] },
@@ -98,6 +112,7 @@ const inputStyle = {
 
 export default function AdminUsers() {
   const { isAdmin, clients, viewAsUser, realUser } = useClient();
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -105,6 +120,8 @@ export default function AdminUsers() {
   const [showCreate, setShowCreate] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [pushData, setPushData] = useState(null);   // { prefs, devices } for the notification toggles
+  const [roleMap, setRoleMap] = useState({});       // home_roles: { user id: role }
+  const [usage, setUsage] = useState(null);         // { rows, days } | { error, needsMigration }
 
   async function load() {
     setLoading(true); setError(null);
@@ -115,8 +132,29 @@ export default function AdminUsers() {
   async function loadPrefs() {
     try { setPushData(await getPushPrefs()); } catch (_) { /* toggles just hide */ }
   }
+  async function loadHomeRoles() {
+    try { setRoleMap(await getHomeRoles()); } catch (_) { /* select shows Auto */ }
+  }
+  async function loadUsage() {
+    try { setUsage(await getAppEvents(USAGE_DAYS)); }
+    catch (e) { setUsage({ error: e.message, needsMigration: !!e.needs_migration || e.status === 503 }); }
+  }
 
-  useEffect(() => { if (isAdmin) { load(); loadPrefs(); } }, [isAdmin]);
+  // Change one person's home layout; empty role means back to Auto.
+  async function changeHomeRole(userId, role) {
+    if (!userId) return;
+    const prev = roleMap;
+    const next = { ...roleMap };
+    if (role) next[userId] = role; else delete next[userId];
+    setRoleMap(next);
+    try {
+      await setHomeRoles(next);
+      const who = users.find(u => u.id === userId)?.email || 'user';
+      toast.success(`${who} now opens to the ${role ? HOME_ROLES.find(r => r.key === role)?.name : 'Auto'} home`);
+    } catch (e) { setRoleMap(prev); toast.error(e.message); }
+  }
+
+  useEffect(() => { if (isAdmin) { load(); loadPrefs(); loadHomeRoles(); loadUsage(); } }, [isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -167,9 +205,13 @@ export default function AdminUsers() {
             isSelf={u.id === realUser?.id}
             pushData={pushData}
             onPrefsSaved={loadPrefs}
+            homeRole={roleMap[u.id] || ''}
+            onHomeRoleChange={(role) => changeHomeRole(u.id, role)}
           />
         ))}
       </div>
+
+      <AppUsageTable usage={usage} users={users} />
 
       {showInvite && (
         <InviteUserModal
@@ -318,7 +360,7 @@ function ResetPasswordModal({ user, onClose }) {
   );
 }
 
-function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSelf, pushData, onPrefsSaved }) {
+function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSelf, pushData, onPrefsSaved, homeRole = '', onHomeRoleChange }) {
   const toast = useToast();
   const [resetOpen, setResetOpen] = useState(false);
   const isRestricted = user.is_admin && Array.isArray(user.allowed_pages_global) && user.allowed_pages_global.length > 0;
@@ -367,7 +409,25 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
                 })()}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {/* Home layout in the iPhone app (settings key home_roles, keyed by auth user id) */}
+          {user.id && onHomeRoleChange && (
+            <label
+              onClick={e => e.stopPropagation()}
+              title="Which home the app opens to for this person. Auto picks from admin status and roster title."
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'default' }}
+            >
+              <LayoutDashboard size={12} /> Home
+              <select
+                value={homeRole}
+                onChange={e => onHomeRoleChange(e.target.value)}
+                onClick={e => e.stopPropagation()}
+                style={{ ...inputStyle, width: 'auto', minWidth: 96, padding: '5px 8px', fontSize: 12, textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}
+              >
+                {HOME_ROLES.map(r => <option key={r.key || 'auto'} value={r.key}>{r.name}</option>)}
+              </select>
+            </label>
+          )}
           {!isSelf && (
             <button
               style={btnGhost}
@@ -491,7 +551,7 @@ function GlobalPagesEditor({ user, onChanged }) {
 }
 
 // Per-employee page access. Single-account CRM, so there's no "client" to
-// pick — this just edits which pages the employee can open. Under the hood it
+// pick, this just edits which pages the employee can open. Under the hood it
 // writes one grant on the single workspace.
 function PageAccessEditor({ user, workspace, onChanged }) {
   const toast = useToast();
@@ -529,7 +589,7 @@ function PageAccessEditor({ user, workspace, onChanged }) {
 
   return (
     <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-      {/* Role preset — one-click bundle; still fully overridable below */}
+      {/* Role preset, one-click bundle; still fully overridable below */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Role</span>
         <select value={currentRole} onChange={e => applyRole(e.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: 170, padding: '6px 10px' }}>
@@ -648,6 +708,110 @@ function NotificationPrefsEditor({ user, pushData, onSaved }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// What the team actually uses in the iPhone app: per person, screen views and
+// actions over the last 30 days, their top screens and actions, and a small
+// per-day sparkline. Names only; message bodies are never logged.
+const dayKeys = (days) => {
+  // Days are Chicago dates (YYYY-MM-DD) from the rollup view; walk back from
+  // today's Chicago date with UTC arithmetic so DST cannot skip a day.
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const get = (t) => Number(parts.find(p => p.type === t)?.value || 0);
+  const today = Date.UTC(get('year'), get('month') - 1, get('day'));
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) out.push(new Date(today - i * 86400000).toISOString().slice(0, 10));
+  return out;
+};
+const topN = (counts, n = 3) => Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, n);
+const prettyName = (s) => String(s || '').replace(/_/g, ' ');
+
+function Sparkline({ days, byDay }) {
+  const keys = useMemo(() => dayKeys(days), [days]);
+  const vals = keys.map(k => byDay[k] || 0);
+  const max = Math.max(1, ...vals);
+  return (
+    <div title="Events per day, oldest to newest" style={{ display: 'flex', alignItems: 'flex-end', gap: 1, height: 22, width: keys.length * 4 }}>
+      {vals.map((v, i) => (
+        <div key={keys[i]} title={`${keys[i]}: ${v}`} style={{ width: 3, height: Math.max(2, Math.round((v / max) * 22)), borderRadius: 1, background: v ? 'var(--orange)' : 'var(--border)', opacity: v ? 0.85 : 1 }} />
+      ))}
+    </div>
+  );
+}
+
+function AppUsageTable({ usage, users }) {
+  const people = useMemo(() => {
+    const rows = Array.isArray(usage?.rows) ? usage.rows : [];
+    const byUser = {};
+    for (const r of rows) {
+      const u = byUser[r.user_id] || (byUser[r.user_id] = { user_id: r.user_id, name: r.user_name || '', screens: 0, actions: 0, topScreens: {}, topActions: {}, byDay: {} });
+      if (!u.name && r.user_name) u.name = r.user_name;
+      const n = Number(r.n) || 0;
+      if (r.event === 'action') { u.actions += n; u.topActions[r.name] = (u.topActions[r.name] || 0) + n; }
+      else { u.screens += n; u.topScreens[r.name] = (u.topScreens[r.name] || 0) + n; }
+      if (r.day) u.byDay[r.day] = (u.byDay[r.day] || 0) + n;
+    }
+    return Object.values(byUser)
+      .map(u => ({ ...u, name: u.name || users.find(x => x.id === u.user_id)?.email || u.user_id }))
+      .sort((a, b) => (b.screens + b.actions) - (a.screens + a.actions));
+  }, [usage, users]);
+
+  const th = { ...labelStyle, textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
+  const td = { padding: '10px 10px', fontSize: 13, color: 'var(--text)', verticalAlign: 'top', borderBottom: '1px solid var(--border)' };
+  const days = usage?.days || USAGE_DAYS;
+
+  return (
+    <div style={{ ...card, marginTop: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <BarChart2 size={15} color="var(--orange)" />
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>App usage (last {days} days)</div>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>What each person opens and does in the iPhone app. Screen and action names only, never what was typed.</div>
+
+      {!usage ? (
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>Loading usage…</div>
+      ) : usage.error ? (
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+          {usage.needsMigration ? 'App usage tracking is not set up yet (run docs/sql/app-events.sql in Supabase).' : usage.error}
+        </div>
+      ) : people.length === 0 ? (
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>No app activity in the last {days} days.</div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={th}>Person</th>
+                <th style={{ ...th, textAlign: 'right' }}>Screen views</th>
+                <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+                <th style={th}>Top screens</th>
+                <th style={th}>Top actions</th>
+                <th style={th}>Per day</th>
+              </tr>
+            </thead>
+            <tbody>
+              {people.map(p => (
+                <tr key={p.user_id}>
+                  <td style={{ ...td, fontWeight: 700, whiteSpace: 'nowrap' }} className="pii-name">{p.name}</td>
+                  <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.screens.toLocaleString()}</td>
+                  <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.actions.toLocaleString()}</td>
+                  <td style={{ ...td, fontSize: 12, color: 'var(--muted)' }}>
+                    {topN(p.topScreens).map(([n, c]) => <div key={n}><span style={{ color: 'var(--text)' }}>{prettyName(n)}</span> · {c}</div>)}
+                    {!Object.keys(p.topScreens).length && <span>none</span>}
+                  </td>
+                  <td style={{ ...td, fontSize: 12, color: 'var(--muted)' }}>
+                    {topN(p.topActions).map(([n, c]) => <div key={n}><span style={{ color: 'var(--text)' }}>{prettyName(n)}</span> · {c}</div>)}
+                    {!Object.keys(p.topActions).length && <span>none</span>}
+                  </td>
+                  <td style={td}><Sparkline days={days} byDay={p.byDay} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

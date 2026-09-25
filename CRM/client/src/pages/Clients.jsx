@@ -8,6 +8,7 @@ import {
   StickyNote, Phone, CheckSquare, PhoneIncoming, PhoneOutgoing, Flag, Activity, X, Mail,
   ChevronLeft, ChevronRight, ChevronDown, Loader, FolderOpen,
   Folder, FolderPlus, Upload, File as FileIcon, MoreHorizontal, CornerLeftUp,
+  Send as SendIcon, Smartphone,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import {
@@ -22,10 +23,11 @@ import {
   agreementChat, analyzeDeal, generateAgreement, saveAgreementDoc, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent, startMaintenance,
   listClientFiles, listClientFolders, createClientFolder, renameClientFile,
   moveClientFile, deleteClientFile, uploadClientFile,
-  getAssignees,
+  getAssignees, textSignLink,
 } from '../api';
 import { useClient } from '../context/ClientContext';
 import Modal from '../components/Modal';
+import NudgeModal from '../components/NudgeModal';
 import InlineEdit from '../components/InlineEdit';
 import StatusBadge from '../components/StatusBadge';
 import DeliveryBoard from '../components/DeliveryBoard';
@@ -39,7 +41,7 @@ const projectPaymentBadge = (p) => {
 };
 const PROJECT_LIFECYCLE = ['Onboarding', 'Awaiting Access', 'In Progress', 'Live', 'Completed', 'Paused'];
 
-// The project's start date IS the pay date — use start_date, else the recorded
+// The project's start date IS the pay date, use start_date, else the recorded
 // deposit paid_at. Returns a short formatted string, or '' if neither is set.
 const projectStartDate = (p) => {
   const raw = p?.start_date || p?.paid_at;
@@ -92,7 +94,7 @@ const RANKS = [
 ];
 const rankOf = (k) => RANKS.find(r => r.key === k) || RANKS[1];
 
-// Follow-up status for leads/clients — tracks whose court the ball is in.
+// Follow-up status for leads/clients, tracks whose court the ball is in.
 const FOLLOW_UPS = [
   { key: 'none',            label: 'No follow-up',    color: '#64748b' },
   { key: 'needs_follow_up', label: 'Needs follow-up', color: '#dc2626' },
@@ -179,7 +181,7 @@ function PillSelect({ value, options, onChange, minWidth = 54 }) {
 
 const fmtUsd = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 
-// Kanban board for leads — one column per temperature (Hot / Warm / Cold).
+// Kanban board for leads, one column per temperature (Hot / Warm / Cold).
 // Drag a card between columns to change its temperature. Each card carries a
 // potential-revenue amount; the board totals it per column and overall.
 function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFollowUp }) {
@@ -253,7 +255,7 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFol
                   >
                     {/* Title */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <span className="private-value" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.business_name || '—'}</span>
+                      <span className="private-value" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.business_name || '-'}</span>
                       <button className="lead-card-del" onClick={e => { e.stopPropagation(); onDelete(l); }} title="Delete lead"
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 1, flexShrink: 0 }}><Trash2 size={13} /></button>
                     </div>
@@ -304,7 +306,7 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFol
                     {/* Footer: owner + date */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--surface-3)', color: 'var(--muted)', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initial}</span>
-                      <span className="private-value" style={{ fontSize: 11.5, color: 'var(--text)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.owner_name || l.source || '—'}</span>
+                      <span className="private-value" style={{ fontSize: 11.5, color: 'var(--text)', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.owner_name || l.source || '-'}</span>
                       {l.assigned_to_name && (
                         <span title={`Assigned to ${l.assigned_to_name}`} style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--orange)', background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.25)', borderRadius: 999, padding: '2px 8px', flexShrink: 0, maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {l.assigned_to_name.split(' ')[0]}
@@ -330,7 +332,7 @@ function LeadsBoard({ leads, onOpen, onTempChange, onRankChange, onDelete, onFol
 
 // kind='lead'   -> stage === 'lead' (still trying to convert, hasn't paid/started)
 // kind='client' -> stage !== 'lead' (paid and started with VTM)
-// Same crm_clients table either way — moving a lead's stage off 'lead' is what
+// Same crm_clients table either way, moving a lead's stage off 'lead' is what
 // "converts" it; it just disappears from the Leads list and shows up in Clients.
 export default function Clients({ kind = 'client' }) {
   const isLeadView = kind === 'lead';
@@ -402,7 +404,7 @@ export default function Clients({ kind = 'client' }) {
         b.count += 1;
         b.value += Number(p.value) || 0;
         // Retainers carry their money in recurring_amount, not value. Without
-        // this the Value column reads "—" for every monthly client.
+        // this the Value column reads "-" for every monthly client.
         b.recurring += Number(p.recurring_amount) || 0;
         b.paid += Number(p.amount_paid) || 0;
         if (p.name) b.names.push(p.name);
@@ -545,7 +547,7 @@ export default function Clients({ kind = 'client' }) {
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
           <input className="search-input" placeholder={`Search ${isLeadView ? 'leads' : 'clients'}…`} value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
         </div>
-        {/* Leads pipeline filter (cold / warm / hot) — list view only; the
+        {/* Leads pipeline filter (cold / warm / hot), list view only; the
             board's columns already are the pipeline. */}
         {isLeadView && view === 'list' && (
           <div style={{ display: 'inline-flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 3, gap: 2 }}>
@@ -591,7 +593,7 @@ export default function Clients({ kind = 'client' }) {
         </div>
       )}
 
-      {/* Client revenue snapshot — last 30 days + recurring, from Stripe. */}
+      {/* Client revenue snapshot, last 30 days + recurring, from Stripe. */}
       {!isLeadView && revStats && (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '14px 24px 2px' }}>
           {[
@@ -703,10 +705,10 @@ export default function Clients({ kind = 'client' }) {
                     <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
                       {c.logo_url ? <img src={c.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={15} style={{ color: 'var(--muted)' }} />}
                     </div>
-                    <span className="pii-name" style={{ fontWeight: 700, color: 'var(--text)' }}>{c.business_name || '—'}</span>
+                    <span className="pii-name" style={{ fontWeight: 700, color: 'var(--text)' }}>{c.business_name || '-'}</span>
                   </div>
                 </td>
-                <td><span className="pii-name" style={{ color: 'var(--muted)' }}>{c.owner_name || '—'}</span></td>
+                <td><span className="pii-name" style={{ color: 'var(--muted)' }}>{c.owner_name || '-'}</span></td>
                 {isLeadView ? (
                   <>
                     <td onClick={e => e.stopPropagation()}><PillSelect value={c.lead_temperature || 'warm'} options={TEMPERATURES} onChange={v => patchLead(c.id, { lead_temperature: v })} /></td>
@@ -716,10 +718,10 @@ export default function Clients({ kind = 'client' }) {
                 )}
                 {isLeadView ? (
                   <>
-                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.source || '—'}</td>
-                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(c.client_type || []).join(', ') || '—'}</td>
-                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.assigned_to_name || '—'}</td>
-                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.source || '-'}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(c.client_type || []).join(', ') || '-'}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.assigned_to_name || '-'}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}</td>
                   </>
                 ) : (() => {
                   const b = projByClient[c.id];
@@ -740,13 +742,13 @@ export default function Clients({ kind = 'client' }) {
                             {b.recurring > 0 && b.value > 0 && <span style={{ color: 'var(--muted)' }}> + </span>}
                             {b.value > 0 && <span>{fmtUsd(b.value)}</span>}
                           </span>
-                        ) : '—'}
+                        ) : '-'}
                       </td>
                       <td style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', fontWeight: outstanding > 0 ? 700 : 400, color: outstanding > 0 ? '#b45309' : 'var(--muted)' }}>
                         {b && b.value ? (outstanding > 0 ? fmtUsd(outstanding) : 'Paid up')
-                          : (b && b.recurring > 0 ? <span style={{ color: 'var(--muted)' }}>Recurring</span> : '—')}
+                          : (b && b.recurring > 0 ? <span style={{ color: 'var(--muted)' }}>Recurring</span> : '-')}
                       </td>
-                      <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                      <td style={{ color: 'var(--muted)', fontSize: 12 }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}</td>
                     </>
                   );
                 })()}
@@ -766,7 +768,7 @@ export default function Clients({ kind = 'client' }) {
             <div className="mobile-card-row primary" style={{ gap: 8 }}>
               <input type="checkbox" checked={selectedIds.has(c.id)} onClick={e => e.stopPropagation()} onChange={() => toggleSelectId(c.id)} style={{ accentColor: 'var(--orange)' }} />
               <Building2 size={14} style={{ color: 'var(--orange)' }} />
-              <span className="pii-name">{c.business_name || '—'}</span>
+              <span className="pii-name">{c.business_name || '-'}</span>
             </div>
             {isLeadView ? (
               <div className="mobile-card-row" style={{ gap: 8 }} onClick={e => e.stopPropagation()}>
@@ -926,7 +928,7 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
           {client.logo_url ? <img src={client.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="pii-name" style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.1, letterSpacing: '-0.01em' }}>{client.business_name || '—'}</div>
+          <div className="pii-name" style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.1, letterSpacing: '-0.01em' }}>{client.business_name || '-'}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
             <span style={{ fontSize: 13, color: 'var(--muted)' }}>{client.owner_name || 'No owner set'}</span>
             {client.source && <span style={{ fontSize: 12, color: 'var(--muted)' }}>· via {client.source}</span>}
@@ -1100,7 +1102,7 @@ function mdToDocHtml(md) {
   return html;
 }
 
-// Step 0 — Discuss: a chat assistant that reads the lead's documents + notes,
+// Step 0, Discuss: a chat assistant that reads the lead's documents + notes,
 // asks Ray clarifying questions, and writes the terms summary that feeds the
 // agreement. When it has scope + pricing it marks the terms ready and Ray moves on.
 function DiscussStep({ client, chatLog, setChatLog, termsText, setTermsText, setFooter, onReady, onRestart }) {
@@ -1146,7 +1148,7 @@ function DiscussStep({ client, chatLog, setChatLog, termsText, setTermsText, set
         </div>
       </div>
 
-      {/* Chat transcript — grows to fill, scrolls on its own */}
+      {/* Chat transcript, grows to fill, scrolls on its own */}
       <div ref={scrollRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', padding: '4px 2px' }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -1174,7 +1176,7 @@ function DiscussStep({ client, chatLog, setChatLog, termsText, setTermsText, set
         </div>
       )}
 
-      {/* Input — pinned at the bottom, just above the step-count footer */}
+      {/* Input, pinned at the bottom, just above the step-count footer */}
       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
         <textarea className="form-input" rows={2} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
@@ -1185,7 +1187,7 @@ function DiscussStep({ client, chatLog, setChatLog, termsText, setTermsText, set
   );
 }
 
-// Step 1 — Terms: pick the pricing structure. Scope + pricing come from Discuss.
+// Step 1, Terms: pick the pricing structure. Scope + pricing come from Discuss.
 function TermsStep({ client, savedDraft, termsText, setTermsText, onApprove, setFooter, paymentMode, setPaymentMode }) {
   // Scope + pricing come from the Discuss chat (termsText). This step only picks
   // the pricing structure. For Standard, clicking Next drafts the agreement; for
@@ -1217,7 +1219,7 @@ function TermsStep({ client, savedDraft, termsText, setTermsText, onApprove, set
             setOffered(Object.fromEntries(computePlans(ag.total_amount).map(p => [p.key, ag.plan_options.some(o => o.key === p.key)])));
           }
         }
-      } catch (e) { /* no agreement yet — fine */ }
+      } catch (e) { /* no agreement yet, fine */ }
       finally { setLoading(false); }
     })();
   }, [client.id]);
@@ -1288,7 +1290,7 @@ function TermsStep({ client, savedDraft, termsText, setTermsText, onApprove, set
         <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Choose how the client pays. The scope and pricing were captured in the Discuss step.</div>
       </div>
 
-      {/* Standard vs Payment Plan — two big button cards */}
+      {/* Standard vs Payment Plan, two big button cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
         {[
           { key: 'fixed',  title: 'Standard Pricing', blurb: 'One fixed agreement with the terms from Discuss. Clicking Next drafts it.', icon: FileSignature },
@@ -1361,7 +1363,7 @@ function TermsStep({ client, savedDraft, termsText, setTermsText, onApprove, set
           )}
         </div>
       ) : (
-        /* ── Standard mode — the editable terms captured in Discuss ── */
+        /* ── Standard mode, the editable terms captured in Discuss ── */
         <div style={{ maxWidth: 760 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Terms from your discussion</div>
           <textarea
@@ -1381,12 +1383,12 @@ function TermsStep({ client, savedDraft, termsText, setTermsText, onApprove, set
   );
 }
 
-// Step 2 — Deals & Projects: turn the approved terms into a billable deal +
+// Step 2, Deals & Projects: turn the approved terms into a billable deal +
 // project line items (one-time and monthly), so invoicing/Stripe can bill them.
 function DealsStep({ client, termsDraft, savedDealId, onCreated, setFooter }) {
   const [loading, setLoading] = useState(true);
   const [deal, setDeal] = useState(null); // an existing deal for this client, if any
-  const [name, setName] = useState(`${client.business_name || 'Client'} — Service Agreement`);
+  const [name, setName] = useState(`${client.business_name || 'Client'} · Service Agreement`);
   const [items, setItems] = useState([]);
   const [seeding, setSeeding] = useState(false); // AI building the line items
   const [seeded, setSeeded] = useState(false);
@@ -1476,7 +1478,7 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated, setFooter }) {
 
   if (loading) return <div style={{ color: 'var(--muted)', padding: 24 }}>Loading…</div>;
 
-  // Already has projects — show it read-only and let Ray continue.
+  // Already has projects, show it read-only and let Ray continue.
   if (hasProjects) {
     const ps = deal.projects || [];
     return (
@@ -1544,7 +1546,7 @@ function DealsStep({ client, termsDraft, savedDealId, onCreated, setFooter }) {
   );
 }
 
-// Step 3 — Agreement: persist the approved terms into a real agreement doc,
+// Step 3, Agreement: persist the approved terms into a real agreement doc,
 // preview it exactly as the client will see it (gate), then approve to lock.
 function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
   const [loading, setLoading] = useState(true);
@@ -1650,7 +1652,7 @@ function AgreementStep({ client, termsDraft, onApproved, setFooter }) {
     return (
       <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', color: 'var(--muted)' }}>
         <FileSignature size={28} style={{ opacity: 0.4 }} />
-        <div style={{ marginTop: 12, fontSize: 14 }}>Approve the terms first — head back to the <strong>Terms</strong> step.</div>
+        <div style={{ marginTop: 12, fontSize: 14 }}>Approve the terms first. Head back to the <strong>Terms</strong> step.</div>
       </div>
     );
   }
@@ -1740,9 +1742,9 @@ function computePlans(total, financePct = 10) {
   ];
 }
 
-// Step 5 — Payment: choose which of the standard plans to offer this client.
-// Step (fixed mode only) — Payment: confirm the fixed billing schedule that
-// auto-sets-up on signing. (Custom-plan clients skip this — they pick in portal.)
+// Step 5, Payment: choose which of the standard plans to offer this client.
+// Step (fixed mode only), Payment: confirm the fixed billing schedule that
+// auto-sets-up on signing. (Custom-plan clients skip this: they pick in portal.)
 function PaymentStep({ client, onDone, setFooter }) {
   const [loading, setLoading] = useState(true);
   const [ag, setAg] = useState(null);
@@ -1761,7 +1763,7 @@ function PaymentStep({ client, onDone, setFooter }) {
   if (!ag) return (
     <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', color: 'var(--muted)' }}>
       <DollarSign size={28} style={{ opacity: 0.4 }} />
-      <div style={{ marginTop: 12, fontSize: 14 }}>Approve the agreement first — go to the <strong>Agreement</strong> step.</div>
+      <div style={{ marginTop: 12, fontSize: 14 }}>Approve the agreement first. Go to the <strong>Agreement</strong> step.</div>
     </div>
   );
 
@@ -1788,9 +1790,9 @@ function PaymentStep({ client, onDone, setFooter }) {
       <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>This is what Stripe sets up automatically the moment {client.business_name || 'the client'} signs. Nothing is charged until then.</div>
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 18px 14px' }}>
-        {deposit && <Line label="Deposit — charged at signing" sub="Stripe Checkout on the card the client enters" value={money(deposit.amount)} />}
+        {deposit && <Line label="Deposit, charged at signing" sub="Stripe Checkout on the card the client enters" value={money(deposit.amount)} />}
         {buildRest.length > 0 && (
-          <Line label={`Build installments — ${buildRest.length} × ${money(buildRest[0].amount)}`} sub="Auto-charged monthly on the same card, starting the month after the deposit" value={money(buildRest.reduce((s, i) => s + Number(i.amount || 0), 0))} />
+          <Line label={`Build installments · ${buildRest.length} × ${money(buildRest[0].amount)}`} sub="Auto-charged monthly on the same card, starting the month after the deposit" value={money(buildRest.reduce((s, i) => s + Number(i.amount || 0), 0))} />
         )}
         {maint?.amount && <Line label={maint.item || 'Maintenance & Support'} sub="Recurring subscription, begins right after the build" value={`${money(maint.amount)}/mo`} />}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '12px 0 2px', borderTop: '2px solid var(--border)', marginTop: 4 }}>
@@ -1802,21 +1804,21 @@ function PaymentStep({ client, onDone, setFooter }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14, padding: '12px 14px', background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 10 }}>
         <ShieldCheck size={16} style={{ color: 'var(--orange)', flexShrink: 0, marginTop: 1 }} />
         <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.55 }}>
-          On signing, VTM charges the deposit via Stripe Checkout and sets the recurring plan up on that same card automatically. No separate invoice needed — it's wired into the signature.
+          On signing, VTM charges the deposit via Stripe Checkout and sets the recurring plan up on that same card automatically. No separate invoice needed: it's wired into the signature.
         </div>
       </div>
     </div>
   );
 }
 
-// Step 5 — Platforms & Access: a checklist of tools the client must grant VTM
+// Step 5, Platforms & Access: a checklist of tools the client must grant VTM
 // access to, each with copy-ready instructions. Persisted as client tasks.
 const ACCESS_SEED = [
   { title: 'Website & hosting login', description: 'Add ray@vernontm.com as an Administrator on your website host. WordPress: Users → Add New → role Administrator. Squarespace/Shopify/Wix: Settings → Permissions → invite as admin. This lets us build and connect the CRM to your site.' },
   { title: 'Domain / DNS (registrar)', description: 'Grant delegate access at your domain registrar (GoDaddy, Namecheap, Google Domains) or share DNS management. GoDaddy: Account Settings → Delegate Access → invite ray@vernontm.com. We need this to point records for email and the CRM.' },
   { title: 'Google Workspace / email admin', description: 'Add ray@vernontm.com as a delegated admin, or provide a temporary admin login, so we can configure email routing and the AI email assistant.' },
   { title: 'Stripe', description: 'In Stripe: Settings → Team → invite ray@vernontm.com as Admin. This wires up checkout, subscriptions, and invoicing for your bookings.' },
-  { title: 'Existing CRM export (Keap / Monday.com)', description: 'Export your contacts, pipelines, and bookings as CSV — or add ray@vernontm.com as a user — so we can migrate your data into the new CRM with no loss.' },
+  { title: 'Existing CRM export (Keap / Monday.com)', description: 'Export your contacts, pipelines, and bookings as CSV (or add ray@vernontm.com as a user) so we can migrate your data into the new CRM with no loss.' },
   { title: 'Booking & calendar', description: 'Share your booking tool and calendar (Calendly, Acuity, Google Calendar) so we can integrate scheduling and prevent double-booking.' },
   { title: 'Social & ad accounts', description: 'Add VTM as a partner/admin on Meta Business Suite and any ad accounts, so we can set up retargeting and lower your lead cost.' },
 ];
@@ -1850,7 +1852,7 @@ function AccessStep({ client, onDone, setFooter }) {
   };
   const remove = async (t) => { setItems(xs => xs.filter(x => x.id !== t.id)); if (edit?.id === t.id) setEdit(null); try { await deleteClientTask(t.id); } catch (e) { toast('error', e.message); } };
 
-  // Regenerate the instructions for the item being edited — the AI picks up
+  // Regenerate the instructions for the item being edited, the AI picks up
   // whatever Ray has typed in the box and rewrites from it.
   const regen = async () => {
     if (!edit) return;
@@ -1891,8 +1893,8 @@ function AccessStep({ client, onDone, setFooter }) {
   const copyRequest = () => {
     const pending = items.filter(i => i.status !== 'done');
     const list = (pending.length ? pending : items).map(i => `• ${i.title}${i.description ? `\n   ${i.description}` : ''}`).join('\n\n');
-    const msg = `Hi ${client.owner_name || 'there'},\n\nTo get your build started, we'll need access to a few things. Here's what we need and how to grant it:\n\n${list}\n\nSend ray@vernontm.com over as the invite email wherever it's needed. Let me know if anything's unclear!\n\n— Ray, Vernon Tech & Media`;
-    navigator.clipboard?.writeText(msg).then(() => toast('success', 'Access request copied — paste into an email or text.'), () => toast('error', 'Could not copy'));
+    const msg = `Hi ${client.owner_name || 'there'},\n\nTo get your build started, we'll need access to a few things. Here's what we need and how to grant it:\n\n${list}\n\nSend ray@vernontm.com over as the invite email wherever it's needed. Let me know if anything's unclear!\n\nRay, Vernon Tech & Media`;
+    navigator.clipboard?.writeText(msg).then(() => toast('success', 'Access request copied. Paste it into an email or text.'), () => toast('error', 'Could not copy'));
   };
 
   useStepFooter(setFooter, { label: 'Continue', disabled: loading, onClick: onDone });
@@ -1972,7 +1974,7 @@ function AccessStep({ client, onDone, setFooter }) {
   );
 }
 
-// Step 7 — Proposal: draft the cover email to the client (what was sent + their
+// Step 7, Proposal: draft the cover email to the client (what was sent + their
 // portal link), in a chosen style. Held in the pipeline for the Send step to fire.
 function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone, setFooter }) {
   const [ag, setAg] = useState(null);
@@ -2011,7 +2013,7 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
     finally { setBusy(''); }
   };
 
-  // Auto-draft (gain-focused by default) as soon as we land here — no click needed.
+  // Auto-draft (gain-focused by default) as soon as we land here, no click needed.
   const autoTried = useRef(false);
   useEffect(() => {
     if (ag?.sign_token && !emailDraft && !autoTried.current) { autoTried.current = true; gen(tone); }
@@ -2021,7 +2023,7 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
       <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Proposal email</div>
       <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        A cover note letting {client.owner_name || 'them'} know what you're sending, with their personal link to review &amp; sign — auto-drafted from your notes, terms, and the plan. Switch the style anytime.
+        A cover note letting {client.owner_name || 'them'} know what you're sending, with their personal link to review &amp; sign, auto-drafted from your notes, terms, and the plan. Switch the style anytime.
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -2051,7 +2053,7 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
             <label className="form-label">Message</label>
             <textarea className="form-input" rows={13} value={emailDraft.body} onChange={e => setEmailDraft(m => ({ ...m, body: e.target.value }))} style={{ resize: 'vertical', fontSize: 13, lineHeight: 1.6 }} />
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>To: {client.contact_email || <span style={{ color: '#ff5c5c' }}>no email on file — add one in Business Details</span>}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>To: {client.contact_email || <span style={{ color: '#ff5c5c' }}>no email on file, add one in Business Details</span>}</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn-ghost" disabled={busy === 'draft' || !client.contact_email} onClick={saveGmailDraft}>{busy === 'draft' ? 'Saving…' : 'Save as Gmail draft'}</button>
             <button className="btn-ghost" onClick={() => navigator.clipboard?.writeText(`${emailDraft.subject}\n\n${emailDraft.body}`).then(() => toast('success', 'Copied'))}><Copy size={13} /> Copy</button>
@@ -2063,7 +2065,7 @@ function ProposalStep({ client, emailDraft, setEmailDraft, tone, setTone, onDone
   );
 }
 
-// Step 8 — Send: final gate. Sends the agreement to sign + the proposal email,
+// Step 8, Send: final gate. Sends the agreement to sign + the proposal email,
 // then shows live status (sent → opened → signed).
 function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
   const custom = paymentMode === 'custom';
@@ -2072,6 +2074,7 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
   const [deals, setDeals] = useState([]);
   const [busy, setBusy] = useState('');
   const [emailSent, setEmailSent] = useState(false);
+  const [nudge, setNudge] = useState(null);   // { kind: 'agreement', id }
 
   const load = async () => {
     try {
@@ -2082,6 +2085,18 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, [client.id]);
+
+  // After the email has gone out, also drop the sign link in their texts
+  // (queued iMessage from the business number).
+  const textLink = async () => {
+    if (!ag) return;
+    setBusy('text');
+    try {
+      const r = await textSignLink(ag.id);
+      toast('success', `Sign link texted to ${r?.phone || 'the client'}`);
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
 
   const send = async () => {
     if (!ag) return;
@@ -2102,11 +2117,11 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
     setBusy('email');
     try {
       // Make the agreement signable (status=sent) so the link in the email works,
-      // without firing the plain system email — the proposal email IS the delivery.
+      // without firing the plain system email, the proposal email IS the delivery.
       if (ag && ag.status !== 'signed') { try { await markAgreementSent(ag.id); } catch (e) { /* non-fatal */ } }
       await sendClientEmail({ to: client.contact_email, subject: emailDraft.subject, body: emailDraft.body, mode: 'send' });
       setEmailSent(true);
-      toast('success', `Sent to ${client.contact_email} — they can review & sign from the link.`);
+      toast('success', `Sent to ${client.contact_email}. They can review & sign from the link.`);
       if (ag.status !== 'signed') onPatch && onPatch({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' });
       onSent && onSent();
       setLoading(true); load();
@@ -2118,7 +2133,7 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
   if (!ag) return (
     <div style={{ maxWidth: 560, margin: '48px auto', textAlign: 'center', color: 'var(--muted)' }}>
       <FileSignature size={28} style={{ opacity: 0.4 }} />
-      <div style={{ marginTop: 12, fontSize: 14 }}>Nothing to send yet — complete the <strong>Terms</strong> step first.</div>
+      <div style={{ marginTop: 12, fontSize: 14 }}>Nothing to send yet. Complete the <strong>Terms</strong> step first.</div>
     </div>
   );
 
@@ -2136,17 +2151,17 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
       <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>{custom ? 'Send to the client' : 'Send for signature'}</div>
       <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>
         {custom
-          ? 'The client opens their portal, picks a payment plan, then signs and pays there — the agreement and Stripe checkout are built from their choice.'
+          ? 'The client opens their portal, picks a payment plan, then signs and pays there. The agreement and Stripe checkout are built from their choice.'
           : 'Nothing goes out until you send. On signing, the deposit is charged and the plan is set up automatically.'}
       </div>
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ready to send</div>
         {custom
-          ? <Check ok={plansOffered} label={`Payment plans offered${plansOffered ? ` — ${ag.plan_options.length}` : ''}`} />
+          ? <Check ok={plansOffered} label={`Payment plans offered${plansOffered ? ` · ${ag.plan_options.length}` : ''}`} />
           : <Check ok={approved} label="Agreement approved" />}
         <Check ok={deals.length > 0} label="Deal & projects created" />
-        <Check ok={!!ag.total_amount} label={`Build value set — ${money(ag.total_amount)}`} />
+        <Check ok={!!ag.total_amount} label={`Build value set · ${money(ag.total_amount)}`} />
         <Check ok={!!emailDraft?.body} label="Proposal email drafted" />
       </div>
 
@@ -2160,6 +2175,11 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
             <FileSignature size={15} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend plain link' : 'Send agreement to sign'}
           </button>
         ) : null}
+        {ag.status !== 'signed' && (ag.sent_at || emailSent) && (
+          <button className="btn-ghost" disabled={busy === 'text'} onClick={textLink} title="Queue an iMessage with the sign link to the client's phone">
+            <Smartphone size={14} /> {busy === 'text' ? 'Texting…' : 'Also text the sign link'}
+          </button>
+        )}
       </div>
       {!emailDraft?.body && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Draft the proposal on the previous step to send a personalized email with their sign link (or use the plain send above).</div>}
 
@@ -2167,6 +2187,11 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
         <div style={{ marginTop: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', flex: 1 }}>Signature status</div>
+            {ag.status === 'sent' && (
+              <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setNudge({ kind: 'agreement', id: ag.id })} title="Remind them to sign, by text or email">
+                <SendIcon size={12} /> Nudge
+              </button>
+            )}
             <button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }} disabled={busy === 'refresh'} onClick={() => { setBusy('refresh'); load().finally(() => setBusy('')); }}>Refresh</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -2182,6 +2207,7 @@ function SendStep({ client, emailDraft, onSent, onPatch, paymentMode }) {
           )}
         </div>
       )}
+      {nudge && <NudgeModal kind={nudge.kind} id={nudge.id} onClose={() => setNudge(null)} onSent={() => { setLoading(true); load(); }} />}
     </div>
   );
 }
@@ -2199,7 +2225,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
   // ── Server-synced pipeline state ──────────────────────────────────────────
   // Every pipeline artifact (current step, the Discuss chat, terms, drafts, and
   // choices) lives in crm_clients.pipeline_state, so anyone with access to this
-  // lead — on any device or login — sees the same progress. Local edits save
+  // lead (on any device or login) sees the same progress. Local edits save
   // (debounced) and we poll for changes others make while the page is open.
   const initState = (client.pipeline_state && typeof client.pipeline_state === 'object') ? client.pipeline_state : {};
   const [pstate, setPstate] = useState(initState);
@@ -2275,7 +2301,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
     setPstate(prev => ({ _rev: (prev._rev || 0) + 1 }));
     // Also wipe TermsStep's local caches (analysis / total / maint).
     try { Object.keys(localStorage).forEach(k => { if (k.startsWith(`vtm-terms-${client.id}-`)) localStorage.removeItem(k); }); } catch {}
-    toast('success', 'Pipeline reset — start from the Discuss step.');
+    toast('success', 'Pipeline reset. Start from the Discuss step.');
   };
   const stepIdx = Math.min(step, steps.length - 1);
   const cur = steps[stepIdx];
@@ -2304,7 +2330,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
 
       {/* Sidebar nav + section content */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Vertical section nav — sticky so it stays put while content scrolls */}
+        {/* Vertical section nav, sticky so it stays put while content scrolls */}
         <aside style={{ width: 208, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'var(--surface)', padding: '14px 10px' }}>
           <div style={{ position: 'sticky', top: 14, display: 'flex', flexDirection: 'column', gap: 3 }}>
           {[{ k: 'overview', label: 'Overview', icon: Building2 }, { k: 'documents', label: 'Documents', icon: FolderOpen }, { k: 'pipeline', label: 'Projects', icon: ListChecks }].map(n => {
@@ -2329,7 +2355,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
       ) : view === 'overview' ? (
         <div style={{ flex: 1, padding: 24 }}>
           <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', gap: 20, alignItems: 'start' }}>
-            {/* LEFT — business details + lead status */}
+            {/* LEFT, business details + lead status */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
               <Card title="Business details">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 18 }}>
@@ -2363,7 +2389,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
                 </div>
               </Card>
             </div>
-            {/* RIGHT — activity timeline */}
+            {/* RIGHT, activity timeline */}
             <LeadActivity client={client} />
           </div>
         </div>
@@ -2402,7 +2428,7 @@ function LeadDetail({ client, onBack, onDelete, onPatch }) {
         ) : null}
       </div>
 
-      {/* Sticky bottom nav — the active step's approve/commit action lives here */}
+      {/* Sticky bottom nav, the active step's approve/commit action lives here */}
       <div style={{ position: 'sticky', bottom: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 -4px 16px rgba(0,0,0,0.06)', zIndex: 20 }}>
         <button className="btn-ghost" disabled={stepIdx === 0} onClick={() => setStep(s => Math.max(0, s - 1))}><ChevronLeft size={15} /> Previous</button>
         <div style={{ flex: 1, textAlign: 'center' }}>
@@ -2479,7 +2505,7 @@ function LeadActivity({ client, onRestart }) {
     finally { setSaving(false); }
   };
 
-  // Inline "add a note to the timeline" — type + Enter (or Add), no form to open.
+  // Inline "add a note to the timeline", type + Enter (or Add), no form to open.
   const addQuick = async () => {
     const text = quick.trim();
     if (!text || saving) return;
@@ -2502,7 +2528,7 @@ function LeadActivity({ client, onRestart }) {
   const remove = async (a) => { setItems(x => x.filter(i => i.id !== a.id)); try { await deleteClientActivity(a.id); } catch (e) { toast('error', e.message); } };
   const toggleTask = async (a) => { const status = a.status === 'done' ? 'todo' : 'done'; setItems(x => x.map(i => i.id === a.id ? { ...i, status } : i)); try { await updateClientActivity(a.id, { status }); } catch (e) { toast('error', e.message); } };
 
-  // Inline note editing — keeps saved terms/notes current so the agreement AI
+  // Inline note editing, keeps saved terms/notes current so the agreement AI
   // never drafts from stale numbers.
   const [editingId, setEditingId] = useState(null);
   const [editBody, setEditBody] = useState('');
@@ -2533,7 +2559,7 @@ function LeadActivity({ client, onRestart }) {
         {!adding && <button className="btn-ghost" style={{ marginLeft: onRestart ? 0 : 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', fontSize: 12 }} onClick={openAdd} title="Log a call, meeting, or note with a date and document"><Plus size={13} /> Detailed</button>}
       </div>
 
-      {/* Inline add-a-note bar — just type and hit Add/Enter */}
+      {/* Inline add-a-note bar, just type and hit Add/Enter */}
       <div style={{ display: 'flex', gap: 8 }}>
         <input className="form-input" placeholder="Add a note to the timeline…" value={quick}
           onChange={e => setQuick(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addQuick(); }} style={{ flex: 1 }} />
@@ -2584,9 +2610,9 @@ function LeadActivity({ client, onRestart }) {
         </div>
       )}
 
-      {/* Scrollable region — timeline + files + uploader scroll on their own so the page doesn't */}
+      {/* Scrollable region, timeline + files + uploader scroll on their own so the page doesn't */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 4 }}>
-      {/* Timeline — connected dots with a vertical rail */}
+      {/* Timeline, connected dots with a vertical rail */}
       {loading ? <div style={{ color: 'var(--muted)' }}>Loading…</div>
         : items.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 13, padding: '10px 0' }}>No activity yet. Type above to add your first note.</div>
         : <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -2601,7 +2627,7 @@ function LeadActivity({ client, onRestart }) {
             : (a.type === 'call' || a.type === 'meeting' || a.type === 'email') ? '#2563eb'
             : (c?.color || NOTE_TAGS[a.tag] || 'var(--muted)');
           const titleText = a.type === 'call'
-            ? `${a.direction === 'inbound' ? 'Inbound' : 'Outbound'} call${a.outcome ? ' — ' + a.outcome : ''}`
+            ? `${a.direction === 'inbound' ? 'Inbound' : 'Outbound'} call${a.outcome ? ' · ' + a.outcome : ''}`
             : (a.title || '');
           const bodyText = a.body || '';
           const primaryIsBody = !titleText;
@@ -2665,7 +2691,7 @@ function LeadActivity({ client, onRestart }) {
   );
 }
 
-// Documents tab — a real file manager per client: folders, drag-and-drop
+// Documents tab, a real file manager per client: folders, drag-and-drop
 // upload (files AND whole folders), drag-to-move, rename, delete. Files live in
 // the `client-documents` bucket; folder structure is logical (parent_path), so
 // moving or renaming never rewrites storage.
@@ -3010,7 +3036,7 @@ function RevenueField({ value, type, onSave }) {
   );
 }
 
-// Compact roll-up of a client's projects on the Overview — each with its
+// Compact roll-up of a client's projects on the Overview, each with its
 // lifecycle status + payment badge, so the client page reads as a summary of
 // their work without opening the Projects tab.
 function ClientProjectsRollup({ client }) {
@@ -3459,6 +3485,7 @@ function AgreementTab({ client }) {
   const [terms, setTerms] = useState('');
   const [draft, setDraft] = useState(null);
   const [showText, setShowText] = useState('agreement');
+  const [nudge, setNudge] = useState(null);   // { kind: 'agreement', id }
 
   const load = async () => {
     try { const d = await getAgreements(client.id); setAgreements(d.agreements || []); setPayments(d.payments || []); }
@@ -3466,6 +3493,19 @@ function AgreementTab({ client }) {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, [client.id]);
+
+  // "Also text the sign link": the email send goes first (when it has not gone
+  // out yet), then the sign link is queued as an iMessage to their phone.
+  const textLink = async (ag) => {
+    setBusy('text');
+    try {
+      if (!ag.sent_at) await sendAgreementForSignature(ag.id);
+      const r = await textSignLink(ag.id);
+      toast('success', `Sign link texted to ${r?.phone || 'the client'}`);
+      load();
+    } catch (e) { toast('error', e.message); }
+    finally { setBusy(''); }
+  };
 
   const togglePay = async (p) => {
     const status = p.status === 'paid' ? 'pending' : 'paid';
@@ -3524,7 +3564,7 @@ function AgreementTab({ client }) {
           {ag.status === 'draft' && (
             <button className="btn-primary" disabled={busy === 'approve'} onClick={async () => {
               setBusy('approve');
-              try { const r = await approveAgreementRow(ag.id); toast('success', 'Approved — deal & payment schedule created. Review the document, then Send.'); load(); }
+              try { const r = await approveAgreementRow(ag.id); toast('success', 'Approved. Deal & payment schedule created. Review the document, then Send.'); load(); }
               catch (e) { toast('error', e.message); } finally { setBusy(''); }
             }}>
               <CheckCircle2 size={14} /> {busy === 'approve' ? 'Approving…' : 'Approve'}
@@ -3548,8 +3588,19 @@ function AgreementTab({ client }) {
               <FileSignature size={14} /> {busy === 'send' ? 'Sending…' : ag.sent_at ? 'Resend' : 'Send to sign'}
             </button>
           )}
+          {(ag.status === 'approved' || ag.status === 'sent') && (
+            <button className="btn-ghost" disabled={busy === 'text'} onClick={() => textLink(ag)} title="Queue an iMessage with the sign link to the client's phone (emails first if it has not been sent)">
+              <Smartphone size={14} /> {busy === 'text' ? 'Texting…' : 'Also text the sign link'}
+            </button>
+          )}
+          {ag.status === 'sent' && (
+            <button className="btn-ghost" onClick={() => setNudge({ kind: 'agreement', id: ag.id })} title="Remind them to sign, by text or email">
+              <SendIcon size={14} /> Nudge
+            </button>
+          )}
           {ag.file_url && <button className="btn-ghost" onClick={() => viewPdf(ag)}><Download size={14} /> PDF</button>}
         </div>
+        {nudge && <NudgeModal kind={nudge.kind} id={nudge.id} onClose={() => setNudge(null)} onSent={() => load()} />}
         {ag.status === 'signed' && ag.signer_ip && (
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: -8 }}>
             Signed electronically · {ag.signature_method === 'draw' ? 'drawn signature' : 'typed signature'} · IP {ag.signer_ip} · {ag.signed_at ? new Date(ag.signed_at).toLocaleString() : ''}
@@ -3563,14 +3614,14 @@ function AgreementTab({ client }) {
           </div>
         )}
 
-        {/* Manual maintenance start — for pay-in-full / 50-50 plans that have no build schedule to trail. */}
+        {/* Manual maintenance start, for pay-in-full / 50-50 plans that have no build schedule to trail. */}
         {ag.status === 'signed' && Number(md.maintenance) > 0 && (md.plan_key === 'full' || md.plan_key === '50_50') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12 }}>
             <DollarSign size={18} style={{ color: ag.maintenance_started_at ? '#16a34a' : 'var(--orange)', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 13.5 }}>Maintenance &amp; Support — {money(md.maintenance)}/mo</div>
+              <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 13.5 }}>Maintenance &amp; Support · {money(md.maintenance)}/mo</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-                {ag.maintenance_started_at ? `Active since ${new Date(ag.maintenance_started_at).toLocaleDateString()}` : 'Start this when the project is delivered — it bills monthly on the card on file.'}
+                {ag.maintenance_started_at ? `Active since ${new Date(ag.maintenance_started_at).toLocaleDateString()}` : 'Start this when the project is delivered. It bills monthly on the card on file.'}
               </div>
             </div>
             {!ag.maintenance_started_at && (
@@ -3826,7 +3877,7 @@ function ActivityTab({ clientId }) {
 // ── Deals tab ───────────────────────────────────────────────────────────────
 // A Deal groups this client's projects into one agreement + one combined
 // invoice. One client can have several deals; each bills as a single invoice
-// with a line item per project — so multiple projects never split into
+// with a line item per project, so multiple projects never split into
 // separate bills.
 const fmtMoney = (v) => `$${Number(v || 0).toLocaleString()}`;
 const dealTotals = (deal) => {
@@ -3880,7 +3931,7 @@ function DealCard({ deal, clientProjects, onChanged }) {
         {editing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Projects in this deal</div>
-            {clientProjects.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>This client has no projects yet — create them on the Projects page.</div>}
+            {clientProjects.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>This client has no projects yet. Create them on the Projects page.</div>}
             {clientProjects.map(p => {
               const on = picked.has(p.id);
               const inOther = p.deal_id && p.deal_id !== deal.id;
@@ -3977,12 +4028,12 @@ function DealsTab({ client }) {
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Deal name</label>
-            <input className="form-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Veteran Nexus — CRM + 2 sites" autoFocus />
+            <input className="form-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Veteran Nexus · CRM + 2 sites" autoFocus />
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Include projects</div>
             {projects.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>This client has no projects yet — create them on the Projects page, then group them here.</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>This client has no projects yet. Create them on the Projects page, then group them here.</div>
             ) : projects.map(p => (
               <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text)', cursor: 'pointer', padding: '3px 0' }}>
                 <input type="checkbox" checked={newPicked.has(p.id)} onChange={() => setNewPicked(s => { const n = new Set(s); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} style={{ accentColor: 'var(--orange)' }} />

@@ -7,7 +7,14 @@ import { useClient } from '../context/ClientContext';
 import { usePageActions } from '../context/UiContext';
 import { toast } from '../components/Toast';
 import Modal from '../components/Modal';
-import { getRoutines, createRoutine, updateRoutine, deleteRoutine, checkRoutineItem } from '../api';
+import { getRoutines, createRoutine, updateRoutine, deleteRoutine, checkRoutineItem, countRoutineItem } from '../api';
+
+// Items can carry a numeric `target` ("Reach out to 50 leads"). Those are
+// counted up instead of ticked: the check row keeps a `count` and the item
+// reads as done once count >= target. Plain items still toggle as before.
+const targetOf = (item) => { const t = Number(item?.target); return Number.isFinite(t) && t > 0 ? t : 0; };
+const countOf = (chk) => { const c = Number(chk?.count); return Number.isFinite(c) && c > 0 ? c : 0; };
+const isItemDone = (item, chk) => targetOf(item) > 0 ? countOf(chk) >= targetOf(item) : !!chk;
 
 const CADENCES = [
   { key: 'daily',   label: 'Daily',   reset: 'today',      resets: 'day',   icon: Sun,           color: '#f59e0b' },
@@ -17,7 +24,7 @@ const CADENCES = [
 const cadenceOf = (k) => CADENCES.find(c => c.key === k) || CADENCES[0];
 const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : 'i_' + Math.random().toString(36).slice(2) + Date.now());
 
-// Period key the checks hang off — must match how a routine "resets".
+// Period key the checks hang off, must match how a routine "resets".
 function periodKey(cadence, d = new Date()) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   if (cadence === 'monthly') return `${y}-${m}`;
@@ -38,13 +45,18 @@ function RoutineModal({ initial, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const setItem = (i, text) => setItems(a => a.map((x, idx) => idx === i ? { ...x, text } : x));
+  const setTarget = (i, target) => setItems(a => a.map((x, idx) => idx === i ? { ...x, target } : x));
   const addItem = () => setItems(a => [...a, { id: uid(), text: '' }]);
   const delItem = (i) => setItems(a => a.filter((_, idx) => idx !== i));
   const move = (i, dir) => setItems(a => { const j = i + dir; if (j < 0 || j >= a.length) return a; const c = [...a]; [c[i], c[j]] = [c[j], c[i]]; return c; });
 
   const save = async () => {
     if (!title.trim()) { toast('error', 'Give the routine a name'); return; }
-    const clean = items.filter(x => x.text.trim()).map(x => ({ id: x.id, text: x.text.trim() }));
+    // A blank or zero target means a plain checkbox item (the key is dropped).
+    const clean = items.filter(x => x.text.trim()).map(x => {
+      const t = Math.floor(Number(x.target));
+      return { id: x.id, text: x.text.trim(), ...(Number.isFinite(t) && t > 0 ? { target: t } : {}) };
+    });
     setSaving(true);
     try {
       const payload = { title: title.trim(), cadence, description, items: clean };
@@ -71,10 +83,16 @@ function RoutineModal({ initial, onClose, onSaved }) {
         </div>
         <div>
           <label style={lbl}>Checklist items</label>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>Give an item a target to count it up instead of ticking it (e.g. Reach out to 50 leads, target 50).</div>
           {items.map((it, i) => (
             <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
               <GripVertical size={14} style={{ color: 'var(--muted)', flexShrink: 0 }} />
               <input value={it.text} onChange={e => setItem(i, e.target.value)} style={{ ...field, flex: 1 }} placeholder={`Item ${i + 1}`} />
+              <input
+                type="number" min={1} step={1} inputMode="numeric"
+                value={it.target ?? ''} onChange={e => setTarget(i, e.target.value)}
+                style={{ ...field, width: 82, flexShrink: 0 }} placeholder="Target" title="Optional: count up to this number"
+              />
               <button type="button" className="btn-ghost" style={{ padding: '5px 6px' }} onClick={() => move(i, -1)} disabled={i === 0}><ChevronUp size={13} /></button>
               <button type="button" className="btn-ghost" style={{ padding: '5px 6px' }} onClick={() => move(i, 1)} disabled={i === items.length - 1}><ChevronDown size={13} /></button>
               <button type="button" className="btn-ghost" style={{ padding: '5px 6px', color: '#ff5c5c' }} onClick={() => delItem(i)} disabled={items.length === 1}><X size={13} /></button>
@@ -84,6 +102,62 @@ function RoutineModal({ initial, onClose, onSaved }) {
         </div>
       </div>
     </Modal>
+  );
+}
+
+/* ── Count-to-target row ─────────────────────────────────────────────────── */
+// "{text} · {count} of {target}" with a progress bar and a +1 button. Click
+// the count to type a number instead. Reads as done once count >= target.
+function CountRow({ item, check, color, onSet }) {
+  const target = targetOf(item);
+  const count = countOf(check);
+  const done = count >= target;
+  const pct = Math.min(100, Math.round((count / target) * 100));
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(count));
+
+  const startEdit = () => { setVal(String(count)); setEditing(true); };
+  const commit = () => {
+    setEditing(false);
+    const n = Math.max(0, Math.floor(Number(val)));
+    if (Number.isFinite(n) && n !== count) onSet(n);
+  };
+
+  return (
+    <div className="todo-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px', borderRadius: 8 }}>
+      <span style={{
+        width: 19, height: 19, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: done ? '#16a34a' : 'transparent', border: `1.5px solid ${done ? '#16a34a' : 'var(--border-strong, #cbd5e1)'}`,
+      }}>{done && <Check size={12} color="#fff" />}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: done ? 'var(--muted)' : 'var(--text)' }}>
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: done ? 'line-through' : 'none' }}>{item.text}</span>
+          <span style={{ color: 'var(--muted)' }}>·</span>
+          {editing ? (
+            <input
+              type="number" min={0} step={1} autoFocus value={val}
+              onChange={e => setVal(e.target.value)} onBlur={commit}
+              onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false); }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: 64, padding: '2px 6px', fontSize: 12.5, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)' }}
+            />
+          ) : (
+            <button type="button" onClick={startEdit} title="Click to set the count"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'text', fontSize: 12.5, fontWeight: 700, color: done ? '#16a34a' : 'var(--text)', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+              {count} of {target}
+            </button>
+          )}
+        </div>
+        <div style={{ height: 4, background: 'var(--surface-2)', borderRadius: 999, marginTop: 5, overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: done ? '#16a34a' : color, transition: 'width 0.2s' }} />
+        </div>
+      </div>
+      {check?.done_by_name && count > 0 && <span style={{ fontSize: 10.5, color: 'var(--muted)', flexShrink: 0 }}>{check.done_by_name}</span>}
+      <button type="button" className="btn-ghost" onClick={() => onSet(count + 1)} title="Add one"
+        style={{ padding: '3px 9px', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+        <Plus size={12} /> 1
+      </button>
+    </div>
   );
 }
 
@@ -113,6 +187,20 @@ export default function Routines() {
   }, [checks]);
 
   const checkOf = (routine, item) => doneMap[`${item.id}@${periodKey(routine.cadence)}`];
+
+  // Count-to-target items: set the period's count (the +1 button and the
+  // number input both land here). Optimistic, then re-sync from the server.
+  const setCount = async (routine, item, count) => {
+    const pk = periodKey(routine.cadence);
+    const next = Math.max(0, Math.floor(Number(count) || 0));
+    setChecks(prev => {
+      const rest = prev.filter(c => !(c.item_id === item.id && c.period_key === pk));
+      const cur = prev.find(c => c.item_id === item.id && c.period_key === pk);
+      return [...rest, { ...(cur || {}), item_id: item.id, period_key: pk, count: next, done_by_name: 'You', done_at: new Date().toISOString() }];
+    });
+    try { await countRoutineItem({ routine_id: routine.id, item_id: item.id, period_key: pk, count: next }); load(); }
+    catch (e) { toast('error', e.message); load(); }
+  };
 
   const toggle = async (routine, item) => {
     const pk = periodKey(routine.cadence);
@@ -153,7 +241,7 @@ export default function Routines() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
             {group.list.map(r => {
               const total = (r.items || []).length;
-              const doneCount = (r.items || []).filter(it => checkOf(r, it)).length;
+              const doneCount = (r.items || []).filter(it => isItemDone(it, checkOf(r, it))).length;
               const allDone = total > 0 && doneCount === total;
               const pct = total ? Math.round((doneCount / total) * 100) : 0;
               return (
@@ -185,6 +273,9 @@ export default function Routines() {
                     {(r.items || []).length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', padding: 10 }}>No items yet.</div>}
                     {(r.items || []).map(it => {
                       const chk = checkOf(r, it);
+                      if (targetOf(it) > 0) {
+                        return <CountRow key={it.id} item={it} check={chk} color={group.color} onSet={(n) => setCount(r, it, n)} />;
+                      }
                       const done = !!chk;
                       return (
                         <div key={it.id} onClick={() => toggle(r, it)} className="todo-row"

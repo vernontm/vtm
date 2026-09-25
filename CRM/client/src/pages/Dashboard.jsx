@@ -3,13 +3,27 @@ import {
   RefreshCw, FolderOpen, CheckSquare, ListChecks,
   Calendar, Plus, Trash2, AlertTriangle,
   TrendingUp, DollarSign, CreditCard, Bell, Check, X, Repeat, Link2,
+  Siren, Send, Receipt, Zap,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   getDashboardStats, getUpcomingMeetings, getClients, getProjects,
   getClientAlerts, markAlertRead, markAllAlertsRead,
-  getTodos, createTodo, updateTodo, deleteTodo,
+  getTodos, createTodo, updateTodo, deleteTodo, getHome,
 } from '../api';
+import { useClient } from '../context/ClientContext';
+import NudgeModal from '../components/NudgeModal';
+
+// Whole dollars for the money tiles (the /home reply is in dollars already).
+const usd = (v) => `$${Math.round(Number(v) || 0).toLocaleString('en-US')}`;
+const fmtShortDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso);
+  return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+// held_up rows: these kinds get a Nudge; agreements and leads link to the record.
+const NUDGE_KINDS = ['invoice', 'manual_invoice', 'payment', 'plan'];
+const SEVERITY_COLOR = { red: '#ef4444', amber: '#f59e0b' };
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -36,7 +50,7 @@ function fmtTime(iso) {
   catch { return ''; }
 }
 
-// Out-of-office / all-day blocks aren't real meetings — filter them out of
+// Out-of-office / all-day blocks aren't real meetings, filter them out of
 // the calendar entirely (Ray's request).
 function isBlock(m) {
   if ((m.duration_minutes || 0) >= 720) return true;
@@ -92,7 +106,7 @@ function WeekMeetings({ meetings, onMeetingClick }) {
   const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
   const daysWithMeetings = days.filter(d => (byDay[d.toDateString()] || []).length > 0);
-  const weekLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  const weekLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to ${days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
   return (
     <div>
@@ -255,6 +269,7 @@ function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { isAdmin } = useClient();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(null);
@@ -264,6 +279,24 @@ export default function Dashboard() {
   const [projects, setProjects] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [todos, setTodos] = useState([]);
+  // Admin-only CEO home data: what is held up + the money tiles. Hidden
+  // quietly when /home answers 503 needs_migration (table not there yet).
+  const [home, setHome] = useState(null);
+  const [homeErr, setHomeErr] = useState('');
+  const [nudge, setNudge] = useState(null);        // { kind, id, key }
+  const [nudgedKeys, setNudgedKeys] = useState({}); // { 'kind:id': 'sent' | 'scheduled' }
+
+  async function loadHome() {
+    if (!isAdmin) { setHome(null); return; }
+    try {
+      setHome(await getHome('ceo'));
+      setHomeErr('');
+    } catch (e) {
+      setHome(null);
+      setHomeErr(e.needs_migration || e.status === 503 ? '' : (e.message || 'Could not load'));
+    }
+  }
+  useEffect(() => { loadHome(); }, [isAdmin]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadTodos() {
     try { const r = await getTodos(); setTodos(r.todos || []); } catch { /* ignore */ }
@@ -316,8 +349,12 @@ export default function Dashboard() {
     }
   }
 
-  async function handleRefresh() { setRefreshing(true); await load(); setRefreshing(false); }
+  async function handleRefresh() { setRefreshing(true); await Promise.all([load(), loadHome()]); setRefreshing(false); }
   useEffect(() => { load(); }, []);
+
+  // held_up rows: agreements and leads open the record; money kinds get a Nudge.
+  const heldUpLink = (h) => h.client_id ? `${h.kind === 'lead' ? '/leads' : '/clients'}?open=${h.client_id}` : null;
+  const heldKey = (h) => `${h.kind}:${h.id}`;
 
   // Click a meeting on the calendar -> open the matching client's profile
   // (matched by attendee email), or the meeting detail page as a fallback.
@@ -392,6 +429,97 @@ export default function Dashboard() {
           Refresh
         </button>
       </div>
+
+      {/* ── Needs attention (admins): what is held up, from /home ────────── */}
+      {isAdmin && homeErr && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Needs attention could not load: {homeErr}</div>
+      )}
+      {isAdmin && home && (home.held_up || []).length > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.32)', borderRadius: 14, padding: '16px 20px', marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Siren size={15} color="#ef4444" />
+            </div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Needs attention</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 999, padding: '1px 8px' }}>{home.held_up.length}</span>
+          </div>
+          {home.held_up.map(h => {
+            const key = heldKey(h);
+            const to = heldUpLink(h);
+            const canNudge = NUDGE_KINDS.includes(h.kind);
+            return (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+                <span title={h.severity === 'red' ? 'Red: act today' : 'Amber: worth a look'} style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: SEVERITY_COLOR[h.severity] || SEVERITY_COLOR.amber, boxShadow: `0 0 0 3px ${(SEVERITY_COLOR[h.severity] || SEVERITY_COLOR.amber)}22` }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title}</div>
+                  {h.sub && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.sub}</div>}
+                </div>
+                {canNudge && (
+                  nudgedKeys[key] ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>
+                      <Check size={12} /> {nudgedKeys[key] === 'scheduled' ? 'Nudge scheduled' : 'Nudged just now'}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setNudge({ kind: h.kind, id: h.id, key })}
+                      title="Send a reminder by text or email"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+                    >
+                      <Send size={12} /> Nudge
+                    </button>
+                  )
+                )}
+                {to && (
+                  <Link to={to} style={{ fontSize: 12, color: 'var(--link)', textDecoration: 'none', fontWeight: 700, flexShrink: 0 }}>
+                    {h.kind === 'lead' ? 'Open lead' : 'Open client'}
+                  </Link>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Money tiles (admins), from /home ──────────────────────────────── */}
+      {isAdmin && home?.money && (() => {
+        const m = home.money;
+        const prev = Number(m.collected_prev_month) || 0;
+        const cur = Number(m.collected_month) || 0;
+        const delta = prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null;
+        // Money lives on Projects and Clients in this app (no invoices or
+        // subscriptions page is routed), so those are where the tiles go.
+        const tiles = [
+          { label: `Collected in ${m.month || 'this month'}`, value: usd(cur), icon: DollarSign, color: '#16a34a',
+            hint: delta == null ? `${m.payments_this_week || 0} payment${m.payments_this_week === 1 ? '' : 's'} this week` : `${delta >= 0 ? '+' : ''}${delta}% vs ${usd(prev)} last month`, to: '/projects' },
+          { label: 'Outstanding', value: usd(m.outstanding?.total), icon: Receipt, color: (m.outstanding?.overdue || 0) > 0 ? '#ef4444' : '#f59e0b',
+            hint: `${m.outstanding?.count || 0} unpaid · ${m.outstanding?.overdue || 0} overdue`, to: '/projects' },
+          { label: 'Client plans per month', value: usd(m.client_plans?.mrr), icon: Repeat, color: '#2563eb',
+            hint: `${m.client_plans?.active || 0} active${(m.client_plans?.past_due || 0) > 0 ? ` · ${m.client_plans.past_due} past due` : ''}`, to: '/clients' },
+          { label: 'Tools per month', value: usd(m.tools?.monthly), icon: Zap, color: '#7c3aed',
+            hint: m.tools?.next?.service ? `${m.tools.count || 0} tools · next ${m.tools.next.service} ${fmtShortDate(m.tools.next.date)}` : `${m.tools?.count || 0} tools`, to: null },
+        ];
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
+            {tiles.map(t => (
+              <button key={t.label} onClick={() => { if (t.to) navigate(t.to); }} type="button"
+                style={{
+                  textAlign: 'left', background: 'var(--surface)', border: '1px solid var(--border)',
+                  borderRadius: 14, padding: '14px 16px', cursor: t.to ? 'pointer' : 'default',
+                  transition: 'transform var(--dur-fast, 150ms) var(--ease-out, cubic-bezier(0.4,0,0.2,1)), border-color var(--dur-fast, 150ms)',
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                }}
+                onMouseEnter={e => { if (!t.to) return; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = t.color + '80'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}>
+                <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <t.icon size={12} color={t.color} /> {t.label}
+                </div>
+                <div className="private-value" style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>{t.value}</div>
+                <div className="private-value" style={{ fontSize: 11.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.hint}</div>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── Today band ────────────────────────────────────────────────────── */}
       {(() => {
@@ -565,14 +693,14 @@ export default function Dashboard() {
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', marginBottom: 22, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
           <DollarSign size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
-          <span>Stripe isn't returning data yet — sales &amp; MRR will appear here once payments come through.</span>
+          <span>Stripe isn't returning data yet. Sales &amp; MRR will appear here once payments come through.</span>
         </div>
       )}
 
       {/* Three-column widgets: this-week meetings · to-do · active projects */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 20, alignItems: 'start' }}>
 
-        {/* Upcoming Meetings — this week */}
+        {/* Upcoming Meetings, this week */}
         <Card>
           <CardHeader icon={Calendar} title="Upcoming Meetings" color="#784bd1" linkTo="/appointments" />
           <WeekMeetings meetings={meetings} onMeetingClick={handleMeetingClick} />
@@ -629,6 +757,15 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
+
+      {nudge && (
+        <NudgeModal
+          kind={nudge.kind}
+          id={nudge.id}
+          onClose={() => setNudge(null)}
+          onSent={(_reply, { scheduled } = {}) => setNudgedKeys(prev => ({ ...prev, [nudge.key]: scheduled ? 'scheduled' : 'sent' }))}
+        />
+      )}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

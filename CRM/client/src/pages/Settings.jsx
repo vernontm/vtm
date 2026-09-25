@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Mail, CheckCircle, AlertCircle, Loader, ExternalLink, Clock } from 'lucide-react';
+import { Settings as SettingsIcon, Mail, CheckCircle, AlertCircle, Loader, ExternalLink, Clock, Zap } from 'lucide-react';
 import { getSettings, bulkUpdateSettings, getGmailStatus, connectGmail, disconnectGmail } from '../api';
 import { toast } from '../components/Toast';
+import { DEFAULT_AUTOMATIONS, PLACEHOLDERS, AUTOMATION_TITLES, SAMPLE_VARS, fillTemplate, parseAutomations } from '../lib/templates';
 
 // ── Toggle switch ─────────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
@@ -119,6 +120,138 @@ function WorkHoursSection() {
   );
 }
 
+// Texts the CRM sends on its own (thank-you after a meetup, meeting
+// confirmation) and what a Nudge sends (invoice, agreement, plan past due).
+// Stored as one JSON value under the settings key 'automations'; the iPhone
+// app edits the same value, and the defaults live in src/lib/templates.js.
+const AUTOMATION_KEYS = Object.keys(DEFAULT_AUTOMATIONS);
+const AUTOMATION_HELP = {
+  thank_you: 'Goes out the morning after any in-person meeting with a known number.',
+  meeting_confirmation: 'Texted when a meeting is created from a conversation. {link} becomes the Meet link, or the address for in-person.',
+  invoice_reminder: 'What Nudge sends for an unpaid invoice, by text and email. {link} is the pay link.',
+  agreement_reminder: 'What Nudge sends for an agreement that has not been signed. {link} is the sign link.',
+  plan_past_due: 'What Nudge sends when a client plan payment fails. {link} lets them update the card.',
+};
+const SEND_HOURS = [7, 8, 9, 10];
+const fmtHour = (h) => `${h > 12 ? h - 12 : h} ${h >= 12 ? 'PM' : 'AM'}`;
+
+function AutomationsSection() {
+  const [auto, setAuto] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const refs = useRef({});   // template textareas by key, for insert-at-cursor
+
+  useEffect(() => {
+    getSettings().then(rows => setAuto(parseAutomations(rows))).catch(() => setAuto(parseAutomations([])));
+  }, []);
+
+  const set = (key, patch) => setAuto(a => ({ ...a, [key]: { ...a[key], ...patch } }));
+
+  // Drop {placeholder} where the caret is (or at the end), then put the caret
+  // right after it so the next chip lands in the right spot too.
+  const insert = (key, p) => {
+    const el = refs.current[key];
+    const cur = auto[key].template || '';
+    const token = `{${p}}`;
+    let start = cur.length, end = cur.length;
+    if (el && typeof el.selectionStart === 'number') { start = el.selectionStart; end = el.selectionEnd; }
+    set(key, { template: cur.slice(0, start) + token + cur.slice(end) });
+    const caret = start + token.length;
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      try { el.setSelectionRange(caret, caret); } catch (_) { /* ignore */ }
+    });
+  };
+
+  const save = async () => {
+    setSaving(true); setMsg('');
+    try { await bulkUpdateSettings([{ key: 'automations', value: JSON.stringify(auto) }]); setMsg('saved'); setTimeout(() => setMsg(''), 3000); }
+    catch { setMsg('error'); setTimeout(() => setMsg(''), 4000); }
+    finally { setSaving(false); }
+  };
+
+  const chip = {
+    fontSize: 11.5, fontWeight: 600, fontFamily: 'monospace', color: 'var(--orange)',
+    background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.25)', borderRadius: 999,
+    padding: '3px 9px', cursor: 'pointer',
+  };
+
+  return (
+    <Section title="Automations (texts and nudges)" icon={Zap}>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>
+        The texts the CRM sends on its own, and what a Nudge sends. Click a placeholder to drop it into the template where your cursor is. The preview fills it with sample values.
+      </p>
+      {!auto ? (
+        <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading…</div>
+      ) : (
+        <>
+          {AUTOMATION_KEYS.map(k => {
+            const a = auto[k];
+            const on = a.enabled !== false;
+            const mode = a.mode === 'assistant' ? 'assistant' : 'template';
+            return (
+              <div key={k} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', background: 'var(--bg)', marginBottom: 12, opacity: on ? 1 : 0.75 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{AUTOMATION_TITLES[k].title}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{AUTOMATION_HELP[k] || AUTOMATION_TITLES[k].sub}</div>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: on ? 'var(--text)' : 'var(--muted)', cursor: 'pointer', flexShrink: 0, paddingTop: 2 }}>
+                    <input type="checkbox" checked={on} onChange={e => set(k, { enabled: e.target.checked })} style={{ margin: 0 }} />
+                    {on ? 'On' : 'Off'}
+                  </label>
+                </div>
+
+                {k === 'thank_you' && (
+                  <FormRow label="Send at" hint="Central time, the day after">
+                    <select style={{ ...INPUT_STYLE, width: 140 }} value={SEND_HOURS.includes(Number(a.send_hour)) ? Number(a.send_hour) : 8} onChange={e => set(k, { send_hour: Number(e.target.value) })}>
+                      {SEND_HOURS.map(h => <option key={h} value={h}>{fmtHour(h)}</option>)}
+                    </select>
+                  </FormRow>
+                )}
+
+                <FormRow label="Mode" hint={mode === 'assistant' ? 'The assistant writes each one fresh, matching the tone and length of your template.' : 'Sent exactly as written, with the placeholders filled in.'}>
+                  <select style={{ ...INPUT_STYLE, width: 220 }} value={mode} onChange={e => set(k, { mode: e.target.value })}>
+                    <option value="template">Use the template</option>
+                    <option value="assistant">Assistant writes it</option>
+                  </select>
+                </FormRow>
+
+                <FormRow label="Template">
+                  <textarea
+                    ref={el => { refs.current[k] = el; }}
+                    style={{ ...TEXTAREA_STYLE, minHeight: 72 }}
+                    value={a.template || ''}
+                    onChange={e => set(k, { template: e.target.value })}
+                    placeholder="Write the message"
+                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                    {PLACEHOLDERS[k].map(p => (
+                      <button key={p} type="button" style={chip} onClick={() => insert(k, p)} title={`Insert {${p}}`}>{`{${p}}`}</button>
+                    ))}
+                  </div>
+                </FormRow>
+
+                <FormRow label="Preview" hint="With sample values">
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 14px', fontSize: 13, color: 'var(--text)', lineHeight: 1.55, whiteSpace: 'pre-wrap', minHeight: 20 }}>
+                    {fillTemplate(a.template, SAMPLE_VARS) || <span style={{ color: 'var(--muted)' }}>(empty)</span>}
+                  </div>
+                </FormRow>
+              </div>
+            );
+          })}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <button className="btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save templates'}</button>
+            {msg === 'saved' && <span style={{ fontSize: 13, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: 5 }}><CheckCircle size={15} /> Saved. New texts use these templates.</span>}
+            {msg === 'error' && <span style={{ fontSize: 13, color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: 5 }}><AlertCircle size={15} /> Failed to save</span>}
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
 export default function Settings() {
   const [searchParams] = useSearchParams();
   const navigate       = useNavigate();
@@ -203,7 +336,7 @@ export default function Settings() {
         {/* ── Business Profile ─────────────────────────────────────────────── */}
         <Section title="Business Profile" icon={SettingsIcon}>
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>
-            Used by the AI email generator in every prompt. Be specific — the more detail, the better the emails.
+            Used by the AI email generator in every prompt. Be specific: the more detail, the better the emails.
           </p>
           <FormRow label="Company Name">
             <input
@@ -253,9 +386,12 @@ export default function Settings() {
           </FormRow>
         </Section>
 
-        {/* ── Email Signature ───────────────────────────────────────────────── */}
         <WorkHoursSection />
 
+        {/* ── Automated texts + nudge templates ─────────────────────────────── */}
+        <AutomationsSection />
+
+        {/* ── Email Signature ───────────────────────────────────────────────── */}
         <Section title="Email Signature" icon={Mail}>
           <FormRow label="Signature" hint="Appended to every email">
             <textarea
@@ -304,7 +440,7 @@ export default function Settings() {
             }} />
             <span style={{ fontSize: 13, color: 'var(--muted)' }}>
               {gmailStatus.connected
-                ? `Connected as ${gmailStatus.email}${gmailStatus.expired ? ' (token expired — reconnect)' : ''}`
+                ? `Connected as ${gmailStatus.email}${gmailStatus.expired ? ' (token expired, reconnect)' : ''}`
                 : 'Not connected'}
             </span>
           </div>
@@ -395,7 +531,7 @@ export default function Settings() {
           )}
           {saveMsg === 'error' && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ff5c5c', fontSize: 13 }}>
-              <AlertCircle size={15} /> Failed to save — try again
+              <AlertCircle size={15} /> Failed to save, try again
             </span>
           )}
         </div>

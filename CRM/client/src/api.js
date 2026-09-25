@@ -30,7 +30,13 @@ async function request(path, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || err.detail || `${res.status}: ${res.statusText}`);
+    const e = new Error(err.error || err.detail || `${res.status}: ${res.statusText}`);
+    // Callers that care can branch on these (e.g. a 503 with needs_migration
+    // means "the table is not there yet", so hide the feature quietly).
+    e.status = res.status;
+    e.needs_migration = !!err.needs_migration;
+    e.body = err;
+    throw e;
   }
   return res.json();
 }
@@ -139,7 +145,7 @@ export const createContact  = (data) => request('/contacts', { method: 'POST', b
 export const updateContact  = (id, data) => request(`/contacts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteContact  = (id) => request(`/contacts?id=${id}`, { method: 'DELETE' });
 
-// Deals — the billable container: one agreement + one combined invoice,
+// Deals, the billable container: one agreement + one combined invoice,
 // grouping a client's projects. Pass a crm_clients.id to scope to that client.
 export const getDeals    = (clientId) => request(`/deals${clientId ? `?client_id=${clientId}` : ''}`);
 export const createDeal  = (data) => request('/deals', { method: 'POST', body: JSON.stringify(data) });
@@ -147,7 +153,7 @@ export const updateDeal  = (id, data) => request(`/deals?id=${id}`, { method: 'P
 export const deleteDeal  = (id) => request(`/deals?id=${id}`, { method: 'DELETE' });
 export const createDealInvoice = (id, data) => request(`/deal-invoice?id=${id}`, { method: 'POST', body: JSON.stringify(data) });
 
-// Time tracking — employee clocks in/out; admin reviews + settles.
+// Time tracking, employee clocks in/out; admin reviews + settles.
 export const getTimeEntries   = (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/time-entries${qs ? '?' + qs : ''}`); };
 export const clockIn          = (data = {}) => request('/time-entries?action=clock-in', { method: 'POST', body: JSON.stringify(data) });
 export const clockOut         = (data = {}) => request('/time-entries?action=clock-out', { method: 'POST', body: JSON.stringify(data) });
@@ -185,7 +191,7 @@ export const updateEmployee  = (id, data) => request(`/employees?id=${id}`, { me
 export const removeEmployee  = (id) => request(`/employees?id=${id}`, { method: 'DELETE' });
 export const inviteEmployee  = (id) => request(`/employees?action=invite&id=${id}`, { method: 'POST', body: '{}' });
 
-// Employee resources — internal team hub (SOPs, guides, links). Admin edits.
+// Employee resources, internal team hub (SOPs, guides, links). Admin edits.
 export const getEmployeeResources    = () => request('/employee-resources');
 export const createEmployeeResource  = (data) => request('/employee-resources', { method: 'POST', body: JSON.stringify(data) });
 export const updateEmployeeResource  = (id, data) => request(`/employee-resources?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -256,7 +262,7 @@ export const draftQueueItem  = (id) => request(`/email-queue?id=${id}&action=dra
 export const gmailSync = (startHistoryId) =>
   request(`/gmail-sync${startHistoryId ? `?startHistoryId=${encodeURIComponent(startHistoryId)}` : ''}`);
 
-// Batch label refresh — force-refetch labelIds for the given message IDs from Gmail.
+// Batch label refresh, force-refetch labelIds for the given message IDs from Gmail.
 // Used by the manual Refresh button so pre-existing labels applied outside our
 // history window still make it into the CRM cache.
 export const gmailRefreshLabels = (ids) => {
@@ -279,7 +285,7 @@ export const uploadClientDocument = async (client_id, file) => {
   });
 };
 
-// Attachment upload — turns a File into { url, name, mime, size } via Supabase Storage.
+// Attachment upload, turns a File into { url, name, mime, size } via Supabase Storage.
 export const uploadEmailAttachment = async (client_id, file) => {
   const reader = new FileReader();
   const data_base64 = await new Promise((res, rej) => {
@@ -331,7 +337,7 @@ export const updateSubscription = (id, data) => request(`/subscriptions?id=${id}
 export const deleteSubscription = (id) => request(`/subscriptions?id=${id}`, { method: 'DELETE' });
 export const scanSubscriptions = () => request('/subscriptions?action=scan', { method: 'POST' });
 
-// Gmail labels — real Gmail labels, two-way synced (create here -> exists in
+// Gmail labels, real Gmail labels, two-way synced (create here -> exists in
 // Gmail; created in Gmail -> shows up here). Color is a CRM-only display
 // preference stored against the real Gmail label id.
 export const getGmailLabels = () => request('/gmail-labels');
@@ -407,7 +413,7 @@ export const createBlogPost  = (data)       => request('/blog-posts', { method: 
 export const updateBlogPost  = (id, data)   => request(`/blog-posts?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const deleteBlogPost  = (id)         => request(`/blog-posts?id=${id}`, { method: 'DELETE' });
 
-// Resources (public resources pages — grouped by category)
+// Resources (public resources pages, grouped by category)
 export const getResourceCategories   = ()         => request('/resource-categories');
 export const createResourceCategory  = (data)     => request('/resource-categories', { method: 'POST', body: JSON.stringify(data) });
 export const updateResourceCategory  = (id, data) => request(`/resource-categories?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -652,13 +658,13 @@ export const getContactSends = (contactId) => request(`/email-stats?action=conta
 // Email image upload (returns { url, key })
 export const uploadEmailImage = (data) => request('/email-upload-image', { method: 'POST', body: JSON.stringify(data) });
 
-// Client logo upload — also persists logo_url on crm_content_clients
+// Client logo upload, also persists logo_url on crm_content_clients
 export const uploadClientLogo = (data) => request('/client-logo-upload', { method: 'POST', body: JSON.stringify(data) });
 
 // AI-generate an email template using the client's brand bible + logo + colors
 export const generateEmailTemplateAI = (data) => request('/email-template-ai', { method: 'POST', body: JSON.stringify(data) });
 
-// AI edit pass over existing HTML — body: { client_id, html, instruction, selection? }
+// AI edit pass over existing HTML, body: { client_id, html, instruction, selection? }
 // editEmailAI streams progress via SSE from /email-edit-ai.
 // Signature: editEmailAI(data, { onProgress } = {}) -> Promise<{ html, message, mode }>
 // onProgress receives { phase, mode?, model?, chars? } events so the UI can
@@ -731,7 +737,7 @@ export const editEmailAI = async (data, { onProgress } = {}) => {
 // MailerLite groups for a client (for broadcast audience picker)
 export const getMailerliteGroups = (client_id) => request(`/mailerlite-groups?client_id=${client_id}`);
 export const createMailerliteGroup = (client_id, name) => request('/mailerlite-groups', { method: 'POST', body: JSON.stringify({ client_id, name }) });
-// Live MailerLite subscribers (marketing audience) — optionally filtered by group
+// Live MailerLite subscribers (marketing audience), optionally filtered by group
 export const getMailerliteSubscribers = (client_id, group_id) =>
   request(`/mailerlite-subscribers?client_id=${client_id}${group_id ? `&group_id=${group_id}` : ''}`);
 export const updateMailerliteSubscriber = (data) =>
@@ -809,7 +815,7 @@ export const generateAcademyContent = (data) => academyRequest('/ai-generate', {
 // Single lesson (with content items)
 export const getAcademyLesson = (id) => academyRequest(`/admin-lessons?id=${id}`);
 
-// Upload file to storage (uses signed URL — uploads directly to Supabase)
+// Upload file to storage (uses signed URL, uploads directly to Supabase)
 export async function uploadAcademyFile(bucket, path, file, contentType) {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
@@ -886,7 +892,7 @@ export const getMonitors                 = (client_id)   => request(`/uploadpost
 export const startMonitor                = (data)        => request('/uploadpost?action=start-monitor', { method: 'POST', body: JSON.stringify(data) });
 export const stopMonitor                 = (data)        => request('/uploadpost?action=stop-monitor', { method: 'POST', body: JSON.stringify(data) });
 
-// Team & Access — retired. Use the admin-users helpers instead
+// Team & Access, retired. Use the admin-users helpers instead
 // (getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
 // upsertUserGrant, revokeUserGrant).
 
@@ -947,3 +953,48 @@ export const suggestTitle    = (script)     => request('/avatar-renders?action=s
 // Claude Code workspaces available to link to a project. Published from a local
 // machine by tools/claude-sync.mjs; the server cannot enumerate them itself.
 export const getClaudeWorkspaces = () => request('/claude-workspaces');
+
+// ══════════════════════════════════════════════════════════════
+// ══ ROLE HOMES, MONEY, NUDGES, AGREEMENTS ══
+// Shapes in docs/engineer/role-homes-contracts.md. The iPhone app calls the
+// same endpoints, so keep these in step with mobile/lib/api.js.
+// ══════════════════════════════════════════════════════════════
+
+// One call per home load: { role, me, next_up, held_up, money, ... }. Answers
+// 503 with needs_migration when docs/sql/role-homes.sql has not been run.
+export const getHome = (role) => request(`/home${role ? `?role=${encodeURIComponent(role)}` : ''}`);
+
+// Nudges: draft (target + channels + template message), send, history.
+// kind is 'invoice' | 'manual_invoice' | 'payment' | 'agreement' | 'plan'.
+export const draftNudge = ({ kind, id }) => request('/nudges?action=draft', { method: 'POST', body: JSON.stringify({ kind, id }) });
+// data: { kind, id, channels: ['text','email'], message, email_subject?, schedule_at? }
+// Reply: { ok, sent: [...], skipped: [...], nudge_id }
+export const sendNudge = (data) => request('/nudges', { method: 'POST', body: JSON.stringify(data) });
+export const getNudges = (kind, id) => request(`/nudges?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(id)}`);
+// getClientActivity(client_id) is defined above (Client activity section) and
+// already calls GET /client-activity?client_id=, the same URL the contract uses.
+
+// Count-to-target routine items: upserts crm_routine_checks.count for the
+// period; the row counts as done once count >= item.target.
+export const countRoutineItem = ({ routine_id, item_id, period_key, count }) =>
+  request('/routines?action=count', { method: 'POST', body: JSON.stringify({ routine_id, item_id, period_key, count }) });
+
+// Queue an iMessage with the agreement's sign link. Reply: { ok, phone }.
+export const textSignLink = (id) => request(`/agreements?action=text-sign-link&id=${encodeURIComponent(id)}`, { method: 'POST', body: '{}' });
+
+// App usage rollup (admins): { days, rows: [{ user_id, user_name, event, name, day, n }] }
+export const getAppEvents = (days) => request(`/app-events${days ? `?days=${encodeURIComponent(days)}` : ''}`);
+
+// Which home layout each person gets in the app: settings key home_roles, a
+// JSON map of auth user id to 'ceo' | 'hr' | 'assistant' | 'sales' | 'general'.
+// A missing entry means "auto" (the server resolves it from admin flag + roster).
+export const getHomeRoles = () => getSettings().then(rows => {
+  let raw;
+  if (Array.isArray(rows)) raw = rows.find(r => r.key === 'home_roles')?.value;
+  else if (rows && typeof rows === 'object') raw = rows.home_roles ?? (rows.settings || rows.rows || []).find?.(r => r.key === 'home_roles')?.value;
+  try {
+    const parsed = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (_) { return {}; }
+});
+export const setHomeRoles = (map) => bulkUpdateSettings([{ key: 'home_roles', value: JSON.stringify(map || {}) }]);
