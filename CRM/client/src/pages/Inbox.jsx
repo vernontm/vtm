@@ -5,6 +5,7 @@ import {
   getImsgThreads, getImsgThread, sendImsg, getImsgDirectory, assignImsgThread,
   createClient, createContact, getAssignees,
 } from '../api';
+import { useClient } from '../context/ClientContext';
 
 // Two-way iMessage inbox for the business number. Threads are grouped by the
 // contact's phone. Sends are queued and delivered by the bridge on the Mac
@@ -62,6 +63,7 @@ function AssigneePill({ assignedTo, name }) {
 }
 
 export default function Inbox() {
+  const { user } = useClient();
   const [threads, setThreads] = useState([]);
   const [directory, setDirectory] = useState([]);
   const [assignees, setAssignees] = useState([]);
@@ -88,6 +90,20 @@ export default function Inbox() {
   const displayName = (phone) => byPhone[last10(phone)]?.name || fmtPhone(phone);
   const displayKind = (phone) => byPhone[last10(phone)]?.kind || null;
   const threadFor = (phone) => threads.find(t => last10(t.phone) === last10(phone));
+
+  // The people you can assign a conversation to: the Employees roster, plus the
+  // signed-in user themselves (so you can self-assign even if you are not on the
+  // roster). Skip the self entry when the roster already includes that email.
+  const assignOptions = useMemo(() => {
+    const list = [...assignees];
+    const meEmail = (user?.email || '').toLowerCase();
+    const onRoster = list.some(a => (a.email || '').toLowerCase() === meEmail || a.id === user?.id);
+    if (user?.id && !onRoster) {
+      const label = user.name || (meEmail ? meEmail.split('@')[0].replace(/^./, c => c.toUpperCase()) : 'Me');
+      list.unshift({ id: user.id, name: label, email: user.email });
+    }
+    return list;
+  }, [assignees, user]);
 
   const loadThreads = async () => {
     try { setThreads(await getImsgThreads() || []); }
@@ -252,7 +268,7 @@ export default function Inbox() {
                     <span style={{ fontSize: 12, color: 'var(--muted)' }}>{fmtPhone(active)}</span>
                   )}
                   <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <AssignMenu assignees={assignees} current={activeThread} onAssign={assignActive} />
+                    <AssignMenu assignees={assignOptions} current={activeThread} onAssign={assignActive} />
                     {isUnknown && (
                       <button onClick={() => setAddOpen(o => !o)}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: addOpen ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)' }}>
