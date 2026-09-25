@@ -1,0 +1,37 @@
+# Files excluded from the EAS Build upload archive. EAS reinstalls dependencies
+# from package-lock.json on its servers, so shipping node_modules (and local
+# caches) just makes the upload slow. When present, .easignore replaces
+# .gitignore for the archive, so this must list everything to exclude.
+
+# Dependencies (reinstalled server-side)
+node_modules/
+
+# Expo / build output + caches
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# Generated native folders (EAS regenerates via prebuild)
+ios/
+android/
+
+# Version control + logs
+.git/
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# OS + editor
+.DS_Store
+
+# Secrets / signing material (should never leave the machine)
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.env*.local
