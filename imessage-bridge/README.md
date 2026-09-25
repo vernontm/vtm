@@ -24,6 +24,14 @@ ways:
      on crm_sms_messages (channel, direction, status);
    create unique index if not exists crm_sms_messages_imsg_guid_idx
      on crm_sms_messages (imsg_guid) where imsg_guid is not null;
+
+   -- Per-conversation employee assignment (colored pill in the Inbox).
+   create table if not exists crm_imessage_threads (
+     phone text primary key,
+     assigned_to text,
+     assigned_to_name text,
+     updated_at timestamptz default now()
+   );
    ```
 
 2. **Shared secret on Vercel:** add an environment variable

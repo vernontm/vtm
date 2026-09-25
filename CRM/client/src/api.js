@@ -50,6 +50,9 @@ export const getImsgThread  = (phone) => request(`/imessage?phone=${encodeURICom
 export const sendImsg       = (phone, body) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
 // People you can text (leads + clients + contacts), for the Inbox To picker.
 export const getImsgDirectory = () => request('/imessage?action=directory');
+// Assign a conversation (by phone) to an employee, or unassign with nulls.
+export const assignImsgThread = (phone, assigned_to, assigned_to_name) =>
+  request('/imessage?action=assign', { method: 'POST', body: JSON.stringify({ phone, assigned_to, assigned_to_name }) });
 
 // Tasks / priorities (assignable to a client)
 export const getTasks   = (status) => request(`/tasks${status ? `?status=${status}` : ''}`);

@@ -34,7 +34,7 @@ function normalizePhone(raw) {
 // PostgREST error into something a person can act on.
 function needsMigration(e) {
   const m = String((e && e.message) || '');
-  return /(channel|imsg_guid)/i.test(m) && /(does not exist|schema cache|could not find)/i.test(m);
+  return /(channel|imsg_guid|crm_imessage_threads)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
 }
 const MIGRATION_MSG = 'The iMessage inbox needs its one-time database update. Run the SQL from imessage-bridge/README.md.';
 
@@ -203,7 +203,19 @@ module.exports = async function handler(req, res) {
         if (!threads[m.phone]) threads[m.phone] = { phone: m.phone, last: m, count: 0, client_id: m.client_id };
         threads[m.phone].count++;
       }
-      return res.json(Object.values(threads));
+      const list = Object.values(threads);
+      // Merge in each thread's employee assignment (best effort: the assignment
+      // table is a later migration; without it, threads are simply unassigned).
+      try {
+        const asg = (await supaFetch('crm_imessage_threads?select=phone,assigned_to,assigned_to_name')) || [];
+        const byPhone = {};
+        for (const a of asg) byPhone[a.phone] = a;
+        for (const t of list) {
+          const a = byPhone[t.phone];
+          if (a) { t.assigned_to = a.assigned_to; t.assigned_to_name = a.assigned_to_name; }
+        }
+      } catch (_) { /* assignment table not migrated yet */ }
+      return res.json(list);
     }
 
     // Queue an outbound iMessage. The Mac bridge picks it up within seconds.
@@ -230,6 +242,24 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify(row),
       });
       return res.status(201).json(first(saved) || row);
+    }
+
+    // Assign (or unassign) a conversation to an employee. Keyed by phone so it
+    // survives across the messages in the thread.
+    if (req.method === 'POST' && action === 'assign') {
+      const phone = normalizePhone((req.body || {}).phone);
+      if (!phone) return res.status(400).json({ error: 'phone required' });
+      const saved = await supaFetch('crm_imessage_threads?on_conflict=phone', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({
+          phone,
+          assigned_to: (req.body || {}).assigned_to || null,
+          assigned_to_name: (req.body || {}).assigned_to_name || null,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+      return res.json(first(saved) || { ok: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
