@@ -28,4 +28,5 @@ alter table crm_nudges enable row level security;
 
 -- Count-to-target routine items ("Reach out to 50 leads"): how many so far
 -- in the period. Null means the item was ticked the old way (fully done).
-alter table crm_routine_checks add column if not exists count integer;
+-- Named done_count on purpose: PostgREST reads a bare "count" in a select as the aggregate.
+alter table crm_routine_checks add column if not exists done_count integer;

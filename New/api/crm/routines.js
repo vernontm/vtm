@@ -65,7 +65,8 @@ module.exports = async function handler(req, res) {
           await supaFetch('crm_routine_checks?on_conflict=item_id,period_key', {
             method: 'POST',
             headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify({ routine_id: routine_id || null, item_id, period_key, count, done_by: user.id, done_by_name: nameOf(), done_at: new Date().toISOString() }),
+            // The column is done_count: PostgREST reads a bare "count" in a select as the aggregate.
+            body: JSON.stringify({ routine_id: routine_id || null, item_id, period_key, done_count: count, done_by: user.id, done_by_name: nameOf(), done_at: new Date().toISOString() }),
           });
         }
       } catch (e) {
@@ -81,13 +82,15 @@ module.exports = async function handler(req, res) {
       const since = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
       let checks;
       try {
-        checks = await supaFetch(`crm_routine_checks?select=item_id,period_key,done_by_name,done_at,count&done_at=gte.${since}`);
+        checks = await supaFetch(`crm_routine_checks?select=item_id,period_key,done_by_name,done_at,done_count&done_at=gte.${since}`);
       } catch (e) {
-        // Before the count column exists the list still has to load.
+        // Before the done_count column exists the list still has to load.
         if (!missingCount(e)) throw e;
         checks = await supaFetch(`crm_routine_checks?select=item_id,period_key,done_by_name,done_at&done_at=gte.${since}`);
       }
-      return res.json({ routines: routines || [], checks: checks || [] });
+      // The app and the web read `count`; the column is named done_count.
+      const out = (checks || []).map(({ done_count, ...r }) => ({ ...r, count: done_count == null ? null : done_count }));
+      return res.json({ routines: routines || [], checks: out });
     }
 
     if (req.method === 'POST') {

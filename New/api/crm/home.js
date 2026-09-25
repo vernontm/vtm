@@ -102,7 +102,9 @@ async function loadPeople() {
     if (r?.name) return r.name;
     const u = (userId && authById.get(userId)) || (em && authByEmail.get(em));
     const meta = u?.user_metadata || {};
-    return meta.name || meta.full_name || String(u?.email || email || '').split('@')[0] || 'Someone';
+    // An email prefix is the last resort, so at least capitalize it.
+    const local = String(u?.email || email || '').split('@')[0];
+    return meta.name || meta.full_name || (local ? local[0].toUpperCase() + local.slice(1) : 'Someone');
   };
   return {
     roster,
@@ -344,7 +346,8 @@ async function payroll(cal, people) {
 
 // ── Sales and outreach ──────────────────────────────────────────────────────
 async function routineChecks(periodKey) {
-  try { return await supaFetch(`crm_routine_checks?period_key=eq.${q(periodKey)}&select=item_id,count`) || []; }
+  // The column is done_count (a bare "count" in a PostgREST select is the aggregate).
+  try { return await supaFetch(`crm_routine_checks?period_key=eq.${q(periodKey)}&select=item_id,done_count`) || []; }
   catch (e) {
     // Before the count column exists a ticked row is simply "done".
     if (/count/i.test(String(e.message)) && missingTable(e)) return await supaFetch(`crm_routine_checks?period_key=eq.${q(periodKey)}&select=item_id`) || [];
@@ -365,7 +368,7 @@ async function outreach(cal, me) {
       if (!(target > 0)) continue;
       const c = checkFor.get(it.id);
       // A row without a count was ticked the old way: fully done.
-      const count = c ? (c.count == null ? target : num(c.count)) : 0;
+      const count = c ? (c.done_count == null ? target : num(c.done_count)) : 0;
       items.push({ routine_id: r.id, item_id: it.id, text: it.text || '', target, count });
     }
   }
@@ -403,7 +406,7 @@ async function loadUnpaid(cal) {
     const due = N.toYmd(dueRaw);
     return {
       kind, id, label, amount: num(amount), ...contactOf(client),
-      client_name: contactOf(client).client_name || fallback.name || '', email: client?.contact_email || fallback.email || null,
+      client_name: contactOf(client).client_name || fallback.name || fallback.email || '', email: client?.contact_email || fallback.email || null,
       due, days_late: N.daysAgo(due), last_nudged_at: nudged.get(`${kind}:${id}`) || null, link: link || null,
     };
   };

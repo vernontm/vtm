@@ -974,7 +974,7 @@ export const getNudges = (kind, id) => request(`/nudges?kind=${encodeURIComponen
 // getClientActivity(client_id) is defined above (Client activity section) and
 // already calls GET /client-activity?client_id=, the same URL the contract uses.
 
-// Count-to-target routine items: upserts crm_routine_checks.count for the
+// Count-to-target routine items: upserts crm_routine_checks.done_count (read back as count) for the
 // period; the row counts as done once count >= item.target.
 export const countRoutineItem = ({ routine_id, item_id, period_key, count }) =>
   request('/routines?action=count', { method: 'POST', body: JSON.stringify({ routine_id, item_id, period_key, count }) });

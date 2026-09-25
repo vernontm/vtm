@@ -156,7 +156,8 @@ create table if not exists crm_nudges (
   created_at timestamptz not null default now()
 );
 create index if not exists crm_nudges_target_idx on crm_nudges (kind, target_id, created_at desc);
-alter table crm_routine_checks add column if not exists count integer;
+alter table crm_routine_checks add column if not exists done_count integer;
+-- (the API exposes it as `count`; the column is done_count because PostgREST reads a bare "count" in a select as the aggregate)
 ```
 
 ## Mobile helpers (in `mobile/lib/api.js`, already added)
