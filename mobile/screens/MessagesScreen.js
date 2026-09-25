@@ -24,7 +24,12 @@ export default function MessagesScreen({ navigation }) {
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setMe(user)).catch(() => {});
+    // Admins land on All; everyone else on their own conversations.
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setMe(user);
+      const admin = !!(user?.user_metadata?.is_admin || user?.app_metadata?.is_admin);
+      setFilter(admin ? 'all' : 'mine');
+    }).catch(() => {});
     getAssignees().then(r => setAssignees(Array.isArray(r) ? r : (r?.employees || []))).catch(() => {});
   }, []);
 
