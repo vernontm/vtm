@@ -3,11 +3,12 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Sheet, { SheetRow } from '../components/Sheet';
-import { openAssistant } from '../lib/nav';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
-  getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability,
+  getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability, askAssistant,
 } from '../lib/api';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GRAD } from '../lib/theme';
 import { C, T, F } from '../lib/theme';
 import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, TEMP, KIND_COLOR } from '../components/ui';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, colorForEmployee } from '../lib/imsg';
@@ -34,6 +35,7 @@ export default function ConversationScreen({ route, navigation }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const scrollRef = useRef(null);
 
   const loadPerson = useCallback(async () => {
@@ -149,7 +151,25 @@ export default function ConversationScreen({ route, navigation }) {
   const temp = person?.temperature ? TEMP[person.temperature] : null;
   const name = person?.name || fmtPhone(phone);
   const subLine = [person?.kind ? KIND[person.kind].label : null, fmtPhone(phone)].filter(Boolean).join(' · ');
-  const draftWithAssistant = () => openAssistant({ prompt: `Draft a short, friendly text reply to ${name}${person?.kind ? ` (a ${person.kind})` : ''}. Recent messages: ${messages.slice(-6).map(m => `${m.direction === 'out' ? 'Us' : name}: ${m.body}`).join(' | ')}` });
+  // The orb in the composer: the assistant writes the next text and it lands
+  // in the box to edit and send. Nothing is sent on its own.
+  const draftWithAssistant = async () => {
+    if (drafting) return;
+    setDrafting(true);
+    try {
+      const thread = messages.slice(-8).map(m => `${m.direction === 'out' ? 'Us' : name}: ${m.body}`).join('\n');
+      const r = await askAssistant(
+        `Write the next text message from us to ${name}${person?.kind ? ` (a ${person.kind})` : ''} in this iMessage thread. Keep it short, warm and natural: one to three sentences, no sign-off, no placeholders. Reply with ONLY the message text. No quotes, no preamble, no options.\n\nThread:\n${thread || '(no messages yet)'}`
+      );
+      let text = String(r?.answer || '').trim();
+      // If it still wrapped the message in prose, keep the quoted part.
+      const quoted = text.match(/["“]([^"”]{8,})["”]/);
+      if (quoted && text.length > quoted[1].length + 20) text = quoted[1];
+      text = text.replace(/^["“]+|["”]+$/g, '').trim();
+      if (text) setInput(prev => (prev.trim() ? `${prev.trim()} ${text}` : text));
+    } catch (e) { Alert.alert('Could not draft a reply', e.message); }
+    finally { setDrafting(false); }
+  };
 
   return (
     <Screen>
@@ -223,7 +243,13 @@ export default function ConversationScreen({ route, navigation }) {
           )}
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 50, borderRadius: 25, backgroundColor: C.tile, paddingLeft: 8, paddingRight: 14, paddingVertical: 8 }}>
-              <Orb size={34} icon="sparkles" label="Ask the assistant to write" onPress={draftWithAssistant} style={{ shadowOpacity: 0 }} />
+              {drafting ? (
+                <LinearGradient colors={GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                </LinearGradient>
+              ) : (
+                <Orb size={34} icon="sparkles" label="Write a reply with the assistant" onPress={draftWithAssistant} style={{ shadowOpacity: 0 }} />
+              )}
               <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 16, color: C.ink, paddingHorizontal: 10, paddingVertical: 6, maxHeight: 120 }}
                 placeholder="Message" placeholderTextColor={C.slate} value={input} onChangeText={setInput} multiline />
             </View>
