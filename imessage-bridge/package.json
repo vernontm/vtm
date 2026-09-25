@@ -1,0 +1,9 @@
+{
+  "name": "vtm-imessage-bridge",
+  "private": true,
+  "type": "module",
+  "description": "Runs on the Mac signed into the business Apple ID. Sends CRM-queued iMessages through Messages.app and forwards client replies back to the CRM.",
+  "scripts": {
+    "start": "node bridge.mjs"
+  }
+}

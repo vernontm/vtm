@@ -43,6 +43,12 @@ export const getSmsThreads = () => request('/sms');
 export const getSmsThread  = (phone) => request(`/sms?phone=${encodeURIComponent(phone)}`);
 export const sendSms       = (phone, body) => request('/sms?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
 
+// iMessage inbox. Sends are queued here and delivered by the bridge running on
+// the Mac signed into the business Apple ID (see imessage-bridge/).
+export const getImsgThreads = () => request('/imessage');
+export const getImsgThread  = (phone) => request(`/imessage?phone=${encodeURIComponent(phone)}`);
+export const sendImsg       = (phone, body) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
+
 // Tasks / priorities (assignable to a client)
 export const getTasks   = (status) => request(`/tasks${status ? `?status=${status}` : ''}`);
 export const createTask = (data) => request('/tasks', { method: 'POST', body: JSON.stringify(data) });

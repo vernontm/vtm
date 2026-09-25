@@ -1,0 +1,7 @@
+{
+  "crmUrl": "https://vernontm.com",
+  "bridgeToken": "PASTE_THE_SAME_VALUE_AS_IMESSAGE_BRIDGE_TOKEN_ON_VERCEL",
+  "outboundPollMs": 3000,
+  "inboundPollMs": 5000,
+  "contactsRefreshMs": 120000
+}

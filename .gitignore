@@ -12,3 +12,7 @@ CRM/server/client-demos/
 CRM/content-output/
 New/.env.production
 .vercel
+
+# iMessage bridge: local secret + inbound watermark
+imessage-bridge/config.json
+imessage-bridge/state.json

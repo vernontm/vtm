@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MessageSquare, Send, Search, Plus, X, ArrowLeft } from 'lucide-react';
 import { toast } from '../components/Toast';
-import { getSmsThreads, getSmsThread, sendSms } from '../api';
+import { getImsgThreads, getImsgThread, sendImsg } from '../api';
 
-// Two-way SMS inbox for the VTM number. Threads are grouped by the client's
-// phone; inbound texts land here via the Twilio webhook, and replies send from
-// the VTM number through the approved messaging service.
+// Two-way iMessage inbox for the business number. Threads are grouped by the
+// contact's phone. Sends are queued and delivered by the bridge running on the
+// Mac signed into the business Apple ID (imessage-bridge/), which also forwards
+// replies from known clients and leads back here.
 
 const fmtPhone = (p) => {
   const d = String(p || '').replace(/\D/g, '');
@@ -20,6 +21,9 @@ const fmtTime = (t) => {
     ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
+// Outbound status as a person reads it. 'queued' and 'sending' mean the Mac
+// bridge has not confirmed the send yet.
+const STATUS_LABEL = { queued: 'queued', sending: 'sending', sent: 'sent', failed: 'failed' };
 
 export default function Inbox() {
   const [threads, setThreads] = useState([]);
@@ -35,7 +39,7 @@ export default function Inbox() {
   const scrollRef = useRef(null);
 
   const loadThreads = async () => {
-    try { setThreads(await getSmsThreads() || []); }
+    try { setThreads(await getImsgThreads() || []); }
     catch (e) { toast('error', e.message); }
     finally { setLoading(false); }
   };
@@ -47,14 +51,16 @@ export default function Inbox() {
 
   const openThread = async (phone) => {
     setActive(phone); setMessages([]);
-    try { setMessages(await getSmsThread(phone) || []); }
+    try { setMessages(await getImsgThread(phone) || []); }
     catch (e) { toast('error', e.message); }
   };
+  // Poll the open thread a little faster than the list so a queued send flips
+  // to sent, and replies show up, without a manual refresh.
   useEffect(() => {
     if (!active) return;
     const t = setInterval(async () => {
-      try { setMessages(await getSmsThread(active) || []); } catch (_) { /* keep quiet on poll */ }
-    }, 12000);
+      try { setMessages(await getImsgThread(active) || []); } catch (_) { /* keep quiet on poll */ }
+    }, 6000);
     return () => clearInterval(t);
   }, [active]);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
@@ -64,9 +70,9 @@ export default function Inbox() {
     if (!body || !active) return;
     setSending(true);
     try {
-      await sendSms(active, body);
+      await sendImsg(active, body);
       setReply('');
-      setMessages(await getSmsThread(active) || []);
+      setMessages(await getImsgThread(active) || []);
       loadThreads();
     } catch (e) { toast('error', e.message); }
     finally { setSending(false); }
@@ -78,8 +84,8 @@ export default function Inbox() {
     if (!body) { toast('error', 'Enter a message.'); return; }
     setSending(true);
     try {
-      await sendSms(phone, body);
-      toast('success', 'Message sent');
+      await sendImsg(phone, body);
+      toast('success', 'Queued. Your Mac sends it in a few seconds.');
       setComposing(false); setNewPhone(''); setNewBody('');
       await loadThreads();
       openThread(phone);
@@ -109,7 +115,7 @@ export default function Inbox() {
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Inbox</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            Text your clients from the VTM number. Replies land here.
+            Text your clients over iMessage from your business number. Replies land here.
           </div>
         </div>
         <button className="btn-primary" onClick={() => setComposing(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -166,16 +172,17 @@ export default function Inbox() {
               <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {messages.map(m => {
                   const out = m.direction === 'out';
+                  const failed = out && m.status === 'failed';
                   return (
                     <div key={m.id} style={{ alignSelf: out ? 'flex-end' : 'flex-start', maxWidth: '76%' }}>
                       <div style={{
                         padding: '9px 13px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                        background: out ? 'var(--orange)' : 'var(--surface-2)',
+                        background: out ? (failed ? '#b91c1c' : 'var(--orange)') : 'var(--surface-2)',
                         color: out ? '#fff' : 'var(--text)',
                         border: out ? 'none' : '1px solid var(--border)',
                       }}>{m.body}</div>
-                      <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3, textAlign: out ? 'right' : 'left' }}>
-                        {fmtTime(m.created_at)}{out && m.status ? ` · ${m.status}` : ''}
+                      <div style={{ fontSize: 10.5, color: failed ? '#b91c1c' : 'var(--muted)', marginTop: 3, textAlign: out ? 'right' : 'left' }}>
+                        {fmtTime(m.created_at)}{out && m.status ? ` · ${STATUS_LABEL[m.status] || m.status}` : ''}{failed && m.error ? ` (${m.error})` : ''}
                       </div>
                     </div>
                   );
@@ -184,7 +191,7 @@ export default function Inbox() {
               <div style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
                 <textarea value={reply} onChange={e => setReply(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } }}
-                  placeholder="Type a message… (prefixed VTM: with an opt-out line)"
+                  placeholder="Type a message…"
                   rows={1} style={{ ...input, resize: 'none', minHeight: 40, maxHeight: 120 }} />
                 <button className="btn-primary" onClick={doSend} disabled={sending || !reply.trim()}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -207,17 +214,17 @@ export default function Inbox() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <span style={label}>To (mobile number)</span>
-                <input style={input} type="tel" autoFocus value={newPhone} placeholder="(281) 000-0000"
+                <input style={input} type="tel" autoFocus value={newPhone} placeholder="(000) 000-0000"
                   onChange={e => setNewPhone(e.target.value)} />
               </div>
               <div>
                 <span style={label}>Message</span>
                 <textarea style={{ ...input, minHeight: 110, resize: 'vertical', lineHeight: 1.5 }} value={newBody}
-                  placeholder="Your message. It sends prefixed with VTM: and an opt-out line."
+                  placeholder="Your message. It sends as an iMessage from your business number."
                   onChange={e => setNewBody(e.target.value)} />
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                Only text clients who have opted in. Every message includes a STOP opt-out.
+                Sends as a personal iMessage from your business number. Text people who expect to hear from you.
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
