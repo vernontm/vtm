@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { C, card } from '../lib/theme';
+import { C, T } from '../lib/theme';
+import { Screen, HeaderBar, Tile, Avatar, Button, DOCK_SPACE } from '../components/ui';
 
-export default function SettingsScreen() {
+// Settings (Aura): who you are, a couple of links, sign out.
+const nameOf = (user) => String(user?.user_metadata?.name || user?.user_metadata?.full_name || (user?.email || '').split('@')[0] || '');
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+export default function SettingsScreen({ navigation }) {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -12,6 +17,7 @@ export default function SettingsScreen() {
   }, []);
 
   const isAdmin = !!(user?.user_metadata?.is_admin || user?.app_metadata?.is_admin);
+  const name = nameOf(user);
 
   const signOut = () => {
     Alert.alert('Sign out?', 'You can sign back in anytime.', [
@@ -20,44 +26,44 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const rows = [
+    { icon: 'globe-outline', label: 'Open the web CRM', sub: 'vernontm.com/admin', onPress: () => Linking.openURL('https://www.vernontm.com/admin') },
+    { icon: 'chatbubble-outline', label: 'Report a problem', sub: 'Email Ray', onPress: () => Linking.openURL('mailto:ray@vernontm.com') },
+  ];
+
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, padding: 16, gap: 14 }}>
-      {/* Account */}
-      <View style={[card, { flexDirection: 'row', alignItems: 'center', gap: 14 }]}>
-        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.blueSoft, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: C.blue, fontWeight: '800', fontSize: 18 }}>
-            {(user?.email || '?')[0].toUpperCase()}
-          </Text>
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ color: C.text, fontWeight: '800', fontSize: 16 }}>{user?.email || '…'}</Text>
-          <Text style={{ color: isAdmin ? C.blue : C.muted, fontSize: 12.5, fontWeight: '700', marginTop: 2 }}>
-            {isAdmin ? 'Admin' : 'Team member'}
-          </Text>
-        </View>
-      </View>
+    <Screen>
+      <HeaderBar title="Settings" onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 18, paddingTop: 4, paddingBottom: DOCK_SPACE, gap: 12 }}>
+        {/* Account */}
+        <Tile style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Avatar name={name || user?.email} size={56} tone="ink" />
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Text numberOfLines={1} style={T.title}>{cap(name) || 'Signed in'}</Text>
+            {user?.email ? <Text numberOfLines={1} style={T.sub}>{user.email}</Text> : null}
+            <Text style={[T.meta, { color: isAdmin ? C.ink : C.slate }]}>{isAdmin ? 'Admin' : 'Team member'}</Text>
+          </View>
+        </Tile>
 
-      {/* Links */}
-      <View style={[card, { padding: 0, overflow: 'hidden' }]}>
-        <TouchableOpacity onPress={() => Linking.openURL('https://www.vernontm.com/admin')}
-          style={{ paddingVertical: 15, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: C.border }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><Ionicons name="globe-outline" size={18} color={C.blue} /><Text style={{ color: C.text, fontWeight: '600', fontSize: 15 }}>Open the web CRM</Text></View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => Linking.openURL('mailto:ray@vernontm.com')}
-          style={{ paddingVertical: 15, paddingHorizontal: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><Ionicons name="chatbubble-outline" size={18} color={C.blue} /><Text style={{ color: C.text, fontWeight: '600', fontSize: 15 }}>Report a problem</Text></View>
-        </TouchableOpacity>
-      </View>
+        {/* Links */}
+        {rows.map(r => (
+          <Tile key={r.label} onPress={r.onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name={r.icon} size={20} color={C.ink} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+              <Text style={T.title}>{r.label}</Text>
+              {r.sub ? <Text style={T.sub}>{r.sub}</Text> : null}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={C.slate} />
+          </Tile>
+        ))}
 
-      {/* Sign out */}
-      <TouchableOpacity onPress={signOut}
-        style={{ backgroundColor: 'rgba(220,38,38,0.12)', borderWidth: 1, borderColor: 'rgba(220,38,38,0.4)', borderRadius: 14, paddingVertical: 15, alignItems: 'center' }}>
-        <Text style={{ color: C.red, fontWeight: '800', fontSize: 15 }}>Sign out</Text>
-      </TouchableOpacity>
+        {/* Sign out */}
+        <Button label="Sign out" kind="danger" icon="log-out-outline" onPress={signOut} style={{ marginTop: 4 }} />
 
-      <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 'auto', marginBottom: 8 }}>
-        VTM CRM Mobile · v1.0
-      </Text>
-    </View>
+        <Text style={[T.sub, { textAlign: 'center', marginTop: 'auto', paddingTop: 16 }]}>VTM CRM Mobile · v1.0</Text>
+      </ScrollView>
+    </Screen>
   );
 }

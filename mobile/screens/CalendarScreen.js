@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert, Platform } from 'react-native';
 import Sheet from '../components/Sheet';
-import HeaderButton from '../components/HeaderButton';
 import LocationInput from '../components/LocationInput';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { getUpcomingMeetings, getPastMeetings, createMeeting, updateMeeting, deleteMeeting, getClients } from '../lib/api';
-import { C, card } from '../lib/theme';
+import { C, T, F } from '../lib/theme';
+import { Screen, HeaderBar, IconButton, Tile, Label, Chip, Button, Dot, Empty, DOCK_SPACE } from '../components/ui';
 import DateField from '../components/DateField';
 
+// Calendar (Aura): the month sits in one soft tile, the selected day's events
+// are tiles below it, and the add button lives in the header.
 const pad = (n) => String(n).padStart(2, '0');
 const dstr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -24,18 +26,36 @@ const confirmDelete = (title, message, onYes) => {
   Alert.alert(title, message, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: onYes }]);
 };
 
+// The month grid, rethemed light. The background matches the tile it sits in
+// so the grid and its wrapper read as one soft tile.
+const CAL_THEME = {
+  calendarBackground: C.tile,
+  dayTextColor: C.ink,
+  monthTextColor: C.ink,
+  textDisabledColor: '#B9BBC6',
+  todayTextColor: C.ink,
+  todayBackgroundColor: '#FFFFFF',
+  arrowColor: C.ink,
+  textSectionTitleColor: C.slate,
+  selectedDayBackgroundColor: C.ink,
+  selectedDayTextColor: '#FFFFFF',
+  dotColor: C.ink,
+  selectedDotColor: '#FFFFFF',
+  textDayFontFamily: F.semi,
+  textMonthFontFamily: F.displayBold,
+  textDayHeaderFontFamily: F.bold,
+  textDayFontSize: 15,
+  textMonthFontSize: 17,
+  textDayHeaderFontSize: 11,
+};
+
 export default function CalendarScreen({ navigation }) {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState(dstr(new Date()));
   const [showNew, setShowNew] = useState(false);
-  const [editing, setEditing] = useState(null);   // the event being edited (tap a card)
-
-  // iOS-style: the add button lives in the header instead of floating over the page.
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerRight: () => <HeaderButton icon="add" label="New appointment" onPress={() => setShowNew(true)} /> });
-  }, [navigation]);
+  const [editing, setEditing] = useState(null);   // the event being edited (tap a tile)
 
   const load = useCallback(async (quiet) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
@@ -68,60 +88,63 @@ export default function CalendarScreen({ navigation }) {
       const hasMeeting = items.some(m => !isBlock(m));
       const hasBlock = items.some(isBlock);
       out[day] = {
-        dots: [hasMeeting && { key: 'm', color: C.blue }, hasBlock && { key: 'b', color: C.amber }].filter(Boolean),
+        dots: [hasMeeting && { key: 'm', color: C.ink }, hasBlock && { key: 'b', color: C.amberDot }].filter(Boolean),
       };
     }
-    out[selected] = { ...(out[selected] || {}), selected: true, selectedColor: C.blue };
+    out[selected] = { ...(out[selected] || {}), selected: true, selectedColor: C.ink };
     return out;
   }, [byDay, selected]);
 
   const dayItems = byDay[selected] || [];
   const closeSheet = () => { setShowNew(false); setEditing(null); };
+  const selectedDate = new Date(selected + 'T12:00:00');
+  const dateWords = selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const isToday = selected === dstr(new Date());
+  const listTitle = isToday ? 'Today' : selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const countLabel = dayItems.length ? `${dayItems.length} ${dayItems.length === 1 ? 'event' : 'events'}` : undefined;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {loading ? <ActivityIndicator color={C.blue} style={{ marginTop: 40 }} /> : (
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.blue} />}>
-        <Calendar
-          markingType="multi-dot"
-          markedDates={marked}
-          onDayPress={(d) => setSelected(d.dateString)}
-          theme={{
-            calendarBackground: C.bg, dayTextColor: C.text, monthTextColor: C.text,
-            textDisabledColor: '#4a4a52', todayTextColor: C.blue, arrowColor: C.blue,
-            textSectionTitleColor: C.muted, selectedDayBackgroundColor: C.blue, selectedDayTextColor: '#fff',
-          }}
-        />
-        <View style={{ padding: 16, gap: 10 }}>
-          <Text style={{ color: C.text, fontSize: 16, fontWeight: '800' }}>
-            {new Date(selected + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </Text>
-          {dayItems.length === 0 && <Text style={{ color: C.muted, fontSize: 14 }}>Nothing scheduled.</Text>}
+    <Screen>
+      <HeaderBar title="Calendar" sub={dateWords} onBack={() => navigation.goBack()}
+        right={<IconButton icon="add" dark label="New appointment" onPress={() => setShowNew(true)} />} />
+      {loading ? <ActivityIndicator color={C.ink} style={{ marginTop: 40 }} /> : (
+      <ScrollView contentContainerStyle={{ padding: 18, paddingTop: 4, paddingBottom: DOCK_SPACE, gap: 14 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.ink} />}>
+        <Tile style={{ padding: 8 }}>
+          <Calendar
+            markingType="multi-dot"
+            markedDates={marked}
+            onDayPress={(d) => setSelected(d.dateString)}
+            theme={CAL_THEME}
+            style={{ backgroundColor: C.tile, borderRadius: 16 }}
+          />
+        </Tile>
+
+        <View style={{ gap: 10 }}>
+          <Label right={countLabel}>{listTitle}</Label>
+          {dayItems.length === 0 && <Empty icon="calendar-outline" title="Nothing scheduled" sub="Tap the plus to add an appointment." />}
           {dayItems.map(m => {
             const block = isBlock(m);
+            const when = block && m.duration_minutes >= 1380 ? 'All day' : `${fmtTime(m.start_time)} to ${fmtTime(m.end_time || m.start_time)}`;
+            const where = m.location ? ` · ${m.location}` : m.meet_link ? ' · Google Meet' : '';
             return (
-              <TouchableOpacity key={`${m.id}-${selected}`} activeOpacity={0.7} onPress={() => setEditing(m)} accessibilityLabel={`Edit ${m.title || 'event'}`}
-                style={[card, { padding: 14, borderLeftWidth: 3, borderLeftColor: block ? C.amber : C.blue }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  {block && <Ionicons name="remove-circle" size={15} color={C.amber} />}
-                  <Text numberOfLines={2} style={{ color: block ? C.amber : C.text, fontWeight: '700', fontSize: 15, flex: 1 }}>{m.title || '(no title)'}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={C.muted} />
+              <Tile key={`${m.id}-${selected}`} onPress={() => setEditing(m)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 }}>
+                {block ? <Dot color={C.amberDot} size={10} /> : null}
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Text numberOfLines={2} style={T.title}>{m.title || '(no title)'}</Text>
+                  <Text numberOfLines={1} style={T.sub}>{when}{where}</Text>
                 </View>
-                <Text style={{ color: C.muted, fontSize: 13, marginTop: 3 }}>
-                  {block && m.duration_minutes >= 1380 ? 'All day' : `${fmtTime(m.start_time)} to ${fmtTime(m.end_time || m.start_time)}`}
-                  {m.location ? ` · ${m.location}` : m.meet_link ? ' · Google Meet' : ''}
-                </Text>
-              </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={C.slate} />
+              </Tile>
             );
           })}
         </View>
-        <View style={{ height: 110 }} />
       </ScrollView>
       )}
 
       <AppointmentSheet visible={showNew || !!editing} meeting={editing} defaultDate={selected}
         onClose={closeSheet} onSaved={() => { closeSheet(); load(true); }} />
-    </View>
+    </Screen>
   );
 }
 
@@ -176,7 +199,9 @@ function AppointmentSheet({ visible, defaultDate, meeting, onClose, onSaved }) {
     ).slice(0, 5);
   }, [attendee, contacts]);
 
-  const input = { backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: C.text };
+  // Tile fields: soft fill, no border. DateField takes the same look through its style prop.
+  const input = { minHeight: 48, backgroundColor: C.tile, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, fontFamily: F.body, fontSize: 16, color: C.ink };
+  const dateStyle = { backgroundColor: C.tile, borderWidth: 0, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14 };
   // An existing event may have a length that is not one of the presets.
   const durations = DURATIONS.includes(duration) ? DURATIONS : [...DURATIONS, duration].sort((a, b) => a - b);
 
@@ -217,62 +242,48 @@ function AppointmentSheet({ visible, defaultDate, meeting, onClose, onSaved }) {
     finally { setBusy(false); }
   });
 
-  const chip = (on) => ({ paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5, borderColor: on ? C.blue : C.border, backgroundColor: on ? C.blueSoft : C.surface2 });
-
   return (
     <Sheet visible={visible} title={editing ? 'Edit event' : 'New appointment'} onClose={onClose}>
-          <TextInput style={input} placeholder="Title" placeholderTextColor={C.muted} value={title} onChangeText={setTitle} />
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={chip(kind === 'online')} onPress={() => setKind('online')}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="videocam-outline" size={15} color={kind === 'online' ? C.blue : C.muted} /><Text style={{ color: kind === 'online' ? C.blue : C.muted, fontWeight: '700' }}>Online</Text></View></TouchableOpacity>
-            <TouchableOpacity style={chip(kind === 'in_person')} onPress={() => setKind('in_person')}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="location-outline" size={15} color={kind === 'in_person' ? C.blue : C.muted} /><Text style={{ color: kind === 'in_person' ? C.blue : C.muted, fontWeight: '700' }}>In person</Text></View></TouchableOpacity>
-          </View>
-          {kind === 'in_person' && <LocationInput style={input} placeholder="Business or address" value={location} onChange={setLocation} />}
-          {editing && meeting?.meet_link ? <Text style={{ color: C.muted, fontSize: 12.5 }}>The Google Meet link stays on the invite.</Text> : null}
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <View style={{ flex: 1, minWidth: 0 }}><DateField value={date} onChange={setDate} /></View>
-            <View style={{ width: 110 }}><DateField mode="time" value={time} onChange={setTime} /></View>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {durations.map(d => (
-              <TouchableOpacity key={d} style={chip(duration === d)} onPress={() => setDuration(d)}>
-                <Text style={{ color: duration === d ? C.blue : C.muted, fontWeight: '700' }}>{fmtDur(d)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <TextInput style={input} placeholder="Invitee: search clients/leads or type an email" placeholderTextColor={C.muted} autoCapitalize="none" keyboardType="email-address" value={attendee}
-            onChangeText={(v) => { setAttendee(v); setShowSug(true); }} onFocus={() => setShowSug(true)} />
-          {showSug && suggestions.length > 0 && (
-            <View style={{ backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, marginTop: -6 }}>
-              {suggestions.map(c => (
-                <TouchableOpacity key={c.id} onPress={() => { setAttendee(c.contact_email); setShowSug(false); }}
-                  style={{ paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ color: C.text, fontWeight: '700', fontSize: 13.5 }}>{c.business_name || c.owner_name}</Text>
-                    <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12 }}>{c.contact_email}</Text>
-                  </View>
-                  <Text style={{ color: c.stage === 'lead' ? C.amber : C.green, fontSize: 10.5, fontWeight: '800' }}>
-                    {c.stage === 'lead' ? 'LEAD' : 'CLIENT'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 8 }}>
-            {editing ? (
-              <TouchableOpacity onPress={remove} disabled={busy} accessibilityLabel="Delete event" style={{ flex: 1, borderWidth: 1, borderColor: `${C.red}88`, borderRadius: 12, paddingVertical: 14, alignItems: 'center', opacity: busy ? 0.6 : 1 }}>
-                <Text style={{ color: C.red, fontWeight: '700' }}>Delete</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={onClose} style={{ flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}>
-                <Text style={{ color: C.muted, fontWeight: '700' }}>Cancel</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={save} disabled={busy} style={{ flex: 2, backgroundColor: C.blue, borderRadius: 12, paddingVertical: 14, alignItems: 'center', opacity: busy ? 0.6 : 1 }}>
-              {busy ? <ActivityIndicator color="#fff" /> : (
-                <Text style={{ color: '#fff', fontWeight: '800' }}>{editing ? 'Save changes' : `Create${kind === 'online' ? ' + Meet link' : ''}`}</Text>
-              )}
+      <TextInput style={input} placeholder="Title" placeholderTextColor={C.slate} value={title} onChangeText={setTitle} />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Chip label="Online" icon="videocam-outline" active={kind === 'online'} onPress={() => setKind('online')} />
+        <Chip label="In person" icon="location-outline" active={kind === 'in_person'} onPress={() => setKind('in_person')} />
+      </View>
+      {kind === 'in_person' && <LocationInput style={input} placeholder="Business or address" value={location} onChange={setLocation} />}
+      {editing && meeting?.meet_link ? <Text style={T.sub}>The Google Meet link stays on the invite.</Text> : null}
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flex: 1, minWidth: 0 }}><DateField value={date} onChange={setDate} style={dateStyle} /></View>
+        <View style={{ width: 118 }}><DateField mode="time" value={time} onChange={setTime} style={dateStyle} /></View>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+        {durations.map(d => (
+          <Chip key={d} label={fmtDur(d)} active={duration === d} onPress={() => setDuration(d)} />
+        ))}
+      </View>
+      <TextInput style={input} placeholder="Invitee: search clients and leads, or type an email" placeholderTextColor={C.slate} autoCapitalize="none" keyboardType="email-address" value={attendee}
+        onChangeText={(v) => { setAttendee(v); setShowSug(true); }} onFocus={() => setShowSug(true)} />
+      {showSug && suggestions.length > 0 && (
+        <View style={{ backgroundColor: C.tile, borderRadius: 16, marginTop: -4, overflow: 'hidden' }}>
+          {suggestions.map((c, i) => (
+            <TouchableOpacity key={c.id} onPress={() => { setAttendee(c.contact_email); setShowSug(false); }} activeOpacity={0.8}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={[T.body, { fontFamily: F.bold }]}>{c.business_name || c.owner_name}</Text>
+                <Text numberOfLines={1} style={T.sub}>{c.contact_email}</Text>
+              </View>
+              <Text style={[T.meta, { color: c.stage === 'lead' ? C.amber : C.green }]}>{c.stage === 'lead' ? 'Lead' : 'Client'}</Text>
             </TouchableOpacity>
-          </View>
+          ))}
+        </View>
+      )}
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+        {editing ? (
+          <Button label="Delete" kind="danger" onPress={remove} disabled={busy} style={{ flex: 1, height: 50, borderRadius: 25 }} />
+        ) : (
+          <Button label="Cancel" kind="soft" onPress={onClose} style={{ flex: 1, height: 50, borderRadius: 25 }} />
+        )}
+        <Button label={editing ? 'Save changes' : `Create${kind === 'online' ? ' + Meet link' : ''}`} onPress={save} busy={busy} style={{ flex: 2, height: 50, borderRadius: 25 }} />
+      </View>
     </Sheet>
   );
 }

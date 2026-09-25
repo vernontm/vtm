@@ -44,6 +44,24 @@ export const addTimeEntry = (data) => request('/time-entries?action=add', { meth
 export const getClients = () => request('/clients');
 export const createClient = (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) });
 
+// ── Tasks: recurring checklists (routines) + the shared to-do list ──
+// Routines: { routines: [{ id, title, cadence, items:[{id,text}], position }], checks: [{ item_id, period_key, done_by_name, done_at }] }
+export const getRoutines = () => request('/routines');
+export const checkRoutineItem = (routine_id, item_id, period_key, done) => request('/routines?action=check', { method: 'POST', body: JSON.stringify({ routine_id, item_id, period_key, done }) });
+export const createRoutine = (data) => request('/routines', { method: 'POST', body: JSON.stringify(data) });
+export const updateRoutine = (id, data) => request(`/routines?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+// Team to-dos: [{ id, title, urgent, done, created_by, created_by_name, assigned_to, assigned_to_name, done_at, link_* }]
+export const getTeamTodos = () => request('/team-todos');
+export const getTeamMembers = () => request('/team-todos?members=1');
+export const addTeamTodo = (data) => request('/team-todos', { method: 'POST', body: JSON.stringify(data) });
+export const updateTeamTodo = (id, data) => request(`/team-todos?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteTeamTodo = (id) => request(`/team-todos?id=${id}`, { method: 'DELETE' });
+// Reminders: { reminders: [{ id, title, remind_at, for_user, for_user_name, created_by, created_by_name, task_type, task_id, source, status, done_at }], needs_migration? }
+export const getReminders = () => request('/reminders');
+export const addReminder = (data) => request('/reminders', { method: 'POST', body: JSON.stringify(data) });
+export const updateReminder = (id, data) => request(`/reminders?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteReminder = (id) => request(`/reminders?id=${id}`, { method: 'DELETE' });
+
 // ── Contacts (everyone: people we talk to) ──
 // The contacts endpoint is workspace-scoped via the X-Client-Id header; the
 // workspace id comes from /me (first client grant).

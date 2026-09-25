@@ -1,21 +1,24 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { useHeaderHeight } from '@react-navigation/elements';
+import { View, Text, ScrollView, TextInput, RefreshControl, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { getTimeEntries, clockIn, clockOut, addTimeEntry, getAdminUsers, payTimeRange } from '../lib/api';
-import { C, card } from '../lib/theme';
+import { C, T, F } from '../lib/theme';
+import { Screen, HeaderBar, Tile, Label, Chip, Button, Empty, DOCK_SPACE } from '../components/ui';
 import DateField from '../components/DateField';
 
+// Time (Aura): one big Start / Pause button on a hero tile. Each stretch is
+// its own entry (one open entry at a time), so a break is just Pause, then
+// Start again. Admins switch people with chips and pay a period from a tile.
 const pad = (n) => String(n).padStart(2, '0');
 const localToday = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const weekStart = () => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const fmtHM = (min) => { const m = Math.max(0, Math.round(min)); const h = Math.floor(m / 60); return h ? `${h}h ${m % 60}m` : `${m % 60}m`; };
 const fmtDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch { return d; } };
+const fmtClock = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const money = (v) => `$${Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
-export default function TimeScreen() {
-  const headerHeight = useHeaderHeight();        // keyboard offset under the nav header
+export default function TimeScreen({ navigation }) {
   const [me, setMe] = useState(null);            // supabase user
   const [isAdmin, setIsAdmin] = useState(false);
   const [team, setTeam] = useState([]);          // admin: all users
@@ -26,7 +29,7 @@ export default function TimeScreen() {
   const [nowTs, setNowTs] = useState(Date.now());
   const [addMin, setAddMin] = useState('');
   const [addNote, setAddNote] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(null);        // 'clock' | 'add' | 'pay' while that request runs
   // Admin pay-a-period
   const [payFrom, setPayFrom] = useState(daysAgo(6));
   const [payTo, setPayTo] = useState(localToday());
@@ -90,19 +93,19 @@ export default function TimeScreen() {
   }, [data, liveMin]);
 
   const doClock = async () => {
-    setBusy(true);
+    setBusy('clock');
     try { data.open ? await clockOut() : await clockIn(); await load(true); }
     catch (e) { Alert.alert('Clock error', e.message); }
-    finally { setBusy(false); }
+    finally { setBusy(null); }
   };
 
   const doAdd = async () => {
     const m = parseInt(addMin, 10);
     if (!m || m <= 0) return Alert.alert('Enter minutes worked');
-    setBusy(true);
+    setBusy('add');
     try { await addTimeEntry({ minutes: m, note: addNote.trim(), work_date: localToday() }); setAddMin(''); setAddNote(''); await load(true); }
     catch (e) { Alert.alert('Could not add', e.message); }
-    finally { setBusy(false); }
+    finally { setBusy(null); }
   };
 
   const doPay = async () => {
@@ -113,10 +116,10 @@ export default function TimeScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Pay', style: 'default', onPress: async () => {
-          setBusy(true);
+          setBusy('pay');
           try { await payTimeRange({ user_id: viewUserId, from: payFrom, to: payTo, amount: payAmount }); await load(true); }
           catch (e) { Alert.alert('Payment failed', e.message); }
-          finally { setBusy(false); }
+          finally { setBusy(null); }
         } },
       ]
     );
@@ -150,144 +153,144 @@ export default function TimeScreen() {
   }, [viewUserId, presets.length && (data.payments || [])[0]?.id]);
 
   const teamLabel = (u) => (u.email || '').split('@')[0];
-  const input = { backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, color: C.text };
-
-  if (loading) return <View style={{ flex: 1, backgroundColor: C.bg }}><ActivityIndicator color={C.blue} style={{ marginTop: 40 }} /></View>;
+  // Fields that sit inside a tile are white so they stay visible on the soft fill.
+  const innerInput = { height: 48, backgroundColor: '#FFFFFF', borderRadius: 14, paddingHorizontal: 14, fontFamily: F.body, fontSize: 16, color: C.ink };
+  const innerDate = { backgroundColor: '#FFFFFF', borderWidth: 0, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14 };
+  const entries = (data.entries || []).filter(e => e.minutes).slice(0, 30);
+  const headerSub = loading ? null : (data.open || totals.today > 0 ? `Today · ${fmtHM(totals.today)}` : 'Not clocked in');
+  const payments = (data.payments || []);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight} style={{ flex: 1, backgroundColor: C.bg }}>
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ padding: 16, gap: 14 }}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.blue} />}>
+    <Screen>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0} style={{ flex: 1 }}>
+        <HeaderBar title="Time" sub={headerSub} onBack={() => navigation.goBack()} />
+        {loading ? <ActivityIndicator color={C.ink} style={{ marginTop: 40 }} /> : (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingTop: 4, paddingBottom: DOCK_SPACE, gap: 14 }}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.ink} />}>
 
-      {/* Admin: employee switcher */}
-      {isAdmin && team.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {team.map(u => {
-            const on = viewUserId === u.id;
-            return (
-              <TouchableOpacity key={u.id} onPress={() => setViewUserId(u.id)}
-                style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: on ? C.blue : C.surface2, borderWidth: 1, borderColor: on ? C.blue : C.border }}>
-                <Text style={{ color: on ? '#fff' : C.muted, fontWeight: '700', fontSize: 13 }}>
-                  {u.id === me?.id ? 'Me' : teamLabel(u)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* Clock — only on your own time */}
-      {viewingSelf && (
-        <View style={[card, { alignItems: 'center', paddingVertical: 24 }]}>
-          {data.open ? (
-            <>
-              <Text style={{ color: C.green, fontSize: 13, fontWeight: '700', marginBottom: 6 }}>● CLOCKED IN</Text>
-              <Text style={{ color: C.text, fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{elapsed()}</Text>
-            </>
-          ) : (
-            <Text style={{ color: C.muted, fontSize: 15, marginBottom: 4 }}>Not clocked in</Text>
-          )}
-          <TouchableOpacity onPress={doClock} disabled={busy}
-            style={{ marginTop: 14, backgroundColor: data.open ? C.red : C.green, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 44, opacity: busy ? 0.6 : 1 }}>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{data.open ? 'Clock out' : 'Clock in'}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Totals */}
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        {[['Today', totals.today, C.blue], ['This week', totals.week, C.text], ['Unpaid', totals.unpaid, C.green]].map(([label, v, color]) => (
-          <View key={label} style={[card, { flex: 1, padding: 13 }]}>
-            <Text style={{ color: C.muted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>{label}</Text>
-            <Text style={{ color, fontSize: 17, fontWeight: '800', marginTop: 4 }}>{fmtHM(v)}</Text>
-          </View>
-        ))}
-      </View>
-      {isAdmin && !viewingSelf && data.hourly_rate > 0 && totals.unpaid > 0 && (
-        <Text style={{ color: C.muted, fontSize: 13, marginTop: -6 }}>
-          Owed at ${data.hourly_rate}/hr: <Text style={{ color: C.green, fontWeight: '800' }}>{money((totals.unpaid / 60) * data.hourly_rate)}</Text>
-        </Text>
-      )}
-
-      {/* Admin: pay a period */}
-      {isAdmin && (
-        <View style={[card, { gap: 10 }]}>
-          <Text style={{ color: C.text, fontWeight: '800' }}>Pay a period{!viewingSelf && team.length ? ` · ${teamLabel(team.find(u => u.id === viewUserId) || {})}` : ''}</Text>
-          {presets.length > 0 && (
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              {presets.map(pr => (
-                <TouchableOpacity key={pr.label} onPress={() => { setPayFrom(pr.from); setPayTo(pr.to); }}
-                  style={{ paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, backgroundColor: payFrom === pr.from && payTo === pr.to ? C.blueSoft : C.surface2, borderWidth: 1, borderColor: payFrom === pr.from && payTo === pr.to ? C.blue : C.border }}>
-                  <Text style={{ color: payFrom === pr.from && payTo === pr.to ? C.blue : C.muted, fontWeight: '700', fontSize: 12 }}>{pr.label}</Text>
-                </TouchableOpacity>
+          {/* Admin: employee switcher */}
+          {isAdmin && team.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
+              {team.map(u => (
+                <Chip key={u.id} label={u.id === me?.id ? 'Me' : teamLabel(u)} active={viewUserId === u.id} onPress={() => setViewUserId(u.id)} />
               ))}
-            </View>
+            </ScrollView>
           )}
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <View style={{ flex: 1, minWidth: 0 }}><DateField value={payFrom} onChange={setPayFrom} /></View>
-            <Text style={{ color: C.muted }}>to</Text>
-            <View style={{ flex: 1, minWidth: 0 }}><DateField value={payTo} onChange={setPayTo} /></View>
+
+          {/* The clock: only on your own time */}
+          {viewingSelf && (
+            <Tile style={{ alignItems: 'center', paddingVertical: 26, gap: 6 }}>
+              {data.open ? (
+                <>
+                  <Label style={{ color: C.green }}>Clocked in</Label>
+                  <Text style={[T.numeral, { fontVariant: ['tabular-nums'], marginTop: 6 }]}>{elapsed()}</Text>
+                  <Text style={T.sub}>since {fmtClock(data.open.started_at)}</Text>
+                </>
+              ) : (
+                <>
+                  <Label>Clock</Label>
+                  <Text style={[T.h3, { marginTop: 6 }]}>Not clocked in</Text>
+                  <Text style={T.sub}>{totals.today > 0 ? `${fmtHM(totals.today)} logged today` : 'Nothing logged today yet'}</Text>
+                </>
+              )}
+              <Button label={data.open ? 'Pause' : 'Start'} kind={data.open ? 'outline' : 'primary'} icon={data.open ? 'pause-outline' : 'play-outline'}
+                onPress={doClock} busy={busy === 'clock'} disabled={!!busy}
+                style={{ height: 56, borderRadius: 28, alignSelf: 'stretch', marginTop: 14 }} />
+              <Text style={[T.sub, { textAlign: 'center', marginTop: 6 }]}>Tap Start again after a break. Each stretch is saved on its own.</Text>
+            </Tile>
+          )}
+
+          {/* Totals */}
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {[['Today', totals.today, C.ink], ['This week', totals.week, C.ink], ['Unpaid', totals.unpaid, C.green]].map(([label, v, color]) => (
+              <Tile key={label} style={{ flex: 1, padding: 14, gap: 6 }}>
+                <Label>{label}</Label>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[T.h3, { color }]}>{fmtHM(v)}</Text>
+              </Tile>
+            ))}
           </View>
-          <Text style={{ color: preview?.minutes ? C.text : C.muted, fontSize: 13.5, fontWeight: '600' }}>
-            {preview
-              ? preview.minutes
-                ? `${fmtHM(preview.minutes)} unpaid across ${preview.entry_count} entries${preview.hourly_rate > 0 ? ` · ${money(preview.suggested_amount)} at $${preview.hourly_rate}/hr` : ''}`
-                : 'No unpaid time in this range.'
-              : 'Pick a valid range…'}
-          </Text>
-          {preview?.minutes > 0 && (
-            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-              <Text style={{ color: C.muted }}>Paid $</Text>
-              <TextInput style={[input, { width: 100 }]} keyboardType="decimal-pad" value={payAmount} onChangeText={setPayAmount} />
-              <TouchableOpacity onPress={doPay} disabled={busy} style={{ flex: 1, backgroundColor: C.green, borderRadius: 10, paddingVertical: 12, alignItems: 'center', opacity: busy ? 0.6 : 1 }}>
-                <Text style={{ color: '#fff', fontWeight: '800' }}>Pay period</Text>
-              </TouchableOpacity>
-            </View>
+          {isAdmin && !viewingSelf && data.hourly_rate > 0 && totals.unpaid > 0 && (
+            <Text style={[T.sub, { marginTop: -6, paddingHorizontal: 4 }]}>
+              Owed at ${data.hourly_rate}/hr: <Text style={{ color: C.green, fontFamily: F.bold }}>{money((totals.unpaid / 60) * data.hourly_rate)}</Text>
+            </Text>
           )}
-          {(data.payments || []).length > 0 && (
-            <View style={{ borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10, gap: 6 }}>
-              <Text style={{ color: C.muted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>Payment history</Text>
-              {(data.payments || []).slice(0, 6).map(p => (
-                <View key={p.id} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ color: C.muted, fontSize: 12.5 }}>{fmtDate(p.period_start)} to {fmtDate(p.period_end)} · {fmtHM(p.minutes)}</Text>
-                  <Text style={{ color: C.green, fontWeight: '800', fontSize: 12.5 }}>{p.amount != null ? money(p.amount) : ''}</Text>
+
+          {/* Admin: pay a period */}
+          {isAdmin && (
+            <Tile style={{ gap: 12 }}>
+              <Text style={T.title}>Pay a period{!viewingSelf && team.length ? ` · ${teamLabel(team.find(u => u.id === viewUserId) || {})}` : ''}</Text>
+              {presets.length > 0 && (
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  {presets.map(pr => (
+                    <Chip key={pr.label} label={pr.label} active={payFrom === pr.from && payTo === pr.to} onPress={() => { setPayFrom(pr.from); setPayTo(pr.to); }} />
+                  ))}
                 </View>
-              ))}
-            </View>
+              )}
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                <View style={{ flex: 1, minWidth: 0 }}><DateField value={payFrom} onChange={setPayFrom} style={innerDate} /></View>
+                <Text style={T.sub}>to</Text>
+                <View style={{ flex: 1, minWidth: 0 }}><DateField value={payTo} onChange={setPayTo} style={innerDate} /></View>
+              </View>
+              <Text style={[T.body, { color: preview?.minutes ? C.ink : C.slate }]}>
+                {preview
+                  ? preview.minutes
+                    ? `${fmtHM(preview.minutes)} unpaid across ${preview.entry_count} entries${preview.hourly_rate > 0 ? ` · ${money(preview.suggested_amount)} at $${preview.hourly_rate}/hr` : ''}`
+                    : 'No unpaid time in this range.'
+                  : 'Pick a valid range.'}
+              </Text>
+              {preview?.minutes > 0 && (
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 132, height: 48, borderRadius: 14, backgroundColor: '#FFFFFF', paddingHorizontal: 14 }}>
+                    <Text style={[T.body, { color: C.slate }]}>$</Text>
+                    <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 16, color: C.ink, paddingVertical: 0 }} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={C.slate} value={payAmount} onChangeText={setPayAmount} />
+                  </View>
+                  <Button label="Pay period" onPress={doPay} busy={busy === 'pay'} disabled={!!busy} style={{ flex: 1, height: 48, borderRadius: 24 }} />
+                </View>
+              )}
+              {payments.length > 0 && (
+                <View style={{ borderTopWidth: 1, borderTopColor: C.line, paddingTop: 12, gap: 8 }}>
+                  <Label>Payment history</Label>
+                  {payments.slice(0, 6).map(p => (
+                    <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <Text numberOfLines={1} style={[T.sub, { flex: 1 }]}>{fmtDate(p.period_start)} to {fmtDate(p.period_end)} · {fmtHM(p.minutes)}</Text>
+                      <Text style={[T.meta, { color: C.green }]}>{p.amount != null ? money(p.amount) : ''}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Tile>
           )}
-        </View>
-      )}
 
-      {/* Manual add — own time only */}
-      {viewingSelf && (
-        <View style={[card, { gap: 10 }]}>
-          <Text style={{ color: C.text, fontWeight: '800' }}>Add time for today</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TextInput style={[input, { width: 90 }]} placeholder="Min" placeholderTextColor={C.muted} keyboardType="number-pad" value={addMin} onChangeText={setAddMin} />
-            <TextInput style={[input, { flex: 1, minWidth: 0 }]} placeholder="What you worked on" placeholderTextColor={C.muted} value={addNote} onChangeText={setAddNote} />
-          </View>
-          <TouchableOpacity onPress={doAdd} disabled={busy || !addMin} style={{ backgroundColor: C.blue, borderRadius: 10, paddingVertical: 12, alignItems: 'center', opacity: busy || !addMin ? 0.6 : 1 }}>
-            <Text style={{ color: '#fff', fontWeight: '800' }}>Add entry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          {/* Manual add: own time only */}
+          {viewingSelf && (
+            <Tile style={{ gap: 12 }}>
+              <Text style={T.title}>Add time for today</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput style={[innerInput, { width: 92 }]} placeholder="Min" placeholderTextColor={C.slate} keyboardType="number-pad" value={addMin} onChangeText={setAddMin} />
+                <TextInput style={[innerInput, { flex: 1, minWidth: 0 }]} placeholder="What you worked on" placeholderTextColor={C.slate} value={addNote} onChangeText={setAddNote} />
+              </View>
+              <Button label="Add entry" kind="white" icon="add" onPress={doAdd} busy={busy === 'add'} disabled={!!busy || !addMin} />
+            </Tile>
+          )}
 
-      {/* Entries */}
-      <Text style={{ color: C.text, fontWeight: '800', fontSize: 16, marginTop: 4 }}>Recent entries</Text>
-      {(data.entries || []).filter(e => e.minutes).slice(0, 30).map(e => (
-        <View key={e.id} style={[card, { padding: 13, flexDirection: 'row', alignItems: 'center' }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontWeight: '600', fontSize: 14 }}>{fmtDate(e.work_date)}{e.note ? ` · ${e.note}` : ''}</Text>
-            <Text style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{fmtHM(e.minutes)}</Text>
-          </View>
-          <Text style={{ color: e.status === 'paid' ? C.green : C.amber, fontWeight: '800', fontSize: 12 }}>
-            {e.status === 'paid' ? 'PAID' : 'UNPAID'}
-          </Text>
-        </View>
-      ))}
-      <View style={{ height: 30 }} />
-    </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Entries */}
+          <Label style={{ paddingHorizontal: 4, marginTop: 4 }}>Recent entries</Label>
+          {entries.length === 0 && <Empty icon="time-outline" title="No entries yet" sub="Start the clock or add time by hand." />}
+          {entries.map(e => (
+            <Tile white key={e.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text numberOfLines={1} style={T.body}>{fmtDate(e.work_date)}{e.note ? ` · ${e.note}` : ''}</Text>
+                <Text style={T.sub}>{fmtHM(e.minutes)}</Text>
+              </View>
+              <Text style={[T.meta, { color: e.status === 'paid' ? C.green : C.amber }]}>
+                {e.status === 'paid' ? 'PAID' : 'UNPAID'}
+              </Text>
+            </Tile>
+          ))}
+        </ScrollView>
+        )}
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }

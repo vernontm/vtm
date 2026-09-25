@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getImsgDirectory, sendImsg, createClient, createContact, getMe } from '../lib/api';
-import { C } from '../lib/theme';
+import { C, T, F } from '../lib/theme';
+import { Screen, HeaderBar, Avatar, Chip, Button, Label, KIND_COLOR } from '../components/ui';
 import { last10, fmtPhone, KIND } from '../lib/imsg';
 
+// Start a text: pick someone from the directory or type a number. A new
+// number gets added as a lead (or client / contact) before the first message.
 export default function NewMessageScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [directory, setDirectory] = useState([]);
   const [pick, setPick] = useState('');
   const [selected, setSelected] = useState(null);
@@ -48,59 +53,65 @@ export default function NewMessageScreen({ navigation }) {
     finally { setBusy(false); }
   };
 
-  const chip = (on, color) => ({ flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center', borderWidth: 1.5, borderColor: on ? color : C.border, backgroundColor: on ? `${color}22` : C.surface2 });
+  const field = { minHeight: 48, borderRadius: 16, backgroundColor: C.tile, paddingHorizontal: 16, paddingVertical: 12, fontFamily: F.body, fontSize: 16, color: C.ink };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={92}>
-      <View style={{ padding: 16, gap: 12, flex: 1 }}>
-        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>To</Text>
-        {selected ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}>
-            <Text style={{ color: C.text, fontWeight: '700', flex: 1 }}>{selected.name} <Text style={{ color: C.muted, fontWeight: '400' }}>{fmtPhone(selected.phone)}</Text></Text>
-            <TouchableOpacity onPress={() => { setSelected(null); setPick(''); }}><Ionicons name="close" size={18} color={C.muted} /></TouchableOpacity>
-          </View>
-        ) : (
-          <TextInput autoFocus style={{ backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: C.text }}
-            placeholder="Name or number…" placeholderTextColor={C.muted} value={pick} onChangeText={t => { setSelected(null); setPick(t); }} />
-        )}
-
-        {matches.length > 0 && (
-          <FlatList data={matches} keyboardShouldPersistTaps="handled" style={{ maxHeight: 220 }} keyExtractor={p => p.kind + p.id}
-            renderItem={({ item: p }) => (
-              <TouchableOpacity onPress={() => { setSelected(p); setPick(p.name); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 11, borderBottomColor: C.border, borderBottomWidth: 1 }}>
-                <Text style={{ flex: 1, color: C.text, fontWeight: '700', fontSize: 15 }}>{p.name}</Text>
-                <View style={{ paddingVertical: 2, paddingHorizontal: 8, borderRadius: 999, backgroundColor: `${KIND[p.kind].color}22` }}>
-                  <Text style={{ color: KIND[p.kind].color, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }}>{KIND[p.kind].label}</Text>
+    <Screen>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <HeaderBar title="New message" sub="Sends as an iMessage from the business number" onBack={() => navigation.goBack()} />
+        <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: Math.max(insets.bottom, 18) + 10, gap: 14 }} keyboardShouldPersistTaps="handled">
+          <View style={{ gap: 8 }}>
+            <Label>To</Label>
+            {selected ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, paddingLeft: 12, borderRadius: 18, backgroundColor: C.tile }}>
+                <Avatar name={selected.name} size={36} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={[T.body, { fontFamily: F.bold }]}>{selected.name}</Text>
+                  <Text style={T.sub}>{KIND[selected.kind]?.label || 'Contact'} · {fmtPhone(selected.phone)}</Text>
                 </View>
-                <Text style={{ color: C.muted, fontSize: 12 }}>{fmtPhone(p.phone)}</Text>
-              </TouchableOpacity>
-            )} />
-        )}
+                <TouchableOpacity onPress={() => { setSelected(null); setPick(''); }} accessibilityLabel="Change recipient" style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="close" size={18} color={C.ink} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TextInput autoFocus style={field} placeholder="Name or number" placeholderTextColor={C.slate} value={pick} onChangeText={t => { setSelected(null); setPick(t); }} />
+            )}
+          </View>
 
-        {showQuickAdd && (
-          <View style={{ borderColor: C.border, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, padding: 12, backgroundColor: C.surface2, gap: 10 }}>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>New number. Add it as a:</Text>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {['lead', 'client', 'contact'].map(k => (
-                <TouchableOpacity key={k} style={chip(addKind === k, KIND[k].color)} onPress={() => setAddKind(k)}>
-                  <Text style={{ color: addKind === k ? KIND[k].color : C.muted, fontWeight: '700', textTransform: 'capitalize' }}>{k}</Text>
+          {matches.length > 0 && (
+            <View style={{ gap: 6 }}>
+              {matches.map(p => (
+                <TouchableOpacity key={p.kind + p.id} onPress={() => { setSelected(p); setPick(p.name); }} activeOpacity={0.8}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, paddingLeft: 12, borderRadius: 18, backgroundColor: C.bg, borderWidth: 1, borderColor: C.line }}>
+                  <Avatar name={p.name} size={36} tone="tile" />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={[T.body, { fontFamily: F.bold }]}>{p.name}</Text>
+                    <Text style={T.sub}>{fmtPhone(p.phone)}</Text>
+                  </View>
+                  <Text style={[T.meta, { color: KIND_COLOR[p.kind] || C.slate }]}>{KIND[p.kind]?.label || 'Contact'}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <TextInput style={{ backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: C.text }}
-              placeholder={addKind === 'contact' ? 'Contact name' : 'Business or person name'} placeholderTextColor={C.muted} value={addName} onChangeText={setAddName} />
+          )}
+
+          {showQuickAdd && (
+            <View style={{ gap: 10, padding: 14, borderRadius: 18, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(11,11,16,0.3)' }}>
+              <Text style={T.sub}>New number. Add it as a:</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {['lead', 'client', 'contact'].map(k => <Chip key={k} label={KIND[k].label} active={addKind === k} onPress={() => setAddKind(k)} />)}
+              </View>
+              <TextInput style={[field, { backgroundColor: C.bg, borderWidth: 1, borderColor: C.line }]} placeholder={addKind === 'contact' ? 'Contact name' : 'Business or person name'} placeholderTextColor={C.slate} value={addName} onChangeText={setAddName} />
+            </View>
+          )}
+
+          <View style={{ gap: 8 }}>
+            <Label>Message</Label>
+            <TextInput style={[field, { minHeight: 110, textAlignVertical: 'top' }]} placeholder="Type your text" placeholderTextColor={C.slate} value={body} onChangeText={setBody} multiline />
           </View>
-        )}
 
-        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 }}>Message</Text>
-        <TextInput style={{ backgroundColor: C.surface2, borderColor: C.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: C.text, minHeight: 90, textAlignVertical: 'top' }}
-          placeholder="Sends as an iMessage from your business number." placeholderTextColor={C.muted} value={body} onChangeText={setBody} multiline />
-
-        <TouchableOpacity onPress={send} disabled={busy || !targetPhone || !body.trim()}
-          style={{ backgroundColor: C.blue, borderRadius: 12, paddingVertical: 15, alignItems: 'center', opacity: (busy || !targetPhone || !body.trim()) ? 0.5 : 1 }}>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{busy ? 'Sending…' : (showQuickAdd ? 'Add & send' : 'Send')}</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <Button label={busy ? 'Sending' : (showQuickAdd ? 'Add and send' : 'Send')} busy={busy} disabled={!targetPhone || !body.trim()} onPress={send} icon="arrow-up" />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }

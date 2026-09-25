@@ -1,9 +1,10 @@
 const { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
+const { pushUser } = require('../_lib/push.js');
 
 // Shared team to-do list. Every signed-in user can see the whole list and add
 // items. A to-do can be linked to a client / project / other, and either left
 // open (anyone may complete it) or assigned/locked to one user (only that user
-// — or an admin — may mark it done). Editing meta / deleting is limited to the
+// (or an admin) may mark it done. Editing meta / deleting is limited to the
 // creator or an admin.
 //
 //   GET    /api/crm/team-todos           -> [{...}]
@@ -45,7 +46,7 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'GET') {
       const sharing = await loadSharing();
-      // Roster for the assignee picker + the sharing toggles — any signed-in
+      // Roster for the assignee picker + the sharing toggles: any signed-in
       // user can read names (needed to assign); `shared` drives the admin UI.
       if (members) {
         const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, {
@@ -83,6 +84,10 @@ module.exports = async function handler(req, res) {
           urgent: !!urgent,
         }),
       });
+      // Assigning to someone else lands on their phone right away.
+      if (row?.assigned_to && row.assigned_to !== user.id) {
+        pushUser(row.assigned_to, { title: `New task from ${nameOf(user)}`, body: row.title, data: { type: 'task', id: row.id } }).catch(() => {});
+      }
       return res.status(201).json(row);
     }
 
@@ -115,6 +120,13 @@ module.exports = async function handler(req, res) {
       const [row] = await supaFetch(`crm_team_todos?id=eq.${id}`, {
         method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(patch),
       });
+      // Whoever handed it out hears when it is done; a reassignment lands on the new person.
+      if (body.done && existing.created_by && existing.created_by !== user.id) {
+        pushUser(existing.created_by, { title: `${nameOf(user)} finished a task`, body: existing.title, data: { type: 'task', id } }).catch(() => {});
+      }
+      if (body.assigned_to && body.assigned_to !== existing.assigned_to && body.assigned_to !== user.id) {
+        pushUser(body.assigned_to, { title: `New task from ${nameOf(user)}`, body: patch.title || existing.title, data: { type: 'task', id } }).catch(() => {});
+      }
       return res.json(row || {});
     }
 

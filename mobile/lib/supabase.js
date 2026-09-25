@@ -1,4 +1,4 @@
-// Supabase client for the VTM CRM mobile app — same project and accounts as
+// Supabase client for the VTM CRM mobile app: same project and accounts as
 // the web CRM. Sessions persist in AsyncStorage so login survives restarts.
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';

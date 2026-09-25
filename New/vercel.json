@@ -58,7 +58,8 @@
     { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" },
     { "path": "/api/crm/email-queue-cron", "schedule": "*/15 * * * *" },
     { "path": "/api/crm/publish-cron", "schedule": "*/15 * * * *" },
-    { "path": "/api/crm/meeting-transcripts-cron", "schedule": "*/15 * * * *" }
+    { "path": "/api/crm/meeting-transcripts-cron", "schedule": "*/15 * * * *" },
+    { "path": "/api/crm/reminders-cron", "schedule": "*/5 * * * *" }
   ],
   "redirects": [
     { "source": "/crm",        "destination": "/crm-blueprint?utm_source=tiktok&utm_medium=social&utm_campaign=crm-funnel", "permanent": false },

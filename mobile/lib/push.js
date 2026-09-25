@@ -1,5 +1,5 @@
 // Push registration. Works only in a real dev/production build on a physical
-// device — in Expo Go and on web it degrades to a silent no-op, so the rest
+// device; in Expo Go and on web it degrades to a silent no-op, so the rest
 // of the app never notices.
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
