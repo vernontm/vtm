@@ -220,10 +220,10 @@ function decodeAttributedBody(hex) {
   if (len === 0x81) { if (i + 2 > buf.length) return ''; len = buf.readUInt16LE(i); i += 2; }
   else if (len === 0x82) { if (i + 4 > buf.length) return ''; len = buf.readUInt32LE(i); i += 4; }
   if (!len || i + len > buf.length) return '';
-  return buf.subarray(i, i + len).toString('utf8').replace(/ /g, '').trim();
+  return buf.subarray(i, i + len).toString('utf8').replace(/\x00/g, '').trim();
 }
 // Messages puts an object-replacement character where an attachment sits.
-const stripPlaceholders = (s) => String(s || '').replace(/￼/g, '').trim();
+const stripPlaceholders = (s) => String(s || '').replace(/\uFFFC/g, '').trim();
 
 // Only forward inbound from numbers the CRM knows (clients + leads).
 let allowed = new Set();
