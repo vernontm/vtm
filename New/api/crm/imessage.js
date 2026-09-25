@@ -66,8 +66,17 @@ module.exports = async function handler(req, res) {
       // Numbers the bridge is allowed to forward inbound from: every client and
       // lead with a phone on file. Anything else is personal and stays on the Mac.
       if (action === 'contacts' && req.method === 'GET') {
-        const rows = (await supaFetch('crm_clients?select=contact_phone&contact_phone=not.is.null')) || [];
-        const numbers = [...new Set(rows.map((r) => last10(r.contact_phone)).filter((n) => n.length === 10))];
+        // Known contacts = every client/lead with a phone, plus anyone the CRM
+        // has already texted, so a reply to a CRM-sent message always lands
+        // even before that person is saved as a lead.
+        const [clients, texted] = await Promise.all([
+          supaFetch('crm_clients?select=contact_phone&contact_phone=not.is.null'),
+          supaFetch(`crm_sms_messages?channel=eq.${CHANNEL}&direction=eq.out&select=phone&limit=1000`),
+        ]);
+        const numbers = [...new Set([
+          ...(clients || []).map((r) => last10(r.contact_phone)),
+          ...(texted || []).map((r) => last10(r.phone)),
+        ].filter((n) => n.length === 10))];
         return res.json({ numbers });
       }
 
