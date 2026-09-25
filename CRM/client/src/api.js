@@ -55,6 +55,14 @@ export const assignImsgThread = (phone, assigned_to, assigned_to_name) =>
   request('/imessage?action=assign', { method: 'POST', body: JSON.stringify({ phone, assigned_to, assigned_to_name }) });
 // Change a conversation's type: 'lead' | 'client' | 'contact'.
 export const setImsgKind  = (phone, kind) => request('/imessage?action=set-kind', { method: 'POST', body: JSON.stringify({ phone, kind }) });
+// Google Places location search for the meeting scheduler (server-proxied key).
+export const searchPlaces = (q) => request(`/places?q=${encodeURIComponent(q)}`);
+export const getPlaceDetail = (placeId) => request(`/places?place_id=${encodeURIComponent(placeId)}`);
+// Open scheduling slots (work hours minus booked calendar).
+export const getAvailability = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request(`/availability${qs ? '?' + qs : ''}`);
+};
 // Mark a conversation read for the current user (clears its unread badge).
 export const markImsgRead = (phone) => request('/imessage?action=read', { method: 'POST', body: JSON.stringify({ phone }) });
 // Internal notes on a conversation, attributed to the logged-in employee.

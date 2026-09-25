@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, X, Plus, Check, Loader, Video, Clock, Users, Search, Minimize2, MapPin, ArrowLeft } from 'lucide-react';
-import { createMeeting, checkMeetingAvailability, getContacts, getLeads, getGmailContacts, getCommLog, getUpcomingMeetings } from '../api';
+import { createMeeting, checkMeetingAvailability, getContacts, getLeads, getGmailContacts, getCommLog, getUpcomingMeetings, searchPlaces } from '../api';
 import { copyToClipboard } from '../lib/clipboard';
 
 export default function ScheduleMeetingModal({ onClose, onComplete, onMinimize, initialTitle, initialAttendees, initialLeadName, pickType }) {
@@ -86,8 +86,10 @@ export default function ScheduleMeetingModal({ onClose, onComplete, onMinimize, 
   const addressBoxRef = useRef(null);
   const addressTimer = useRef(null);
 
-  // Debounced address autocomplete (OpenStreetMap geocoder — keyless; swaps to
-  // Google Places automatically if a VITE_GOOGLE_MAPS_KEY is ever configured).
+  // Debounced location autocomplete. Prefers Google Places (real businesses +
+  // addresses) via the server proxy; falls back to the keyless OpenStreetMap
+  // geocoder when GOOGLE_MAPS_KEY is not configured. Results are objects:
+  // { label, sub, value }.
   function onAddressInput(v) {
     setAddress(v); setAddressOpen(true);
     clearTimeout(addressTimer.current);
@@ -95,9 +97,17 @@ export default function ScheduleMeetingModal({ onClose, onComplete, onMinimize, 
     addressTimer.current = setTimeout(async () => {
       setAddressLoading(true);
       try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&countrycodes=us&q=${encodeURIComponent(v.trim())}`, { headers: { Accept: 'application/json' } });
-        const j = await r.json();
-        setAddressResults((j || []).map(x => x.display_name));
+        let out = null;
+        try {
+          const g = await searchPlaces(v.trim());
+          if (g && g.configured) out = (g.results || []).map(r => ({ label: r.main, sub: r.secondary, value: r.description }));
+        } catch { out = null; }
+        if (out === null) { // Google unavailable — fall back to OpenStreetMap.
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&countrycodes=us&q=${encodeURIComponent(v.trim())}`, { headers: { Accept: 'application/json' } });
+          const j = await r.json();
+          out = (j || []).map(x => ({ label: x.display_name, sub: '', value: x.display_name }));
+        }
+        setAddressResults(out);
       } catch { setAddressResults([]); }
       finally { setAddressLoading(false); }
     }, 350);
@@ -524,10 +534,14 @@ export default function ScheduleMeetingModal({ onClose, onComplete, onMinimize, 
                       <div style={{ position:'absolute', bottom:'100%', left:0, right:0, marginBottom:4, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, boxShadow:'0 8px 24px rgba(0,0,0,0.18)', zIndex:110, maxHeight:220, overflow:'auto' }}>
                         {addressLoading && <div style={{ padding:'10px 14px', fontSize:12, color:'var(--muted)', display:'flex', alignItems:'center', gap:8 }}><Loader size={12} style={{ animation:'spin 0.7s linear infinite' }} /> Searching…</div>}
                         {!addressLoading && addressResults.map((a,i) => (
-                          <div key={i} onClick={() => { setAddress(a); setAddressOpen(false); }}
+                          <div key={i} onClick={() => { setAddress(a.value); setAddressResults([]); setAddressOpen(false); }}
                             style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'9px 14px', cursor:'pointer', fontSize:12.5, color:'var(--text)', borderBottom:i<addressResults.length-1?'1px solid var(--border)':'none', lineHeight:1.4 }}
                             onMouseEnter={e => e.currentTarget.style.background='var(--surface-2)'} onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
-                            <MapPin size={13} style={{ flexShrink:0, marginTop:2, color:'var(--orange)' }} /> {a}
+                            <MapPin size={13} style={{ flexShrink:0, marginTop:2, color:'var(--orange)' }} />
+                            <span style={{ display:'flex', flexDirection:'column', minWidth:0 }}>
+                              <span style={{ fontWeight:600, color:'var(--text)' }}>{a.label}</span>
+                              {a.sub ? <span style={{ fontSize:11.5, color:'var(--muted)', marginTop:1 }}>{a.sub}</span> : null}
+                            </span>
                           </div>
                         ))}
                       </div>
