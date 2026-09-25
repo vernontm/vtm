@@ -3,6 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer, DarkTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from './lib/supabase';
@@ -62,6 +63,10 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   // A conversation to open once navigation is ready (from a cold-start tap).
   const pendingConvo = useRef(null);
+  // The focused screen, so the floating assistant can step aside on screens
+  // that have their own composer along the bottom.
+  const [routeName, setRouteName] = useState(null);
+  const syncRoute = () => setRouteName(navigationRef.getCurrentRoute()?.name || null);
 
   // Tapping a message push opens that conversation. Works foreground and from a
   // cold start; harmless in Expo Go / on web where notifications are a no-op.
@@ -103,28 +108,33 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer theme={navTheme} ref={navigationRef}
-      onReady={() => { if (pendingConvo.current) { goToConversation(pendingConvo.current); pendingConvo.current = null; } }}>
-      <StatusBar style="light" />
-      {!session ? (
-        <LoginScreen />
-      ) : (
-        <View style={{ flex: 1 }}>
-          <Tab.Navigator screenOptions={{
-            headerStyle: { backgroundColor: C.surface }, headerTintColor: C.text,
-            tabBarStyle: { backgroundColor: C.surface, borderTopColor: C.border },
-            tabBarActiveTintColor: C.blue, tabBarInactiveTintColor: C.muted,
-          }}>
-            <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarIcon: icon('calendar') }} />
-            <Tab.Screen name="Inbox" component={MessagesStack} options={{ headerShown: false, tabBarIcon: icon('chatbubbles') }} />
-            <Tab.Screen name="Time" component={TimeScreen} options={{ tabBarIcon: icon('stopwatch') }} />
-            <Tab.Screen name="Clients" component={ClientsStack} options={{ headerShown: false, tabBarIcon: icon('people') }} />
-            <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: icon('settings') }} />
-          </Tab.Navigator>
-          {/* Floating assistant, bottom-right on every screen; stacks above page action buttons. */}
-          <AssistantFab />
-        </View>
-      )}
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer theme={navTheme} ref={navigationRef}
+        onReady={() => { syncRoute(); if (pendingConvo.current) { goToConversation(pendingConvo.current); pendingConvo.current = null; } }}
+        onStateChange={syncRoute}>
+        <StatusBar style="light" />
+        {!session ? (
+          <LoginScreen />
+        ) : (
+          <View style={{ flex: 1 }}>
+            <Tab.Navigator screenOptions={{
+              headerStyle: { backgroundColor: C.surface }, headerTintColor: C.text,
+              tabBarStyle: { backgroundColor: C.surface, borderTopColor: C.border },
+              tabBarActiveTintColor: C.blue, tabBarInactiveTintColor: C.muted,
+            }}>
+              <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarIcon: icon('calendar') }} />
+              <Tab.Screen name="Inbox" component={MessagesStack} options={{ headerShown: false, tabBarIcon: icon('chatbubbles') }} />
+              <Tab.Screen name="Time" component={TimeScreen} options={{ tabBarIcon: icon('stopwatch') }} />
+              <Tab.Screen name="Clients" component={ClientsStack} options={{ headerShown: false, tabBarIcon: icon('people') }} />
+              <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: icon('settings') }} />
+            </Tab.Navigator>
+            {/* Floating assistant, bottom-right on every screen. Page actions live
+                in the headers, and the two messaging screens with a composer at
+                the bottom hide it (the conversation opens it from its header). */}
+            <AssistantFab hidden={routeName === 'Conversation' || routeName === 'NewMessage'} />
+          </View>
+        )}
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }

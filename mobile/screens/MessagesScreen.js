@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getImsgThreads, getImsgDirectory } from '../lib/api';
 import { C } from '../lib/theme';
+import HeaderButton from '../components/HeaderButton';
 import { last10, firstName, fmtPhone, fmtTime, KIND, tempOf, colorForEmployee } from '../lib/imsg';
 
 // Two-way iMessage inbox: conversations from the business number, grouped by
@@ -14,6 +15,11 @@ export default function MessagesScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [q, setQ] = useState('');
+
+  // iOS-style: compose lives in the header instead of floating over the list.
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight: () => <HeaderButton icon="create" label="New message" onPress={() => navigation.navigate('NewMessage')} /> });
+  }, [navigation]);
 
   const byPhone = useMemo(() => {
     const m = {};
@@ -99,10 +105,6 @@ export default function MessagesScreen({ navigation }) {
           );
         }}
       />
-      <TouchableOpacity onPress={() => navigation.navigate('NewMessage')}
-        style={{ position: 'absolute', bottom: 24, right: 20, backgroundColor: C.blue, width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 }}>
-        <Ionicons name="create" size={26} color="#fff" />
-      </TouchableOpacity>
     </View>
   );
 }

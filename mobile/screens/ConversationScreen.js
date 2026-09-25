@@ -3,6 +3,8 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { Ionicons } from '@expo/vector-icons';
 import { useHeaderHeight } from '@react-navigation/elements';
 import Sheet from '../components/Sheet';
+import HeaderButton from '../components/HeaderButton';
+import { openAssistant } from '../components/AssistantFab';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
   getImsgThreads, assignImsgThread, setImsgKind, setClientTemperature, getAssignees, markImsgRead, getAvailability,
@@ -63,7 +65,12 @@ export default function ConversationScreen({ route, navigation }) {
   }, [phone]);
 
   useEffect(() => {
-    navigation.setOptions({ title: person?.name || fmtPhone(phone) });
+    navigation.setOptions({
+      title: person?.name || fmtPhone(phone),
+      // The floating assistant is hidden here (it would sit on the send
+      // button), so the conversation opens it from the header instead.
+      headerRight: () => <HeaderButton icon="sparkles" label="Open the assistant" size={18} onPress={openAssistant} />,
+    });
   }, [person, phone]);
 
   const timeline = useMemo(() => {

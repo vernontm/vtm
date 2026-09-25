@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import Sheet from '../components/Sheet';
+import HeaderButton from '../components/HeaderButton';
 import { getClients, createClient, getMe, getContacts, createContact } from '../lib/api';
 import { C, card } from '../lib/theme';
 
@@ -20,6 +21,11 @@ export default function ClientsScreen({ navigation }) {
   const [q, setQ] = useState('');
   const [tab, setTab] = useState('clients');   // clients | leads | contacts
   const [showAdd, setShowAdd] = useState(false);
+
+  // iOS-style: the add button lives in the header instead of floating over the list.
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight: () => <HeaderButton icon="add" label="Add" onPress={() => setShowAdd(true)} /> });
+  }, [navigation]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -126,11 +132,6 @@ export default function ClientsScreen({ navigation }) {
           </TouchableOpacity>
         )}
       />
-
-      <TouchableOpacity onPress={() => setShowAdd(true)}
-        style={{ position: 'absolute', bottom: 24, right: 20, backgroundColor: C.blue, width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 }}>
-        <Ionicons name="add" size={30} color="#fff" />
-      </TouchableOpacity>
 
       {tab === 'contacts' ? (
         <AddContactModal visible={showAdd} workspaceId={workspaceId} onClose={() => setShowAdd(false)} onCreated={() => { setShowAdd(false); load(true); }} />

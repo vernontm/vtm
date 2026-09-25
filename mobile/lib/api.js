@@ -26,6 +26,9 @@ async function request(path, options = {}) {
 export const getUpcomingMeetings = () => request('/meetings?action=upcoming');
 export const getPastMeetings = () => request('/meetings?action=past');
 export const createMeeting = (data) => request('/meetings?action=create', { method: 'POST', body: JSON.stringify(data) });
+// Edit / delete an existing event (syncs to Google Calendar server-side).
+export const updateMeeting = (id, data) => request(`/meetings?id=${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteMeeting = (id) => request(`/meetings?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
 
 // ── Team (admin) ──
 export const getAdminUsers = () => request('/admin-users');
