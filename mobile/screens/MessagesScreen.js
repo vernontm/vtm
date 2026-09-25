@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, TextInput, RefreshControl, Acti
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { getImsgThreads, getImsgDirectory, getAssignees, getChatRooms, getChatPeople, createChat } from '../lib/api';
+import { getImsgThreads, getImsgDirectory, getAssignees, getChatRooms, getChatPeople, createChat, getMe } from '../lib/api';
 import { C, T, F } from '../lib/theme';
 import { Screen, HeaderBar, IconButton, Segmented, Avatar, Dot, Empty, Chip, Button, Label, TEMP, KIND_COLOR, DOCK_SPACE } from '../components/ui';
 import Sheet from '../components/Sheet';
@@ -44,10 +44,17 @@ export default function MessagesScreen({ navigation, route }) {
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
-    // Admins land on All; everyone else on their own conversations.
+    // Admins land on All; everyone else on their own conversations. The admin
+    // flag comes from the server (/me, the same check the web CRM makes) with
+    // the auth metadata as a backup, so an admin never gets dropped to Mine.
+    let metaAdmin = false;
     supabase.auth.getUser().then(({ data: { user } }) => {
       setMe(user);
-      const admin = !!(user?.user_metadata?.is_admin || user?.app_metadata?.is_admin);
+      metaAdmin = !!(user?.user_metadata?.is_admin || user?.app_metadata?.is_admin);
+      if (metaAdmin) setFilter('all');
+    }).catch(() => {});
+    getMe().then(r => {
+      const admin = !!(r?.user?.is_admin || metaAdmin);
       setFilter(admin ? 'all' : 'mine');
     }).catch(() => {});
     getAssignees().then(r => setAssignees(Array.isArray(r) ? r : (r?.employees || []))).catch(() => {});
@@ -160,6 +167,8 @@ export default function MessagesScreen({ navigation, route }) {
             return (
               <TouchableOpacity onPress={() => navigation.navigate('TeamChat', { room: r.id })} activeOpacity={0.75}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingHorizontal: 16, borderRadius: 22, backgroundColor: isUnread ? C.tile : C.bg, borderWidth: isUnread ? 0 : 1, borderColor: C.line }}>
+                {/* Unread: a blue dot on the left edge of the row, nothing else uses a dot here. */}
+                {isUnread ? <Dot size={10} color={C.blue} /> : null}
                 {group ? (
                   <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isUnread ? '#FFFFFF' : C.tile, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="people" size={20} color={C.ink} />
@@ -174,7 +183,6 @@ export default function MessagesScreen({ navigation, route }) {
                     {r.last_message_preview ? `${r.last_sender_name ? `${firstName(r.last_sender_name)}: ` : ''}${r.last_message_preview}` : (group ? `${(r.members || []).length} people` : 'Say hello')}
                   </Text>
                 </View>
-                {isUnread ? <Dot /> : null}
               </TouchableOpacity>
             );
           }}
@@ -193,35 +201,38 @@ export default function MessagesScreen({ navigation, route }) {
             const kindColor = p?.kind ? KIND_COLOR[p.kind] : C.slate;
             return (
               <TouchableOpacity onPress={() => navigation.navigate('Conversation', { phone: t.phone })} activeOpacity={0.75}
-                style={{ gap: 10, padding: 14, paddingHorizontal: 16, borderRadius: 22, backgroundColor: isUnread ? C.tile : C.bg, borderWidth: isUnread ? 0 : 1, borderColor: C.line }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Avatar name={nameOf(t.phone)} size={44} tone={isUnread ? 'white' : 'tile'} />
-                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <Text numberOfLines={1} style={[T.title, { flex: 1 }]}>{nameOf(t.phone)}</Text>
-                      <Text style={T.meta}>{fmtTime(t.last?.created_at)}</Text>
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, paddingHorizontal: 16, borderRadius: 22, backgroundColor: isUnread ? C.tile : C.bg, borderWidth: isUnread ? 0 : 1, borderColor: C.line }}>
+                {/* Unread: a blue dot on the left edge of the row. The assignee is a
+                    solid colored pill, so the two never look alike. */}
+                {isUnread ? <Dot size={10} color={C.blue} /> : null}
+                <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Avatar name={nameOf(t.phone)} size={44} tone={isUnread ? 'white' : 'tile'} />
+                    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <Text numberOfLines={1} style={[T.title, { flex: 1 }]}>{nameOf(t.phone)}</Text>
+                        <Text style={[T.meta, isUnread ? { color: C.blue } : null]}>{fmtTime(t.last?.created_at)}</Text>
+                      </View>
+                      <Text numberOfLines={1} style={[T.body, { fontSize: 14, color: isUnread ? C.ink : C.slate }]}>
+                        {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || mediaLabel(t.last?.attachments)}
+                      </Text>
                     </View>
-                    <Text numberOfLines={1} style={[T.body, { fontSize: 14, color: isUnread ? C.ink : C.slate }]}>
-                      {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || mediaLabel(t.last?.attachments)}
-                    </Text>
                   </View>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  {isUnread ? <Dot /> : null}
-                  <Text style={[T.meta, { color: temp ? temp.color : kindColor }]}>
-                    {p?.kind ? p.kind[0].toUpperCase() + p.kind.slice(1) : 'Unknown'}{temp ? ` · ${temp.label}` : ''}
-                  </Text>
-                  <View style={{ flex: 1 }} />
-                  {t.assigned_to_name ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 24, paddingHorizontal: 10, borderRadius: 12, backgroundColor: isUnread ? '#FFFFFF' : C.tile }}>
-                      <Dot size={14} color={colorForEmployee(t.assigned_to || t.assigned_to_name)} />
-                      <Text style={T.meta}>{firstName(t.assigned_to_name)}</Text>
-                    </View>
-                  ) : (
-                    <View style={{ height: 24, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(11,11,16,0.3)', justifyContent: 'center' }}>
-                      <Text style={T.meta}>Assign</Text>
-                    </View>
-                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={[T.meta, { color: temp ? temp.color : kindColor }]}>
+                      {p?.kind ? p.kind[0].toUpperCase() + p.kind.slice(1) : 'Unknown'}{temp ? ` · ${temp.label}` : ''}
+                    </Text>
+                    <View style={{ flex: 1 }} />
+                    {t.assigned_to_name ? (
+                      <View style={{ height: 24, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colorForEmployee(t.assigned_to || t.assigned_to_name), justifyContent: 'center' }}>
+                        <Text style={[T.meta, { color: '#FFFFFF' }]}>{firstName(t.assigned_to_name)}</Text>
+                      </View>
+                    ) : (
+                      <View style={{ height: 24, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(11,11,16,0.3)', justifyContent: 'center' }}>
+                        <Text style={T.meta}>Assign</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </TouchableOpacity>
             );
