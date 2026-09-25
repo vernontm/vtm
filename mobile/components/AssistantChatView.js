@@ -4,15 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { askAssistant } from '../lib/api';
 import { C } from '../lib/theme';
 
-// The CRM assistant on mobile: ask about availability, follow-ups, people, and
-// the calendar. Same server tools as the web assistant; read-only.
+// Reusable assistant chat (message list + input). Same server tools as the web
+// assistant; read-only. Used inside the floating-button sheet.
 const STARTERS = [
   'Check availability next week for a 1 hour in-person meetup',
   'Which leads need to be followed up with?',
   "What's on my calendar in the next day?",
 ];
 
-export default function AssistantScreen() {
+export default function AssistantChatView({ keyboardOffset = 0 }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -34,11 +34,12 @@ export default function AssistantScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={92}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={keyboardOffset}>
       <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}
+        keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
         {messages.length === 0 ? (
-          <View style={{ gap: 10, paddingTop: 8 }}>
+          <View style={{ gap: 10, paddingTop: 4 }}>
             <Text style={{ color: C.muted, fontSize: 13, marginBottom: 2 }}>Ask about availability, follow-ups, people, and your calendar.</Text>
             {STARTERS.map(s => (
               <TouchableOpacity key={s} onPress={() => send(s)}

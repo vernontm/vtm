@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useHeaderHeight } from '@react-navigation/elements';
 import Sheet from '../components/Sheet';
 import {
   getImsgThread, sendImsg, getImsgDirectory, getImsgEvents, getImsgNotes, addImsgNote,
@@ -14,6 +15,7 @@ import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, tempOf, colorFor
 
 export default function ConversationScreen({ route, navigation }) {
   const phone = route.params?.phone;
+  const headerHeight = useHeaderHeight();
   const [messages, setMessages] = useState([]);
   const [events, setEvents] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -150,7 +152,7 @@ export default function ConversationScreen({ route, navigation }) {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={92}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
       {/* Meta bar: type, assignee, notes, temperature */}
       <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomColor: C.border, borderBottomWidth: 1, gap: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
@@ -187,6 +189,7 @@ export default function ConversationScreen({ route, navigation }) {
 
       {/* Messages + handoffs */}
       <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 8 }}
+        keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
         {timeline.map(it => {
           if (it.t === 'ho') {

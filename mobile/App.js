@@ -16,8 +16,8 @@ import ClientDetailScreen from './screens/ClientDetailScreen';
 import MessagesScreen from './screens/MessagesScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import NewMessageScreen from './screens/NewMessageScreen';
-import AssistantScreen from './screens/AssistantScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import AssistantFab from './components/AssistantFab';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -109,18 +109,21 @@ export default function App() {
       {!session ? (
         <LoginScreen />
       ) : (
-        <Tab.Navigator screenOptions={{
-          headerStyle: { backgroundColor: C.surface }, headerTintColor: C.text,
-          tabBarStyle: { backgroundColor: C.surface, borderTopColor: C.border },
-          tabBarActiveTintColor: C.blue, tabBarInactiveTintColor: C.muted,
-        }}>
-          <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarIcon: icon('calendar') }} />
-          <Tab.Screen name="Time" component={TimeScreen} options={{ tabBarIcon: icon('stopwatch') }} />
-          <Tab.Screen name="Clients" component={ClientsStack} options={{ headerShown: false, tabBarIcon: icon('people') }} />
-          <Tab.Screen name="Inbox" component={MessagesStack} options={{ headerShown: false, tabBarIcon: icon('chatbubbles') }} />
-          <Tab.Screen name="Assistant" component={AssistantScreen} options={{ tabBarIcon: icon('sparkles') }} />
-          <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: icon('settings') }} />
-        </Tab.Navigator>
+        <View style={{ flex: 1 }}>
+          <Tab.Navigator screenOptions={{
+            headerStyle: { backgroundColor: C.surface }, headerTintColor: C.text,
+            tabBarStyle: { backgroundColor: C.surface, borderTopColor: C.border },
+            tabBarActiveTintColor: C.blue, tabBarInactiveTintColor: C.muted,
+          }}>
+            <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarIcon: icon('calendar') }} />
+            <Tab.Screen name="Inbox" component={MessagesStack} options={{ headerShown: false, tabBarIcon: icon('chatbubbles') }} />
+            <Tab.Screen name="Time" component={TimeScreen} options={{ tabBarIcon: icon('stopwatch') }} />
+            <Tab.Screen name="Clients" component={ClientsStack} options={{ headerShown: false, tabBarIcon: icon('people') }} />
+            <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: icon('settings') }} />
+          </Tab.Navigator>
+          {/* Floating assistant, bottom-right on every screen; stacks above page action buttons. */}
+          <AssistantFab />
+        </View>
       )}
     </NavigationContainer>
   );
