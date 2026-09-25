@@ -1,14 +1,56 @@
 const crypto = require('crypto');
-const { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
+const { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { sendEmail } = require('../_lib/gmail.js');
+const { normalizePhone } = require('../_lib/followups.js');
+const { logNudge } = require('../_lib/nudges.js');
 const stripe = require('../_lib/stripe.js');
 
 // Read a client's agreements + payment schedule, and mint short-lived signed
 // URLs to view the stored (private) signed PDF.
+const SIGN_BASE = 'https://vernontm.com/sign?token=';
+
+// Save an AI draft (agreement-ai.js generate output) as the client's agreement
+// row, the same way agreement-ai.js approve does: a stale placeholder row
+// (an empty custom-mode one left over from toggling the payment-plan option)
+// is reused instead of duplicated. Returns the agreement id.
+async function persistDraft(clientId, draft) {
+  const payload = {
+    client_id: clientId,
+    title: 'Service Agreement: Vernon Tech & Media',
+    total_amount: draft.total || null,
+    status: 'approved',
+    payment_mode: 'fixed',
+    plan_options: null,
+    terms: {
+      summary: draft.summary || null,
+      installments: Array.isArray(draft.installments) ? draft.installments : [],
+      monthly: Array.isArray(draft.monthly) ? draft.monthly : [],
+      agreement_markdown: draft.agreement_markdown || '',
+      nda_markdown: draft.nda_markdown || '',
+    },
+  };
+  const priorRows = await supaFetch(`crm_agreements?client_id=eq.${clientId}&status=neq.signed&order=created_at.desc&limit=1&select=id,terms`).catch(() => []);
+  const prior = priorRows && priorRows[0];
+  if (prior && !(prior.terms && prior.terms.agreement_markdown)) {
+    await supaFetch(`crm_agreements?id=eq.${prior.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    await supaFetch(`crm_payments?agreement_id=eq.${prior.id}`, { method: 'DELETE' }).catch(() => {});
+    return prior.id;
+  }
+  const rows = await supaFetch('crm_agreements', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(payload) });
+  return rows[0].id;
+}
+
+// Sending the link moves the lead to the "Contract Sent" column (unless already signed).
+async function markContractSent(ag, clientId) {
+  if (ag.status === 'signed' || !clientId) return;
+  await supaFetch(`crm_clients?id=eq.${clientId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' }) }).catch(() => {});
+}
+
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireCrmUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { client_id, id, action } = req.query;
 
@@ -61,37 +103,43 @@ module.exports = async function handler(req, res) {
       };
       const patch = { total_amount: total || null, payment_mode: 'custom', plan_options: plan_options || [], selected_plan: null, terms };
       if (row) {
-        // Reselecting plans → clear any previously-built schedule so the client re-picks.
+        // Reselecting plans clears any previously built schedule so the client re-picks.
         await supaFetch(`crm_payments?agreement_id=eq.${row.id}`, { method: 'DELETE' }).catch(() => {});
         await supaFetch(`crm_agreements?id=eq.${row.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
         return res.json({ ok: true, agreement_id: row.id });
       }
       const created = await supaFetch('crm_agreements', {
         method: 'POST', headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ client_id, title: 'Service Agreement — Vernon Tech & Media', status: 'draft', ...patch }),
+        body: JSON.stringify({ client_id, title: 'Service Agreement: Vernon Tech & Media', status: 'draft', ...patch }),
       });
       return res.json({ ok: true, agreement_id: created[0]?.id });
     }
 
     // POST action=approve -> lock the draft in: create the payment schedule
     // from the agreement's installments and a linked Deal, so it shows on the
-    // pipeline. Idempotent — won't duplicate payments or the deal.
+    // pipeline. Idempotent: it will not duplicate payments or the deal.
+    // Takes ?id= (an existing row) or a body of { client_id, draft } (the
+    // generate output), in which case the row is saved first (persistDraft)
+    // and locked in the same call.
     if (req.method === 'POST' && action === 'approve') {
-      if (!id) return res.status(400).json({ error: 'id required' });
-      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=*`);
+      const body = req.body || {};
+      let agId = id || body.id || null;
+      if (!agId && body.client_id && body.draft && typeof body.draft === 'object') agId = await persistDraft(body.client_id, body.draft);
+      if (!agId) return res.status(400).json({ error: 'id required (or client_id and draft)' });
+      const [ag] = await supaFetch(`crm_agreements?id=eq.${agId}&select=*`);
       if (!ag) return res.status(404).json({ error: 'Agreement not found' });
-      if (ag.status === 'signed') return res.json({ ok: true, alreadySigned: true, deal_id: ag.deal_id });
+      if (ag.status === 'signed') return res.json({ ok: true, alreadySigned: true, deal_id: ag.deal_id, agreement_id: agId });
       const terms = ag.terms || {};
 
       // 1) mark approved
-      await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
+      await supaFetch(`crm_agreements?id=eq.${agId}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
 
       // 2) payment schedule from installments (only if none exist yet)
-      const existing = await supaFetch(`crm_payments?agreement_id=eq.${id}&select=id`);
+      const existing = await supaFetch(`crm_payments?agreement_id=eq.${agId}&select=id`);
       if ((!existing || !existing.length) && Array.isArray(terms.installments) && terms.installments.length) {
         const rows = terms.installments.map(i => ({
           client_id: ag.client_id,
-          agreement_id: id,
+          agreement_id: agId,
           label: i.label || null,
           amount: Number(i.amount) || 0,
           status: i.status === 'paid' ? 'paid' : 'pending',
@@ -114,19 +162,19 @@ module.exports = async function handler(req, res) {
             stage: 'Proposal',
             payment_status: 'unpaid',
             amount_paid: 0,
-            agreement_id: id,
-            notes: monthly ? `Recurring: $${monthly.amount}/mo — ${monthly.item || ''}` : null,
+            agreement_id: agId,
+            notes: monthly ? `Recurring: $${monthly.amount}/mo, ${monthly.item || ''}`.trim().replace(/,$/, '') : null,
           }),
         });
         dealId = deal && deal.id;
-        if (dealId) await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ deal_id: dealId }) });
+        if (dealId) await supaFetch(`crm_agreements?id=eq.${agId}`, { method: 'PATCH', body: JSON.stringify({ deal_id: dealId }) });
       }
 
-      return res.json({ ok: true, status: 'approved', deal_id: dealId });
+      return res.json({ ok: true, status: 'approved', deal_id: dealId, agreement_id: agId });
     }
 
     // POST action=mark-sent -> make the agreement signable (status=sent, mint the
-    // sign token) WITHOUT emailing — used when the personalized proposal email is
+    // sign token) WITHOUT emailing, used when the personalized proposal email is
     // the delivery vehicle and already carries the sign link.
     if (req.method === 'POST' && action === 'mark-sent') {
       if (!id) return res.status(400).json({ error: 'id required' });
@@ -137,16 +185,13 @@ module.exports = async function handler(req, res) {
       if (ag.status !== 'signed') patch.status = 'sent';
       if (!ag.sent_at) patch.sent_at = new Date().toISOString();
       await supaFetch(`crm_agreements?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
-      // Move the lead to the "Contract Sent" column (unless already signed).
-      if (ag.status !== 'signed' && ag.client_id) {
-        await supaFetch(`crm_clients?id=eq.${ag.client_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' }) }).catch(() => {});
-      }
-      return res.json({ ok: true, sign_token: signToken, link: `https://vernontm.com/sign?token=${signToken}` });
+      await markContractSent(ag, ag.client_id);
+      return res.json({ ok: true, sign_token: signToken, link: `${SIGN_BASE}${signToken}` });
     }
 
     // POST action=start-maintenance -> begin the recurring maintenance subscription
     // on the client's saved card (used for pay-in-full / 50-50 plans, where there's
-    // no build schedule to trail — Ray clicks this when the project is delivered).
+    // no build schedule to trail: Ray clicks this when the project is delivered).
     if (req.method === 'POST' && action === 'start-maintenance') {
       if (!id) return res.status(400).json({ error: 'id required' });
       if (!stripe.configured()) return res.status(500).json({ error: 'Stripe is not configured.' });
@@ -162,12 +207,12 @@ module.exports = async function handler(req, res) {
       if (!dealId) { const [d] = await supaFetch(`crm_deals?client_id=eq.${ag.client_id}&order=created_at.desc&limit=1&select=id`); dealId = d && d.id; }
       const [deal] = dealId ? await supaFetch(`crm_deals?id=eq.${dealId}&select=id,stripe_customer_id`) : [];
       const customerId = deal && deal.stripe_customer_id;
-      if (!customerId) return res.status(400).json({ error: 'No card on file yet — the client must complete their deposit first.' });
+      if (!customerId) return res.status(400).json({ error: 'No card on file yet: the client must complete their deposit first.' });
       const pms = await stripe.call('GET', `/payment_methods?customer=${customerId}&type=card`).catch(() => null);
       const pmId = pms && pms.data && pms.data[0] && pms.data[0].id;
 
       const co = (ag.client && ag.client.business_name) || 'Client';
-      const product = await stripe.call('POST', '/products', { name: `${co} — maintenance` });
+      const product = await stripe.call('POST', '/products', { name: `${co} maintenance` });
       const price = await stripe.call('POST', '/prices', { product: product.id, currency: 'usd', unit_amount: Math.round(maint * 100), recurring: { interval: 'month' } });
       const sub = await stripe.call('POST', '/subscriptions', {
         customer: customerId,
@@ -186,24 +231,21 @@ module.exports = async function handler(req, res) {
       const ag = rows && rows[0];
       if (!ag) return res.status(404).json({ error: 'Agreement not found' });
       const client = ag.client || {};
-      if (!client.contact_email) return res.status(400).json({ error: 'Client has no email — add one on the client first.' });
+      if (!client.contact_email) return res.status(400).json({ error: 'Client has no email: add one on the client first.' });
 
       const signToken = ag.sign_token || crypto.randomUUID();
       await supaFetch(`crm_agreements?id=eq.${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ sign_token: signToken, status: 'sent', sent_at: new Date().toISOString() }),
       });
-      // Move the lead to the "Contract Sent" column (unless already signed).
-      if (ag.status !== 'signed' && (client.id || ag.client_id)) {
-        await supaFetch(`crm_clients?id=eq.${client.id || ag.client_id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' }) }).catch(() => {});
-      }
-      const link = `https://vernontm.com/sign?token=${signToken}`;
+      await markContractSent(ag, client.id || ag.client_id);
+      const link = `${SIGN_BASE}${signToken}`;
       const first = (client.owner_name || 'there').split(' ')[0];
 
       try {
         await sendEmail({
           to: client.contact_email,
-          subject: 'Your Vernon Tech & Media agreement — ready to sign',
+          subject: 'Your Vernon Tech & Media agreement, ready to sign',
           body: `Hi ${first},\n\nYour service agreement with Vernon Tech & Media is ready. You can review and sign it here (no account needed):\n${link}\n\nOnce you sign, we'll get your project moving right away.\n\nThank you,\nRay\nVernon Tech & Media`,
         });
       } catch (e) { console.error('send email failed:', e.message); }
@@ -216,6 +258,41 @@ module.exports = async function handler(req, res) {
         }).catch(() => {});
       }
       return res.json({ ok: true, link });
+    }
+
+    // POST action=text-sign-link -> queue an iMessage with the sign link to the
+    // client's phone (the Mac bridge delivers it, same queue as nudges). Mints
+    // the token and marks the agreement sent the way action=send does, minus
+    // the email. Reply { ok, phone, link }.
+    if (req.method === 'POST' && action === 'text-sign-link') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const rows = await supaFetch(`crm_agreements?id=eq.${id}&select=*,client:crm_clients(id,business_name,owner_name,contact_email,contact_phone)`);
+      const ag = rows && rows[0];
+      if (!ag) return res.status(404).json({ error: 'Agreement not found' });
+      const client = ag.client || {};
+      const phone = normalizePhone(client.contact_phone);
+      if (!phone) return res.status(400).json({ error: 'Client has no phone number: add one on the client first.' });
+      if (ag.status === 'signed') return res.status(400).json({ error: 'This agreement is already signed.' });
+
+      const signToken = ag.sign_token || crypto.randomUUID();
+      await supaFetch(`crm_agreements?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ sign_token: signToken, status: 'sent', sent_at: ag.sent_at || new Date().toISOString() }),
+      });
+      await markContractSent(ag, client.id || ag.client_id);
+      const link = `${SIGN_BASE}${signToken}`;
+      const first = (client.owner_name || 'there').split(' ')[0];
+      const body = `Hi ${first}, your Vernon Tech & Media agreement is ready to sign: ${link}`;
+      await supaFetch('crm_sms_messages', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ client_id: client.id || ag.client_id || null, direction: 'out', channel: 'imessage', phone, body, status: 'queued' }),
+      });
+      // Best effort: show it in the agreement's nudge history (needs crm_nudges).
+      await logNudge({
+        kind: 'agreement', target_id: ag.id, client_id: client.id || ag.client_id || null, channels: ['text'], message: body,
+        sent_by: user.id, sent_by_name: (user.email || '').split('@')[0] || 'CRM', status: 'sent', sent_at: new Date().toISOString(),
+      }).catch(() => {});
+      return res.json({ ok: true, phone, link });
     }
 
     // POST action=file -> signed URL for the stored PDF (file_url = "bucket/path")

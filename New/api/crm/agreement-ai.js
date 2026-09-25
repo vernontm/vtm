@@ -30,7 +30,7 @@ async function callClaude(system, user, maxTokens = 4096) {
 }
 
 // Escape bare control characters (raw newlines/tabs/returns) that appear INSIDE
-// string values — LLMs sometimes emit these unescaped in long markdown fields,
+// string values: LLMs sometimes emit these unescaped in long markdown fields,
 // which breaks JSON.parse. Tracks string vs. structure so we only touch strings.
 function escapeBareControls(s) {
   let out = '', inStr = false, esc = false;
@@ -50,9 +50,9 @@ function escapeBareControls(s) {
 }
 
 // Remove em/en dashes from any generated text (an "AI tell" Ray dislikes).
-// Em dash → ", " (clause break); en dash → "-" (ranges). Collapse doubled commas.
+// Em dash becomes ", " (clause break); en dash becomes "-" (ranges). Collapse doubled commas.
 function stripDashes(s) {
-  return s.replace(/\s*—\s*/g, ', ').replace(/\s*–\s*/g, '-').replace(/,\s*,/g, ',');
+  return s.replace(/\s*\u2014\s*/g, ', ').replace(/\s*\u2013\s*/g, '-').replace(/,\s*,/g, ',');
 }
 function stripDashesDeep(v) {
   if (typeof v === 'string') return stripDashes(v);
@@ -69,7 +69,7 @@ function parseJson(text) {
   try { parsed = JSON.parse(raw); }
   catch (e) {
     try { parsed = JSON.parse(escapeBareControls(raw)); }
-    catch (e2) { throw new Error('The AI returned a malformed response — please try again.'); }
+    catch (e2) { throw new Error('The AI returned a malformed response: please try again.'); }
   }
   return stripDashesDeep(parsed);
 }
@@ -79,7 +79,7 @@ async function loadContext(clientId) {
   const client = clients && clients[0];
   if (!client) throw new Error('Client not found');
   const projects = await supaFetch(`crm_projects?client_id=eq.${clientId}&select=name,scope,value,status&order=created_at.asc`);
-  // Discovery/call notes and AI summaries from the lead Overview timeline — this
+  // Discovery/call notes and AI summaries from the lead Overview timeline: this
   // is where the discussed pricing (e.g. $5,000 total, payment plan) lives.
   const activity = await supaFetch(`crm_client_activity?client_id=eq.${clientId}&type=eq.note&select=tag,body,created_at&order=created_at.desc&limit=40`).catch(() => []);
   return { client, projects: projects || [], activity: activity || [] };
@@ -95,11 +95,11 @@ function contextBlock(client, projects, activity = []) {
 Service types: ${(client.client_type || []).join(', ') || 'unspecified'}
 Notes: ${client.notes || 'none'}
 
-DISCOVERY NOTES, CALL NOTES & AI SUMMARIES (contains the pricing / payment plan discussed with the client — use these to set the total and payment schedule):
+DISCOVERY NOTES, CALL NOTES & AI SUMMARIES (contains the pricing / payment plan discussed with the client: use these to set the total and payment schedule):
 ${notesBlock}
 
 PROJECTS / SCOPE:
-${projects.length ? projects.map((p, i) => `${i + 1}. ${p.name} — value $${p.value || 0}\n   ${p.scope || 'no scope yet'}`).join('\n') : 'none logged'}`;
+${projects.length ? projects.map((p, i) => `${i + 1}. ${p.name}, value $${p.value || 0}\n   ${p.scope || 'no scope yet'}`).join('\n') : 'none logged'}`;
 }
 
 module.exports = async function handler(req, res) {
@@ -172,17 +172,21 @@ Return ONLY JSON with this shape:
     }
 
     // ── generate: draft the full agreement + NDA as reviewable text ──
+    //    `instruction` is free text from the app ("add a rush fee"): with a
+    //    base document it is the change request, on a fresh draft it rides on
+    //    top of the billing terms.
     if (req.method === 'POST' && action === 'generate') {
-      const { client_id, terms, base, mode } = req.body || {};
+      const { client_id, terms, base, mode, instruction } = req.body || {};
       if (!client_id) return res.status(400).json({ error: 'client_id required' });
       const { client, projects, activity } = await loadContext(client_id);
+      const extra = String(instruction || '').trim().slice(0, 2000);
 
       // Revise-mode: an existing document is supplied. Apply ONLY the requested
       // change and keep everything else byte-for-byte, so regenerating tweaks the
       // doc instead of rewriting it in a new style.
       if (base && base.agreement_markdown) {
-        const system = `You revise an existing Service Agreement / Mutual NDA for Vernon Tech & Media. You are given the CURRENT documents and a change request. Apply ONLY the requested change. NEVER use em dashes or en dashes ("—" or "–"); use commas, periods, or hyphens instead (also replace any existing dashes you come across). Preserve everything else EXACTLY — same headings, same section numbering and order, same wording, same bullet formatting, same "not legal advice" note. Do not re-style, re-order, re-title, or re-word any section the change does not touch. Never add signature blocks or date lines. If the change does not affect billing, keep total/installments/monthly identical to the current values.
-Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON with the FULL revised documents:
+        const system = `You revise an existing Service Agreement / Mutual NDA for Vernon Tech & Media. You are given the CURRENT documents and a change request. Apply ONLY the requested change. NEVER use em dashes or en dashes ("\u2014" or "\u2013"); use commas, periods, or hyphens instead (also replace any existing dashes you come across). Preserve everything else EXACTLY: same headings, same section numbering and order, same wording, same bullet formatting, same "not legal advice" note. Do not re-style, re-order, re-title, or re-word any section the change does not touch. Never add signature blocks or date lines. If the change does not affect billing, keep total/installments/monthly identical to the current values.
+Output STRICT, valid JSON only: inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON with the FULL revised documents:
 {
   "summary": "one line",
   "total": number,
@@ -191,7 +195,8 @@ Output STRICT, valid JSON only — inside the markdown string values, escape eve
   "agreement_markdown": "full revised service agreement in markdown",
   "nda_markdown": "full revised mutual NDA in markdown"
 }`;
-        const user = `CHANGE REQUEST (apply only this, preserve all other formatting and wording):\n"""${(terms || '').toString().slice(0, 4000)}"""
+        const change = [extra, (terms || '').toString().slice(0, 4000)].filter(Boolean).join('\n');
+        const user = `CHANGE REQUEST (apply only this, preserve all other formatting and wording):\n"""${change}"""
 
 CURRENT total: ${base.total ?? 'n/a'}
 CURRENT installments: ${JSON.stringify(base.installments || [])}
@@ -207,12 +212,12 @@ CURRENT MUTUAL NDA (markdown):
       }
 
       const system = `You are drafting a Service Agreement and a Mutual NDA for Vernon Tech & Media LLC, a New Mexico limited liability company, with its office at 1209 Mountain Road Pl NE, Ste R, Albuquerque, NM 87110 ("VTM"), ray@vernontm.com. Governing law: Texas.\nPARTIES BLOCK IS AUTHORITATIVE: the contracting party is always "Vernon Tech & Media LLC, a New Mexico limited liability company, with its office at 1209 Mountain Road Pl NE, Ste R, Albuquerque, NM 87110". Never write "Rayvaughn Vernon, dba Vernon Tech & Media" or "doing business as" in the parties block. Rayvaughn Vernon appears only as the signer, not as the contracting entity. Both documents MUST include a "Notices" section stating that all notices under the agreement are sent in writing to VTM at its Katy office, 23018 Undertaken Path, Katy, TX 77493, and to the Client at the email or address on file.
-Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to — do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law; 11. Notices (written notices to VTM go to the Katy office at 23018 Undertaken Path, Katy, TX 77493). Do NOT include signature blocks, "Signature: ___", or date lines — the e-sign page adds the real signature fields automatically. By default, end with a one-line "not legal advice" note.
-Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance) — no refunds are issued. Section 9 Commitment: by default, once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy).
+Mirror this proven structure for the Service Agreement: Parties; 1. Scope of Work (list each project from the scope); 2. Priority & Timeline; 3. Total Price & Payment Schedule (a clear bullet list of installments and what each is tied to, do NOT use markdown tables); 4. Milestone Acceptance; 5. Revisions; 6. Ownership (client owns deliverables upon final payment); 7. Confidentiality (references the NDA); 8. Refund Policy; 9. Commitment; 10. Governing Law; 11. Notices (written notices to VTM go to the Katy office at 23018 Undertaken Path, Katy, TX 77493). Do NOT include signature blocks, "Signature: ___", or date lines: the e-sign page adds the real signature fields automatically. By default, end with a one-line "not legal advice" note.
+Section 8 Refund Policy: state plainly that because this is custom development work, ALL payments are non-refundable (deposit, build installments, and maintenance): no refunds are issued. Section 9 Commitment: by default, once the project has started, the Client agrees to see it through to completion and to fulfill the full build payment schedule; all charges are authorized by the Client's signature and recurring-billing consent. Do NOT use the word "chargeback" or frame the client as a dispute risk. Include milestone acceptance sign-off and card-authorization / recurring-billing consent. Keep language clear and professional (not legalese-heavy).
 RAY'S BILLING TERMS BELOW ARE AUTHORITATIVE AND OVERRIDE THESE DEFAULTS. Read them carefully and obey any explicit instruction they contain, even if it contradicts the default structure above:
 - If Ray's terms say the engagement is month-to-month, or has NO minimum commitment, or no lock-in: Section 9 MUST reflect that. Do NOT say the client must "see it through to completion" or fulfill a fixed multi-month schedule, and do NOT state or imply any minimum term or commitment anywhere in either document. Instead, Section 9 covers only card-authorization / recurring-billing consent and states that either party may cancel with the stated notice (e.g. 30 days). A guaranteed or "held" intro RATE for a number of months is a price promise, not a commitment, so never phrase it as the client being locked in or committed to that many months.
 - If Ray's terms say to remove references to lawyers, legal counsel, or "consult an attorney", or to remove the "not legal advice" note: OMIT the closing "not legal advice" note and any "consult your own legal counsel / attorney" lines from BOTH the Service Agreement and the NDA entirely.
-Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives); never default the total to 0. NEVER use em dashes or en dashes ("—" or "–") anywhere; use commas, periods, hyphens, or the word "to" instead.${mode === 'custom' ? ` CUSTOM PLAN MODE: The client chooses their payment plan later in their portal, so DO NOT list any amounts, installments, or dates anywhere. For section 3 (Total Price & Payment Schedule), write the heading and then a single line containing exactly the token {{PAYMENT_SCHEDULE}} and nothing else. Set "total" to the build value from the terms/notes, and return installments: [] and monthly: []. Also fill "recap": a warm, client-facing 2-4 sentence summary of everything included, and EXPLICITLY call out (with enthusiasm) any bonus feature added at no additional cost or any goodwill on timeline mentioned in the notes. Also fill "features": an array of 5 to 8 objects { "title": short bold label (2-4 words), "detail": one concise client-facing sentence }, covering the key deliverables and capabilities in this package (pull them from the Scope of Work / notes; include the no-cost bonus as one of them).` : ''} Output STRICT, valid JSON only — inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
+Use the billing terms Ray provides verbatim where given. If Ray's billing terms are brief or blank, derive the total, installments, and payment schedule from the discovery notes / call summaries in the context (that is where the discussed pricing lives); never default the total to 0. NEVER use em dashes or en dashes ("\u2014" or "\u2013") anywhere; use commas, periods, hyphens, or the word "to" instead.${mode === 'custom' ? ` CUSTOM PLAN MODE: The client chooses their payment plan later in their portal, so DO NOT list any amounts, installments, or dates anywhere. For section 3 (Total Price & Payment Schedule), write the heading and then a single line containing exactly the token {{PAYMENT_SCHEDULE}} and nothing else. Set "total" to the build value from the terms/notes, and return installments: [] and monthly: []. Also fill "recap": a warm, client-facing 2-4 sentence summary of everything included, and EXPLICITLY call out (with enthusiasm) any bonus feature added at no additional cost or any goodwill on timeline mentioned in the notes. Also fill "features": an array of 5 to 8 objects { "title": short bold label (2-4 words), "detail": one concise client-facing sentence }, covering the key deliverables and capabilities in this package (pull them from the Scope of Work / notes; include the no-cost bonus as one of them).` : ''} Output STRICT, valid JSON only: inside the markdown string values, escape every double quote as \\" and every line break as \\n (never put a raw newline or unescaped quote inside a JSON string). Return ONLY JSON:
 {
   "summary": "one line",
   "recap": "client-facing 2-4 sentence recap of what's included (custom mode: highlight any no-cost bonus)",
@@ -223,7 +228,8 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
   "agreement_markdown": "full service agreement in markdown",
   "nda_markdown": "full mutual NDA in markdown"
 }`;
-      const user = `Draft the agreement using these billing terms from Ray:\n"""${(terms || '').toString().slice(0, 4000)}"""\n\n${contextBlock(client, projects, activity)}`;
+      const extraBlock = extra ? `\n\nADDITIONAL INSTRUCTION FROM RAY (apply it on top of the billing terms; it wins on any conflict):\n"""${extra}"""` : '';
+      const user = `Draft the agreement using these billing terms from Ray:\n"""${(terms || '').toString().slice(0, 4000)}"""${extraBlock}\n\n${contextBlock(client, projects, activity)}`;
       const out = await callClaude(system, user, 8192);
       return res.json(parseJson(out));
     }
@@ -250,7 +256,7 @@ Use the billing terms Ray provides verbatim where given. If Ray's billing terms 
         : `CALL TO ACTION: The email's single main link is the SIGNING LINK below, this client's personal link that opens their agreement so they can review the terms and sign it (no account or login needed). Present it as "Review and sign your agreement:" followed by the exact URL. Tell them that once they sign, they'll set up their client portal and complete the deposit. Do NOT include a separate generic portal URL, and do NOT invent links.`;
 
       const system = `You are Ray (Rayvaughn Vernon) of Vernon Tech & Media, writing a short email to a client to send over their service agreement. First person, human, warm, never robotic. Reference what was actually agreed using the discovery notes below. If the notes mention a bonus feature added at no extra cost, or an adjusted/extended delivery timeline, weave it in as a positive. Keep it tight (roughly 120 to 180 words). Sign off as Ray, Vernon Tech & Media.
-NEVER use em dashes or en dashes ("—" or "–") anywhere. Use commas, periods, or the word "to" instead.
+NEVER use em dashes or en dashes ("\u2014" or "\u2013") anywhere. Use commas, periods, or the word "to" instead.
 TONE: ${toneGuide}
 ${cta}
 Return ONLY JSON: { "subject": string, "body": string }`;
@@ -268,7 +274,7 @@ ${contextBlock(client, projects, activity)}`;
     if (req.method === 'POST' && action === 'access-instructions') {
       const { title, notes } = req.body || {};
       if (!title) return res.status(400).json({ error: 'title required' });
-      const system = `You write concise, client-facing instructions for granting Vernon Tech & Media (VTM) access to a specific platform or tool. The invite/admin email to use is ray@vernontm.com. Rules: 2–4 sentences, concrete (name the actual menu path where you can, e.g. "Settings → Team → Invite"), friendly and plain, no fluff or preamble. If Ray provides notes or an edited draft, follow them and incorporate what he wrote. Return ONLY JSON: { "description": string }`;
+      const system = `You write concise, client-facing instructions for granting Vernon Tech & Media (VTM) access to a specific platform or tool. The invite/admin email to use is ray@vernontm.com. Rules: 2 to 4 sentences, concrete (name the actual menu path where you can, e.g. "Settings → Team → Invite"), friendly and plain, no fluff or preamble. If Ray provides notes or an edited draft, follow them and incorporate what he wrote. Return ONLY JSON: { "description": string }`;
       const user = `Platform / tool: ${title}\n\nRay's notes or edited draft to incorporate (may be blank):\n"""${(notes || '').toString().slice(0, 2000)}"""`;
       const out = await callClaude(system, user, 700);
       return res.json(parseJson(out));
@@ -283,11 +289,11 @@ ${contextBlock(client, projects, activity)}`;
       const ag = agRows && agRows[0];
       const t = ag?.terms || {};
 
-      const system = `You turn a service agreement into the billable PROJECT LINE ITEMS for a CRM deal — the things that actually get invoiced.
+      const system = `You turn a service agreement into the billable PROJECT LINE ITEMS for a CRM deal: the things that actually get invoiced.
 Rules:
 - Usually ONE one-time build project (value = the one-time build total) PLUS one recurring maintenance project (recurring = the monthly amount) if the agreement includes maintenance.
-- Only split the build into multiple one-time projects if the agreement EXPLICITLY prices them separately. If you split, the one-time values MUST sum to the build total exactly — never invent per-item prices.
-- Each project needs: a clear name, a 1–2 sentence scope taken from the agreement's Scope of Work (concrete, faithful — no invented deliverables), value (one-time dollars; 0 if none), recurring (dollars per month; 0 if none).
+- Only split the build into multiple one-time projects if the agreement EXPLICITLY prices them separately. If you split, the one-time values MUST sum to the build total exactly: never invent per-item prices.
+- Each project needs: a clear name, a 1 to 2 sentence scope taken from the agreement's Scope of Work (concrete, faithful, no invented deliverables), value (one-time dollars; 0 if none), recurring (dollars per month; 0 if none).
 Return ONLY JSON: { "projects": [ { "name": string, "scope": string, "value": number, "recurring": number } ] }`;
       const user = `Build the project line items for this deal.
 AGREEMENT total: ${ag?.total_amount ?? 'n/a'}
@@ -309,7 +315,7 @@ ${contextBlock(client, projects, activity)}`;
 
       const payload = {
         client_id,
-        title: `Service Agreement — Vernon Tech & Media`,
+        title: 'Service Agreement: Vernon Tech & Media',
         total_amount: draft.total || null,
         status: 'approved',
         payment_mode: 'fixed',

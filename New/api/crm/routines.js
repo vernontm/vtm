@@ -1,17 +1,26 @@
 const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
 
 // Recurring checklists ("routines"). Each routine has a cadence (daily /
-// weekly / monthly) and an ordered list of items (JSONB: [{ id, text }]).
-// Completion is tracked per (item, period_key) in crm_routine_checks — the
+// weekly / monthly) and an ordered list of items (JSONB: [{ id, text, target? }]).
+// Completion is tracked per (item, period_key) in crm_routine_checks: the
 // client computes the current period key, so a checklist visually resets when
 // the day / week / month rolls over. Checks are team-wide: anyone can tick an
 // item and it counts as done for that period.
 //
-//   GET    /api/crm/routines                 -> { routines: [...], checks: [...recent] }
+// An item may carry a numeric target ("Reach out to 50 leads"). Those are
+// counted rather than ticked: crm_routine_checks.count holds how many so far
+// and the item is done once count >= target (column from docs/sql/role-homes.sql).
+//
+//   GET    /api/crm/routines                 -> { routines: [...], checks: [...recent, each with count] }
 //   POST   /api/crm/routines                 { title, cadence?, description?, items? }   (admin)
 //   PUT    /api/crm/routines?id=<uuid>       { ...fields }                               (admin)
 //   DELETE /api/crm/routines?id=<uuid>                                                   (admin)
 //   POST   /api/crm/routines?action=check    { routine_id, item_id, period_key, done }   (any user)
+//   POST   /api/crm/routines?action=count    { routine_id, item_id, period_key, count }  (any user)
+const MIGRATION_MSG = 'Count-to-target items need the count column. Run docs/sql/role-homes.sql in Supabase.';
+const missingCount = (e) => { const m = String(e?.message || e || ''); return /count/i.test(m) && /schema cache|does not exist|could not find/i.test(m); };
+const q = encodeURIComponent;
+
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -35,16 +44,49 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify({ routine_id: routine_id || null, item_id, period_key, done_by: user.id, done_by_name: nameOf() }),
         });
       } else {
-        await supaFetch(`crm_routine_checks?item_id=eq.${encodeURIComponent(item_id)}&period_key=eq.${encodeURIComponent(period_key)}`, { method: 'DELETE' });
+        await supaFetch(`crm_routine_checks?item_id=eq.${q(item_id)}&period_key=eq.${q(period_key)}`, { method: 'DELETE' });
       }
       return res.json({ ok: true });
     }
 
+    // Record progress on a count-to-target item. A count of zero clears the
+    // row, the same as unticking; anything else is upserted with the count.
+    if (action === 'count') {
+      const { routine_id, item_id, period_key } = req.body || {};
+      if (!item_id || !period_key) return res.status(400).json({ error: 'item_id and period_key required' });
+      const raw = Number(req.body?.count);
+      if (!Number.isFinite(raw)) return res.status(400).json({ error: 'count must be a number' });
+      const count = Math.max(0, Math.floor(raw));
+      const target = await targetOf(routine_id, item_id);
+      try {
+        if (count <= 0) {
+          await supaFetch(`crm_routine_checks?item_id=eq.${q(item_id)}&period_key=eq.${q(period_key)}`, { method: 'DELETE' });
+        } else {
+          await supaFetch('crm_routine_checks?on_conflict=item_id,period_key', {
+            method: 'POST',
+            headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify({ routine_id: routine_id || null, item_id, period_key, count, done_by: user.id, done_by_name: nameOf(), done_at: new Date().toISOString() }),
+          });
+        }
+      } catch (e) {
+        if (missingCount(e)) return res.status(503).json({ error: MIGRATION_MSG, needs_migration: true });
+        throw e;
+      }
+      return res.json({ ok: true, count, target, done: target ? count >= target : count > 0 });
+    }
+
     if (req.method === 'GET') {
       const routines = await supaFetch('crm_routines?select=*&order=position.asc,created_at.asc');
-      // Recent checks only (older periods are irrelevant — the list has reset).
+      // Recent checks only (older periods are irrelevant: the list has reset).
       const since = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
-      const checks = await supaFetch(`crm_routine_checks?select=item_id,period_key,done_by_name,done_at&done_at=gte.${since}`);
+      let checks;
+      try {
+        checks = await supaFetch(`crm_routine_checks?select=item_id,period_key,done_by_name,done_at,count&done_at=gte.${since}`);
+      } catch (e) {
+        // Before the count column exists the list still has to load.
+        if (!missingCount(e)) throw e;
+        checks = await supaFetch(`crm_routine_checks?select=item_id,period_key,done_by_name,done_at&done_at=gte.${since}`);
+      }
       return res.json({ routines: routines || [], checks: checks || [] });
     }
 
@@ -88,3 +130,14 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 };
+
+// The item's target, so the reply can say whether the count finished it.
+async function targetOf(routineId, itemId) {
+  if (!routineId || !/^[\w-]{1,64}$/.test(String(routineId))) return null;
+  try {
+    const [r] = await supaFetch(`crm_routines?id=eq.${routineId}&select=items`) || [];
+    const item = (Array.isArray(r?.items) ? r.items : []).find(i => i && i.id === itemId);
+    const t = Number(item?.target);
+    return t > 0 ? t : null;
+  } catch (_) { return null; }
+}

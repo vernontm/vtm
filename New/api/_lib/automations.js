@@ -16,25 +16,51 @@ const DEFAULTS = {
     mode: 'template',
     template: "You're all set for {when}{service_clause}. {link}",
   },
+  // Nudges (crm/nudges.js): sent by hand from the Money screen or a client's file.
+  invoice_reminder: {
+    enabled: true,
+    mode: 'template',
+    template: 'Hi {first_name}, quick reminder that {invoice} for {amount} was due {due}. You can pay here: {link} Thank you!',
+  },
+  agreement_reminder: {
+    enabled: true,
+    mode: 'template',
+    template: 'Hi {first_name}, when you get a minute, the {title} agreement is ready for your signature: {link}',
+  },
+  plan_past_due: {
+    enabled: true,
+    mode: 'template',
+    template: 'Hi {first_name}, the card on file for {plan} did not go through. You can update it here: {link}',
+  },
 };
 
 // {first_name} {business} {meeting_title} {meeting_clause} {when} {service}
-// {service_clause} {link} {location}: unknown ones render empty.
-const PLACEHOLDERS = ['first_name', 'business', 'meeting_title', 'meeting_clause', 'when', 'service', 'service_clause', 'link', 'location'];
+// {service_clause} {link} {location} {invoice} {amount} {due} {days_late}
+// {title} {plan}: unknown ones render empty.
+const PLACEHOLDERS = ['first_name', 'business', 'meeting_title', 'meeting_clause', 'when', 'service', 'service_clause', 'link', 'location', 'invoice', 'amount', 'due', 'days_late', 'title', 'plan'];
 
+// Every key in DEFAULTS is merged with what was saved, and any extra saved
+// key comes through as is, so a new template never needs a change here.
 async function getAutomations() {
+  let parsed = {};
   try {
     const rows = await supaFetch('crm_app_settings?key=eq.automations&select=value&limit=1');
     const raw = rows?.[0]?.value;
-    const parsed = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
-    return {
-      thank_you: { ...DEFAULTS.thank_you, ...(parsed.thank_you || {}) },
-      meeting_confirmation: { ...DEFAULTS.meeting_confirmation, ...(parsed.meeting_confirmation || {}) },
-    };
+    parsed = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    if (!parsed || typeof parsed !== 'object') parsed = {};
   } catch (e) {
     console.error('getAutomations failed, using defaults:', e.message);
-    return { thank_you: { ...DEFAULTS.thank_you }, meeting_confirmation: { ...DEFAULTS.meeting_confirmation } };
+    parsed = {};
   }
+  const out = {};
+  for (const key of Object.keys(DEFAULTS)) {
+    const saved = parsed[key] && typeof parsed[key] === 'object' ? parsed[key] : {};
+    out[key] = { ...DEFAULTS[key], ...saved };
+  }
+  for (const key of Object.keys(parsed)) {
+    if (!out[key] && parsed[key] && typeof parsed[key] === 'object') out[key] = { ...parsed[key] };
+  }
+  return out;
 }
 
 function fillTemplate(tpl, vars) {
