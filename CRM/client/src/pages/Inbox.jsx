@@ -3,7 +3,7 @@ import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, Stick
 import { toast } from '../components/Toast';
 import {
   getImsgThreads, getImsgThread, sendImsg, getImsgDirectory, assignImsgThread,
-  getImsgNotes, addImsgNote, createClient, createContact, updateClient, setImsgKind, getAssignees,
+  getImsgNotes, addImsgNote, getImsgEvents, createClient, createContact, updateClient, setImsgKind, getAssignees,
 } from '../api';
 import { useClient } from '../context/ClientContext';
 
@@ -96,6 +96,7 @@ export default function Inbox() {
   const [addBusy, setAddBusy] = useState(false);
   // Internal notes for the open conversation.
   const [notes, setNotes] = useState([]);
+  const [events, setEvents] = useState([]); // handoff events
   const [noteText, setNoteText] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
   const scrollRef = useRef(null);
@@ -134,6 +135,7 @@ export default function Inbox() {
     try { const r = await getAssignees(); setAssignees(Array.isArray(r) ? r : (r?.employees || [])); } catch (_) {}
   };
   const loadNotes = async (phone) => { try { setNotes(await getImsgNotes(phone) || []); } catch (_) {} };
+  const loadEvents = async (phone) => { try { setEvents(await getImsgEvents(phone) || []); } catch (_) {} };
   useEffect(() => {
     loadThreads(); loadDirectory(); loadAssignees();
     const t = setInterval(loadThreads, 20000);
@@ -141,14 +143,15 @@ export default function Inbox() {
   }, []);
 
   const openThread = async (phone) => {
-    setActive(phone); setMessages([]); setNotes([]);
+    setActive(phone); setMessages([]); setNotes([]); setEvents([]);
     try { setMessages(await getImsgThread(phone) || []); } catch (e) { toast('error', e.message); }
-    loadNotes(phone);
+    loadNotes(phone); loadEvents(phone);
   };
   useEffect(() => {
     if (!active) return;
     const t = setInterval(async () => {
       try { setMessages(await getImsgThread(active) || []); } catch (_) {}
+      getImsgEvents(active).then(r => setEvents(r || [])).catch(() => {});
     }, 6000);
     return () => clearInterval(t);
   }, [active]);
@@ -191,7 +194,7 @@ export default function Inbox() {
       const patched = ts.map(t => last10(t.phone) === last10(active) ? { ...t, assigned_to, assigned_to_name } : t);
       return exists ? patched : [{ phone: active, last: null, count: 0, assigned_to, assigned_to_name }, ...patched];
     });
-    try { await assignImsgThread(active, assigned_to, assigned_to_name); }
+    try { await assignImsgThread(active, assigned_to, assigned_to_name); loadEvents(active); }
     catch (e) { toast('error', e.message); loadThreads(); }
   };
 
@@ -253,6 +256,25 @@ export default function Inbox() {
   const activePerson = active ? personFor(active) : null;
   const isUnknown = active ? !displayKind(active) : false;
   const canTemp = !!activePerson?.id && activePerson.kind !== 'contact';
+
+  // Messages + handoffs, oldest first, for the chat pane.
+  const timeline = useMemo(() => {
+    const items = [
+      ...messages.map(m => ({ t: 'msg', at: m.created_at, key: 'm' + m.id, m })),
+      ...events.filter(e => e.type === 'handoff').map(e => ({ t: 'ho', at: e.created_at, key: 'e' + e.id, e })),
+    ];
+    items.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+    return items;
+  }, [messages, events]);
+  // Notes + handoffs, newest first, for the Activity panel.
+  const activityFeed = useMemo(() => {
+    const items = [
+      ...notes.map(n => ({ t: 'note', at: n.created_at, key: 'n' + n.id, n })),
+      ...events.filter(e => e.type === 'handoff').map(e => ({ t: 'ho', at: e.created_at, key: 'e' + e.id, e })),
+    ];
+    items.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+    return items;
+  }, [notes, events]);
 
   return (
     <div style={{ padding: 24, fontFamily: 'var(--font-display)', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -353,11 +375,25 @@ export default function Inbox() {
                 )}
               </div>
               <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {messages.map(m => {
+                {timeline.map(it => {
+                  if (it.t === 'ho') {
+                    const e = it.e;
+                    return (
+                      <div key={it.key} style={{ alignSelf: 'stretch', display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0' }}>
+                        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                          {e.from_name ? <>{firstName(e.from_name)} <span style={{ opacity: 0.6 }}>→</span></> : 'Assigned to'}
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: colorForEmployee(e.to_id || e.to_name), borderRadius: 999, padding: '2px 8px' }}>{firstName(e.to_name)}</span>
+                        </span>
+                        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                      </div>
+                    );
+                  }
+                  const m = it.m;
                   const out = m.direction === 'out';
                   const failed = out && m.status === 'failed';
                   return (
-                    <div key={m.id} style={{ alignSelf: out ? 'flex-end' : 'flex-start', maxWidth: '76%' }}>
+                    <div key={it.key} style={{ alignSelf: out ? 'flex-end' : 'flex-start', maxWidth: '76%' }}>
                       <div style={{
                         padding: '9px 13px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                         background: out ? (failed ? '#b91c1c' : 'var(--orange)') : 'var(--surface-2)',
@@ -430,15 +466,23 @@ export default function Inbox() {
 
             {/* Notes list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {notes.length === 0 ? (
-                <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>No notes yet.</div>
-              ) : notes.map(n => (
-                <div key={n.id} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.body}</div>
+              {activityFeed.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>No activity yet.</div>
+              ) : activityFeed.map(it => it.t === 'ho' ? (
+                <div key={it.key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 13, color: 'var(--text)' }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: colorForEmployee(it.e.to_id || it.e.to_name), borderRadius: 999, padding: '2px 8px' }}>{firstName(it.e.to_name)}</span>
+                    <span>{it.e.from_name ? `took over from ${firstName(it.e.from_name)}` : 'picked up the conversation'}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{it.e.by_name ? `handed off by ${firstName(it.e.by_name)} · ` : ''}{fmtDateTime(it.e.created_at)}</div>
+                </div>
+              ) : (
+                <div key={it.key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{it.n.body}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)' }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: colorForEmployee(n.author_email || n.author_name), flexShrink: 0 }} />
-                    <span style={{ fontWeight: 700 }}>{n.author_name || 'Someone'}</span>
-                    <span>· {fmtDateTime(n.created_at)}</span>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: colorForEmployee(it.n.author_email || it.n.author_name), flexShrink: 0 }} />
+                    <span style={{ fontWeight: 700 }}>{it.n.author_name || 'Someone'}</span>
+                    <span>· {fmtDateTime(it.n.created_at)}</span>
                   </div>
                 </div>
               ))}

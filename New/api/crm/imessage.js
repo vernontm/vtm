@@ -34,7 +34,7 @@ function normalizePhone(raw) {
 // PostgREST error into something a person can act on.
 function needsMigration(e) {
   const m = String((e && e.message) || '');
-  return /(channel|imsg_guid|crm_imessage_threads|crm_imessage_notes)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
+  return /(channel|imsg_guid|crm_imessage_threads|crm_imessage_notes|crm_imessage_events)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
 }
 const MIGRATION_MSG = 'The iMessage inbox needs its one-time database update. Run the SQL from imessage-bridge/README.md.';
 
@@ -196,6 +196,14 @@ module.exports = async function handler(req, res) {
       return res.json(rows || []);
     }
 
+    // Handoff events for a conversation (who took it over, when, by whom).
+    if (req.method === 'GET' && action === 'events') {
+      const phone = normalizePhone(req.query.phone);
+      if (!phone) return res.json([]);
+      const rows = await supaFetch(`crm_imessage_events?phone=eq.${encodeURIComponent(phone)}&order=created_at.asc`);
+      return res.json(rows || []);
+    }
+
     if (req.method === 'GET') {
       // ?phone= returns one thread (chronological); otherwise thread summaries.
       const phone = req.query.phone ? normalizePhone(req.query.phone) : null;
@@ -304,16 +312,42 @@ module.exports = async function handler(req, res) {
     if (req.method === 'POST' && action === 'assign') {
       const phone = normalizePhone((req.body || {}).phone);
       if (!phone) return res.status(400).json({ error: 'phone required' });
+      const assigned_to = (req.body || {}).assigned_to || null;
+      const assigned_to_name = (req.body || {}).assigned_to_name || null;
+
+      // Read the current assignment first, so a real change is recorded as a handoff.
+      let prev = null;
+      try { prev = first(await supaFetch(`crm_imessage_threads?phone=eq.${encodeURIComponent(phone)}&select=assigned_to,assigned_to_name&limit=1`)); } catch (_) {}
+
       const saved = await supaFetch('crm_imessage_threads?on_conflict=phone', {
         method: 'POST',
         headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
-        body: JSON.stringify({
-          phone,
-          assigned_to: (req.body || {}).assigned_to || null,
-          assigned_to_name: (req.body || {}).assigned_to_name || null,
-          updated_at: new Date().toISOString(),
-        }),
+        body: JSON.stringify({ phone, assigned_to, assigned_to_name, updated_at: new Date().toISOString() }),
       });
+
+      // Log a handoff when the conversation moves to a (different) person.
+      // Best effort: if the events table is not migrated yet, the assignment
+      // still succeeds.
+      if (assigned_to && assigned_to !== (prev?.assigned_to || null)) {
+        let by_name = me.email ? me.email.split('@')[0] : null;
+        try {
+          const tm = first(await supaFetch(`crm_team_members?email=eq.${encodeURIComponent((me.email || '').toLowerCase())}&select=name&limit=1`));
+          if (tm?.name) by_name = tm.name;
+        } catch (_) {}
+        try {
+          await supaFetch('crm_imessage_events', {
+            method: 'POST',
+            headers: { Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              phone, type: 'handoff',
+              from_name: prev?.assigned_to_name || null,
+              to_id: assigned_to, to_name: assigned_to_name,
+              by_email: me.email || null, by_name,
+              created_at: new Date().toISOString(),
+            }),
+          });
+        } catch (_) { /* events table not migrated yet */ }
+      }
       return res.json(first(saved) || { ok: true });
     }
 

@@ -43,6 +43,20 @@ ways:
      created_at timestamptz default now()
    );
    create index if not exists crm_imessage_notes_phone_idx on crm_imessage_notes (phone);
+
+   -- Handoff events: who took a conversation over, when, and who handed it off.
+   create table if not exists crm_imessage_events (
+     id uuid primary key default gen_random_uuid(),
+     phone text not null,
+     type text not null default 'handoff',
+     from_name text,
+     to_id text,
+     to_name text,
+     by_email text,
+     by_name text,
+     created_at timestamptz default now()
+   );
+   create index if not exists crm_imessage_events_phone_idx on crm_imessage_events (phone);
    ```
 
 2. **Shared secret on Vercel:** add an environment variable

@@ -58,6 +58,8 @@ export const setImsgKind  = (phone, kind) => request('/imessage?action=set-kind'
 // Internal notes on a conversation, attributed to the logged-in employee.
 export const getImsgNotes = (phone) => request(`/imessage?action=notes&phone=${encodeURIComponent(phone)}`);
 export const addImsgNote  = (phone, body) => request('/imessage?action=note', { method: 'POST', body: JSON.stringify({ phone, body }) });
+// Handoff events (assignee changes) for a conversation.
+export const getImsgEvents = (phone) => request(`/imessage?action=events&phone=${encodeURIComponent(phone)}`);
 
 // Tasks / priorities (assignable to a client)
 export const getTasks   = (status) => request(`/tasks${status ? `?status=${status}` : ''}`);
