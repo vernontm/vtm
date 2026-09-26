@@ -551,7 +551,15 @@ export default function Inbox() {
           {tab === 'team' ? (
             activeRoomObj ? (
               <TeamChatPanel room={activeRoomObj} me={user} onRoomsChanged={loadRooms}
-                onClose={() => { setActiveRoom(null); activeRoomRef.current = null; }} />
+                onClose={() => { setActiveRoom(null); activeRoomRef.current = null; }}
+                onTextClient={({ phone, message, client_name }) => {
+                  // Leave the team room, open that customer, put the draft in the box.
+                  setTab('clients');
+                  setActiveRoom(null); activeRoomRef.current = null;
+                  openThread(phone);
+                  setReply(message || '');
+                  toast('info', `Draft ready for ${client_name || 'this customer'}. Read it before you send.`);
+                }} />
             ) : (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
                 <Users size={34} style={{ marginBottom: 12, opacity: 0.6 }} />

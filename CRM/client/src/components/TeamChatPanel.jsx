@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Send, Users, ArrowLeft, UserPlus, X, LogOut } from 'lucide-react';
+import { Send, Users, ArrowLeft, UserPlus, X, LogOut, Sparkles } from 'lucide-react';
 import Drawer from './Drawer';
 import { toast } from './Toast';
 import {
   getChatMessages, sendChat, markChatRead, renameChat, changeChatMembers, leaveChat, getChatPeople,
+  askAssistant, proposeActions,
 } from '../api';
 
 // One internal chat room: a direct message or a group. Mine on the right in
@@ -36,7 +37,7 @@ function dayLabel(t) {
   return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
 }
 
-export default function TeamChatPanel({ room, me, onRoomsChanged, onClose }) {
+export default function TeamChatPanel({ room, me, onRoomsChanged, onClose, onTextClient }) {
   const roomId = room?.id || null;
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -46,6 +47,16 @@ export default function TeamChatPanel({ room, me, onRoomsChanged, onClose }) {
   const [people, setPeople] = useState([]);
   const [nameDraft, setNameDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  // Assistant drafting for this room: suggested replies, a free instruction
+  // box, and any customer the chat implies we should text.
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [drafts, setDrafts] = useState([]);
+  const [draftNote, setDraftNote] = useState('');
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftInput, setDraftInput] = useState('');
+  const [actions, setActions] = useState([]);
+  const [actionsBusy, setActionsBusy] = useState(false);
+  const draftHistory = useRef([]);
   const scrollRef = useRef(null);
   const lastAt = useRef(null);
 
@@ -107,6 +118,90 @@ export default function TeamChatPanel({ room, me, onRoomsChanged, onClose }) {
     } catch (e) { toast('error', e.message); }
     finally { setSending(false); }
   };
+
+  // What the assistant reads: who is in the room and the last 15 messages.
+  // Same context the app builds, so both give the same quality of draft.
+  const contextPrompt = () => {
+    const who = (room?.members || []).map(m => m.user_name).filter(Boolean).join(', ');
+    const recent = messages.slice(-15);
+    const cut = Math.max(0, recent.length - 4);
+    const thread = recent.map((m, i) => {
+      const mine = m.sender_id === me?.id;
+      const stamp = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      return `${i === cut ? '[most recent from here]\n' : ''}${stamp} ${mine ? `${m.sender_name} (me)` : m.sender_name}: ${m.body}`;
+    }).join('\n') || '(no messages yet)';
+    const myName = firstName(me?.user_metadata?.name || me?.email) || 'a team member';
+    return [
+      `This is an INTERNAL team chat between employees of Vernon Tech & Media${title ? ` ("${title}")` : ''}, not a customer conversation. People in it: ${who || 'the team'}. I am ${myName}. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.`,
+      `The chat, oldest to newest (the most recent messages matter most):\n${thread}`,
+      'Customers mentioned here are in the CRM; look them up with search_people when you need their details. Never invent names, prices or dates.',
+    ].join('\n\n');
+  };
+
+  const parseDrafts = (text) => String(text || '').split(/\n+/)
+    .map(l => l.replace(/^\s*(?:[-*•]|\d+[.)]|option\s*\d+:?)\s*/i, '').replace(/^["“]+|["”]+$/g, '').trim())
+    .filter(l => l.length >= 4).slice(0, 4);
+  const wantsDraft = (t) => /\b(draft|write|reply|respond|say|message|shorter|longer|warmer|friendlier|formal|casual|rewrite|summar|recap|answer)\b/i.test(t);
+
+  const runDraft = async (instruction, initial = false) => {
+    if (draftBusy) return;
+    setDraftBusy(true); setDraftNote('');
+    try {
+      const prompt = initial
+        ? `${contextPrompt()}\n\n${instruction}`
+        : `${contextPrompt()}\n\nInstruction from me: ${instruction}\n${wantsDraft(instruction) ? 'Reply with ONLY the message text I should send in this team chat (or up to three options, one per line). No numbering, no quotes, no preamble.' : 'Answer briefly and plainly.'}`;
+      const r = await askAssistant(prompt, draftHistory.current);
+      const answer = String(r?.answer || '').trim();
+      draftHistory.current = [...draftHistory.current, { role: 'user', content: instruction }, { role: 'assistant', content: answer }].slice(-10);
+      if (initial || wantsDraft(instruction)) {
+        const opts = parseDrafts(answer);
+        if (opts.length) setDrafts(opts); else setDraftNote(answer || 'No draft came back.');
+      } else setDraftNote(answer || 'No answer.');
+    } catch (e) { setDraftNote(`Could not reach the assistant: ${e.message}`); }
+    finally { setDraftBusy(false); }
+  };
+
+  // Does this chat imply reaching out to a customer? Those come back as
+  // text_client actions, each with the customer and a ready message.
+  const detectActions = async () => {
+    if (actionsBusy) return;
+    setActionsBusy(true);
+    try {
+      const r = await proposeActions(contextPrompt());
+      setActions((r?.actions || []).filter(a => a.type === 'text_client'));
+    } catch (_) { /* suggestions are a bonus, never an error */ }
+    finally { setActionsBusy(false); }
+  };
+
+  const openDrafts = () => {
+    setDraftOpen(true);
+    if (!actionsBusy) detectActions();
+    if (!drafts.length && !draftBusy) {
+      runDraft('Write three short replies I could send next in this team chat: one that answers or moves the conversation forward, one that assigns or confirms a next step, and one short and casual. Each one to two sentences, natural, no sign-off. Reply with exactly three options, one per line, no numbering, no quotes, nothing else.', true);
+    }
+  };
+  const useDraft = (text) => {
+    setInput(prev => (prev.trim() ? `${prev.trim()} ${text}` : text));
+    setDraftOpen(false);
+  };
+  const sendDraftInstruction = () => {
+    const t = draftInput.trim();
+    if (!t) return;
+    setDraftInput('');
+    runDraft(t);
+  };
+  const useAction = (a) => {
+    if (!a.phone) { toast('error', `No number on file for ${a.client_name || 'this customer'}. Add their phone to the record first.`); return; }
+    setDraftOpen(false);
+    if (onTextClient) onTextClient({ phone: a.phone, message: a.message, client_name: a.client_name });
+    else toast('info', 'Open their conversation from the Clients tab to send this.');
+  };
+  const DRAFT_CHIPS = [
+    ['Recap', 'Summarize what this chat decided, in three bullet points at most.'],
+    ['Next steps', 'List the next steps this chat implies, who owns each, one line each.'],
+    ['Shorter', 'Make it shorter.'],
+    ['Warmer', 'Make it warmer and more personal.'],
+  ];
 
   const openPeople = () => {
     setPeopleOpen(true);
@@ -214,6 +309,10 @@ export default function TeamChatPanel({ room, me, onRoomsChanged, onClose }) {
       </div>
 
       <div style={{ borderTop: '1px solid var(--border)', padding: 12, display: 'flex', gap: 8 }}>
+        <button onClick={openDrafts} title="Draft with the assistant" aria-label="Draft with the assistant"
+          style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--card)', color: '#7c5cff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Sparkles size={16} />
+        </button>
         <textarea value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="Message the team…" rows={1} style={{ ...INPUT, resize: 'none', minHeight: 40, maxHeight: 120 }} />
@@ -222,6 +321,61 @@ export default function TeamChatPanel({ room, me, onRoomsChanged, onClose }) {
           <Send size={14} /> {sending ? 'Sending…' : 'Send'}
         </button>
       </div>
+
+      <Drawer open={draftOpen} onClose={() => setDraftOpen(false)} width={460}
+        title="Assistant" subtitle={title ? `Drafting for ${title}` : 'Drafting for this chat'}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {actions.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>Smart actions</div>
+              {actions.map((a, i) => (
+                <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--surface-2)' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700 }}>Text {firstName(a.client_name) || 'the customer'}</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{a.message}</div>
+                  <button className="btn-primary" onClick={() => useAction(a)} style={{ alignSelf: 'flex-start' }}>
+                    {a.phone ? 'Open their chat with this draft' : 'No number on file'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+              {draftBusy && !drafts.length ? 'Writing some replies' : 'Tap one to put it in the box'}
+            </div>
+            {drafts.map((d, i) => (
+              <button key={i} onClick={() => useDraft(d)}
+                style={{ textAlign: 'left', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px', background: 'var(--card)', cursor: 'pointer', fontSize: 13.5, lineHeight: 1.45, color: 'var(--text)' }}>
+                {d}
+              </button>
+            ))}
+            {!drafts.length && !draftBusy && !draftNote && (
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>Nothing to suggest yet. Ask for something below.</div>
+            )}
+            {draftNote && <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{draftNote}</div>}
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {DRAFT_CHIPS.map(([label, instruction]) => (
+              <button key={label} onClick={() => runDraft(instruction)} disabled={draftBusy}
+                style={{ border: '1px solid var(--border)', borderRadius: 999, padding: '6px 12px', background: 'var(--card)', cursor: draftBusy ? 'default' : 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--text)', opacity: draftBusy ? 0.5 : 1 }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={draftInput} onChange={e => setDraftInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') sendDraftInstruction(); }}
+              placeholder="Tell the assistant what to write" style={INPUT} />
+            <button className="btn-primary" onClick={sendDraftInstruction} disabled={draftBusy || !draftInput.trim()} style={{ flexShrink: 0 }}>
+              {draftBusy ? 'Working' : 'Ask'}
+            </button>
+          </div>
+        </div>
+      </Drawer>
 
       <Drawer open={peopleOpen} onClose={() => setPeopleOpen(false)} width={420}
         title={isGroup ? 'Group chat' : 'Direct message'} subtitle={title}>
