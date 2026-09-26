@@ -98,14 +98,16 @@ async function overview(clientId) {
   for (const a of agreements) {
     const core = N.agreementCore(a.title);
     const link = a.sign_token ? N.SIGN_BASE + a.sign_token : null;
+    // agreement_id travels on every row so a Nudge tapped there has a target.
+    const ref = { agreement_id: a.id, signed: !!a.signed_at };
     const total = a.total_amount ? `Total ${N.fmtMoney(a.total_amount)}` : '';
-    push({ kind: 'agreement', at: a.created_at, title: `${core} drafted`, sub: total, direction: null, severity: null, link: null });
+    push({ ...ref, kind: 'agreement', at: a.created_at, title: `${core} drafted`, sub: total, direction: null, severity: null, link: null });
     if (a.sent_at) {
       const waiting = N.daysAgo(a.sent_at);
-      push({ kind: 'agreement', at: a.sent_at, title: `${core} sent for signature`, sub: a.signed_at ? `Signed ${N.fmtDate(a.signed_at)}` : `Waiting ${plural(waiting, 'day')}`, direction: 'out', severity: !a.signed_at && waiting >= 3 ? 'amber' : null, link });
+      push({ ...ref, kind: 'agreement', at: a.sent_at, title: `${core} sent for signature`, sub: a.signed_at ? `Signed ${N.fmtDate(a.signed_at)}` : `Waiting ${plural(waiting, 'day')}`, direction: 'out', severity: !a.signed_at && waiting >= 3 ? 'amber' : null, link });
     }
-    if (a.opened_at) push({ kind: 'agreement', at: a.opened_at, title: `${core} opened`, sub: 'The signing page was opened', direction: 'in', severity: null, link });
-    if (a.signed_at) push({ kind: 'agreement', at: a.signed_at, title: `${core} signed`, sub: total, direction: 'in', severity: 'green', link });
+    if (a.opened_at) push({ ...ref, kind: 'agreement', at: a.opened_at, title: `${core} opened`, sub: 'The signing page was opened', direction: 'in', severity: null, link });
+    if (a.signed_at) push({ ...ref, kind: 'agreement', at: a.signed_at, title: `${core} signed`, sub: total, direction: 'in', severity: 'green', link });
   }
   for (const p of payments) {
     if (p.status === 'paid' && p.paid_at) push({ kind: 'payment', at: p.paid_at, title: `Payment received: ${N.fmtMoney(p.amount)}`, sub: [p.label, p.source].filter(Boolean).join(' · '), direction: 'in', severity: 'green', link: p.stripe_invoice_url || null });
