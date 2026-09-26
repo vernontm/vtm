@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 const { scheduleThankYou, normalizePhone, missingTable } = require('../_lib/followups.js');
 
 // Scheduled follow-up texts (see _lib/followups.js).
@@ -8,7 +8,7 @@ const { scheduleThankYou, normalizePhone, missingTable } = require('../_lib/foll
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.query;
 

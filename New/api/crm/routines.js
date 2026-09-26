@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 // Recurring checklists ("routines"). Each routine has a cadence (daily /
 // weekly / monthly) and an ordered list of items (JSONB: [{ id, text, target? }]).
@@ -24,7 +24,7 @@ const q = encodeURIComponent;
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, action } = req.query;

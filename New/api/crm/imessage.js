@@ -1,4 +1,4 @@
-const { setCors, supaFetch, requireCrmUser } = require('../_lib/supabase.js');
+const { setCors, supaFetch, requireStaff } = require('../_lib/supabase.js');
 const { pushUser, pushAdmins } = require('../_lib/push.js');
 
 // iMessage inbox.
@@ -258,6 +258,18 @@ async function prepareAttachments(raw, cleaned) {
 // A transcribed voice note reads better than "Voice memo" in a push.
 const firstTranscript = (atts) => (atts || []).find((a) => a.type === 'audio' && a.transcript)?.transcript || '';
 
+// Who may see a conversation. Admins see all of them. Everyone else sees
+// the ones assigned to them, plus unassigned ones so a new lead can be
+// picked up. assigned_to holds a roster id, or an auth id on a self assign,
+// so both count as mine.
+function mineOrFree(user) {
+  const ids = [user.roster_id, user.id].filter(Boolean).map(String);
+  return (row) => {
+    if (user.is_admin) return true;
+    const owner = row && row.assigned_to ? String(row.assigned_to) : null;
+    return !owner || ids.includes(owner);
+  };
+}
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -390,7 +402,7 @@ module.exports = async function handler(req, res) {
   // the selected workspace: that id lives in crm_content_clients and is not a
   // crm_clients id, which is what crm_sms_messages.client_id references. We
   // resolve WHO is calling so internal notes can be attributed to them.
-  const me = await requireCrmUser(req);
+  const me = await requireStaff(req);
   if (!me) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -437,6 +449,11 @@ module.exports = async function handler(req, res) {
       // ?phone= returns one thread (chronological); otherwise thread summaries.
       const phone = req.query.phone ? normalizePhone(req.query.phone) : null;
       if (phone) {
+        // Scoping the list means nothing if the thread opens by phone anyway.
+        if (!me.is_admin) {
+          const own = (await readThreadRows()).find((t) => t.phone === phone) || null;
+          if (!mineOrFree(me)(own)) return res.status(403).json({ error: 'That conversation is assigned to someone else.' });
+        }
         const rows = await readMessages(
           `crm_sms_messages?channel=eq.${CHANNEL}&phone=eq.${encodeURIComponent(phone)}&order=created_at.asc`
         );
@@ -482,7 +499,8 @@ module.exports = async function handler(req, res) {
       // archived shelf, which is only them. Each is a list the caller can
       // render as it comes.
       const shelf = String(req.query.archived || '') === '1';
-      return res.json(list.filter((t) => (shelf ? t.archived : !t.archived)));
+      const visible = mineOrFree(me);
+      return res.json(list.filter((t) => (shelf ? t.archived : !t.archived) && visible(t)));
     }
 
     // Queue an outbound iMessage. The Mac bridge picks it up within seconds.

@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 // Internal resource hub for the team (SOPs, guides, tool logins, templates,
 // links). Any signed-in user with the page grant can read; only admins can
@@ -6,7 +6,7 @@ const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id } = req.query;

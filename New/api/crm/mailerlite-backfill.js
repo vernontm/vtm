@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 const { syncContactToMailerlite } = require('../_lib/mailerlite.js');
 
 // POST /api/crm/mailerlite-backfill
@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   // Tenant guard on any referenced client_id

@@ -6,7 +6,7 @@
 //   GET  /api/crm/app-events?days=30   admin only: { days, rows: [{ user_id, user_name, event, name, day, n }] }
 //
 // Table + view: docs/sql/app-events.sql
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 const MIGRATION_MSG = 'App usage tracking is not set up yet: run docs/sql/app-events.sql in Supabase.';
 const needsMigration = (e) => /crm_app_events|schema cache|does not exist/i.test(String(e?.message || e || ''));
@@ -15,8 +15,8 @@ const clean = (s, n) => String(s || '').slice(0, n);
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req, res);
-  if (!user) return;
+  const user = await requireStaff(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     if (req.method === 'POST') {

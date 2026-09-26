@@ -3,13 +3,13 @@
 //   POST ?action=test      — send a test push to the caller's own devices.
 //   GET  ?action=prefs     — (admin) all saved prefs + device counts per user.
 //   POST ?action=set-prefs {user_id, prefs} — (admin) save who gets what.
-import { setCors, requireCrmUser, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch } from '../_lib/supabase.js';
 import { pushUser, PUSH_EVENTS } from '../_lib/push.js';
 
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   const { action } = req.query;
 

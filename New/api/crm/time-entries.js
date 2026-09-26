@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 const { shootTotal, statementTotal } = require('../_lib/shoot-billing.js');
 
 // Employee time tracking. An employee clocks in/out (or adds manual time) for
@@ -18,7 +18,7 @@ const { shootTotal, statementTotal } = require('../_lib/shoot-billing.js');
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, action } = req.query;

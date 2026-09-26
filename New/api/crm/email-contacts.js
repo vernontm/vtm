@@ -1,10 +1,10 @@
-const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 const { syncContactToMailerlite } = require('../_lib/mailerlite.js');
 
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   // Tenant guard: whichever client_id the caller references must be one

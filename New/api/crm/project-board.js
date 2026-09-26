@@ -17,7 +17,7 @@
 // the report's client_facing mode filters on both, and the PDF module filters
 // again on its own.
 const crypto = require('crypto');
-const { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { templateRows } = require('../_lib/project-templates.js');
 const { buildProjectReportPdf, resolveRange } = require('../_lib/project-report-pdf.js');
 
@@ -66,7 +66,7 @@ function toTree(items) {
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { action, id } = req.query;

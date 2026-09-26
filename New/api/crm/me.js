@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, loadUserAccess } = require('../_lib/supabase.js');
+const { setCors, requireStaff, loadUserAccess } = require('../_lib/supabase.js');
 
 // GET /api/crm/me
 // Returns: { user: { id, email, is_admin }, clients: [{ id, name, role, allowed_pages, ... }] }
@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
 
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   try {

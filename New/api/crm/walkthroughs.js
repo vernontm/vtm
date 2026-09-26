@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 // Step-by-step walkthroughs / SOPs. Each walkthrough has an ordered list of
 // steps (stored as JSONB); a step can hold text, clickable links, and media
@@ -14,7 +14,7 @@ const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id } = req.query;

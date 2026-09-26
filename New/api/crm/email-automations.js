@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 
 // Recurring email-blast automations (admin only). The email-cron endpoint
 // fires these; here we just manage the definitions.
@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   if (!user.is_admin) return res.status(403).json({ error: 'Admins only' });
 

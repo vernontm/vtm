@@ -1,4 +1,4 @@
-import { setCors, requireCrmUser } from './_lib/supabase.js';
+import { setCors, requireStaff } from './_lib/supabase.js';
 
 // Dictation: the app records a clip, posts it here as multipart, and gets the
 // words back from ElevenLabs speech to text. The bytes stream straight through
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const me = await requireCrmUser(req);
+  const me = await requireStaff(req);
   if (!me) return res.status(401).json({ error: 'Unauthorized' });
 
   if (!process.env.ELEVENLABS_API_KEY) {

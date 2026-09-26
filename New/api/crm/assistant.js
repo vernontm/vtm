@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 const { findAvailability } = require('./availability.js');
 
 // The CRM assistant: Claude with real tools over the CRM data. Runs the
@@ -213,7 +213,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: 'Assistant is not configured.' });
 

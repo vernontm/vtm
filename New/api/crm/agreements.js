@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { sendEmail } = require('../_lib/gmail.js');
 const { normalizePhone } = require('../_lib/followups.js');
 const { logNudge } = require('../_lib/nudges.js');
@@ -100,7 +100,7 @@ async function buildSchedule(ag) {
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { client_id, id, action } = req.query;

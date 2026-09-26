@@ -1,4 +1,4 @@
-import { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
 import dropbox from '../_lib/dropbox.js';
 import { signedUpload, BUCKET as MEDIA_BUCKET } from '../_lib/storage.js';
 
@@ -78,9 +78,9 @@ async function removeByKeys(keys) {
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  // requireCrmUser (not requireAuth) so `uploaded_by` records the person who
+  // requireStaff (not requireAuth) so `uploaded_by` records the person who
   // actually sent the file instead of a flat "Team".
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   const who = user.email || 'Team';
   const action = req.query?.action || (req.method === 'GET' ? 'list' : '');

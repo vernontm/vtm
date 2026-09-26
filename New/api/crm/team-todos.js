@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 const { pushUser } = require('../_lib/push.js');
 
 // Shared team to-do list. Every signed-in user can see the whole list and add
@@ -15,7 +15,7 @@ const { pushUser } = require('../_lib/push.js');
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, members, action } = req.query;

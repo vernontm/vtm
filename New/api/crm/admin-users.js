@@ -9,7 +9,7 @@
 //   POST   /api/crm/admin-users?id=<uid>&action=grant   -> upsert { client_id, allowed_pages, role? }
 //   DELETE /api/crm/admin-users?id=<uid>&client_id=<c>&action=grant -> revoke grant
 
-const { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, SUPABASE_URL, SERVICE_KEY } = require('../_lib/supabase.js');
 
 async function adminFetch(path, options = {}) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/${path}`, {
@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   if (!user.is_admin) return res.status(403).json({ error: 'Admin only' });
 

@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 const { pushUser } = require('../_lib/push.js');
 
 // Reminders: a push at a time, for yourself or for a teammate. Any task can
@@ -26,7 +26,7 @@ const fmtWhen = (iso) => {
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.query;
   const me = user.id;

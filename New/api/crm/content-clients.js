@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch, loadUserAccess } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, loadUserAccess } = require('../_lib/supabase.js');
 
 // crm_content_clients is the tenant table itself.
 // - GET: admins see all; non-admins see only clients they have grants for
@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id } = req.query;

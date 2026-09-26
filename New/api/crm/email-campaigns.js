@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 const { wrapEmailHtml } = require('../_lib/email-html.js');
 const ML = require('../_lib/mailerlite.js');
 
@@ -110,7 +110,7 @@ async function pushCampaignToMailerlite(campaign, cfg) {
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   // Tenant guard: any referenced client_id must be one the caller can see.

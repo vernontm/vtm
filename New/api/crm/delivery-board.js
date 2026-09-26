@@ -12,7 +12,7 @@
 //   POST   ?action=report&id=       → build this month's social report from
 //                                     upload-post, save it as a client Document
 // ─────────────────────────────────────────────────────────────────────────────
-import { setCors, requireCrmUser, supaFetch, loadUserAccess } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch, loadUserAccess } from '../_lib/supabase.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -132,7 +132,7 @@ async function seedChecklist(clientId, stage) {
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   // A valid Supabase JWT is not enough (portal clients and academy students
   // also hold them): require CRM access — admin, or at least one client grant.

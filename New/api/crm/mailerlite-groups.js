@@ -1,4 +1,4 @@
-const { setCors, requireCrmUser, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, assertClientAccess } = require('../_lib/supabase.js');
 
 // Minimal MailerLite groups listing — used by the broadcast composer's
 // "Send to" dropdown. Returns [{ id, name, total }, ...] for the client's key.
@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ error: 'GET or POST only' });
 
-  const user = await requireCrmUser(req);
+  const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   // Tenant guard on any referenced client_id

@@ -29,7 +29,7 @@ const ALLOWED_ORIGINS = new Set([...DEFAULT_ORIGINS, ...EXTRA_ORIGINS]);
 
 // Backwards-compatible: if called with just (res), falls back to wildcard so
 // legacy endpoints keep working. If called with (res, req), enforces the
-// allowlist — unlisted origins get NO ACAO header and are blocked by the
+// allowlist: unlisted origins get NO ACAO header and are blocked by the
 // browser. New and security-critical endpoints should pass req.
 function setCors(res, req) {
   const origin = req?.headers?.origin;
@@ -89,6 +89,28 @@ async function requireCrmUser(req) {
   };
 }
 
+
+// Staff only. requireCrmUser answers "is this a valid login", and that
+// includes client portal logins: clients sign in to the same Supabase
+// project. Every CRM endpoint must use this instead, or a client could read
+// the whole inbox, the money and the tasks with their own portal token.
+//
+// Someone is staff when they are an admin, hold a CRM page grant, or sit on
+// the roster. The roster row also carries the id that conversations are
+// assigned to, which is what scopes a non-admin down to their own.
+async function requireStaff(req) {
+  const user = await requireCrmUser(req);
+  if (!user) return null;
+  const email = String(user.email || '').toLowerCase();
+  const [roster, grants] = await Promise.all([
+    supaFetch(`crm_team_members?or=(user_id.eq.${user.id},email.ilike.${encodeURIComponent(email)})&select=id,user_id,email,status`).catch(() => []),
+    supaFetch(`crm_user_access?user_id=eq.${user.id}&select=user_id&limit=1`).catch(() => []),
+  ]);
+  // A retired roster row does not grant access.
+  const row = (roster || []).find((r) => r.status == null || r.status === 'active') || null;
+  if (!user.is_admin && !(grants && grants.length) && !row) return null;
+  return { ...user, is_staff: true, roster_id: row ? row.id : null };
+}
 // Canonical list of page slugs. Keep in sync with AdminUsers.jsx PAGE_GROUPS.
 // Only the pages the CRM actually has now (legacy pages purged) + admin-users.
 const ALL_PAGES = [
@@ -154,8 +176,8 @@ async function assertClientAccess(user, clientId) {
 }
 
 // One-stop helper for tenant-scoped endpoints. Returns:
-//   { ok: true,  user, clientId,  all }  — call filtering/writes with clientId
-//   { ok: false, status, error }         — send this back to the caller
+//   { ok: true,  user, clientId,  all }  = call filtering/writes with clientId
+//   { ok: false, status, error }         = send this back to the caller
 // Rules:
 //   - missing/invalid auth              -> 401
 //   - admin + no X-Client-Id header     -> all=true, clientId=null (legacy "see everything")
@@ -212,4 +234,4 @@ async function supaFetch(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-module.exports = { SUPABASE_URL, SERVICE_KEY, ANON_KEY, headers, setCors, requireAuth, requireCrmUser, requireStudentAuth, requireAdminAuth, supaFetch, loadUserAccess, assertClientAccess, requireClientScope, ALL_PAGES };
+module.exports = { SUPABASE_URL, SERVICE_KEY, ANON_KEY, headers, setCors, requireAuth, requireCrmUser, requireStaff, requireStudentAuth, requireAdminAuth, supaFetch, loadUserAccess, assertClientAccess, requireClientScope, ALL_PAGES };
