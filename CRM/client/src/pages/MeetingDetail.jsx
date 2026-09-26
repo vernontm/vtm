@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, Calendar, Video, Sparkles, Users, FileText,
   Send, Loader, Check, X, Link as LinkIcon, Pencil,
   ChevronRight, MessageSquare, Trash2, Search, ExternalLink,
-  AlertCircle, Copy,
+  AlertCircle, Copy, MapPin, ArrowUpRight,
 } from 'lucide-react';
 import {
   getMeetingDetail, saveMeetingNotes, findMeetingRecording,
   summarizeMeeting, askMeetingSidekick, clearMeetingChat,
-  getLeads, createMeetingLeadLink,
+  getLeads, getClients, createMeetingLeadLink,
   updateMeeting, deleteMeeting,
 } from '../api';
 import LocationInput from '../components/LocationInput';
@@ -17,19 +17,98 @@ import LocationInput from '../components/LocationInput';
 // ── Constants ────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['var(--orange)', 'var(--orange)', '#fdab3d', '#784bd1', '#ff5c5c', '#00d1d1'];
 
+// ── Central time ─────────────────────────────────────────────────────────────
+// Every time on this page is Central (America/Chicago) and reads as 12 hour
+// with AM and PM, whatever zone the browser is set to. This is the approach
+// the iPhone app already ships in mobile/screens/CalendarScreen.js: read a
+// wall clock through an explicit timeZone, and turn a wall clock the user
+// typed back into an instant using the offset that applies at that instant.
+const TZ = 'America/Chicago';
+const pad = (n) => String(n).padStart(2, '0');
+
+function partsIn(date) {
+  try {
+    const f = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const p = {};
+    for (const x of f.formatToParts(date)) if (x.type !== 'literal') p[x.type] = Number(x.value);
+    if (!p.year) throw new Error('no parts');
+    return { year: p.year, month: p.month, day: p.day, hour: p.hour % 24, minute: p.minute, second: p.second || 0 };
+  } catch (_) {
+    return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), hour: date.getHours(), minute: date.getMinutes(), second: date.getSeconds() };
+  }
+}
+// How far Central sits from UTC at that instant, in milliseconds.
+const offsetAt = (ms) => {
+  const p = partsIn(new Date(ms));
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(ms / 1000) * 1000;
+};
+// A Central wall clock (day plus minutes past midnight) as the real instant.
+// Two passes so an event on a clock-change morning still lands right.
+const centralInstant = (day, minutes) => {
+  const [y, m, d] = String(day).split('-').map(Number);
+  const wall = Date.UTC(y, (m || 1) - 1, d || 1, Math.floor(minutes / 60), minutes % 60, 0);
+  let inst = wall - offsetAt(wall);
+  inst = wall - offsetAt(inst);
+  return new Date(inst);
+};
+const fmtTime = (iso) => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }); };
+
+const mapsUrl = (where) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`;
+
+// The CRM record behind an event: an attendee email that matches a client or a
+// lead, with the business name inside the title as the fallback for an event
+// booked without the client on the invite.
+const emailsOf = (m) => (Array.isArray(m?.participants) ? m.participants : [])
+  .map(p => String((typeof p === 'string' ? p : p?.email) || '').toLowerCase())
+  .filter(Boolean);
+function matchRecord(meeting, records) {
+  if (!meeting || !records || !records.length) return null;
+  const mails = emailsOf(meeting);
+  if (mails.length) {
+    const hit = records.find(r => r.contact_email && mails.includes(String(r.contact_email).toLowerCase()));
+    if (hit) return hit;
+  }
+  const t = String(meeting.title || meeting.summary || '').toLowerCase();
+  return records.find(r => {
+    const name = String(r.business_name || '').toLowerCase();
+    return name.length >= 4 && t.includes(name);
+  }) || null;
+}
+
+// The client or lead this meeting belongs to, one click away.
+function RecordChip({ record }) {
+  if (!record) return null;
+  const isLead = record.stage === 'lead';
+  const name = record.business_name || record.owner_name || record.contact_email;
+  return (
+    <Link
+      to={`${isLead ? '/leads' : '/clients'}?open=${record.id}`}
+      className="pii-name"
+      title={`Open ${name} in the CRM`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none',
+        fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 999,
+        color: 'var(--link)', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.22)',
+      }}
+    >
+      {name} <ArrowUpRight size={11} />
+    </Link>
+  );
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatDateTime(iso) {
-  if (!iso) return '—';
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
   try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: 'numeric', minute: '2-digit', hour12: true,
-    }).format(new Date(iso));
-  } catch { return iso; }
+    const day = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }).format(d);
+    return `${day} at ${fmtTime(iso)} CT`;
+  } catch { return fmtTime(iso); }
 }
 
 function formatDuration(min) {
-  if (!min) return '—';
+  if (!min) return '';
   const h = Math.floor(min / 60);
   const m = min % 60;
   return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
@@ -42,7 +121,10 @@ function StatusBadge({ status }) {
     recorded:     { color: 'var(--orange)', label: 'Recording Found' },
     no_recording: { color: 'var(--muted)', label: 'No Recording' },
   };
-  const s = map[status] || { color: 'var(--muted)', label: 'Pending' };
+  const s = map[status];
+  // No badge rather than a standing "Pending": this line is about the recording
+  // and the AI summary, and a meeting with neither is not behind on anything.
+  if (!s) return null;
   return (
     <span style={{
       fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
@@ -57,11 +139,18 @@ function StatusBadge({ status }) {
 export default function MeetingDetail() {
   const { eventId }  = useParams();
   const navigate     = useNavigate();
+  const routeState   = useLocation().state;
+  // Back goes where they came from, and /appointments (the granted page slug)
+  // when this page was opened from a link.
+  const backToCalendar = useCallback(() => {
+    if (window.history.length > 1) navigate(-1); else navigate('/appointments');
+  }, [navigate]);
 
   const [meeting,      setMeeting]      = useState(null);
   const [summary,      setSummary]      = useState(null);
   const [chat,         setChat]         = useState([]);
   const [linkedLeads,  setLinkedLeads]  = useState([]);
+  const [allClients,   setAllClients]   = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
   const [activeTab,    setActiveTab]    = useState('overview');
@@ -89,7 +178,7 @@ export default function MeetingDetail() {
   const [leadSearch,    setLeadSearch]    = useState('');
   const [linkingLeadId, setLinkingLeadId] = useState('');
 
-  // Edit + delete state — a light inline modal (avoids importing the full
+  // Edit + delete state: a light inline modal (avoids importing the full
   // Schedule Meeting composer) that syncs changes both to the CRM row AND the
   // underlying Google Calendar event.
   const [editOpen,      setEditOpen]      = useState(false);
@@ -99,6 +188,10 @@ export default function MeetingDetail() {
 
   // Toast
   const [toast, setToast] = useState('');
+
+  // The calendar's Edit button routes here with state.edit, so editing from the
+  // day list stays one click. Once only, or saving would reopen the modal.
+  const autoEdited = useRef(false);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const loadDetail = useCallback(async () => {
@@ -122,7 +215,18 @@ export default function MeetingDetail() {
   useEffect(() => {
     loadDetail();
     getLeads().then(setAllLeads).catch(() => {});
+    getClients().then(rows => setAllClients(rows || [])).catch(() => {});
   }, [loadDetail]);
+
+  // The CRM record this meeting belongs to, matched on the attendee list.
+  const crmRecord = useMemo(() => matchRecord(meeting, allClients), [meeting, allClients]);
+
+  // Saved links come back as join rows (meeting_id, lead_id), so resolve each
+  // one against the lead list to get a name instead of a blank row.
+  const resolvedLeads = useMemo(() => linkedLeads.map(l => {
+    const full = allLeads.find(x => String(x.id) === String(l.lead_id || l.id));
+    return full ? { ...l, ...full } : l;
+  }), [linkedLeads, allLeads]);
 
   // Scroll chat to bottom
   useEffect(() => {
@@ -239,37 +343,57 @@ export default function MeetingDetail() {
 
   // ── Edit meeting (title / date / time / attendees / notes) ────────────────
   // Values feed a lightweight modal. Attendee list is edited as a comma-
-  // separated string for simplicity — same shape the server accepts.
-  const toLocalInput = (iso) => {
+  // separated string for simplicity, the same shape the server accepts.
+  // A datetime-local input carries no zone of its own, so both directions go
+  // through the Central helpers above. That is what stops a meeting sliding an
+  // hour when the browser itself is not in Central.
+  const toCentralInput = (iso) => {
     if (!iso) return '';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '';
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const p = partsIn(d);
+    return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+  };
+  const fromCentralInput = (value) => {
+    const [day, clock] = String(value || '').split('T');
+    if (!day || !clock) return null;
+    const [h, mi] = clock.split(':').map(Number);
+    const at = centralInstant(day, (h || 0) * 60 + (mi || 0));
+    return isNaN(at.getTime()) ? null : at;
   };
   const openEdit = () => {
     if (!meeting) return;
     setEditDraft({
       title: meeting.title || '',
-      start: toLocalInput(meeting.start_time),
-      end:   toLocalInput(meeting.end_time),
+      start: toCentralInput(meeting.start_time),
+      end:   toCentralInput(meeting.end_time),
       attendees: (meeting.participants || []).map(p => p.email).filter(Boolean).join(', '),
       location: meeting.location || '',
       notes: notes || '',
     });
     setEditOpen(true);
   };
+  useEffect(() => {
+    if (!routeState?.edit || !meeting || autoEdited.current) return;
+    autoEdited.current = true;
+    openEdit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeState, meeting]);
+
   async function handleSaveEdit() {
     if (!editDraft.title.trim() || !editDraft.start || !editDraft.end) {
       showToast('Title, start, and end are required');
       return;
     }
+    const startAt = fromCentralInput(editDraft.start);
+    const endAt   = fromCentralInput(editDraft.end);
+    if (!startAt || !endAt) { showToast('Start and end each need a date and a time'); return; }
     setSavingEdit(true);
     try {
       const patch = {
         title: editDraft.title.trim(),
-        start_time: new Date(editDraft.start).toISOString(),
-        end_time:   new Date(editDraft.end).toISOString(),
+        start_time: startAt.toISOString(),
+        end_time:   endAt.toISOString(),
         attendees:  editDraft.attendees.split(',').map(s => s.trim()).filter(Boolean),
         location:   editDraft.location.trim(),
         notes:      editDraft.notes,
@@ -294,7 +418,7 @@ export default function MeetingDetail() {
     try {
       await deleteMeeting(eventId);
       showToast('Meeting deleted');
-      navigate('/meetings');
+      navigate('/appointments');
     } catch (e) {
       showToast('Delete failed: ' + e.message);
       setDeleting(false);
@@ -358,7 +482,7 @@ export default function MeetingDetail() {
     return (
       <div style={{ padding: 32, background: 'var(--bg)', minHeight: '100%' }}>
         <button
-          onClick={() => navigate('/meetings')}
+          onClick={backToCalendar}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 20, padding: 0 }}
         >
           <ArrowLeft size={15} /> Back to Meetings
@@ -367,7 +491,7 @@ export default function MeetingDetail() {
           <AlertCircle size={16} /> {error}
         </div>
         <div style={{ marginTop: 12, fontSize: 13, color: 'var(--muted)' }}>
-          Tip: First <Link to="/meetings" style={{ color: 'var(--orange)' }}>sync the meeting</Link> from the Meetings page, then click its title to view details.
+          Tip: First <Link to="/appointments" style={{ color: 'var(--orange)' }}>sync the meeting</Link> from the Calendar page, then open it there to see the details.
         </div>
       </div>
     );
@@ -380,7 +504,7 @@ export default function MeetingDetail() {
       {/* ── Back + Header ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 20 }}>
         <button
-          onClick={() => navigate('/meetings')}
+          onClick={backToCalendar}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 14, padding: 0 }}
         >
           <ArrowLeft size={14} /> Back to Meetings
@@ -395,21 +519,38 @@ export default function MeetingDetail() {
               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Calendar size={12} /> {formatDateTime(meeting?.start_time)}
               </span>
-              <span>⏱ {formatDuration(meeting?.duration_minutes)}</span>
+              {formatDuration(meeting?.duration_minutes) && <span>⏱ {formatDuration(meeting?.duration_minutes)}</span>}
+              {meeting?.location && (
+                <a
+                  href={mapsUrl(meeting.location)}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Open in Google Maps"
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--link)', textDecoration: 'none', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                >
+                  <MapPin size={12} /> {meeting.location}
+                </a>
+              )}
               {meeting?.participants?.length > 0 && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Users size={12} /> {meeting.participants.length} participant{meeting.participants.length !== 1 ? 's' : ''}
+                  <Users size={12} /> {meeting.participants.length} guest{meeting.participants.length !== 1 ? 's' : ''}
                 </span>
               )}
+              <RecordChip record={crmRecord} />
             </div>
           </div>
 
           {/* Action buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {/* Join Meeting — only while the meeting hasn't ended yet */}
+            {/* Join Meeting, only while the meeting has not ended yet */}
             {meeting?.meet_link && !isPastMeeting && (
               <a href={meeting.meet_link} target="_blank" rel="noreferrer" className="btn-green" style={{ fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
                 <Video size={14} /> Join Meeting
+              </a>
+            )}
+            {meeting?.location && (
+              <a href={mapsUrl(meeting.location)} target="_blank" rel="noreferrer" className="btn-ghost" style={{ fontSize: 12, padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <MapPin size={13} /> Directions
               </a>
             )}
             <button
@@ -420,7 +561,7 @@ export default function MeetingDetail() {
                   else { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); }
                   setToast('Meeting link copied'); setTimeout(() => setToast(''), 3500);
                 } catch {
-                  setToast('Could not copy — copy it from the address bar'); setTimeout(() => setToast(''), 3500);
+                  setToast('Could not copy, take it from the address bar'); setTimeout(() => setToast(''), 3500);
                 }
               }}
               className="btn-ghost"
@@ -500,12 +641,12 @@ export default function MeetingDetail() {
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Start</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Start (Central)</span>
                   <input type="datetime-local" value={editDraft.start} onChange={e => setEditDraft(d => ({ ...d, start: e.target.value }))}
                     style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>End</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>End (Central)</span>
                   <input type="datetime-local" value={editDraft.end} onChange={e => setEditDraft(d => ({ ...d, end: e.target.value }))}
                     style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} />
                 </label>
@@ -527,7 +668,7 @@ export default function MeetingDetail() {
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private notes / agenda 🔒</span>
                 <textarea value={editDraft.notes} onChange={e => setEditDraft(d => ({ ...d, notes: e.target.value }))} rows={5}
                   style={{ padding: '9px 11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit' }} />
-                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Not shared with attendees — stays in the CRM.</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Not shared with attendees, it stays in the CRM.</span>
               </label>
             </div>
             <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -572,7 +713,7 @@ export default function MeetingDetail() {
             {activeTab === 'overview' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* Private notes preview — the agenda / notes typed at scheduling time,
+                {/* Private notes preview: the agenda and notes typed at scheduling time,
                     kept internal to the CRM (never on the Google Calendar event). */}
                 {notes.trim() && (
                   <div style={{ background: 'rgba(255,155,38,0.05)', border: '1px solid rgba(255,155,38,0.25)', borderRadius: 10, padding: '14px 16px' }}>
@@ -711,7 +852,7 @@ export default function MeetingDetail() {
                       <Sparkles size={30} color="#784bd1" style={{ marginBottom: 12, opacity: 0.55 }} />
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#784bd1', marginBottom: 7 }}>No Summary Yet</div>
                       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16, lineHeight: 1.65 }}>
-                        Pull this meeting's Google Meet transcript and generate a<br />summary, key points, and action items. Auto-runs after<br />each call — or click below to do it now.
+                        Pull this meeting's Google Meet transcript and generate a<br />summary, key points, and action items. Auto-runs after<br />each call, or click below to do it now.
                       </div>
                       <button
                         onClick={handleSummarize}
@@ -734,7 +875,7 @@ export default function MeetingDetail() {
                     {meeting.participants.map((p, i) => {
                       const color   = AVATAR_COLORS[i % AVATAR_COLORS.length];
                       const initial = (p.name || p.email || '?')[0].toUpperCase();
-                      const linkedLead = linkedLeads.find(l => l.email === p.email);
+                      const linkedLead = resolvedLeads.find(l => l.email === p.email);
                       return (
                         <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div style={{
@@ -770,26 +911,25 @@ export default function MeetingDetail() {
                 )}
 
                 {/* Linked CRM Leads */}
-                {linkedLeads.length > 0 && (
+                {resolvedLeads.length > 0 && (
                   <div style={{ marginTop: 22 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
                       Linked CRM Leads
                     </div>
-                    {linkedLeads.map(lead => (
-                      <Link
+                    {resolvedLeads.map(lead => (
+                      <div
                         key={lead.id}
-                        to={`/leads?search=${encodeURIComponent(lead.name || lead.email || '')}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', padding: '10px 14px', background: '#1a1d2e', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 6 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 6 }}
                       >
                         <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(37,99,235,0.13)', border: '1px solid var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--orange)', flexShrink: 0 }}>
                           {(lead.name || lead.email || '?')[0].toUpperCase()}
                         </div>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--orange)' }}>{lead.name || '(no name)'}</div>
+                        <div className="private-value">
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{lead.name || '(no name)'}</div>
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lead.email || lead.company || ''}</div>
                         </div>
-                        <ChevronRight size={14} color="#e5e7ef" style={{ marginLeft: 'auto' }} />
-                      </Link>
+                        <ChevronRight size={14} color="var(--border-light)" style={{ marginLeft: 'auto' }} />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -800,7 +940,7 @@ export default function MeetingDetail() {
             {activeTab === 'notes' && (
               <div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
-                  Private notes for this meeting — saved locally, not synced to Google Calendar.
+                  Private notes for this meeting. Saved locally, not synced to Google Calendar.
                 </div>
                 <textarea
                   value={notes}
@@ -982,7 +1122,7 @@ export default function MeetingDetail() {
               {filteredLeads.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: 13 }}>No leads found</div>
               ) : filteredLeads.map(lead => {
-                const alreadyLinked = linkedLeads.some(l => l.id === lead.id);
+                const alreadyLinked = resolvedLeads.some(l => String(l.lead_id || l.id) === String(lead.id));
                 return (
                   <div
                     key={lead.id}

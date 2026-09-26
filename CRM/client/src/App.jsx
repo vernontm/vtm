@@ -8,29 +8,34 @@ import { ScheduleMeetingProvider } from './context/ScheduleMeetingContext';
 import { ComposeProvider } from './context/ComposeContext';
 import CommandPalette from './components/CommandPalette';
 // Gate a route by page slug. Admins bypass; anyone else needs the slug
-// in their current client's allowed_pages. Blocked users get a friendly
-// /no-access page so they know *why* they can't see something (instead of
-// a silent redirect, which looks like a bug).
-function Gated({ slug, adminOnly = false, children }) {
-  const { isAdmin, canAccess } = useClient();
+// in their current client's allowed_pages. `info` adds the second half of a
+// role, an information switch (see ACCESS_INFO in ClientContext): the page
+// also has to be one their role is allowed to see the information on.
+// Blocked users get a friendly /no-access page so they know *why* they can't
+// see something (instead of a silent redirect, which looks like a bug).
+function Gated({ slug, info, adminOnly = false, children }) {
+  const { isAdmin, canAccess, can } = useClient();
   if (adminOnly && !isAdmin) return <Navigate to={`/no-access?page=${encodeURIComponent(slug || 'page')}&reason=admin`} replace />;
   if (!canAccess(slug)) return <Navigate to={`/no-access?page=${encodeURIComponent(slug || 'page')}`} replace />;
+  if (info && !can(info)) return <Navigate to={`/no-access?page=${encodeURIComponent(slug || 'page')}&reason=info`} replace />;
   return children;
 }
 
 // Where "/" lands: the first page the user can actually open, in nav order.
 // (Dashboard now respects the grant, so someone without it lands on Leads,
 // Appointments, etc. instead of bouncing to a no-access screen.)
+// Third slot is the information switch the page needs, where it has one, so
+// landing never picks a page the role would be bounced off.
 const LANDING_ORDER = [
   ['dashboard', '/dashboard'], ['leads', '/leads'], ['clients', '/clients'],
-  ['projects', '/projects'], ['money', '/money'], ['appointments', '/appointments'], ['todos', '/todos'],
+  ['projects', '/projects'], ['money', '/money', 'money'], ['appointments', '/appointments'], ['todos', '/todos'],
   ['routines', '/routines'], ['tasks', '/tasks'], ['inbox', '/inbox'], ['email', '/email'], ['time', '/time'],
   ['employee-resources', '/employee-resources'], ['contacts', '/contacts'], ['marketing', '/marketing'], ['settings', '/settings'],
 ];
 function Landing() {
-  const { loading, canAccess } = useClient();
+  const { loading, canAccess, can } = useClient();
   if (loading) return null;
-  const target = LANDING_ORDER.find(([slug]) => canAccess(slug));
+  const target = LANDING_ORDER.find(([slug, , info]) => canAccess(slug) && can(info));
   return <Navigate to={target ? target[1] : '/settings'} replace />;
 }
 
@@ -45,7 +50,9 @@ function NoAccess() {
         <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 16 }}>
           {reason === 'admin'
             ? <>The <strong>{page}</strong> page is admin-only.</>
-            : <>You don't have access to <strong>{page}</strong>.</>}
+            : reason === 'info'
+              ? <>Your role does not include the information on <strong>{page}</strong>.</>
+              : <>You don't have access to <strong>{page}</strong>.</>}
           <br />Ask your admin to enable it for your account.
         </div>
         <button
@@ -157,13 +164,19 @@ function AppLayout() {
               <Route path="/leads" element={<Gated slug="leads"><Clients kind="lead" /></Gated>} />
               <Route path="/clients" element={<Gated slug="clients"><Clients kind="client" /></Gated>} />
               <Route path="/projects" element={<Gated slug="projects"><Projects /></Gated>} />
-              <Route path="/money" element={<Gated slug="money" adminOnly><Money /></Gated>} />
+              {/* Money is no longer hardcoded admin only: a role reaches it
+                  when it holds the money page AND the money switch. */}
+              <Route path="/money" element={<Gated slug="money" info="money"><Money /></Gated>} />
               <Route path="/appointments" element={<Gated slug="appointments"><Meetings /></Gated>} />
               <Route path="/appointments/:eventId" element={<Gated slug="appointments"><MeetingDetail /></Gated>} />
               <Route path="/inbox" element={<Gated slug="inbox"><Inbox /></Gated>} />
               <Route path="/assistant" element={<Gated slug="assistant"><Assistant /></Gated>} />
               <Route path="/tasks" element={<Gated slug="tasks"><Tasks /></Gated>} />
-              <Route path="/employees" element={<Gated slug="employees" adminOnly><Employees /></Gated>} />
+              {/* Employees stays admin only: /api/crm/employees answers 403 to
+                  everyone else, so opening it to a role would only show an
+                  error. The team_pay switch gates it on top of that, and is
+                  what the other team pay surfaces read. */}
+              <Route path="/employees" element={<Gated slug="employees" info="team_pay" adminOnly><Employees /></Gated>} />
               <Route path="/time" element={<Gated slug="time"><Time /></Gated>} />
               <Route path="/todos" element={<Gated slug="todos"><TeamTodos /></Gated>} />
               <Route path="/routines" element={<Gated slug="routines"><Routines /></Gated>} />

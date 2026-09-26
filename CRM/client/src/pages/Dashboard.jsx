@@ -3,7 +3,6 @@ import {
   RefreshCw, FolderOpen, CheckSquare, ListChecks,
   Calendar, Plus, Trash2, AlertTriangle,
   TrendingUp, DollarSign, CreditCard, Bell, Check, X, Repeat, Link2,
-  Siren, Send, Receipt, Zap,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -12,18 +11,20 @@ import {
   getTodos, createTodo, updateTodo, deleteTodo, getHome,
 } from '../api';
 import { useClient } from '../context/ClientContext';
-import NudgeModal from '../components/NudgeModal';
+import { firstName } from '../components/home/shared';
+import CeoHome from '../components/home/CeoHome';
+import HrHome from '../components/home/HrHome';
+import AssistantHome from '../components/home/AssistantHome';
+import SalesHome from '../components/home/SalesHome';
 
-// Whole dollars for the money tiles (the /home reply is in dollars already).
-const usd = (v) => `$${Math.round(Number(v) || 0).toLocaleString('en-US')}`;
-const fmtShortDate = (iso) => {
-  if (!iso) return '';
-  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso);
-  return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-// held_up rows: these kinds get a Nudge; agreements and leads link to the record.
-const NUDGE_KINDS = ['invoice', 'manual_invoice', 'payment', 'plan'];
-const SEVERITY_COLOR = { red: '#ef4444', amber: '#f59e0b' };
+// The dashboard is the same role based home the iPhone app has: GET /home
+// with no role resolves who is signed in and answers with only that role's
+// sections, and the layout for reply.role goes at the top of the page.
+// Shapes: docs/engineer/role-homes-contracts.md.
+// ceo and general keep the classic panels (revenue, calendar, to-do,
+// projects) underneath; hr, assistant and sales get their focused home only.
+const ROLE_HOMES = { ceo: CeoHome, hr: HrHome, assistant: AssistantHome, sales: SalesHome };
+const ROLES_WITH_CLASSIC = ['ceo', 'general'];
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -269,7 +270,7 @@ function TodoWidget({ todos, onAdd, onToggle, onDelete }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isAdmin } = useClient();
+  const { user } = useClient();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(null);
@@ -279,24 +280,25 @@ export default function Dashboard() {
   const [projects, setProjects] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [todos, setTodos] = useState([]);
-  // Admin-only CEO home data: what is held up + the money tiles. Hidden
-  // quietly when /home answers 503 needs_migration (table not there yet).
+  // The role home for whoever is signed in. No role argument: the server
+  // resolves it and sends back only that role's sections. A failure, or a 503
+  // needs_migration while the tables are not there yet, quietly falls back to
+  // the classic dashboard below.
   const [home, setHome] = useState(null);
   const [homeErr, setHomeErr] = useState('');
-  const [nudge, setNudge] = useState(null);        // { kind, id, key }
-  const [nudgedKeys, setNudgedKeys] = useState({}); // { 'kind:id': 'sent' | 'scheduled' }
+  const updateHome = (fn) => setHome(h => (h ? fn(h) : h));
 
   async function loadHome() {
-    if (!isAdmin) { setHome(null); return; }
     try {
-      setHome(await getHome('ceo'));
+      const reply = await getHome();
+      setHome(reply && reply.role ? reply : null);
       setHomeErr('');
     } catch (e) {
       setHome(null);
       setHomeErr(e.needs_migration || e.status === 503 ? '' : (e.message || 'Could not load'));
     }
   }
-  useEffect(() => { loadHome(); }, [isAdmin]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadHome(); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadTodos() {
     try { const r = await getTodos(); setTodos(r.todos || []); } catch { /* ignore */ }
@@ -352,10 +354,6 @@ export default function Dashboard() {
   async function handleRefresh() { setRefreshing(true); await Promise.all([load(), loadHome()]); setRefreshing(false); }
   useEffect(() => { load(); }, []);
 
-  // held_up rows: agreements and leads open the record; money kinds get a Nudge.
-  const heldUpLink = (h) => h.client_id ? `${h.kind === 'lead' ? '/leads' : '/clients'}?open=${h.client_id}` : null;
-  const heldKey = (h) => `${h.kind}:${h.id}`;
-
   // Click a meeting on the calendar -> open the matching client's profile
   // (matched by attendee email), or the meeting detail page as a fallback.
   function handleMeetingClick(m) {
@@ -405,17 +403,22 @@ export default function Dashboard() {
   );
   const CHEVRON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E";
 
+  // Who is looking, and which home they get. Without a /home reply everyone
+  // falls back to the classic dashboard.
+  const role = home?.role || 'general';
+  const RoleHome = ROLE_HOMES[role] || null;
+  const showClassic = ROLES_WITH_CLASSIC.includes(role);
+  const who = firstName(home?.me?.name || user?.name || (user?.email || '').split('@')[0]);
+  const me = who ? who[0].toUpperCase() + who.slice(1) : '';
+  const hour = new Date().getHours();
+  const greeting = `${hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'}${me ? `, ${me}` : ''}`;
+
   return (
     <div className="dashboard-page" style={{ flex: 1, overflow: 'auto', padding: '28px 32px', background: 'var(--bg)' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
-            {(() => {
-              const h = new Date().getHours();
-              return h < 12 ? 'Good morning, Ray' : h < 18 ? 'Good afternoon, Ray' : 'Good evening, Ray';
-            })()}
-          </div>
+          <div className="private-value" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{greeting}</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · here's what's on your plate today
           </div>
@@ -430,97 +433,17 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* ── Needs attention (admins): what is held up, from /home ────────── */}
-      {isAdmin && homeErr && (
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Needs attention could not load: {homeErr}</div>
+      {/* Role home: the layout for whoever is signed in, from GET /home */}
+      {homeErr && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>Your home could not load: {homeErr}</div>
       )}
-      {isAdmin && home && (home.held_up || []).length > 0 && (
-        <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.32)', borderRadius: 14, padding: '16px 20px', marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Siren size={15} color="#ef4444" />
-            </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Needs attention</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 999, padding: '1px 8px' }}>{home.held_up.length}</span>
-          </div>
-          {home.held_up.map(h => {
-            const key = heldKey(h);
-            const to = heldUpLink(h);
-            const canNudge = NUDGE_KINDS.includes(h.kind);
-            return (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
-                <span title={h.severity === 'red' ? 'Red: act today' : 'Amber: worth a look'} style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: SEVERITY_COLOR[h.severity] || SEVERITY_COLOR.amber, boxShadow: `0 0 0 3px ${(SEVERITY_COLOR[h.severity] || SEVERITY_COLOR.amber)}22` }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title}</div>
-                  {h.sub && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.sub}</div>}
-                </div>
-                {canNudge && (
-                  nudgedKeys[key] ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>
-                      <Check size={12} /> {nudgedKeys[key] === 'scheduled' ? 'Nudge scheduled' : 'Nudged just now'}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setNudge({ kind: h.kind, id: h.id, key })}
-                      title="Send a reminder by text or email"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--orange)', background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
-                    >
-                      <Send size={12} /> Nudge
-                    </button>
-                  )
-                )}
-                {to && (
-                  <Link to={to} style={{ fontSize: 12, color: 'var(--link)', textDecoration: 'none', fontWeight: 700, flexShrink: 0 }}>
-                    {h.kind === 'lead' ? 'Open lead' : 'Open client'}
-                  </Link>
-                )}
-              </div>
-            );
-          })}
-        </div>
+      {RoleHome && home && (
+        <RoleHome home={home} todos={todos} updateHome={updateHome} />
       )}
 
-      {/* ── Money tiles (admins), from /home ──────────────────────────────── */}
-      {isAdmin && home?.money && (() => {
-        const m = home.money;
-        const prev = Number(m.collected_prev_month) || 0;
-        const cur = Number(m.collected_month) || 0;
-        const delta = prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null;
-        // Money lives on Projects and Clients in this app (no invoices or
-        // subscriptions page is routed), so those are where the tiles go.
-        const tiles = [
-          { label: `Collected in ${m.month || 'this month'}`, value: usd(cur), icon: DollarSign, color: '#16a34a',
-            hint: delta == null ? `${m.payments_this_week || 0} payment${m.payments_this_week === 1 ? '' : 's'} this week` : `${delta >= 0 ? '+' : ''}${delta}% vs ${usd(prev)} last month`, to: '/projects' },
-          { label: 'Outstanding', value: usd(m.outstanding?.total), icon: Receipt, color: (m.outstanding?.overdue || 0) > 0 ? '#ef4444' : '#f59e0b',
-            hint: `${m.outstanding?.count || 0} unpaid · ${m.outstanding?.overdue || 0} overdue`, to: '/projects' },
-          { label: 'Client plans per month', value: usd(m.client_plans?.mrr), icon: Repeat, color: '#2563eb',
-            hint: `${m.client_plans?.active || 0} active${(m.client_plans?.past_due || 0) > 0 ? ` · ${m.client_plans.past_due} past due` : ''}`, to: '/clients' },
-          { label: 'Tools per month', value: usd(m.tools?.monthly), icon: Zap, color: '#7c3aed',
-            hint: m.tools?.next?.service ? `${m.tools.count || 0} tools · next ${m.tools.next.service} ${fmtShortDate(m.tools.next.date)}` : `${m.tools?.count || 0} tools`, to: null },
-        ];
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
-            {tiles.map(t => (
-              <button key={t.label} onClick={() => { if (t.to) navigate(t.to); }} type="button"
-                style={{
-                  textAlign: 'left', background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: 14, padding: '14px 16px', cursor: t.to ? 'pointer' : 'default',
-                  transition: 'transform var(--dur-fast, 150ms) var(--ease-out, cubic-bezier(0.4,0,0.2,1)), border-color var(--dur-fast, 150ms)',
-                  display: 'flex', flexDirection: 'column', gap: 4,
-                }}
-                onMouseEnter={e => { if (!t.to) return; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = t.color + '80'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}>
-                <div style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <t.icon size={12} color={t.color} /> {t.label}
-                </div>
-                <div className="private-value" style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>{t.value}</div>
-                <div className="private-value" style={{ fontSize: 11.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.hint}</div>
-              </button>
-            ))}
-          </div>
-        );
-      })()}
-
+      {/* The classic panels. Ray and anyone on the general home keep these;
+          the focused role homes above stand on their own. */}
+      {showClassic && (<>
       {/* ── Today band ────────────────────────────────────────────────────── */}
       {(() => {
         const today = new Date();
@@ -757,15 +680,7 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
-
-      {nudge && (
-        <NudgeModal
-          kind={nudge.kind}
-          id={nudge.id}
-          onClose={() => setNudge(null)}
-          onSent={(_reply, { scheduled } = {}) => setNudgedKeys(prev => ({ ...prev, [nudge.key]: scheduled ? 'scheduled' : 'sent' }))}
-        />
-      )}
+      </>)}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

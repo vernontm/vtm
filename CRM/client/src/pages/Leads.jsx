@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
-  Plus, Search, Trash2, UserPlus, Mail, Phone, Upload, X, Check,
+  Plus, Search, Trash2, UserPlus, Phone, Upload, X, Check,
   ThumbsUp, ThumbsDown, Send, Clock, Download, Calendar as CalendarIcon,
-  ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Mic, MicOff, Play, Pause, Square, ListPlus, Loader, FileText,
+  ChevronLeft, ChevronRight, ChevronDown, Mic, Play, Pause, Square, ListPlus, Loader, FileText,
   PhoneCall, PhoneOff, Voicemail,
 } from 'lucide-react';
 import { useRecorder } from '../context/RecorderContext';
@@ -79,82 +79,7 @@ const PRODUCT_NEED_STYLES = {
     subtitle: 'Automation · Email · CRM Flows' },
 };
 
-function ProductNeedChip({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const style = (value ? (PRODUCT_NEED_STYLES[value] || { bg: '#8e8ea020', fg: '#8e8ea0', icon: '•' }) : null);
-  return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          padding: value ? '3px 9px' : '3px 8px', borderRadius: 10,
-          fontSize: 11, fontWeight: 600,
-          background: value ? style.bg : 'var(--surface-3)',
-          color: value ? style.fg : '#8e8ea0',
-          border: value ? 'none' : '1px dashed #c0c0c8',
-          cursor: 'pointer', lineHeight: 1.4, maxWidth: 150,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}
-      >
-        {value ? <><span style={{ fontSize: 10 }}>{style.icon}</span> {value}</> : '+ Need'}
-      </button>
-      {open && (
-        <>
-          <div onClick={e => { e.stopPropagation(); setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 51,
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 200,
-              maxHeight: 320, overflowY: 'auto',
-            }}
-          >
-            {PRODUCT_NEEDS.map(s => {
-              const st = PRODUCT_NEED_STYLES[s] || PRODUCT_NEED_STYLES['Other'];
-              return (
-                <button
-                  key={s}
-                  onClick={() => { onChange(s); setOpen(false); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                    borderRadius: 5, fontSize: 12, fontWeight: 500, width: '100%',
-                    background: value === s ? st.bg : 'transparent',
-                    color: value === s ? st.fg : 'var(--text)',
-                    border: 'none', cursor: 'pointer', textAlign: 'left',
-                  }}
-                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                  onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <span style={{ fontSize: 14 }}>{st.icon}</span>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{s}</div>
-                    {st.subtitle && <div style={{ fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{st.subtitle}</div>}
-                  </div>
-                </button>
-              );
-            })}
-            {value && (
-              <button
-                onClick={() => { onChange(''); setOpen(false); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                  borderRadius: 5, fontSize: 12, color: '#ff5c5c', background: 'transparent',
-                  border: 'none', cursor: 'pointer', width: '100%', borderTop: '1px solid var(--border)', marginTop: 2,
-                }}
-              >
-                <X size={11} /> Clear
-              </button>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── Platform chip (unchanged) ────────────────────────────────────────────────
+// ─── Lead sources ─────────────────────────────────────────────────────────────
 const LEAD_SOURCES = [
   '', 'Website', 'Referral', 'Cold Outreach',
   'Email', 'TikTok', 'Instagram', 'YouTube', 'Threads', 'Facebook', 'X / Twitter', 'LinkedIn',
@@ -178,74 +103,23 @@ const PLATFORM_STYLES = {
   'Other':        { bg: '#8e8ea020', fg: '#8e8ea0', icon: '•' },
 };
 
-function PlatformChip({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const style = PLATFORM_STYLES[value] || PLATFORM_STYLES['Other'];
+// A read only chip for the list rows. Editing happens in the opened lead, so
+// the row face carries colour and meaning without carrying controls.
+function MetaChip({ value, styles, max = 130 }) {
+  if (!value) return null;
+  const st = styles[value] || styles['Other'] || { bg: 'var(--surface-3)', fg: 'var(--muted)', icon: '•' };
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          padding: value ? '3px 9px' : '3px 8px',
-          borderRadius: 10, fontSize: 11, fontWeight: 600,
-          background: value ? style.bg : 'var(--surface-3)',
-          color: value ? style.fg : '#8e8ea0',
-          border: value ? 'none' : '1px dashed #c0c0c8',
-          cursor: 'pointer', lineHeight: 1.4, maxWidth: 120,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}
-      >
-        {value ? <><span style={{ fontSize: 10 }}>{style.icon}</span> {value}</> : '+ Platform'}
-      </button>
-      {open && (
-        <>
-          <div onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 51,
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 160,
-              display: 'grid', gap: 2, maxHeight: 320, overflowY: 'auto',
-            }}
-          >
-            {LEAD_SOURCES.filter(s => s).map(s => {
-              const st = PLATFORM_STYLES[s] || PLATFORM_STYLES['Other'];
-              return (
-                <button
-                  key={s}
-                  onClick={() => { onChange(s); setOpen(false); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                    borderRadius: 5, fontSize: 12, fontWeight: 500,
-                    background: value === s ? st.bg : 'transparent',
-                    color: value === s ? st.fg : 'var(--text)',
-                    border: 'none', cursor: 'pointer', textAlign: 'left',
-                  }}
-                  onMouseEnter={e => { if (value !== s) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                  onMouseLeave={e => { if (value !== s) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <span style={{ fontSize: 11 }}>{st.icon}</span> {s}
-                </button>
-              );
-            })}
-            {value && (
-              <button
-                onClick={() => { onChange(''); setOpen(false); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                  borderRadius: 5, fontSize: 12, color: '#ff5c5c', background: 'transparent',
-                  border: 'none', cursor: 'pointer', textAlign: 'left', borderTop: '1px solid var(--border)', marginTop: 2,
-                }}
-              >
-                <X size={11} /> Clear
-              </button>
-            )}
-          </div>
-        </>
-      )}
-    </div>
+    <span
+      title={value}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 8px', borderRadius: 9, fontSize: 10.5, fontWeight: 600,
+        background: st.bg, color: st.fg, lineHeight: 1.5, maxWidth: max,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ fontSize: 9.5 }}>{st.icon}</span> {value}
+    </span>
   );
 }
 
@@ -321,27 +195,55 @@ function initials(name) {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase();
 }
-function Avatar({ name }) {
+function Avatar({ name, size = 34 }) {
   return (
     <div style={{
-      width: 34, height: 34, borderRadius: '50%',
+      width: size, height: size, borderRadius: '50%',
       background: avatarColor(name), color: '#fff',
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 12, fontWeight: 700, flexShrink: 0,
+      fontSize: Math.round(size * 0.38), fontWeight: 700, flexShrink: 0,
     }}>
       {initials(name)}
     </div>
   );
 }
 
-// ─── Goal summary / follow-up helpers ─────────────────────────────────────────
-function summarizeGoal(lead) {
-  const parts = [lead.problem, lead.current_situation, lead.financial_goal, lead.notes].filter(Boolean);
-  if (parts.length === 0) return '';
-  const combined = parts.join(' ').trim();
-  if (combined.length <= 80) return combined;
-  return combined.slice(0, 80).replace(/\s+\S*$/, '') + '…';
+// ─── Next action / follow-up helpers ──────────────────────────────────────────
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  return Math.floor((new Date() - new Date(dateStr)) / 86400000);
 }
+
+// The one next action for a lead, derived from the fields we already hold.
+// Nothing new is fetched and nothing new is stored: this is a read of status,
+// the last logged call outcome, and how long it has been since last contact.
+function nextAction(lead, lastContactAt) {
+  const age = daysSince(lastContactAt ?? lead.last_contact_date);
+  const stale = age !== null && age >= 7;
+  const status = lead.status || 'New';
+
+  if (status === 'Won')            return { label: 'Move to contacts', tone: 'good' };
+  if (status === 'Not Interested') return { label: 'Nurture later',    tone: 'quiet' };
+  if (status === 'Call Scheduled') return { label: 'Run the call',     tone: 'due' };
+  if (status === 'Interested')     return { label: 'Send proposal',    tone: 'due' };
+
+  if (lead.last_call_outcome === 'no_answer' || lead.last_call_outcome === 'voicemail') {
+    return { label: stale ? 'Call back, overdue' : 'Call back', tone: stale ? 'late' : 'due' };
+  }
+  if (status === 'Follow Up' || status === 'Called') {
+    return { label: stale ? 'Follow up, overdue' : 'Follow up', tone: stale ? 'late' : 'due' };
+  }
+  if (!lead.phone && lead.email) return { label: 'Send intro email', tone: 'due' };
+  return { label: 'Make first call', tone: 'due' };
+}
+
+const NEXT_ACTION_TONES = {
+  good:  { fg: 'var(--green)' },
+  due:   { fg: 'var(--text)' },
+  late:  { fg: 'var(--red)' },
+  quiet: { fg: 'var(--muted)' },
+};
+
 function formatFollowUp(dateStr) {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -373,41 +275,89 @@ const DETAIL_SECTIONS = [
   {
     title: 'Pipeline',
     fields: [
-      { key: 'product_need',       label: 'Product / Need' },
-      { key: 'problem',           label: 'Problem' },
-      { key: 'current_situation',  label: 'Current State' },
-      { key: 'financial_goal',     label: 'Goal' },
-      { key: 'budget',             label: 'Budget Tier' },
-      { key: 'best_time',          label: 'Best Time' },
+      { key: 'lead_source',       label: 'Source',         type: 'select', options: LEAD_SOURCES },
+      { key: 'product_need',      label: 'Product / Need', type: 'select', options: ['', ...PRODUCT_NEEDS] },
+      { key: 'segment',           label: 'Segment',        type: 'select',
+        options: [{ value: 'inbound', label: 'Inbound' }, { value: 'cold', label: 'Cold Call' }] },
+      { key: 'assigned_to',       label: 'Owner',          type: 'select', options: ['Ray', 'Stephanie'] },
+      { key: 'budget',            label: 'Budget Tier' },
+      { key: 'best_time',         label: 'Best Time' },
     ],
   },
   {
-    title: 'Notes',
+    title: 'Discovery',
     fields: [
-      { key: 'notes',        label: 'Notes' },
-      { key: 'lead_source',  label: 'Source' },
+      { key: 'problem',           label: 'Problem' },
+      { key: 'current_situation', label: 'Current State' },
+      { key: 'financial_goal',    label: 'Goal' },
+      { key: 'notes',             label: 'Notes' },
     ],
   },
 ];
 
+const ghostBtn = {
+  display: 'flex', alignItems: 'center', gap: 5,
+  padding: '5px 11px', borderRadius: 6, cursor: 'pointer',
+  fontSize: 11.5, fontWeight: 600, border: '1px solid var(--border)',
+  background: 'var(--surface)', color: 'var(--muted)',
+};
+
 const inputStyle = {
-  width: '100%', padding: '6px 9px', borderRadius: 5, fontSize: 12,
-  color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)',
+  width: '100%', padding: '7px 10px', borderRadius: 6, fontSize: 12.5,
+  color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border-light)',
   outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
 };
 
-function EditableField({ fieldKey, value, onChange }) {
+// Fields edit in place: type, then leave the field and it saves. onCommit is
+// called on blur (and on Enter for single line inputs) only when the value
+// actually moved, so nothing writes on a stray focus.
+function EditableField({ fieldKey, value, onChange, onCommit, options, type }) {
+  const [focused, setFocused] = useState(false);
+  const focusStyle = focused
+    ? { borderColor: 'var(--orange)', boxShadow: '0 0 0 3px rgba(37,99,235,0.12)' }
+    : null;
+
+  if (type === 'select') {
+    return (
+      <select
+        value={value || ''}
+        onChange={e => { onChange(e.target.value); onCommit?.(e.target.value); }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{ ...inputStyle, cursor: 'pointer', ...focusStyle }}
+      >
+        {(options || []).map(o => {
+          const val = typeof o === 'string' ? o : o.value;
+          const label = typeof o === 'string' ? (o || 'None') : o.label;
+          return <option key={val} value={val}>{label}</option>;
+        })}
+      </select>
+    );
+  }
+
   if (LONG_FIELDS.has(fieldKey)) {
     return (
       <textarea
         value={value || ''}
         onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); onCommit?.(); }}
         rows={3}
-        style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+        style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, ...focusStyle }}
       />
     );
   }
-  return <input value={value || ''} onChange={e => onChange(e.target.value)} style={inputStyle} />;
+
+  return (
+    <input
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => { setFocused(false); onCommit?.(); }}
+      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      style={{ ...inputStyle, ...focusStyle }}
+    />
+  );
 }
 
 // ─── Collapsible section ──────────────────────────────────────────────────────
@@ -1165,37 +1115,85 @@ function CallScriptWidget({ lead, scripts, onScriptSaved }) {
   );
 }
 
-function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEmail, onSchedule, onAddToList, lastFollowUp, convos, recordings, onRecordingDeleted, scripts, onPrev, onNext, hasPrev, hasNext, onScriptSaved }) {
+function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, onEmail, onSchedule, onAddToList, onConvert, onDelete, lastFollowUp, convos, recordings, onRecordingDeleted, scripts, onPrev, onNext, hasPrev, hasNext, onScriptSaved }) {
   const { startRecording, stopRecording, isRecordingLead, status: recStatus, elapsed } = useRecorder();
   const isRec = isRecordingLead(lead.id);
   const [draft, setDraft]   = useState({ ...lead });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
+  const [savedKeys, setSavedKeys] = useState({});   // key to timestamp, drives the "Saved" tick
 
-  useEffect(() => { setDraft(d => ({ ...d, ...lead })); }, [lead]);
+  // Keys the user has typed into but not yet committed. Server refreshes merge
+  // around them so an in flight save of one field never wipes what is being
+  // typed in another.
+  const dirtyRef  = useRef(new Set());
+  const leadIdRef = useRef(lead.id);
 
-  const set = (key, val) => setDraft(d => ({ ...d, [key]: val }));
+  useEffect(() => {
+    if (leadIdRef.current !== lead.id) {
+      leadIdRef.current = lead.id;
+      dirtyRef.current = new Set();
+      setSavedKeys({});
+      setDraft({ ...lead });
+      return;
+    }
+    setDraft(d => {
+      const merged = { ...d, ...lead };
+      dirtyRef.current.forEach(k => { merged[k] = d[k]; });
+      return merged;
+    });
+  }, [lead]);
+
+  const set = (key, val) => { dirtyRef.current.add(key); setDraft(d => ({ ...d, [key]: val })); };
 
   const editableKeys = DETAIL_SECTIONS.flatMap(s => s.fields.map(f => f.key));
-  const isDirty = editableKeys.some(k => draft[k] !== lead[k]);
+  const same = (a, b) => (a ?? '') === (b ?? '');
+  const isDirty = editableKeys.some(k => !same(draft[k], lead[k]));
+
+  function flashSaved(key) {
+    setSavedKeys(s => ({ ...s, [key]: Date.now() }));
+    setTimeout(() => setSavedKeys(s => { const n = { ...s }; delete n[key]; return n; }), 1800);
+  }
+
+  // Commit one field. Called when the user leaves the field, or immediately
+  // for dropdowns. nextVal lets a select pass its value before state settles.
+  async function commitField(key, nextVal) {
+    const value = nextVal !== undefined ? nextVal : draft[key];
+    if (same(value, lead[key])) { dirtyRef.current.delete(key); return; }
+    const ok = await onFieldSave(lead.id, key, value);
+    if (ok !== false) { dirtyRef.current.delete(key); flashSaved(key); }
+  }
 
   async function handleSaveAll() {
     setSaving(true);
     try {
       const updates = {};
-      editableKeys.forEach(k => { if (draft[k] !== lead[k]) updates[k] = draft[k]; });
+      editableKeys.forEach(k => { if (!same(draft[k], lead[k])) updates[k] = draft[k]; });
       if (Object.keys(updates).length > 0) await onSaveAll(lead.id, updates);
+      dirtyRef.current = new Set();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally { setSaving(false); }
   }
 
-  const handleStatus = (s) => { set('status', s); onFieldSave(lead.id, 'status', s); };
+  const handleStatus = async (s) => {
+    set('status', s);
+    await onFieldSave(lead.id, 'status', s);
+    dirtyRef.current.delete('status');
+  };
+
+  const handleInterest = (val) => {
+    const next = draft.interest === val ? null : val;
+    set('interest', next);
+    onFieldSave(lead.id, 'interest', next);
+    dirtyRef.current.delete('interest');
+  };
 
   const handleCallToggle = async () => {
     const next = !draft.call_completed;
     set('call_completed', next);
     await onFieldSave(lead.id, 'call_completed', next);
+    dirtyRef.current.delete('call_completed');
   };
 
   const [showOutcomeMenu, setShowOutcomeMenu] = useState(false);
@@ -1214,6 +1212,7 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
     }
     Object.entries(updates).forEach(([k, v]) => set(k, v));
     await onSaveAll(lead.id, updates);
+    Object.keys(updates).forEach(k => dirtyRef.current.delete(k));
     setShowOutcomeMenu(false);
   }
 
@@ -1242,6 +1241,37 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <StatusPill value={draft.status} onChange={handleStatus} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 2 }}>
+                  <button
+                    onClick={() => handleInterest('up')}
+                    title="Interested"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6,
+                      border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                      background: draft.interest === 'up' ? 'rgba(37,99,235,0.14)' : 'transparent',
+                      color: draft.interest === 'up' ? 'var(--orange)' : 'var(--muted)',
+                    }}
+                  >
+                    <ThumbsUp size={12} /> Interested
+                  </button>
+                  <button
+                    onClick={() => handleInterest('down')}
+                    title="Not interested"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6,
+                      border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                      background: draft.interest === 'down' ? 'rgba(180,35,24,0.12)' : 'transparent',
+                      color: draft.interest === 'down' ? 'var(--red)' : 'var(--muted)',
+                    }}
+                  >
+                    <ThumbsDown size={12} /> Not
+                  </button>
+                </div>
+                {lastFollowUp && (
+                  <span style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Clock size={11} /> Last contact {formatFollowUp(lastFollowUp)}
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {lead.email && (
@@ -1256,6 +1286,20 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                   >
                     <Send size={12} /> Email
                   </button>
+                )}
+                {lead.phone && (
+                  <a
+                    href={`tel:${lead.phone}`}
+                    title={`Call ${lead.phone}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                      border: '1px solid var(--border)', background: 'var(--surface-3)', color: 'var(--text)',
+                    }}
+                  >
+                    <Phone size={12} /> Call
+                  </a>
                 )}
                 <button
                   onClick={() => onSchedule(lead)}
@@ -1336,24 +1380,27 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
                     </>
                   )}
                 </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 {lead.email && (
                   <button
                     onClick={() => onAddToList(lead)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
-                      fontSize: 12, fontWeight: 600, border: '1px solid var(--border)',
-                      background: 'var(--surface-3)', color: 'var(--text)',
-                    }}
+                    style={ghostBtn}
                   >
                     <ListPlus size={12} /> Add to Email List
                   </button>
                 )}
-                {lastFollowUp && (
-                  <span style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Clock size={11} /> Last: {formatFollowUp(lastFollowUp)}
-                  </span>
+                {lead.status !== 'Won' && (
+                  <button onClick={() => onConvert(lead)} style={ghostBtn}>
+                    <UserPlus size={12} /> Move to Contacts
+                  </button>
                 )}
+                <button
+                  onClick={() => onDelete(lead)}
+                  style={{ ...ghostBtn, color: 'var(--red)', marginLeft: 'auto' }}
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
@@ -1380,18 +1427,35 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
           </div>
         </div>
 
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20, flex: 1 }}>
+        <div style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            Everything below is editable. Changes save when you leave the field.
+          </div>
           {DETAIL_SECTIONS.map(section => (
             <CollapsibleSection
               key={section.title}
               title={section.title}
-              defaultOpen={section.title !== 'Pipeline' && section.title !== 'Notes'}
+              defaultOpen={true}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {section.fields.map(({ key, label }) => (
-                  <div key={key} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 8 }}>{label}</span>
-                    <EditableField fieldKey={key} value={draft[key]} onChange={val => set(key, val)} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {section.fields.map(({ key, label, type, options }) => (
+                  <div key={key} style={{ display: 'grid', gridTemplateColumns: '132px 1fr', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {label}
+                      {savedKeys[key] && (
+                        <span style={{ fontSize: 10, color: 'var(--green)', display: 'inline-flex', alignItems: 'center', gap: 2, fontWeight: 700 }}>
+                          <Check size={10} /> Saved
+                        </span>
+                      )}
+                    </span>
+                    <EditableField
+                      fieldKey={key}
+                      type={type}
+                      options={options}
+                      value={draft[key]}
+                      onChange={val => set(key, val)}
+                      onCommit={val => commitField(key, val)}
+                    />
                   </div>
                 ))}
               </div>
@@ -1413,15 +1477,16 @@ function LeadDetailPanel({ lead, onClose, onFieldSave, onSaveAll, statuses, onEm
           <button
             onClick={handleSaveAll}
             disabled={saving || !isDirty}
+            title={isDirty ? 'Save every pending change' : 'Fields save as you leave them'}
             style={{
-              flex: 1, padding: '9px 0', borderRadius: 6, cursor: isDirty ? 'pointer' : 'not-allowed',
+              flex: 1, padding: '9px 0', borderRadius: 6, cursor: isDirty ? 'pointer' : 'default',
               fontSize: 13, fontWeight: 700, border: 'none',
               background: isDirty ? 'var(--orange)' : '#e5e7ef',
               color: isDirty ? '#fff' : '#8e8ea0',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
           >
-            {saving ? 'Saving…' : saved ? <><Check size={14} /> Saved!</> : 'Save Changes'}
+            {saving ? 'Saving…' : saved ? <><Check size={14} /> Saved!</> : isDirty ? 'Save Changes' : <><Check size={13} /> All changes saved</>}
           </button>
           <button
             onClick={onClose}
@@ -1569,7 +1634,7 @@ function EmailListModal({ lead, onClose, onSuccess }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Leads() {
-  const { startRecording, stopRecording, isRecordingLead, status: recStatus } = useRecorder();
+  const { isRecordingLead, status: recStatus } = useRecorder();
   const { setLeadPanelOpen } = useUi();
   // Cleanup: reset leadPanelOpen whenever this page unmounts (navigating away)
   useEffect(() => () => setLeadPanelOpen(false), [setLeadPanelOpen]);
@@ -1600,13 +1665,14 @@ export default function Leads() {
   const [showImport, setShowImport] = useState(false);
   const [detailLead, setDetailLead] = useState(null);
   const [sort, setSort] = useState('newest');
-  const [hoveredId, setHoveredId] = useState(null);
   const [lastFollowUps, setLastFollowUps] = useState({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [emailListLead, setEmailListLead] = useState(null);
-  const [toast, setToast] = useState('');
-  function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3500); }
+  // Named notice, not "toast": the imported toast() helper has to stay callable
+  // inside this component.
+  const [notice, setNotice] = useState('');
+  function showToast(msg) { setNotice(msg); setTimeout(() => setNotice(''), 3500); }
 
   // Processing tracker state
   const [processingLeadIds, setProcessingLeadIds] = useState(new Set()); // lead IDs with in-flight recordings
@@ -1734,12 +1800,19 @@ export default function Leads() {
   const clearSelection = () => setSelectedIds(new Set());
   const selectedItems = leads.filter(l => selectedIds.has(l.id));
 
+  // Returns true when the write landed, false when it did not, so the opened
+  // lead can keep the typed value instead of showing a phantom save.
   const handleFieldSave = async (id, field, value) => {
     try {
       await updateLead(id, { [field]: value });
       setLeads(ls => ls.map(l => l.id === id ? { ...l, [field]: value } : l));
       if (detailLead?.id === id) setDetailLead(d => ({ ...d, [field]: value }));
-    } catch (e) { console.error(e); }
+      return true;
+    } catch (e) {
+      console.error(e);
+      toast('error', `Could not save ${field}: ${e.message}`);
+      return false;
+    }
   };
 
   const handleSaveAllFields = async (id, updates) => {
@@ -1747,7 +1820,12 @@ export default function Leads() {
       await updateLead(id, updates);
       setLeads(ls => ls.map(l => l.id === id ? { ...l, ...updates } : l));
       if (detailLead?.id === id) setDetailLead(d => ({ ...d, ...updates }));
-    } catch (e) { console.error(e); }
+      return true;
+    } catch (e) {
+      console.error(e);
+      toast('error', `Could not save: ${e.message}`);
+      return false;
+    }
   };
 
   const openAdd    = () => {
@@ -1779,11 +1857,16 @@ export default function Leads() {
       setModal(null);
     } catch (e) { toast('error', e.message); }
   };
+  // Closing the opened lead matters here: after a delete or a convert the row
+  // it was showing is gone from the list.
+  const closeDetailIf = (id) => {
+    if (detailLead?.id === id) { setDetailLead(null); setLeadPanelOpen(false); }
+  };
   const handleDelete = async () => {
-    try { await deleteLead(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
+    try { await deleteLead(selected.id); closeDetailIf(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
   const handleConvert = async () => {
-    try { await convertLead(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
+    try { await convertLead(selected.id); closeDetailIf(selected.id); await load(); setModal(null); } catch (e) { toast('error', e.message); }
   };
 
   const handleBulkDelete = async () => {
@@ -1888,111 +1971,121 @@ export default function Leads() {
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
 
-      {/* ── Search bar ──────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+      {/* ── Toolbar: segment, search, sort, counters on one line ────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        padding: '8px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 9, padding: 3 }}>
+          {[
+            { key: 'inbound', label: 'Inbound', emoji: '📥', accent: 'var(--orange)', bg: 'rgba(37,99,235,0.1)', owner: 'Ray' },
+            { key: 'cold',    label: 'Cold Calls', emoji: '❄️', accent: '#0369A1', bg: 'rgba(56,189,248,0.14)', owner: 'Stephanie' },
+          ].map(seg => {
+            const active = activeSegment === seg.key;
+            return (
+              <button
+                key={seg.key}
+                onClick={() => { setActiveSegment(seg.key); load(); }}
+                title={`${seg.label} · owned by ${seg.owner}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 11px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                  background: active ? seg.bg : 'transparent',
+                  color: active ? seg.accent : 'var(--muted)',
+                  fontSize: 12.5, fontWeight: active ? 700 : 600, fontFamily: 'var(--font-display)',
+                }}
+              >
+                <span style={{ fontSize: 13 }}>{seg.emoji}</span>
+                {seg.label}
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 7,
+                  background: active ? 'var(--surface)' : 'var(--surface-3)',
+                  color: active ? seg.accent : 'var(--muted)',
+                }}>
+                  {segmentCounts[seg.key]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-          <input className="search-input" placeholder="Search leads…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30 }} />
+          <input className="search-input" placeholder="Search leads…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30, paddingTop: 6, paddingBottom: 6 }} />
         </div>
-      </div>
 
-      {/* ── Segment tabs ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
-        {[
-          { key: 'inbound', label: 'Inbound', emoji: '📥', accent: 'var(--orange)', accentRaw: '#2563eb', bg: 'rgba(37,99,235,0.1)', owner: 'Ray' },
-          { key: 'cold',    label: 'Cold Calls', emoji: '❄️', accent: '#38bdf8', accentRaw: '#38bdf8', bg: 'rgba(56,189,248,0.1)', owner: 'Stephanie' },
-        ].map(seg => {
-          const active = activeSegment === seg.key;
+        <select
+          value={sort}
+          onChange={e => setSort(e.target.value)}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 7, fontSize: 12, padding: '6px 8px', cursor: 'pointer', outline: 'none' }}
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name_az">Name A to Z</option>
+          <option value="name_za">Name Z to A</option>
+        </select>
+
+        {/* Counters, one line each instead of six tall tiles */}
+        {(() => {
+          const won = leads.filter(l => l.status === 'Won').length;
+          const stats = [
+            { label: 'calls 24h',  value: recordingStats.calls_24h, icon: '📞', color: '#0369A1', bg: 'rgba(3,105,161,0.12)' },
+            { label: 'calls 7d',   value: recordingStats.calls_7d,  icon: '📞', color: '#0F766E', bg: 'rgba(45,212,191,0.14)' },
+            { label: 'calls 30d',  value: recordingStats.calls_30d, icon: '📞', color: '#6D28D9', bg: 'rgba(139,92,246,0.12)' },
+            { label: 'meets 7d',   value: meetingStats.meets_7d,    icon: '📅', color: 'var(--blue)', bg: 'rgba(59,130,246,0.12)' },
+            { label: 'meets 30d',  value: meetingStats.meets_30d,   icon: '📅', color: '#0369A1', bg: 'rgba(14,165,233,0.12)' },
+            { label: 'won',        value: won,                      icon: '🏆', color: 'var(--green)', bg: 'rgba(4,120,87,0.12)' },
+          ];
           return (
-            <button key={seg.key} onClick={() => { setActiveSegment(seg.key); load(); }} style={{
-              padding: '8px 16px', border: `1px solid ${active ? (seg.accentRaw + '60') : 'var(--border)'}`,
-              cursor: 'pointer', borderRadius: 10,
-              background: active ? seg.bg : 'var(--surface-2)',
-              display: 'flex', alignItems: 'center', gap: 8,
-              transition: 'all 0.15s',
-            }}>
-              <span style={{ fontSize: 16 }}>{seg.emoji}</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: active ? seg.accent : 'var(--text)', fontFamily: 'var(--font-display)' }}>{seg.label}</div>
-                <div style={{ fontSize: 10, color: active ? seg.accent : 'var(--muted)', opacity: active ? 0.85 : 1, fontFamily: 'var(--font-display)' }}>{segmentCounts[seg.key]} leads · {seg.owner}</div>
-              </div>
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {stats.map(s => (
+                <span
+                  key={s.label}
+                  title={`${s.value} ${s.label}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '4px 9px', borderRadius: 8, background: s.bg, color: s.color,
+                    fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.5,
+                  }}
+                >
+                  <span style={{ fontSize: 11 }}>{s.icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
+                  <span style={{ opacity: 0.8 }}>{s.label}</span>
+                </span>
+              ))}
+            </div>
           );
-        })}
+        })()}
       </div>
 
-      {/* ── Stats bar ───────────────────────────────────────────────────────── */}
-      {(() => {
-        const won = leads.filter(l => l.status === 'Won').length;
-        const stats = [
-          { label: 'Calls (24h)',      value: recordingStats.calls_24h,  icon: '📞', color: '#38bdf8', bg: 'rgba(3,105,161,0.15)' },
-          { label: 'Calls (7d)',       value: recordingStats.calls_7d,   icon: '📞', color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)' },
-          { label: 'Calls (30d)',      value: recordingStats.calls_30d,  icon: '📞', color: '#a78bfa', bg: 'rgba(139,92,246,0.12)' },
-          { label: 'Meets This Week',  value: meetingStats.meets_7d,     icon: '📅', color: 'var(--blue)', bg: 'rgba(59,130,246,0.12)' },
-          { label: 'Meets (30d)',      value: meetingStats.meets_30d,    icon: '📅', color: '#38bdf8', bg: 'rgba(14,165,233,0.12)' },
-          { label: 'Leads Won',        value: won,                      icon: '🏆', color: '#34d399', bg: 'rgba(4,120,87,0.12)' },
-        ];
-        return (
-          <div style={{ padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {stats.map(s => (
-              <div key={s.label} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 16px', borderRadius: 10, background: s.bg,
-                minWidth: 120, flex: '1 1 auto', maxWidth: 180,
-              }}>
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{s.icon}</span>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
-                    {s.value}
-                  </div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: s.color, opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>
-                    {s.label}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* Filter tabs */}
-      <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+      {/* Status filter tabs */}
+      <div style={{ padding: '0 20px', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         {FILTER_TABS.map(tab => {
           const active = activeTab === tab;
           const count = statusCounts[tab] || 0;
+          const dot = STATUS_STYLES[tab]?.fg;
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
-                padding: '8px 14px', borderRadius: '6px 6px 0 0', border: 'none',
+                padding: '7px 11px', borderRadius: '6px 6px 0 0', border: 'none',
                 background: active ? 'rgba(37,99,235,0.1)' : 'transparent',
                 color: active ? 'var(--orange)' : 'var(--muted)',
-                fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
+                fontSize: 12.5, fontWeight: active ? 700 : 500, cursor: 'pointer',
                 borderBottom: active ? '2px solid var(--orange)' : '2px solid transparent',
                 marginBottom: -1,
-                display: 'inline-flex', alignItems: 'center', gap: 6,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
               }}
             >
+              {dot && <span style={{ width: 7, height: 7, borderRadius: 4, background: dot, flexShrink: 0 }} />}
               {tab}
-              <span style={{ fontSize: 10, color: active ? 'var(--orange)' : '#b0b0c0', background: active ? '#fff' : 'var(--surface-3)', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>
+              <span style={{ fontSize: 10, color: active ? 'var(--orange)' : '#b0b0c0', background: active ? 'var(--surface)' : 'var(--surface-3)', padding: '1px 6px', borderRadius: 8, fontWeight: 600 }}>
                 {count}
               </span>
             </button>
           );
         })}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10 }}>
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 6, fontSize: 12, padding: '5px 8px', cursor: 'pointer', outline: 'none' }}
-          >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="name_az">Name A→Z</option>
-            <option value="name_za">Name Z→A</option>
-          </select>
-        </div>
       </div>
 
       {/* Mobile cards */}
@@ -2003,41 +2096,37 @@ export default function Leads() {
           <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>No leads in this view.</div>
         ) : paged.map(lead => {
           const st = STATUS_STYLES[lead.status] || STATUS_STYLES['New'];
-          const pst = PLATFORM_STYLES[lead.lead_source] || null;
+          const na = nextAction(lead, lastFollowUps[lead.id]);
           return (
-            <div key={lead.id} className="mobile-card" onClick={() => { setDetailLead(lead); setLeadPanelOpen(true); }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <Avatar name={lead.name} />
+            <div
+              key={lead.id}
+              className="mobile-card"
+              style={{ padding: '9px 12px', margin: '6px 12px', borderLeft: `3px solid ${st.fg}` }}
+              onClick={() => { setDetailLead(lead); setLeadPanelOpen(true); }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <Avatar name={lead.name} size={24} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="private-value" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{lead.name || '—'}</div>
-                  {lead.company && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)' }}>{lead.company}</div>}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
+                    <span className="private-value" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {lead.name || 'Unnamed'}
+                    </span>
+                    {lead.company && (
+                      <span className="private-value" style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        · {lead.company}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: 'var(--muted)', marginTop: 1 }}>
+                    <span style={{ color: NEXT_ACTION_TONES[na.tone].fg, fontWeight: 600 }}>{na.label}</span>
+                    {lastFollowUps[lead.id] && <span>· {formatFollowUp(lastFollowUps[lead.id])}</span>}
+                    <span>· {lead.assigned_to || 'Ray'}</span>
+                  </div>
                 </div>
-                <span style={{ padding: '2px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600, background: st.bg, color: st.fg }}>
+                <span style={{ padding: '2px 9px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: st.bg, color: st.fg, flexShrink: 0 }}>
                   {lead.status || 'New'}
                 </span>
               </div>
-              {lead.phone && (
-                <div className="mobile-card-row">
-                  <Phone size={12} style={{ color: 'var(--muted)' }} /> <span className="private-value">{lead.phone}</span>
-                </div>
-              )}
-              {lead.email && (
-                <div className="mobile-card-row">
-                  <Mail size={12} style={{ color: 'var(--orange)' }} /> <span className="private-value">{lead.email}</span>
-                </div>
-              )}
-              {pst && (
-                <div className="mobile-card-row" style={{ padding: 0, marginTop: 4 }}>
-                  <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, background: pst.bg, color: pst.fg }}>
-                    {pst.icon} {lead.lead_source}
-                  </span>
-                </div>
-              )}
-              {lastFollowUps[lead.id] && (
-                <div className="mobile-card-row" style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
-                  <Clock size={10} /> Last contact: {formatFollowUp(lastFollowUps[lead.id])}
-                </div>
-              )}
             </div>
           );
         })}
@@ -2045,227 +2134,137 @@ export default function Leads() {
 
       {/* Desktop table */}
       <div className="table-container desktop-table" style={{ background: 'var(--surface)', margin: 20, borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <table>
+        <table className="compact-table">
           <thead>
             <tr>
-              <th style={{ width: 36 }}>
+              <th style={{ width: 34 }}>
                 <input
                   type="checkbox"
                   checked={paged.length > 0 && paged.every(l => selectedIds.has(l.id))}
                   onChange={toggleAllOnPage}
                 />
               </th>
-              <th style={{ width: 40 }} title="Record call"></th>
-              <th style={{ minWidth: 220 }}>Name</th>
-              <th style={{ minWidth: 150 }}>Phone Number</th>
-              <th style={{ minWidth: 200 }}>Email</th>
-              <th style={{ minWidth: 130 }}>Lead Source</th>
-              <th style={{ minWidth: 160 }}>Product Need</th>
-              <th style={{ minWidth: 130 }}>Lead Status</th>
-              <th style={{ minWidth: 100 }}>Last Contact</th>
+              <th style={{ minWidth: 230 }}>Lead</th>
+              <th style={{ minWidth: 130 }}>Phone</th>
+              <th style={{ minWidth: 180 }}>Email</th>
+              <th style={{ minWidth: 170 }}>Source / Need</th>
+              <th style={{ minWidth: 110 }}>Status</th>
+              <th style={{ minWidth: 90 }}>Last Contact</th>
+              <th style={{ minWidth: 130 }}>Next Action</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Loading...</td></tr>
             ) : paged.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
+              <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
                 No leads in this view. {activeTab === 'All Leads' && 'Click "New Lead" to add one.'}
               </td></tr>
-            ) : paged.map(lead => (
-              <tr
-                key={lead.id}
-                style={{
-                  background: selectedIds.has(lead.id) ? 'rgba(37,99,235,0.08)' : undefined,
-                  cursor: 'pointer',
-                  position: 'relative',
-                }}
-                onMouseEnter={() => setHoveredId(lead.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={(e) => {
-                  if (e.target.closest('input[type="checkbox"]') || e.target.closest('.lead-action-bar') || e.target.closest('button') || e.target.closest('a')) return;
-                  setDetailLead(lead);
-                  setLeadPanelOpen(true);
-                }}
-              >
-                <td onClick={e => e.stopPropagation()}>
-                  <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
-                </td>
-                <td onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
-                  {(() => {
-                    const active = isRecordingLead(lead.id);
-                    const count = recordingCounts[lead.id] || 0;
-                    const processing = processingLeadIds.has(lead.id);
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <div style={{ position: 'relative' }}>
-                          <button
-                            title={active ? 'Stop recording' : `Record call${count ? ` (${count} recorded)` : ''}`}
-                            onClick={() => active ? stopRecording() : startRecording(lead.id, lead.name)}
-                            disabled={recStatus === 'saving' || recStatus === 'requesting'}
-                            style={{
-                              width: 28, height: 28, borderRadius: '50%', border: 'none',
-                              cursor: recStatus === 'saving' || recStatus === 'requesting' ? 'not-allowed' : 'pointer',
-                              background: active ? '#FEE2E2' : 'var(--surface-3)',
-                              color: active ? 'var(--red)' : '#8e8ea0',
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              transition: 'all 0.15s',
-                              boxShadow: active ? '0 0 0 2px #C0000040' : 'none',
-                              animation: active ? 'recPulse 1.2s infinite' : 'none',
-                            }}
-                            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#FFE0E0'; e.currentTarget.style.color = 'var(--red)'; } }}
-                            onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'var(--surface-3)'; e.currentTarget.style.color = '#8e8ea0'; } }}
-                          >
-                            {active ? <MicOff size={12} /> : <Mic size={12} />}
-                          </button>
-                          {processing && (
-                            <span title="Processing call..." style={{
-                              position: 'absolute', top: -3, right: -3,
-                              width: 9, height: 9, borderRadius: '50%',
-                              background: '#E8650A',
-                              boxShadow: '0 0 0 0 rgba(232,101,10,0.4)',
-                              animation: 'recPulse 1.2s infinite',
-                              display: 'block',
-                            }} />
-                          )}
-                        </div>
-                        {processing ? (
-                          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--orange)', background: '#FFF5F0', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
-                            AI…
-                          </span>
-                        ) : count > 0 && (
-                          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--muted)', background: 'var(--surface-3)', borderRadius: 6, padding: '0px 4px', lineHeight: '14px' }}>
-                            {count}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Avatar name={lead.name} />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div className="private-value" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{lead.name || '—'}</div>
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
-                          background: (lead.assigned_to || 'Ray') === 'Stephanie' ? '#E0F2FE' : '#FFF5F0',
-                          color: (lead.assigned_to || 'Ray') === 'Stephanie' ? '#0369A1' : '#E8650A',
-                          flexShrink: 0,
-                        }}>
-                          {lead.assigned_to || 'Ray'}
-                        </span>
-                      </div>
-                      {lead.company && <div className="private-value" style={{ fontSize: 11, color: 'var(--muted)' }}>{lead.company}</div>}
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <CopyCell value={lead.phone}>
-                    <span className="private-value" style={{ fontSize: 12, color: 'var(--muted)' }}>{lead.phone || '—'}</span>
-                  </CopyCell>
-                </td>
-                <td>
-                  <CopyCell value={lead.email}>
-                    <span className="private-value" style={{ fontSize: 12, color: 'var(--muted)' }}>{lead.email || '—'}</span>
-                  </CopyCell>
-                </td>
-                <td onClick={e => e.stopPropagation()}>
-                  <PlatformChip
-                    value={lead.lead_source || ''}
-                    onChange={(val) => handleFieldSave(lead.id, 'lead_source', val)}
-                  />
-                </td>
-                <td onClick={e => e.stopPropagation()}>
-                  <ProductNeedChip
-                    value={lead.product_need || ''}
-                    onChange={(val) => handleFieldSave(lead.id, 'product_need', val)}
-                  />
-                </td>
-                <td onClick={e => e.stopPropagation()}>
-                  <StatusPill
-                    value={lead.status || 'New'}
-                    onChange={(val) => handleFieldSave(lead.id, 'status', val)}
-                  />
-                </td>
-                <td>
-                  {lastFollowUps[lead.id] ? (
-                    <span style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Clock size={10} /> {formatFollowUp(lastFollowUps[lead.id])}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>
-                  )}
-                </td>
+            ) : paged.map(lead => {
+              const st  = STATUS_STYLES[lead.status] || STATUS_STYLES['New'];
+              const na  = nextAction(lead, lastFollowUps[lead.id]);
+              const recCount  = recordingCounts[lead.id] || 0;
+              const processing = processingLeadIds.has(lead.id);
+              const live = isRecordingLead(lead.id);
+              return (
+                <tr
+                  key={lead.id}
+                  style={{
+                    background: selectedIds.has(lead.id) ? 'rgba(37,99,235,0.08)' : undefined,
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    if (e.target.closest('input[type="checkbox"]') || e.target.closest('button') || e.target.closest('a')) return;
+                    setDetailLead(lead);
+                    setLeadPanelOpen(true);
+                  }}
+                >
+                  {/* The status colour rides the left edge of the row */}
+                  <td onClick={e => e.stopPropagation()} style={{ boxShadow: `inset 3px 0 0 ${st.fg}` }}>
+                    <input type="checkbox" checked={selectedIds.has(lead.id)} onChange={() => toggleSelect(lead.id)} />
+                  </td>
 
-                {hoveredId === lead.id && (
-                  <td style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', padding: 0, border: 'none', width: 'auto', background: 'transparent' }}>
-                    <div
-                      className="lead-action-bar"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 2,
-                        background: 'var(--surface)', border: '1px solid var(--border)',
-                        borderRadius: 8, padding: '3px 4px',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-                      }}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      {lead.email && (
-                        <button aria-label="Send email" onClick={() => handleEmail(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
-                          <Mail size={14} />
-                        </button>
+                  {/* Lead: avatar, name, owner, company, all on one line */}
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <Avatar name={lead.name} size={22} />
+                      <span className="private-value" title={lead.name || ''} style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 190 }}>
+                        {lead.name || 'Unnamed'}
+                      </span>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                        background: (lead.assigned_to || 'Ray') === 'Stephanie' ? '#E0F2FE' : '#FFF5F0',
+                        color: (lead.assigned_to || 'Ray') === 'Stephanie' ? '#0369A1' : '#E8650A',
+                        flexShrink: 0,
+                      }}>
+                        {lead.assigned_to || 'Ray'}
+                      </span>
+                      {lead.company && (
+                        <span className="private-value" title={lead.company} style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 170, minWidth: 0 }}>
+                          · {lead.company}
+                        </span>
                       )}
-                      {lead.phone && (
-                        <a href={`tel:${lead.phone}`} aria-label="Call"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--orange)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center', textDecoration: 'none' }}
-                          onClick={e => e.stopPropagation()}>
-                          <Phone size={14} />
-                        </a>
+                      {lead.interest === 'up'   && <ThumbsUp   size={11} style={{ color: 'var(--orange)', flexShrink: 0 }} />}
+                      {lead.interest === 'down' && <ThumbsDown size={11} style={{ color: 'var(--red)', flexShrink: 0 }} />}
+                      {live ? (
+                        <span title="Recording now" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 3, background: 'var(--red)' }} /> REC
+                        </span>
+                      ) : processing ? (
+                        <span title="Call is being transcribed" style={{ fontSize: 9, fontWeight: 700, color: 'var(--orange)', background: '#FFF5F0', borderRadius: 6, padding: '0 5px', flexShrink: 0 }}>
+                          AI…
+                        </span>
+                      ) : recCount > 0 && (
+                        <span title={`${recCount} call${recCount > 1 ? 's' : ''} recorded`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700, color: 'var(--muted)', background: 'var(--surface-3)', borderRadius: 6, padding: '0 5px', flexShrink: 0 }}>
+                          <Mic size={8} /> {recCount}
+                        </span>
                       )}
-                      <button aria-label="Interested" onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'up' ? null : 'up')}
-                        style={{
-                          background: lead.interest === 'up' ? 'rgba(74,108,247,0.12)' : 'none',
-                          border: 'none', borderRadius: 5, cursor: 'pointer', padding: '5px 7px',
-                          color: lead.interest === 'up' ? 'var(--orange)' : '#8e8ea0',
-                          display: 'flex', alignItems: 'center',
-                        }}>
-                        <ThumbsUp size={13} />
-                      </button>
-                      <button aria-label="Not interested" onClick={() => handleFieldSave(lead.id, 'interest', lead.interest === 'down' ? null : 'down')}
-                        style={{
-                          background: lead.interest === 'down' ? 'rgba(255,92,92,0.12)' : 'none',
-                          border: 'none', borderRadius: 5, cursor: 'pointer', padding: '5px 7px',
-                          color: lead.interest === 'down' ? '#ff5c5c' : '#8e8ea0',
-                          display: 'flex', alignItems: 'center',
-                        }}>
-                        <ThumbsDown size={13} />
-                      </button>
-                      {lead.status !== 'Won' && (
-                        <button aria-label="Move to Contacts" onClick={() => openConvert(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
-                          <UserPlus size={14} />
-                        </button>
-                      )}
-                      {lead.email && (
-                        <button aria-label="Add to Email List" onClick={() => setEmailListLead(lead)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}
-                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--orange)'; e.currentTarget.style.background = 'rgba(37,99,235,0.08)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = '#8e8ea0'; e.currentTarget.style.background = 'none'; }}
-                        >
-                          <ListPlus size={14} />
-                        </button>
-                      )}
-                      <button aria-label="Delete" onClick={() => openDelete(lead)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '5px 7px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
-                        <Trash2 size={14} />
-                      </button>
                     </div>
                   </td>
-                )}
-              </tr>
-            ))}
+
+                  <td>
+                    <CopyCell value={lead.phone}>
+                      <span className="private-value" style={{ fontSize: 12, color: 'var(--muted)' }}>{lead.phone || '·'}</span>
+                    </CopyCell>
+                  </td>
+                  <td>
+                    <CopyCell value={lead.email}>
+                      <span className="private-value" style={{ fontSize: 12, color: 'var(--muted)' }}>{lead.email || '·'}</span>
+                    </CopyCell>
+                  </td>
+
+                  <td>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
+                      <MetaChip value={lead.lead_source} styles={PLATFORM_STYLES} max={110} />
+                      <MetaChip value={lead.product_need} styles={PRODUCT_NEED_STYLES} max={120} />
+                      {!lead.lead_source && !lead.product_need && <span style={{ fontSize: 11, color: 'var(--muted)' }}>·</span>}
+                    </span>
+                  </td>
+
+                  <td>
+                    <span style={{ padding: '2px 10px', borderRadius: 10, fontSize: 10.5, fontWeight: 700, background: st.bg, color: st.fg, whiteSpace: 'nowrap' }}>
+                      {lead.status || 'New'}
+                    </span>
+                  </td>
+
+                  <td>
+                    {lastFollowUps[lead.id] ? (
+                      <span style={{ fontSize: 11, color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }}>
+                        <Clock size={10} /> {formatFollowUp(lastFollowUps[lead.id])}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>Never</span>
+                    )}
+                  </td>
+
+                  <td>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: NEXT_ACTION_TONES[na.tone].fg, whiteSpace: 'nowrap' }}>
+                      {na.label}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -2335,10 +2334,11 @@ export default function Leads() {
             onClose={() => { setDetailLead(null); setLeadPanelOpen(false); }}
             onFieldSave={handleFieldSave}
             onSaveAll={handleSaveAllFields}
-            statuses={LEAD_STATUSES}
             onEmail={handleEmail}
             onSchedule={(lead) => { scheduleForLead(lead); }}
             onAddToList={(lead) => setEmailListLead(lead)}
+            onConvert={openConvert}
+            onDelete={openDelete}
             lastFollowUp={lastFollowUps[detailLead.id]}
             convos={detailConvos}
             recordings={detailRecordings}
@@ -2466,14 +2466,14 @@ export default function Leads() {
         />
       )}
 
-      {toast && (
+      {notice && (
         <div style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
           background: 'var(--surface)', border: '1px solid var(--orange)', color: 'var(--text)',
           padding: '10px 20px', borderRadius: 8, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
         }}>
-          <Check size={14} color="var(--orange)" /> {toast}
+          <Check size={14} color="var(--orange)" /> {notice}
         </div>
       )}
 

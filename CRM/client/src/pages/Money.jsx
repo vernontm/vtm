@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { getHome } from '../api';
 import NudgeModal from '../components/NudgeModal';
+import { useClient } from '../context/ClientContext';
 import Invoices from './Invoices';
 import Subscriptions from './Subscriptions';
 
@@ -83,6 +84,7 @@ function Dot({ color }) {
 }
 
 export default function Money() {
+  const { isAdmin } = useClient();
   const [tab, setTab] = useState('overview');
   const [m, setM] = useState(null);          // the /home money block
   const [loading, setLoading] = useState(true);
@@ -262,12 +264,16 @@ export default function Money() {
     );
   };
 
+  // crm/invoices.js is admin only, so that tab would 403 for anyone else.
+  const tabs = isAdmin ? TABS : TABS.filter(t => t.key !== 'invoices');
+  const view = tabs.some(t => t.key === tab) ? tab : 'overview';
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       {/* Tabs: Overview reads /home, the other two are the pages that already exist */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '0 28px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
-        {TABS.map(t => {
-          const on = tab === t.key;
+        {tabs.map(t => {
+          const on = view === t.key;
           const badge = t.key === 'invoices' && unpaid.length ? unpaid.length : null;
           return (
             <button key={t.key} type="button" onClick={() => setTab(t.key)} style={{
@@ -297,9 +303,9 @@ export default function Money() {
         )}
       </nav>
 
-      {tab === 'overview'
+      {view === 'overview'
         ? <div style={{ padding: '22px 28px 40px' }}>{overview()}</div>
-        : tab === 'invoices'
+        : view === 'invoices'
           ? <Invoices />
           : <Subscriptions embedded />}
 

@@ -1010,6 +1010,21 @@ export const getHomeRoles = () => getSettings().then(rows => {
 });
 export const setHomeRoles = (map) => bulkUpdateSettings([{ key: 'home_roles', value: JSON.stringify(map || {}) }]);
 
+// Access roles: page and information sets an admin defines once, then puts
+// people in. Stored as one settings key so there is no new table.
+export const getAccessRoles = () => request('/settings?key=access_roles').then(row => {
+  const raw = row && typeof row === 'object' ? row.value : null;
+  try {
+    const parsed = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (_) { return {}; }
+}).catch(() => ({}));
+export const setAccessRoles = (map) => bulkUpdateSettings([{ key: 'access_roles', value: JSON.stringify(map || {}) }]);
+
+// Every event, not just the 50 most recent past ones: a calendar pages back
+// through months and an empty grid is worse than a slow one.
+export const getAllMeetings = () => request('/meetings');
+
 // ── Team chat (internal: direct messages and group chats) ──────────────────
 // Lives beside the customer inbox and never touches it. When the tables are
 // not migrated yet the GETs answer with needs_migration instead of data, and

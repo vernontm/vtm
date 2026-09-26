@@ -1,14 +1,17 @@
 // Admin-only page to manage CRM user accounts + per-client page access.
 // Non-admins see a friendly "not authorized" card instead.
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound, Bell, Smartphone, Mail, Copy, LayoutDashboard, BarChart2 } from 'lucide-react';
-import { useClient } from '../context/ClientContext';
+import { UserPlus, Trash2, Shield, ShieldOff, Plus, X, Check, Lock, Eye, KeyRound, Bell, Smartphone, Mail, Copy, LayoutDashboard, BarChart2, UserCog, Pencil } from 'lucide-react';
+import {
+  useClient, ACCESS_INFO, DEFAULT_ACCESS_ROLES, normalizeAccessRoles, samePages, roleKeyFor,
+} from '../context/ClientContext';
 import { useToast } from '../components/Toast';
 import {
   getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   upsertUserGrant, revokeUserGrant, resetUserPassword,
   getPushPrefs, setPushPrefs, inviteUser,
   getHomeRoles, setHomeRoles, getAppEvents,
+  getAccessRoles, setAccessRoles,
 } from '../api';
 
 // Which home the iPhone app opens to. Stored in the settings key home_roles as
@@ -65,18 +68,18 @@ const ADMIN_PAGE_GROUPS = [
   ]},
 ];
 
-// Role presets, one-click bundles of page access. "Custom" = whatever's
-// checked. Roles are a convenience on top of the per-page checkboxes below.
-const ROLES = [
-  { key: 'full',            name: 'Full access',     pages: ['dashboard','leads','clients','projects','appointments','todos','tasks','routines','employees','time','employee-resources','contacts','marketing','inbox','email','settings'] },
-  { key: 'sales_assistant', name: 'Sales Assistant', pages: ['leads','appointments','todos','routines','time','employee-resources'] },
-  { key: 'project_manager', name: 'Project Manager', pages: ['dashboard','clients','projects','appointments','todos','routines','time','employee-resources'] },
-  { key: 'custom',          name: 'Custom',          pages: null },
-];
-const roleForPages = (pages = []) => {
-  const set = [...pages].sort().join(',');
-  const match = ROLES.find(r => r.pages && [...r.pages].sort().join(',') === set);
-  return match ? match.key : 'custom';
+// Access roles are editable and live in the settings key access_roles. The
+// shape, the seed, the information switches and roleKeyFor (which role a
+// person is in) all come from ClientContext, so this editor and the gating in
+// App and Sidebar cannot drift. Pages that match no role read as Custom.
+
+// A stable key for a new role, from its name. "Sales Assistant" -> sales_assistant
+const keyFromName = (name, taken = {}) => {
+  const base = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'role';
+  if (!taken[base]) return base;
+  let n = 2;
+  while (taken[`${base}_${n}`]) n += 1;
+  return `${base}_${n}`;
 };
 
 const DEFAULT_PAGES = ['leads','appointments'];
@@ -112,7 +115,7 @@ const inputStyle = {
 };
 
 export default function AdminUsers() {
-  const { isAdmin, clients, viewAsUser, realUser } = useClient();
+  const { isAdmin, clients, viewAsUser, realUser, refresh } = useClient();
   const toast = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,12 +126,24 @@ export default function AdminUsers() {
   const [pushData, setPushData] = useState(null);   // { prefs, devices } for the notification toggles
   const [roleMap, setRoleMap] = useState({});       // home_roles: { user id: role }
   const [usage, setUsage] = useState(null);         // { rows, days } | { error, needsMigration }
+  const [roles, setRoles] = useState(DEFAULT_ACCESS_ROLES);   // access_roles
 
   async function load() {
     setLoading(true); setError(null);
     try { setUsers(await getAdminUsers()); }
     catch (e) { setError(e.message); }
     finally { setLoading(false); }
+  }
+  async function loadRoles() {
+    try { setRoles(normalizeAccessRoles(await getAccessRoles())); }
+    catch (_) { setRoles(DEFAULT_ACCESS_ROLES); }   // editor still works off the seed
+  }
+  // One write for the whole map, same settings key every time.
+  async function saveRoles(next) {
+    const clean = normalizeAccessRoles(next);
+    await setAccessRoles(clean);
+    setRoles(clean);
+    refresh?.();          // so this admin's own sidebar and routes re-read them
   }
   async function loadPrefs() {
     try { setPushData(await getPushPrefs()); } catch (_) { /* toggles just hide */ }
@@ -155,7 +170,7 @@ export default function AdminUsers() {
     } catch (e) { setRoleMap(prev); toast.error(e.message); }
   }
 
-  useEffect(() => { if (isAdmin) { load(); loadPrefs(); loadHomeRoles(); loadUsage(); } }, [isAdmin]);
+  useEffect(() => { if (isAdmin) { load(); loadPrefs(); loadHomeRoles(); loadUsage(); loadRoles(); } }, [isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -191,6 +206,9 @@ export default function AdminUsers() {
         <div style={{ ...card, borderColor: '#ef4444', color: '#ef4444', marginBottom: 14 }}>{error}</div>
       )}
 
+      <AccessRolesEditor roles={roles} onSave={saveRoles} />
+
+      <div style={{ ...labelStyle, margin: '20px 0 8px' }}>People</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {loading && <div style={{ ...card, color: 'var(--muted)' }}>Loading users…</div>}
         {!loading && users.length === 0 && <div style={{ ...card, color: 'var(--muted)' }}>No users yet.</div>}
@@ -199,6 +217,7 @@ export default function AdminUsers() {
             key={u.id}
             user={u}
             clients={clients}
+            roles={roles}
             expanded={expandedId === u.id}
             onToggle={() => setExpandedId(expandedId === u.id ? null : u.id)}
             onChanged={load}
@@ -223,10 +242,195 @@ export default function AdminUsers() {
       {showCreate && (
         <CreateUserModal
           clients={clients}
+          roles={roles}
           onClose={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); load(); }}
         />
       )}
+    </div>
+  );
+}
+
+// A row of page pills, the same grid the per-person editor uses.
+function PagePicker({ groups, pages, onToggle }) {
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: 'var(--surface-2)' }}>
+      {groups.map(group => (
+        <div key={group.label} style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{group.label}</div>
+          <div className="access-pill-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {group.pages.map(p => {
+              const on = pages.includes(p.slug);
+              return (
+                <button
+                  key={p.slug}
+                  type="button"
+                  onClick={() => onToggle(p.slug)}
+                  style={{
+                    padding: '5px 10px', borderRadius: 20,
+                    background: on ? 'var(--orange)' : 'var(--surface)',
+                    color: on ? '#fff' : 'var(--text)',
+                    border: `1px solid ${on ? 'var(--orange)' : 'var(--border)'}`,
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// What a role can see, beside the pages. Honest about its reach: these
+// switches shape the web interface, the server is what actually holds the
+// line. See the note under the switches.
+function InfoSwitches({ info, onToggle }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {ACCESS_INFO.map(m => (
+        <label key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={!!info[m.key]}
+            onChange={() => onToggle(m.key)}
+            style={{ marginTop: 2 }}
+          />
+          <span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{m.name}</span>
+            <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>{m.hint}</span>
+          </span>
+        </label>
+      ))}
+      <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+        These switches shape the web interface: they decide what the CRM puts on
+        screen for this role. They are not a security control. The server holds
+        the real line separately. Only staff can reach CRM endpoints at all, and
+        the inbox is scoped server side, so a non admin only ever receives their
+        own and unassigned conversations no matter what is ticked here.
+      </div>
+    </div>
+  );
+}
+
+// Define a role once: its name, the pages it opens, and the information it
+// can see. Everything lives in the settings key access_roles, so there is no
+// new table and no new endpoint. People are put in a role further down.
+function AccessRolesEditor({ roles, onSave }) {
+  const toast = useToast();
+  const [draft, setDraft] = useState(roles);
+  const [openKey, setOpenKey] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  // Re-seed whenever the saved roles change under us (first load, or a save).
+  useEffect(() => { setDraft(roles); }, [roles]);
+
+  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(roles), [draft, roles]);
+  const entries = Object.entries(draft);
+
+  const patch = (key, changes) => setDraft(d => ({ ...d, [key]: { ...d[key], ...changes } }));
+  const togglePage = (key, slug) => setDraft(d => {
+    const pages = d[key].pages.includes(slug) ? d[key].pages.filter(s => s !== slug) : [...d[key].pages, slug];
+    return { ...d, [key]: { ...d[key], pages } };
+  });
+  const toggleInfo = (key, infoKey) => setDraft(d => ({
+    ...d, [key]: { ...d[key], info: { ...d[key].info, [infoKey]: !d[key].info[infoKey] } },
+  }));
+  function addRole() {
+    const key = keyFromName('new role', draft);
+    setDraft(d => ({ ...d, [key]: { name: 'New role', pages: [...DEFAULT_PAGES], info: Object.fromEntries(ACCESS_INFO.map(m => [m.key, false])) } }));
+    setOpenKey(key);
+  }
+  function removeRole(key) {
+    if (!confirm(`Delete the ${draft[key]?.name || key} role? People already in it keep the pages they have, their role just reads as Custom.`)) return;
+    setDraft(d => { const n = { ...d }; delete n[key]; return n; });
+    if (openKey === key) setOpenKey(null);
+  }
+  async function save() {
+    const blank = entries.find(([, r]) => !String(r.name || '').trim());
+    if (blank) { toast.error('Give every role a name first'); return; }
+    setSaving(true);
+    try { await onSave(draft); toast.success('Access roles saved'); }
+    catch (e) { toast.error(e.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div style={{ ...card, marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <UserCog size={15} color="var(--orange)" />
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Access roles</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button style={btnGhost} onClick={addRole}><Plus size={13} /> New role</button>
+          {dirty && (
+            <button style={btnPrimary} onClick={save} disabled={saving}>
+              <Check size={13} /> {saving ? 'Saving…' : 'Save roles'}
+            </button>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, marginBottom: 12, lineHeight: 1.6 }}>
+        Define a role once: the pages it opens and the information it can see.
+        Then put people in it below. Changing a role does not move anyone by
+        itself, re-apply it to a person to push the new page list onto them.
+      </div>
+
+      {entries.length === 0 && (
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>No roles yet. Add one to get started.</div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {entries.map(([key, role]) => {
+          const open = openKey === key;
+          const onCount = ACCESS_INFO.filter(m => role.info[m.key]).length;
+          return (
+            <div key={key} style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface-2)' }}>
+              <div
+                onClick={() => setOpenKey(open ? null : key)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', cursor: 'pointer' }}
+              >
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{role.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                    {role.pages.length} page{role.pages.length === 1 ? '' : 's'} · {onCount} of {ACCESS_INFO.length} information switch{onCount === 1 ? '' : 'es'} on
+                  </div>
+                </div>
+                <button style={btnGhost} onClick={e => { e.stopPropagation(); setOpenKey(open ? null : key); }}>
+                  <Pencil size={12} /> {open ? 'Done' : 'Edit'}
+                </button>
+                <button style={{ ...btnGhost, color: '#ef4444' }} onClick={e => { e.stopPropagation(); removeRole(key); }}>
+                  <Trash2 size={12} /> Delete
+                </button>
+              </div>
+
+              {open && (
+                <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <label style={{ ...labelStyle, display: 'block', marginBottom: 4 }}>Role name</label>
+                    <input
+                      style={{ ...inputStyle, maxWidth: 320 }}
+                      value={role.name}
+                      onChange={e => patch(key, { name: e.target.value })}
+                      placeholder="e.g. Project Manager"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>Pages this role opens</label>
+                    <PagePicker groups={PAGE_GROUPS} pages={role.pages} onToggle={slug => togglePage(key, slug)} />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, display: 'block', marginBottom: 6 }}>Information this role can see</label>
+                    <InfoSwitches info={role.info} onToggle={infoKey => toggleInfo(key, infoKey)} />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -361,10 +565,15 @@ function ResetPasswordModal({ user, onClose }) {
   );
 }
 
-function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSelf, pushData, onPrefsSaved, homeRole = '', onHomeRoleChange }) {
+function UserRow({ user, clients, roles = {}, expanded, onToggle, onChanged, onViewAs, isSelf, pushData, onPrefsSaved, homeRole = '', onHomeRoleChange }) {
   const toast = useToast();
   const [resetOpen, setResetOpen] = useState(false);
   const isRestricted = user.is_admin && Array.isArray(user.allowed_pages_global) && user.allowed_pages_global.length > 0;
+  // Which access role this person is in, or Custom. Admins are not in a role,
+  // they pass everything.
+  const grant = user.grants[0] || null;
+  const roleKey = user.is_admin ? null : roleKeyFor(roles, grant?.role, grant?.allowed_pages || []);
+  const roleLabel = user.is_admin ? null : (roleKey ? roles[roleKey].name : 'Custom');
   async function toggleAdmin(e) {
     e.stopPropagation();
     if (!confirm(`${user.is_admin ? 'Revoke' : 'Grant'} admin for ${user.email}?`)) return;
@@ -398,6 +607,14 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
                 <Lock size={9} /> VA ADMIN
               </span>
             )}
+            {roleLabel && (
+              <span
+                title={roleKey ? 'The access role this person is in' : 'Their pages match no role, so they are on a one-off list'}
+                style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--muted)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              >
+                <UserCog size={9} /> {roleLabel.toUpperCase()}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
             {user.is_admin
@@ -405,7 +622,7 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
                   ? `Admin · limited to ${user.allowed_pages_global.length} page${user.allowed_pages_global.length === 1 ? '' : 's'}`
                   : 'Full admin · every page')
               : (() => {
-                  const n = (user.grants[0]?.allowed_pages || []).length;
+                  const n = (grant?.allowed_pages || []).length;
                   return n === 0 ? 'Employee · no page access yet' : `Employee · ${n} page${n === 1 ? '' : 's'}`;
                 })()}
           </div>
@@ -457,7 +674,7 @@ function UserRow({ user, clients, expanded, onToggle, onChanged, onViewAs, isSel
         <>
           {user.is_admin
             ? <GlobalPagesEditor user={user} onChanged={onChanged} />
-            : <PageAccessEditor user={user} workspace={clients[0]} onChanged={onChanged} />}
+            : <PageAccessEditor user={user} workspace={clients[0]} roles={roles} onChanged={onChanged} />}
           <NotificationPrefsEditor user={user} pushData={pushData} onSaved={onPrefsSaved} />
         </>
       )}
@@ -514,30 +731,7 @@ function GlobalPagesEditor({ user, onChanged }) {
       </div>
 
       {restrict && (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: 'var(--surface-2)' }}>
-          {[...PAGE_GROUPS, ...ADMIN_PAGE_GROUPS].map(group => (
-            <div key={group.label} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{group.label}</div>
-              <div className="access-pill-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {group.pages.map(p => (
-                  <button
-                    key={p.slug}
-                    onClick={() => togglePage(p.slug)}
-                    style={{
-                      padding: '5px 10px', borderRadius: 20,
-                      background: pages.includes(p.slug) ? 'var(--orange)' : 'var(--surface)',
-                      color: pages.includes(p.slug) ? '#fff' : 'var(--text)',
-                      border: `1px solid ${pages.includes(p.slug) ? 'var(--orange)' : 'var(--border)'}`,
-                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    }}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <PagePicker groups={[...PAGE_GROUPS, ...ADMIN_PAGE_GROUPS]} pages={pages} onToggle={togglePage} />
       )}
 
       {dirty && (
@@ -554,27 +748,46 @@ function GlobalPagesEditor({ user, onChanged }) {
 // Per-employee page access. Single-account CRM, so there's no "client" to
 // pick, this just edits which pages the employee can open. Under the hood it
 // writes one grant on the single workspace.
-function PageAccessEditor({ user, workspace, onChanged }) {
+function PageAccessEditor({ user, workspace, roles = {}, onChanged }) {
   const toast = useToast();
   const grant = user.grants[0] || null;                 // the one workspace grant
   const clientId = workspace?.id || grant?.client_id;
   const [pages, setPages] = useState(grant?.allowed_pages || []);
+  // The role picked in this editing session. Ticking a page by hand clears
+  // it, which is how someone drops back to Custom.
+  const [picked, setPicked] = useState(() => (grant?.role && roles[grant.role]) ? grant.role : null);
   const [saving, setSaving] = useState(false);
 
+  // Dirty when the pages moved, or when a role was actively picked that is
+  // not the one already stored. A legacy grant whose role column holds
+  // something we no longer know about is not treated as an edit on its own.
   const dirty = useMemo(() => {
     const a = [...(grant?.allowed_pages || [])].sort().join(',');
     const b = [...pages].sort().join(',');
-    return a !== b;
-  }, [pages, grant]);
+    if (a !== b) return true;
+    return !!picked && picked !== (grant?.role || null);
+  }, [pages, picked, grant]);
 
-  const currentRole = roleForPages(pages);
+  // What the select shows: the picked role while its pages still line up,
+  // else whatever role the current page list matches, else Custom.
+  const currentRole = useMemo(() => {
+    if (picked && roles[picked] && samePages(roles[picked].pages, pages)) return picked;
+    return roleKeyFor(roles, grant?.role, pages) || 'custom';
+  }, [picked, roles, pages, grant]);
+
+  const currentInfo = roles[currentRole]?.info || null;
 
   function togglePage(slug) {
+    setPicked(null);
     setPages(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
   }
+  // Putting someone in a role copies that role's pages onto them. Custom is
+  // a state you land in by ticking pages yourself, not something to pick.
   function applyRole(key) {
-    const r = ROLES.find(x => x.key === key);
-    if (r && r.pages) setPages(r.pages);
+    const r = roles[key];
+    if (!r) return;
+    setPicked(key);
+    setPages([...r.pages]);
   }
 
   async function save() {
@@ -582,7 +795,9 @@ function PageAccessEditor({ user, workspace, onChanged }) {
     setSaving(true);
     try {
       await upsertUserGrant(user.id, { client_id: clientId, allowed_pages: pages, role: currentRole });
-      toast.success('Access updated');
+      toast.success(currentRole === 'custom'
+        ? 'Access updated'
+        : `${user.email} is now in ${roles[currentRole]?.name || currentRole}`);
       onChanged();
     } catch (e) { toast.error(e.message); }
     finally { setSaving(false); }
@@ -590,11 +805,12 @@ function PageAccessEditor({ user, workspace, onChanged }) {
 
   return (
     <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-      {/* Role preset, one-click bundle; still fully overridable below */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      {/* Put them in a role, or tick pages for a one-off list */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Role</span>
         <select value={currentRole} onChange={e => applyRole(e.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: 170, padding: '6px 10px' }}>
-          {ROLES.map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
+          {Object.entries(roles).map(([key, r]) => <option key={key} value={key}>{r.name}</option>)}
+          {currentRole === 'custom' && <option value="custom">Custom</option>}
         </select>
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>or tick individual pages below</span>
         {dirty && (
@@ -603,29 +819,13 @@ function PageAccessEditor({ user, workspace, onChanged }) {
           </button>
         )}
       </div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.5 }}>
+        {currentRole === 'custom'
+          ? 'Custom: a one-off page list, and none of the information switches. Edit the roles at the top of this page to change what a role carries.'
+          : `Sees: ${ACCESS_INFO.filter(m => currentInfo?.[m.key]).map(m => m.name.toLowerCase()).join(', ') || 'pages only, no extra information'}.`}
+      </div>
 
-      {PAGE_GROUPS.map(group => (
-        <div key={group.label} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{group.label}</div>
-          <div className="access-pill-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {group.pages.map(p => (
-              <button
-                key={p.slug}
-                onClick={() => togglePage(p.slug)}
-                style={{
-                  padding: '5px 10px', borderRadius: 20,
-                  background: pages.includes(p.slug) ? 'var(--orange)' : 'var(--surface)',
-                  color: pages.includes(p.slug) ? '#fff' : 'var(--text)',
-                  border: `1px solid ${pages.includes(p.slug) ? 'var(--orange)' : 'var(--border)'}`,
-                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
+      <PagePicker groups={PAGE_GROUPS} pages={pages} onToggle={togglePage} />
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Untick everything to remove this employee's access.</div>
     </div>
   );
@@ -817,14 +1017,15 @@ function AppUsageTable({ usage, users }) {
   );
 }
 
-function CreateUserModal({ clients, onClose, onCreated }) {
+function CreateUserModal({ clients, roles = {}, onClose, onCreated }) {
+  const roleKeys = Object.keys(roles);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [restrictAdmin, setRestrictAdmin] = useState(false);
   const [adminPages, setAdminPages] = useState(['admin-users', ...DEFAULT_PAGES]);
   const workspace = clients[0] || null;                  // single-account: one workspace
-  const [role, setRole] = useState('sales_assistant');
+  const [role, setRole] = useState(() => (roles.sales_assistant ? 'sales_assistant' : (roleKeys[0] || '')));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -836,9 +1037,9 @@ function CreateUserModal({ clients, onClose, onCreated }) {
     e.preventDefault();
     setSaving(true); setErr(null);
     try {
-      const rolePages = ROLES.find(r => r.key === role)?.pages || DEFAULT_PAGES;
+      const rolePages = roles[role]?.pages || DEFAULT_PAGES;
       const grants = (!isAdmin && workspace)
-        ? [{ client_id: workspace.id, allowed_pages: rolePages, role }]
+        ? [{ client_id: workspace.id, allowed_pages: rolePages, role: role || 'custom' }]
         : [];
       const payload = { email, password, is_admin: isAdmin, grants };
       if (isAdmin && restrictAdmin && adminPages.length) {
@@ -909,10 +1110,10 @@ function CreateUserModal({ clients, onClose, onCreated }) {
           <>
             <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Role</label>
             <select value={role} onChange={e => setRole(e.target.value)} style={{ ...inputStyle, marginTop: 4, marginBottom: 10 }}>
-              {ROLES.filter(r => r.key !== 'custom').map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
+              {roleKeys.map(k => <option key={k} value={k}>{roles[k].name}</option>)}
             </select>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>
-              This role grants: {(ROLES.find(r => r.key === role)?.pages || []).join(', ')}. You can fine-tune the pages after creating the user.
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.5 }}>
+              This role grants: {(roles[role]?.pages || DEFAULT_PAGES).join(', ')}. You can fine-tune the pages after creating the user.
             </div>
           </>
         )}

@@ -15,12 +15,17 @@ import { useMobile } from '../App';
 // Naming rewrite (audit item #9): trimmed to a mental model that reads as a
 // customer journey: Home → People → Pipeline → Inbox → Calendar → Marketing
 // → Work → Team → Workspace. Old paths kept intact so no route breaks.
+//
+// `info` is the information switch an item needs on top of its page grant
+// (see ACCESS_INFO in ClientContext). An item whose role lacks the switch is
+// not listed here and is not reachable by URL either, App.jsx gates the same
+// pair on the route.
 const nav = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Home',         slug: 'dashboard' },
   { to: '/leads',        icon: UserPlus,        label: 'Leads',        slug: 'leads' },
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
   { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
-  { to: '/money',        icon: Wallet,          label: 'Money',        slug: 'money' },
+  { to: '/money',        icon: Wallet,          label: 'Money',        slug: 'money', info: 'money' },
   { to: '/inbox',        icon: MessageSquare,   label: 'Inbox',        slug: 'inbox' },
   { to: '/assistant',    icon: Sparkles,        label: 'Assistant',    slug: 'assistant' },
   { to: '/appointments', icon: Calendar,        label: 'Calendar',     slug: 'appointments' },
@@ -38,7 +43,7 @@ const navMarketing = [
 ];
 
 const navTeam = [
-  { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees' },
+  { to: '/employees',    icon: UserCog,         label: 'Employees',    slug: 'employees', info: 'team_pay' },
   { to: '/time',         icon: Clock,           label: 'Time',         slug: 'time' },
   { to: '/employee-resources', icon: BookOpen,  label: 'Library',      slug: 'employee-resources' },
 ];
@@ -71,22 +76,23 @@ const FOOTER_BTN = (active = false) => ({
 export default function Sidebar() {
 
   const { hasPermission, isOwner, viewingAs, clearViewingAs } = useTeam();
-  const { isAdmin, canAccess, user } = useClient();
-  // A nav item is visible when the user has BOTH legacy team permission
-  // (for sub-team filtering) AND a page grant in their current client.
-  // Admins bypass both.
-  const canSee = (slug) => hasPermission(slug) && canAccess(slug);
+  const { isAdmin, canAccess, can, user } = useClient();
+  // A nav item is visible when the user has the legacy team permission (for
+  // sub-team filtering), a page grant in their current client, and, where
+  // the item declares one, the information switch their role carries.
+  // Admins bypass all three.
+  const canSee = (item) => hasPermission(item.slug) && canAccess(item.slug) && can(item.info);
 
 
   const { privacyMode, togglePrivacy } = usePrivacy();
   const { signOut } = useAuth();
   const { sidebarOpen } = useMobile();
 
-  const visibleNav          = nav.filter(item => canSee(item.slug));
-  const visibleNavWork      = navWork.filter(item => canSee(item.slug));
-  const visibleNavTeam      = navTeam.filter(item => canSee(item.slug));
-  const visibleNavMarketing = navMarketing.filter(item => canSee(item.slug));
-  const visibleNavTools     = navTools.filter(item => canSee(item.slug));
+  const visibleNav          = nav.filter(canSee);
+  const visibleNavWork      = navWork.filter(canSee);
+  const visibleNavTeam      = navTeam.filter(canSee);
+  const visibleNavMarketing = navMarketing.filter(canSee);
+  const visibleNavTools     = navTools.filter(canSee);
 
   return (
     <>
