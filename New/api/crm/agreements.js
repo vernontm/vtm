@@ -9,6 +9,14 @@ const stripe = require('../_lib/stripe.js');
 // URLs to view the stored (private) signed PDF.
 const SIGN_BASE = 'https://vernontm.com/sign?token=';
 
+// Where sign.js stores the generated signed PDF. A copy signed on paper or in
+// another tool lands in the same private bucket, so file_url keeps its
+// "bucket/path" shape and action=file can mint a short-lived link for it.
+const SIGNED_BUCKET = 'client-agreements';
+const MAX_SIGNED_BYTES = 25 * 1024 * 1024;
+const safeFileName = (n) => String(n || '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80) || 'signed-copy';
+const isYmd = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+
 // Save an AI draft (agreement-ai.js generate output) as the client's agreement
 // row, the same way agreement-ai.js approve does: a stale placeholder row
 // (an empty custom-mode one left over from toggling the payment-plan option)
@@ -44,6 +52,49 @@ async function persistDraft(clientId, draft) {
 async function markContractSent(ag, clientId) {
   if (ag.status === 'signed' || !clientId) return;
   await supaFetch(`crm_clients?id=eq.${clientId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ lead_temperature: 'contract_sent', follow_up_status: 'contract_sent' }) }).catch(() => {});
+}
+
+// The money side of locking an agreement in: the payment schedule from its
+// installments and a linked Deal on the pipeline. Both idempotent, so calling
+// it twice never duplicates either. Shared by action=approve and
+// action=upload-signed, so a paper signature builds the same schedule a
+// signature taken on the platform does. Returns the deal id.
+async function buildSchedule(ag) {
+  const terms = ag.terms || {};
+  const existing = await supaFetch(`crm_payments?agreement_id=eq.${ag.id}&select=id`);
+  if ((!existing || !existing.length) && Array.isArray(terms.installments) && terms.installments.length) {
+    const rows = terms.installments.map(i => ({
+      client_id: ag.client_id,
+      agreement_id: ag.id,
+      label: i.label || null,
+      amount: Number(i.amount) || 0,
+      status: i.status === 'paid' ? 'paid' : 'pending',
+      due_condition: i.trigger || null,
+      source: 'agreement',
+    }));
+    await supaFetch('crm_payments', { method: 'POST', body: JSON.stringify(rows) });
+  }
+
+  let dealId = ag.deal_id || null;
+  if (!dealId) {
+    const monthly = Array.isArray(terms.monthly) && terms.monthly[0] ? terms.monthly[0] : null;
+    const [deal] = await supaFetch('crm_deals', {
+      method: 'POST', headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        client_id: ag.client_id,
+        name: ag.title || 'Service Agreement',
+        value: Number(ag.total_amount) || null,
+        stage: 'Proposal',
+        payment_status: 'unpaid',
+        amount_paid: 0,
+        agreement_id: ag.id,
+        notes: monthly ? `Recurring: $${monthly.amount}/mo, ${monthly.item || ''}`.trim().replace(/,$/, '') : null,
+      }),
+    });
+    dealId = deal && deal.id;
+    if (dealId) await supaFetch(`crm_agreements?id=eq.${ag.id}`, { method: 'PATCH', body: JSON.stringify({ deal_id: dealId }) });
+  }
+  return dealId;
 }
 
 module.exports = async function handler(req, res) {
@@ -129,46 +180,12 @@ module.exports = async function handler(req, res) {
       const [ag] = await supaFetch(`crm_agreements?id=eq.${agId}&select=*`);
       if (!ag) return res.status(404).json({ error: 'Agreement not found' });
       if (ag.status === 'signed') return res.json({ ok: true, alreadySigned: true, deal_id: ag.deal_id, agreement_id: agId });
-      const terms = ag.terms || {};
 
       // 1) mark approved
       await supaFetch(`crm_agreements?id=eq.${agId}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved' }) });
 
-      // 2) payment schedule from installments (only if none exist yet)
-      const existing = await supaFetch(`crm_payments?agreement_id=eq.${agId}&select=id`);
-      if ((!existing || !existing.length) && Array.isArray(terms.installments) && terms.installments.length) {
-        const rows = terms.installments.map(i => ({
-          client_id: ag.client_id,
-          agreement_id: agId,
-          label: i.label || null,
-          amount: Number(i.amount) || 0,
-          status: i.status === 'paid' ? 'paid' : 'pending',
-          due_condition: i.trigger || null,
-          source: 'agreement',
-        }));
-        await supaFetch('crm_payments', { method: 'POST', body: JSON.stringify(rows) });
-      }
-
-      // 3) linked Deal (only if not already linked)
-      let dealId = ag.deal_id || null;
-      if (!dealId) {
-        const monthly = Array.isArray(terms.monthly) && terms.monthly[0] ? terms.monthly[0] : null;
-        const [deal] = await supaFetch('crm_deals', {
-          method: 'POST', headers: { Prefer: 'return=representation' },
-          body: JSON.stringify({
-            client_id: ag.client_id,
-            name: ag.title || 'Service Agreement',
-            value: Number(ag.total_amount) || null,
-            stage: 'Proposal',
-            payment_status: 'unpaid',
-            amount_paid: 0,
-            agreement_id: agId,
-            notes: monthly ? `Recurring: $${monthly.amount}/mo, ${monthly.item || ''}`.trim().replace(/,$/, '') : null,
-          }),
-        });
-        dealId = deal && deal.id;
-        if (dealId) await supaFetch(`crm_agreements?id=eq.${agId}`, { method: 'PATCH', body: JSON.stringify({ deal_id: dealId }) });
-      }
+      // 2) payment schedule from installments + 3) the linked Deal
+      const dealId = await buildSchedule(ag);
 
       return res.json({ ok: true, status: 'approved', deal_id: dealId, agreement_id: agId });
     }
@@ -293,6 +310,134 @@ module.exports = async function handler(req, res) {
         sent_by: user.id, sent_by_name: (user.email || '').split('@')[0] || 'CRM', status: 'sent', sent_at: new Date().toISOString(),
       }).catch(() => {});
       return res.json({ ok: true, phone, link });
+    }
+
+    // POST action=signed-upload-url -> a signed spot in the private
+    // client-agreements bucket for a copy the client signed on paper or in
+    // another tool. Same two-step shape imessage.js uses for media: the phone
+    // PUTs the bytes straight to storage, then calls action=upload-signed with
+    // the file_url this returns. Nothing about the agreement changes yet.
+    if (req.method === 'POST' && action === 'signed-upload-url') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=id,client_id`);
+      if (!ag) return res.status(404).json({ error: 'Agreement not found' });
+      const { name, size } = req.body || {};
+      if (Number(size) > MAX_SIGNED_BYTES) return res.status(413).json({ error: 'File too large (max 25MB)' });
+
+      // Contractor agreements carry no client, so they file under /contractors
+      // exactly the way sign.js stores their generated PDF.
+      const folder = ag.client_id || 'contractors';
+      const path = `${folder}/uploaded-${ag.id}-${Date.now()}-${safeFileName(name)}`;
+      const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/upload/sign/${SIGNED_BUCKET}/${path}`, {
+        method: 'POST',
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
+        body: '{}',   // storage rejects an empty body when the content type is JSON
+      });
+      if (!signRes.ok) return res.status(500).json({ error: `Could not sign upload: ${(await signRes.text()).slice(0, 200)}` });
+      const signed = await signRes.json();
+      const rel = signed.url || signed.signedURL || '';
+      return res.json({
+        ok: true,
+        uploadUrl: rel.startsWith('http') ? rel : `${SUPABASE_URL}/storage/v1${rel.startsWith('/') ? '' : '/'}${rel}`,
+        path,
+        file_url: `${SIGNED_BUCKET}/${path}`,
+      });
+    }
+
+    // POST action=upload-signed -> attach that uploaded copy and mark the
+    // agreement genuinely signed, on the date Ray picked. It writes the same
+    // fields sign.js writes (status, signed_at, signed_date, signer_name,
+    // signature_method, file_url), so the money tiles, the activity feed and
+    // the held-up detector all read it as signed. An agreement that was never
+    // sent works too: there is no status gate, and a sign token is minted so
+    // the pay link keeps working. Body:
+    //   { file_url, name, mime, size, signed_on: 'YYYY-MM-DD', signer_name, note }
+    if (req.method === 'POST' && action === 'upload-signed') {
+      if (!id) return res.status(400).json({ error: 'id required' });
+      const body = req.body || {};
+      const fileUrl = String(body.file_url || '').trim();
+      if (!fileUrl.startsWith(`${SIGNED_BUCKET}/`) || fileUrl.includes('..')) {
+        return res.status(400).json({ error: 'file_url required: upload the copy with action=signed-upload-url first.' });
+      }
+      const [ag] = await supaFetch(`crm_agreements?id=eq.${id}&select=*`);
+      if (!ag) return res.status(404).json({ error: 'Agreement not found' });
+
+      const [cl] = ag.client_id
+        ? (await supaFetch(`crm_clients?id=eq.${ag.client_id}&select=id,stage,owner_name,business_name`).catch(() => [])) || []
+        : [];
+      const nowIso = new Date().toISOString();
+      const uploadedBy = user.email || 'CRM';
+      const note = String(body.note || '').trim().slice(0, 500)
+        || 'Signed outside the platform. A signed copy was uploaded from the app.';
+      const record = {
+        at: nowIso,                                  // when the copy was uploaded
+        by: uploadedBy,                              // who uploaded it
+        by_user_id: user.id || null,
+        note,
+        file_url: fileUrl,
+        file_name: String(body.name || '').slice(0, 160) || null,
+        mime: String(body.mime || '').slice(0, 80) || null,
+        size: Number(body.size) || 0,
+      };
+
+      // Already signed on the platform: keep that signature and its audit
+      // trail intact, just attach the copy Ray uploaded.
+      if (ag.status === 'signed' || ag.signed_at) {
+        await supaFetch(`crm_agreements?id=eq.${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ file_url: fileUrl, terms: { ...(ag.terms || {}), signed_outside: { ...record, signed_on: ag.signed_date || (ag.signed_at || nowIso).slice(0, 10) } } }),
+        });
+        return res.json({ ok: true, already_signed: true, agreement_id: ag.id, file_url: fileUrl });
+      }
+
+      // Noon UTC on the day Ray picked, so the date never reads a day early in
+      // Central time the way a bare midnight timestamp does.
+      const signedOn = isYmd(body.signed_on) ? body.signed_on : nowIso.slice(0, 10);
+      const signedAt = new Date(`${signedOn}T12:00:00Z`).toISOString();
+      const signerName = String(body.signer_name || '').trim().slice(0, 160)
+        || (cl && (cl.owner_name || cl.business_name))
+        || ((ag.terms && ag.terms.signer && ag.terms.signer.name) || '')
+        || 'Client';
+      const signToken = ag.sign_token || crypto.randomUUID();
+
+      await supaFetch(`crm_agreements?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: 'signed',
+          signed_at: signedAt,
+          signed_date: signedOn,
+          signer_name: signerName,
+          signature_method: 'upload',
+          file_url: fileUrl,
+          sign_token: signToken,
+          terms: { ...(ag.terms || {}), signed_outside: { ...record, signed_on: signedOn } },
+        }),
+      });
+
+      // Signed is signed: move the lead off the follow-up drip. Stage only
+      // advances a lead, so a client already in build or live is left alone.
+      if (cl && cl.id) {
+        const patch = { lead_temperature: 'won', follow_up_status: 'none' };
+        if (!cl.stage || cl.stage === 'lead') patch.stage = 'onboarding';
+        await supaFetch(`crm_clients?id=eq.${cl.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) }).catch(() => {});
+      }
+
+      // Build the schedule and the deal the way approve does, so the money
+      // tiles have something to show. Best effort: never lose the signature
+      // over a pipeline row.
+      let dealId = ag.deal_id || null;
+      try { dealId = await buildSchedule(ag); }
+      catch (e) { console.error('upload-signed schedule failed:', e.message); }
+
+      return res.json({
+        ok: true,
+        agreement_id: ag.id,
+        deal_id: dealId,
+        agreement: {
+          id: ag.id, status: 'signed', signed_at: signedAt, signed_date: signedOn,
+          signer_name: signerName, signature_method: 'upload', file_url: fileUrl, sign_token: signToken,
+        },
+      });
     }
 
     // POST action=file -> signed URL for the stored PDF (file_url = "bucket/path")

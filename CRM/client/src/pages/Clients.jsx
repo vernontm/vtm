@@ -3894,7 +3894,12 @@ function AgreementTab({ client }) {
           {ag.file_url && <button className="btn-ghost" onClick={() => viewPdf(ag)}><Download size={14} /> PDF</button>}
         </div>
         {nudge && <NudgeModal kind={nudge.kind} id={nudge.id} onClose={() => setNudge(null)} onSent={() => load()} />}
-        {ag.status === 'signed' && ag.signer_ip && (
+        {ag.status === 'signed' && ag.signature_method === 'upload' && (
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: -8 }}>
+            Signed outside the platform{ag.signer_name ? ` by ${ag.signer_name}` : ''} · copy uploaded{ag.terms?.signed_outside?.by ? ` by ${ag.terms.signed_outside.by}` : ''} · {ag.signed_date || (ag.signed_at ? new Date(ag.signed_at).toLocaleDateString() : '')}
+          </div>
+        )}
+        {ag.status === 'signed' && ag.signature_method !== 'upload' && ag.signer_ip && (
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: -8 }}>
             Signed electronically · {ag.signature_method === 'draw' ? 'drawn signature' : 'typed signature'} · IP {ag.signer_ip} · {ag.signed_at ? new Date(ag.signed_at).toLocaleString() : ''}
           </div>

@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.vernontm.crm",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Lets you send photos and videos from your library to customers and teammates."
+        "NSPhotoLibraryUsageDescription": "Lets you send photos and videos from your library to customers and teammates.",
+        "NSMicrophoneUsageDescription": "Lets you record a voice note to send in a conversation, and dictate a message instead of typing."
       }
     },
     "android": {
@@ -35,7 +36,14 @@
         {
           "photosPermission": "Lets you send photos and videos from your library to customers and teammates."
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Lets you record a voice note to send in a conversation, and dictate a message instead of typing."
+        }
+      ],
+      "expo-video"
     ],
     "extra": {
       "eas": {

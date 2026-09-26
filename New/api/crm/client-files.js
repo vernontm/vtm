@@ -1,5 +1,6 @@
-import { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
+import { setCors, requireCrmUser, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
 import dropbox from '../_lib/dropbox.js';
+import { signedUpload, BUCKET as MEDIA_BUCKET } from '../_lib/storage.js';
 
 // Per-client file manager: folders, uploads, drag-to-organize.
 //   GET  ?action=list&client_id=&path=        list one folder
@@ -9,6 +10,8 @@ import dropbox from '../_lib/dropbox.js';
 //   POST ?action=rename  {id, name}
 //   POST ?action=move    {id, to_path}
 //   POST ?action=delete  {id}
+//   POST ?action=upload-url {client_id, name}     phone: a signed upload spot
+//   POST ?action=create  {client_id, name, url, mime, size}   phone: record it
 //
 // Storage keys stay flat (`<client_id>/<ts>_<rand>_<name>`); folder structure is
 // logical and lives in `parent_path`, so moving/renaming never touches storage.
@@ -52,20 +55,32 @@ async function ensureFolders(clientId, path, who) {
   return parent;
 }
 
-async function removeStorage(keys) {
-  const list = keys.filter(Boolean);
+async function removeStorage(keys, bucket = BUCKET) {
+  const list = (keys || []).filter(Boolean);
   if (!list.length) return;
-  await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}`, {
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
     method: 'DELETE',
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ prefixes: list }),
   }).catch(() => {});
 }
 
+// A storage_key says where the bytes actually live: "dropbox:<path>" (handled
+// by the caller), "crm-media:<path>" for a phone upload, or a bare key in the
+// client-documents bucket. Delete each group from the bucket that holds it.
+async function removeByKeys(keys) {
+  const list = (keys || []).filter(Boolean);
+  const prefix = `${MEDIA_BUCKET}:`;
+  await removeStorage(list.filter(k => !k.startsWith(prefix) && !k.startsWith('dropbox:')), BUCKET);
+  await removeStorage(list.filter(k => k.startsWith(prefix)).map(k => k.slice(prefix.length)), MEDIA_BUCKET);
+}
+
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  const user = await requireAuth(req);
+  // requireCrmUser (not requireAuth) so `uploaded_by` records the person who
+  // actually sent the file instead of a flat "Team".
+  const user = await requireCrmUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   const who = user.email || 'Team';
   const action = req.query?.action || (req.method === 'GET' ? 'list' : '');
@@ -161,6 +176,42 @@ export default async function handler(req, res) {
         name: display,
         upload_url: rel.startsWith('http') ? rel : `${SUPABASE_URL}/storage/v1${rel.startsWith('/') ? '' : '/'}${rel}`,
       });
+    }
+
+    // --- Phone upload (the iPhone app) ----------------------------------
+    // Same two steps the iMessage composer uses: ask for a signed spot, PUT
+    // the bytes straight to storage, then record the row. The bytes land in
+    // the public crm-media bucket, so the app can draw a thumbnail with no
+    // auth header, and the storage_key is namespaced to that bucket.
+    if (req.method === 'POST' && action === 'upload-url') {
+      const { client_id, name } = req.body || {};
+      if (!client_id) return res.status(400).json({ error: 'client_id required' });
+      if (!/^[\w-]{1,64}$/.test(String(client_id))) return res.status(400).json({ error: 'bad client_id' });
+      const spot = await signedUpload(`clients/${client_id}`, name);
+      return res.json({ ok: true, bucket: MEDIA_BUCKET, ...spot });
+    }
+
+    if (req.method === 'POST' && action === 'create') {
+      const { client_id, name, url, mime, size } = req.body || {};
+      if (!client_id || !url) return res.status(400).json({ error: 'client_id and url required' });
+      // Only our own storage may be recorded as a client file, so a caller can
+      // never point a row at somebody else's host.
+      const publicBase = `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/`;
+      if (!String(url).startsWith(publicBase)) return res.status(400).json({ error: 'url must come from action=upload-url' });
+      if (Number(size) > MAX_DIRECT) return res.status(413).json({ error: 'File too large (max 500MB)' });
+
+      const path = normPath((req.body || {}).path);
+      const finalName = await uniqueName(client_id, path, clean(name) || 'file');
+      const row = await supaFetch(T, {
+        method: 'POST', headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({
+          client_id, name: finalName, parent_path: path, is_folder: false,
+          storage_key: `${MEDIA_BUCKET}:${String(url).slice(publicBase.length)}`,
+          url, mime: mime || 'application/octet-stream',
+          size: Number(size) || 0, uploaded_by: who,
+        }),
+      });
+      return res.json({ ok: true, item: row?.[0] || null });
     }
 
     if (req.method === 'POST' && action === 'register') {
@@ -293,12 +344,12 @@ export default async function handler(req, res) {
       if (row.is_folder) {
         const full = fullPath(row);
         const kids = await supaFetch(`${T}?client_id=eq.${row.client_id}&or=(parent_path.eq.${q(full)},parent_path.like.${q(full + '/')}*)&select=id,storage_key`) || [];
-        await removeStorage(kids.map(k => k.storage_key));
+        await removeByKeys(kids.map(k => k.storage_key));
         for (const k of kids) await supaFetch(`${T}?id=eq.${k.id}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
       } else if (row.storage_key && row.storage_key.startsWith('dropbox:')) {
         if (dropbox.configured()) await dropbox.remove(row.storage_key.slice(8)).catch(() => {});
       } else {
-        await removeStorage([row.storage_key]);
+        await removeByKeys([row.storage_key]);
       }
       await supaFetch(`${T}?id=eq.${id}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
       return res.json({ ok: true, deleted: id });

@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Share, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Share, Linking, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getAgreements, getClientActivity, SIGN_BASE, PAY_BASE } from '../lib/api';
+import {
+  getAgreements, getClientActivity, uploadClientFile, deleteClientFile, getClientFileLink,
+  uploadSignedAgreement, getAgreementFile, SIGN_BASE, PAY_BASE,
+} from '../lib/api';
 import { goToConversation } from '../lib/nav';
-import { C, T, F } from '../lib/theme';
+import { openAppSettings } from '../lib/push';
+import { C, T, F, AURORA } from '../lib/theme';
 import { Screen, HeaderBar, IconButton, Tile, Label, Button, Segmented, GradientChip, Dot, Progress, Empty } from '../components/ui';
+import MediaViewer, { fmtSize } from '../components/MediaViewer';
+import Sheet, { SheetRow } from '../components/Sheet';
+import DateField from '../components/DateField';
 import NudgeSheet from '../components/NudgeSheet';
 
 // The client page (Aura), four tabs. Overview: what is next, the balance, the
@@ -14,6 +23,13 @@ import NudgeSheet from '../components/NudgeSheet';
 // sign and pay links. Files and Activity: the full lists. The dock is hidden
 // here, so the bottom padding is the inset. Data: the agreements pipeline
 // plus the client activity bundle (GET /client-activity?client_id=).
+//
+// Files and agreements both show a real preview instead of a generic row: an
+// image draws its own thumbnail, everything else gets a tinted type tile with
+// the size, who added it and when. Tapping one opens it in MediaViewer, inside
+// the app, never in Safari. Ray can add a file from the phone (camera roll or
+// the file browser) and can upload a copy a client signed on paper, which
+// marks the agreement signed on the date he picks.
 
 // Journey stages as colored text: green is live, blue is in motion, slate is
 // paused, amber is still a lead.
@@ -80,15 +96,46 @@ const kindDot = (a) => {
   }
 };
 const isUnsignedRow = (a) => a.kind === 'agreement' && (a.severity === 'amber' || a.severity === 'red' || /unsigned|waiting|not signed/i.test(`${a.title || ''} ${a.sub || ''}`));
-const fileIcon = (k) => {
-  const s = String(k || '').toLowerCase();
-  if (/image|png|jpe?g|gif|heic|webp/.test(s)) return 'image-outline';
-  if (/video|mp4|mov/.test(s)) return 'videocam-outline';
-  if (/audio|m4a|mp3|wav/.test(s)) return 'mic-outline';
-  if (/pdf/.test(s)) return 'document-outline';
-  if (/sheet|xlsx?|csv/.test(s)) return 'grid-outline';
-  return 'document-text-outline';
+
+// The same buckets the server sorts files into (client-activity.js fileKind),
+// so a row we just uploaded looks identical to one that came back from the API.
+const kindOfFile = (mime, fileName) => {
+  const m = String(mime || '').toLowerCase(), n = String(fileName || '').toLowerCase();
+  if (m.startsWith('image/')) return 'image';
+  if (m.startsWith('video/')) return 'video';
+  if (m.startsWith('audio/')) return 'audio';
+  if (m.includes('pdf') || n.endsWith('.pdf')) return 'pdf';
+  if (/word|\.docx?$/.test(m + n)) return 'doc';
+  if (/sheet|excel|csv|\.xlsx?$/.test(m + n)) return 'sheet';
+  if (/presentation|powerpoint|\.pptx?$/.test(m + n)) return 'slides';
+  if (/zip|compressed/.test(m + n)) return 'zip';
+  if (/\.(jpe?g|png|gif|heic|heif|webp)$/.test(n)) return 'image';
+  if (/\.(mov|mp4|m4v|webm)$/.test(n)) return 'video';
+  if (/\.(m4a|caf|mp3|aac|wav)$/.test(n)) return 'audio';
+  return 'file';
 };
+// A tinted tile per file type: the preview for anything that is not an image.
+const FILE_TONE = {
+  image: { icon: 'image-outline', bg: C.blueSoft, fg: C.blue },
+  video: { icon: 'videocam-outline', bg: C.blueSoft, fg: C.blue },
+  audio: { icon: 'mic-outline', bg: AURORA.lilac, fg: C.violet },
+  pdf: { icon: 'document-text-outline', bg: C.redSoft, fg: C.red },
+  doc: { icon: 'document-outline', bg: C.blueSoft, fg: C.blue },
+  sheet: { icon: 'grid-outline', bg: C.greenSoft, fg: C.green },
+  slides: { icon: 'easel-outline', bg: C.amberSoft, fg: C.amber },
+  zip: { icon: 'archive-outline', bg: C.tile2, fg: C.slate },
+  file: { icon: 'document-outline', bg: C.tile2, fg: C.slate },
+};
+const fileTone = (k) => FILE_TONE[k] || FILE_TONE.file;
+// MediaViewer speaks the attachment vocabulary: image, video, audio or file.
+const viewerType = (k) => (k === 'image' || k === 'video' || k === 'audio' ? k : 'file');
+// uploaded_by is an email; the row only has space for the person.
+const shortWho = (s) => String(s || '').split('@')[0].replace(/[._]+/g, ' ').trim() || null;
+const pad2 = (n) => String(n).padStart(2, '0');
+const todayYmd = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+const MAX_FILE_BYTES = 40 * 1024 * 1024;    // what the phone will send
+const MAX_SIGNED_BYTES = 25 * 1024 * 1024;  // what agreements.js accepts for a signed copy
+const SIGNED_NOTE = 'Signed outside the platform. A signed copy was uploaded from the app.';
 const PLAN_TONE = {
   unsigned: { label: 'Unsigned', color: C.amber, dot: C.amberDot },
   draft: { label: 'Draft', color: C.slate, dot: C.slate },
@@ -118,6 +165,16 @@ export default function ClientDetailScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [nudge, setNudge] = useState(null);
+  const [viewer, setViewer] = useState(null);       // what MediaViewer is showing
+  const [pickOpen, setPickOpen] = useState(false);  // the Add file chooser
+  const [adding, setAdding] = useState(false);
+  const [localFiles, setLocalFiles] = useState([]); // added this session, shown before the refresh lands
+  const [mine, setMine] = useState(() => new Set());     // ids Ray added here, the only ones he can delete
+  const [removed, setRemoved] = useState(() => new Set());
+  const [signFor, setSignFor] = useState(null);     // the agreement getting a signed copy
+  const [signFile, setSignFile] = useState(null);
+  const [signDate, setSignDate] = useState(todayYmd());
+  const [signBusy, setSignBusy] = useState(false);
 
   // The screen draws its own header; keep the native one off if the navigator still shows it.
   useLayoutEffect(() => { navigation.setOptions({ headerShown: false }); }, [navigation]);
@@ -137,6 +194,136 @@ export default function ClientDetailScreen({ route, navigation }) {
   const shareLink = async (label, url) => {
     try { await Share.share({ message: url }); }
     catch { Alert.alert(label, url); }
+  };
+
+  // Pick one thing off the phone. 'photo' is the camera roll, 'file' is the
+  // file browser (PDFs, scans, anything). Returns { uri, name, mime, size },
+  // or null when the picker was dismissed or access is off.
+  const pickAsset = async (source) => {
+    if (source === 'photo') {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        // iOS asks once; after that the switch lives in Settings.
+        Alert.alert('Photos access is off', 'Open Settings, tap Photos, and allow access so you can add photos and videos.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: openAppSettings },
+        ]);
+        return null;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.85, allowsMultipleSelection: false });
+      if (res.canceled || !res.assets?.length) return null;
+      const a = res.assets[0];
+      const isVideo = a.type === 'video' || /^video\//.test(a.mimeType || '');
+      return {
+        uri: a.uri,
+        name: a.fileName || `${isVideo ? 'video' : 'photo'}-${Date.now()}.${isVideo ? 'mov' : 'jpg'}`,
+        mime: a.mimeType || (isVideo ? 'video/quicktime' : 'image/jpeg'),
+        size: Number(a.fileSize) || 0,
+      };
+    }
+    const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
+    if (res.canceled || !res.assets?.length) return null;
+    const a = res.assets[0];
+    return { uri: a.uri, name: a.name || `file-${Date.now()}`, mime: a.mimeType || 'application/octet-stream', size: Number(a.size) || 0 };
+  };
+
+  // Add a file to this client: pick it, upload it through a signed upload, and
+  // show it in the list straight away while the bundle refreshes behind it.
+  const addFile = async (source) => {
+    try {
+      const asset = await pickAsset(source);
+      if (!asset) return;
+      if (asset.size && asset.size > MAX_FILE_BYTES) return Alert.alert('Too big', 'Keep files under 40 MB.');
+      setAdding(true);
+      const saved = await uploadClientFile(client.id, asset.uri, asset.name, asset.mime);
+      const row = (saved && saved.item) || saved || {};
+      const local = {
+        id: row.id || `pending-${Date.now()}`,
+        name: row.name || asset.name,
+        url: row.url || null,
+        mime: row.mime || asset.mime,
+        kind: kindOfFile(row.mime || asset.mime, row.name || asset.name),
+        by_name: row.uploaded_by || 'You',
+        at: row.created_at || new Date().toISOString(),
+        size: Number(row.size) || asset.size || 0,
+      };
+      setLocalFiles(prev => [local, ...prev]);
+      setMine(prev => new Set(prev).add(local.id));
+      setTab('files');
+      load(true);
+    } catch (e) { Alert.alert('Could not add the file', e.message); }
+    finally { setAdding(false); }
+  };
+
+  // Only a file added in this session can be removed here; anything older is
+  // managed in the web CRM.
+  const removeFile = (f) => Alert.alert('Delete this file', `${f.name || 'This file'} will be removed from ${name}.`, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Delete', style: 'destructive', onPress: async () => {
+      setLocalFiles(prev => prev.filter(x => x.id !== f.id));
+      setRemoved(prev => new Set(prev).add(f.id));
+      try { await deleteClientFile(f.id); load(true); }
+      catch (e) {
+        setRemoved(prev => { const nx = new Set(prev); nx.delete(f.id); return nx; });
+        Alert.alert('Could not delete it', e.message);
+      }
+    } },
+  ]);
+
+  // Every file opens inside the app. A Dropbox-backed row carries no public
+  // url, so ask the API for a short-lived one first.
+  const openFile = async (f) => {
+    try {
+      let url = f.url || null;
+      if (!url && f.id) { const r = await getClientFileLink(f.id); url = (r && r.url) || null; }
+      if (!url) return Alert.alert('No preview yet', 'There is no link on this file to open.');
+      const kind = f.kind || kindOfFile(f.mime, f.name);
+      setViewer({ url, type: viewerType(kind), name: f.name || 'File', mime: f.mime || null, size: Number(f.size) || 0 });
+    } catch (e) { Alert.alert('Could not open the file', e.message); }
+  };
+
+  // The stored agreement PDF lives in a private bucket, so it needs a signed
+  // link. With no stored copy, fall back to the signing page.
+  const openAgreementFile = async (a) => {
+    if (!a) return;
+    if (!a.file_url) {
+      if (a.sign_token) return open(`${SIGN_BASE}${a.sign_token}`);
+      return Alert.alert('Nothing to open', 'No signed copy is stored on this agreement yet.');
+    }
+    try {
+      const r = await getAgreementFile(a.id);
+      const url = r && r.url;
+      if (!url) throw new Error('No link came back for that copy.');
+      const outside = (a.terms && a.terms.signed_outside) || {};
+      const nm = outside.file_name || `${a.title || 'Agreement'}.pdf`;
+      const mime = outside.mime || 'application/pdf';
+      setViewer({ url, type: viewerType(kindOfFile(mime, nm)), name: nm, mime, size: Number(outside.size) || 0 });
+    } catch (e) { Alert.alert('Could not open the copy', e.message); }
+  };
+
+  // A client who signed on paper or in another tool still counts: pick the
+  // copy, pick the date it was signed, and the agreement is marked signed.
+  const startSigned = (a) => { setSignFile(null); setSignDate(todayYmd()); setSignFor(a); };
+  const closeSigned = () => { setSignFor(null); setSignFile(null); };
+  const pickSigned = async (source) => {
+    try {
+      const asset = await pickAsset(source);
+      if (!asset) return;
+      if (asset.size && asset.size > MAX_SIGNED_BYTES) return Alert.alert('Too big', 'Keep a signed copy under 25 MB.');
+      setSignFile(asset);
+    } catch (e) { Alert.alert('Could not open the picker', e.message); }
+  };
+  const submitSigned = async () => {
+    const a = signFor;
+    if (!a || !signFile) return;
+    setSignBusy(true);
+    try {
+      await uploadSignedAgreement(a.id, signFile.uri, signFile.name, signFile.mime, { signed_on: signDate, note: SIGNED_NOTE });
+      closeSigned();
+      await load(true);
+      Alert.alert('Marked signed', `${a.title || 'The agreement'} is signed as of ${fmtDay(signDate)}, from the copy you uploaded.`);
+    } catch (e) { Alert.alert('Could not mark it signed', e.message); }
+    finally { setSignBusy(false); }
   };
 
   const agreements = data?.agreements || [];
@@ -200,6 +387,19 @@ export default function ClientDetailScreen({ route, navigation }) {
   const nextUp = act?.next_up || null;
   const unsignedAg = agreements.find(a => !isSigned(a) && (a.status === 'sent' || a.status === 'approved')) || null;
 
+  // What the Files list actually shows: anything added in this session sits on
+  // top of the bundle until the refresh catches up, and a row deleted a moment
+  // ago disappears immediately instead of flickering back.
+  const allFiles = useMemo(() => {
+    const seen = new Set(); const out = [];
+    for (const f of [...localFiles, ...files]) {
+      const k = f.id || f.url || f.name;
+      if (!k || seen.has(k) || removed.has(f.id)) continue;
+      seen.add(k); out.push(f);
+    }
+    return out;
+  }, [localFiles, files, removed]);
+
   const groups = useMemo(() => {
     const out = []; const idx = {};
     for (const a of activity) {
@@ -225,16 +425,76 @@ export default function ClientDetailScreen({ route, navigation }) {
       <Text style={[T.meta, { color: C.ink }]}>See all</Text>
     </TouchableOpacity>
   );
-  const fileRow = (f, i) => (
-    <View key={f.id || `${f.name}-${i}`} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6 }, i ? hairline : null]}>
-      <Ionicons name={fileIcon(f.kind || f.name)} size={18} color={C.ink} />
-      <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-        <Text numberOfLines={1} style={rowTitle}>{f.name || 'File'}</Text>
-        <Text numberOfLines={1} style={[T.sub, { fontSize: 12 }]}>{[f.by_name, fmtDay(f.at)].filter(Boolean).join(' · ') || 'File'}</Text>
-      </View>
-      {f.url ? <Button label="Open" kind="white" small onPress={() => open(f.url)} /> : null}
-    </View>
+  // The preview itself: an image draws a real thumbnail, everything else gets
+  // its tinted type tile. A PDF first page would need a rasterizer the app
+  // does not carry, so a PDF reads as a red document tile with its details.
+  const filePreview = (f, kind, size = 44) => (
+    kind === 'image' && f.url
+      ? <Image source={{ uri: f.url }} resizeMode="cover" style={{ width: size, height: size, borderRadius: 12, backgroundColor: C.tile2 }} />
+      : (
+        <View style={{ width: size, height: size, borderRadius: 12, backgroundColor: fileTone(kind).bg, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={fileTone(kind).icon} size={Math.round(size * 0.45)} color={fileTone(kind).fg} />
+        </View>
+      )
   );
+  const fileRow = (f, i) => {
+    const kind = f.kind || kindOfFile(f.mime, f.name);
+    const meta = [shortWho(f.by_name), fmtDay(f.at), fmtSize(f.size)].filter(Boolean).join(' · ');
+    return (
+      <TouchableOpacity key={f.id || `${f.name}-${i}`} activeOpacity={0.75} onPress={() => openFile(f)} accessibilityLabel={`Open ${f.name || 'this file'}`}
+        style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 6 }, i ? hairline : null]}>
+        {filePreview(f, kind)}
+        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+          <Text numberOfLines={1} style={rowTitle}>{f.name || 'File'}</Text>
+          <Text numberOfLines={1} style={[T.sub, { fontSize: 12 }]}>{meta || cap(kind)}</Text>
+        </View>
+        {mine.has(f.id)
+          ? <IconButton icon="trash-outline" size={34} white color={C.red} label="Delete this file" onPress={() => removeFile(f)} />
+          : <Ionicons name="chevron-forward" size={16} color={C.slate} />}
+      </TouchableOpacity>
+    );
+  };
+  const addFileLink = () => (
+    <TouchableOpacity onPress={() => setPickOpen(true)} disabled={adding} accessibilityLabel="Add a file to this client"
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+      {adding ? <ActivityIndicator size="small" color={C.ink} /> : <Ionicons name="add" size={15} color={C.ink} />}
+      <Text style={[T.meta, { color: C.ink }]}>{adding ? 'Uploading' : 'Add file'}</Text>
+    </TouchableOpacity>
+  );
+  // An agreement row reads like a document: the state as a tinted tile, the
+  // signed copy one tap away, and an upload control while it is unsigned.
+  const agreementRow = (a, i) => {
+    const s = agState(a);
+    const signed = isSigned(a);
+    const tint = signed ? { bg: C.greenSoft, fg: C.green }
+      : (a.status === 'sent' || a.status === 'approved') ? { bg: C.amberSoft, fg: C.amber }
+      : { bg: C.tile2, fg: C.slate };
+    const sub = [s.sub, a.file_url ? 'Tap to read the signed copy' : null].filter(Boolean).join(' · ');
+    return (
+      <View key={a.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingVertical: 6 }, i ? hairline : null]}>
+        <TouchableOpacity activeOpacity={0.75} disabled={!a.file_url && !a.sign_token} onPress={() => openAgreementFile(a)}
+          accessibilityLabel={`Open ${a.title || 'this agreement'}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: tint.bg, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name={signed ? 'document-text' : 'document-text-outline'} size={20} color={tint.fg} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+            <Text numberOfLines={1} style={rowTitle}>{a.title || 'Service agreement'}</Text>
+            <Text numberOfLines={1} style={[T.sub, { fontSize: 12 }]}>{sub}</Text>
+          </View>
+        </TouchableOpacity>
+        {signed ? (
+          a.file_url
+            ? <IconButton icon="eye-outline" size={34} white label="Open the signed copy" onPress={() => openAgreementFile(a)} />
+            : a.sign_token ? <Button label="View" kind="white" small onPress={() => open(`${SIGN_BASE}${a.sign_token}`)} /> : null
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {a.sign_token ? <Button label="Share link" kind="white" small onPress={() => shareLink('Sign link', `${SIGN_BASE}${a.sign_token}`)} /> : null}
+            <IconButton icon="cloud-upload-outline" size={34} white label="Upload a signed copy" onPress={() => startSigned(a)} />
+          </View>
+        )}
+      </View>
+    );
+  };
   const activityRow = (a, i) => (
     <View key={a.id || `${a.kind}-${a.at}-${i}`} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6 }, i ? hairline : null]}>
       <Dot color={kindDot(a)} />
@@ -303,8 +563,10 @@ export default function ClientDetailScreen({ route, navigation }) {
 
       {/* Files */}
       <Tile style={{ gap: 4, paddingVertical: 14 }}>
-        <Label right={files.length > 3 ? seeAll('files') : null}>Files</Label>
-        {files.length === 0 ? <Text style={[T.sub, { paddingVertical: 8 }]}>No files yet.</Text> : files.slice(0, 3).map(fileRow)}
+        <Label right={allFiles.length > 3 ? seeAll('files') : addFileLink()}>Files</Label>
+        {allFiles.length === 0
+          ? <Text style={[T.sub, { paddingVertical: 8 }]}>No files yet. Tap Add file to send one from your phone.</Text>
+          : allFiles.slice(0, 3).map(fileRow)}
       </Tile>
 
       {/* Activity */}
@@ -381,23 +643,7 @@ export default function ClientDetailScreen({ route, navigation }) {
         )}>Agreements</Label>
         {agreements.length === 0 ? (
           <Text style={[T.sub, { paddingVertical: 8 }]}>No agreement yet. Tap Draft agreement to write one from the texts and call notes.</Text>
-        ) : agreements.map((a, i) => {
-          const s = agState(a);
-          return (
-            <View key={a.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 6 }, i ? hairline : null]}>
-              <Dot color={s.dot} />
-              <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                <Text numberOfLines={1} style={rowTitle}>{a.title || 'Service agreement'}</Text>
-                <Text numberOfLines={1} style={[T.sub, { fontSize: 12 }]}>{s.sub}</Text>
-              </View>
-              {a.sign_token ? (
-                isSigned(a)
-                  ? <Button label="View" kind="white" small onPress={() => open(`${SIGN_BASE}${a.sign_token}`)} />
-                  : <Button label="Share link" kind="white" small onPress={() => shareLink('Sign link', `${SIGN_BASE}${a.sign_token}`)} />
-              ) : null}
-            </View>
-          );
-        })}
+        ) : agreements.map(agreementRow)}
       </Tile>
 
       {/* Payments */}
@@ -426,14 +672,14 @@ export default function ClientDetailScreen({ route, navigation }) {
     </>
   );
 
-  const filesTab = () => (files.length === 0 ? (
-    <Empty icon="folder-open-outline" title="No files yet" sub="Files the client shares and the ones we upload show up here." />
-  ) : (
+  const filesTab = () => (
     <Tile style={{ gap: 4, paddingVertical: 14 }}>
-      <Label right={`${files.length} ${files.length === 1 ? 'file' : 'files'}`}>Files</Label>
-      {files.map(fileRow)}
+      <Label right={addFileLink()}>{allFiles.length ? `Files · ${allFiles.length}` : 'Files'}</Label>
+      {allFiles.length === 0 ? (
+        <Empty icon="folder-open-outline" title="No files yet" sub="Files the client shares and the ones you add from your phone show up here." />
+      ) : allFiles.map(fileRow)}
     </Tile>
-  ));
+  );
 
   const activityTab = () => (activity.length === 0 ? (
     <Empty icon="pulse-outline" title="No activity yet" sub="Texts, meetings, payments, agreements and nudges land here." />
@@ -480,6 +726,47 @@ export default function ClientDetailScreen({ route, navigation }) {
       </ScrollView>
 
       <NudgeSheet target={nudge} onClose={() => setNudge(null)} onSent={() => load(true)} />
+
+      {/* Every file and every signed copy opens here, inside the app. */}
+      <MediaViewer attachment={viewer} onClose={() => setViewer(null)} />
+
+      {/* Add a file: the camera roll or the file browser. The picker opens a
+          beat after the sheet closes, or iOS drops it behind the modal. */}
+      <Sheet visible={pickOpen} title="Add a file" onClose={() => setPickOpen(false)}>
+        <SheetRow label="Photo or video" sub="From your camera roll" left={<Ionicons name="images-outline" size={18} color={C.ink} />}
+          onPress={() => { setPickOpen(false); setTimeout(() => addFile('photo'), 250); }} />
+        <SheetRow label="Browse files" sub="A PDF, a scan, anything on your phone" left={<Ionicons name="folder-open-outline" size={18} color={C.ink} />}
+          onPress={() => { setPickOpen(false); setTimeout(() => addFile('file'), 250); }} />
+      </Sheet>
+
+      {/* A copy the client signed on paper or in another tool. */}
+      <Sheet visible={!!signFor} title="Upload a signed copy" onClose={closeSigned}>
+        <Text style={T.sub}>
+          This marks {signFor?.title || 'the agreement'} signed and keeps your copy on it. The CRM records that it was signed outside the platform, and who uploaded it.
+        </Text>
+
+        <Label>Signed on</Label>
+        <DateField value={signDate} onChange={setSignDate} style={{ backgroundColor: C.tile, borderWidth: 0, borderRadius: 16, paddingVertical: 13 }} />
+
+        <Label>The signed copy</Label>
+        {signFile ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.tile, borderRadius: 16, padding: 12 }}>
+            {filePreview({ url: signFile.uri, name: signFile.name }, kindOfFile(signFile.mime, signFile.name), 40)}
+            <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+              <Text numberOfLines={1} style={rowTitle}>{signFile.name}</Text>
+              <Text numberOfLines={1} style={[T.sub, { fontSize: 12 }]}>{fmtSize(signFile.size) || 'Ready to upload'}</Text>
+            </View>
+            <IconButton icon="close" size={32} white label="Remove this file" onPress={() => setSignFile(null)} />
+          </View>
+        ) : (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button label="Photo" icon="images-outline" kind="soft" small onPress={() => pickSigned('photo')} />
+            <Button label="Browse" icon="folder-open-outline" kind="soft" small onPress={() => pickSigned('file')} />
+          </View>
+        )}
+
+        <Button label="Mark signed" icon="checkmark" busy={signBusy} disabled={!signFile} onPress={submitSigned} style={{ marginTop: 4 }} />
+      </Sheet>
     </Screen>
   );
 }

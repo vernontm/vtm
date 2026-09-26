@@ -19,7 +19,13 @@ export const fmtHM = (min) => {
   const h = Math.floor(m / 60), r = m % 60;
   return h && r ? `${h}h ${r}m` : h ? `${h}h` : `${r}m`;
 };
-export const fmtTime = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+// VTM runs on Central time, so a tile reads the same wherever the phone is.
+export const fmtTime = (iso) => {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  try { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' }); }
+  catch (_) { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
+};
 // "9:30" and "AM" as two parts, for the time avatars on the route.
 export const fmtTimeParts = (iso) => {
   const s = fmtTime(iso);

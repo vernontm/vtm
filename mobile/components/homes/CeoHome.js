@@ -4,9 +4,11 @@ import { C, T, F } from '../../lib/theme';
 import { Tile, Label, Button, Dot } from '../ui';
 import { NextUpTile, TeamTodayTile, SmallTile, fmtMoney, plural } from './shared';
 
-// Ray's home: what is next, who is working, what is held up, and the money.
-// No leads tile and no clock tile here. A missing section renders nothing
-// and the layout closes up.
+// Ray's home: the money first, then what is next, who is working and what
+// they are on, and last what is held up. No leads tile and no clock tile
+// here. A missing section renders nothing and the layout closes up, so the
+// money tiles lead whenever the server sends them and Next up leads when it
+// does not.
 const MONEY_TABS = new Set(['invoice', 'manual_invoice', 'payment', 'plan']);
 
 export default function CeoHome({ navigation, home }) {
@@ -32,32 +34,6 @@ export default function CeoHome({ navigation, home }) {
 
   return (
     <>
-      <NextUpTile event={home.next_up} onPress={() => go('Calendar')} />
-
-      {home.team_today ? <TeamTodayTile team={home.team_today} onPress={() => go('Time')} /> : null}
-
-      {/* Held up */}
-      {held ? (
-        <Tile onPress={() => go('Money', { tab: 'invoices' })} style={{ gap: 10, paddingVertical: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Label>Held up</Label>
-            <Text style={T.meta}>{held.length ? plural(held.length, 'item') : 'all clear'}</Text>
-          </View>
-          {held.length === 0 ? <Text style={T.sub}>Nothing is waiting on anyone. Tap to open Money.</Text> : null}
-          {held.slice(0, 5).map(item => (
-            <View key={`${item.kind}-${item.id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Dot color={item.severity === 'red' ? C.redDot : C.amberDot} />
-              <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                <Text numberOfLines={1} style={[T.body, { fontFamily: F.semi }]}>{item.title}</Text>
-                {item.sub ? <Text numberOfLines={1} style={T.sub}>{item.sub}</Text> : null}
-              </View>
-              <Button label="Nudge" small kind="white" onPress={() => nudge(item)} />
-            </View>
-          ))}
-          {held.length > 5 ? <Text style={T.meta}>{held.length - 5} more in Money</Text> : null}
-        </Tile>
-      ) : null}
-
       {/* Collected and client plans */}
       {money ? (
         <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -91,6 +67,10 @@ export default function CeoHome({ navigation, home }) {
         </View>
       ) : null}
 
+      <NextUpTile event={home.next_up} onPress={() => go('Calendar')} />
+
+      {home.team_today ? <TeamTodayTile team={home.team_today} onPress={() => go('Time')} /> : null}
+
       {/* Team chat and clients */}
       {(home.team_unread !== undefined || home.clients_active !== undefined) ? (
         <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -103,6 +83,28 @@ export default function CeoHome({ navigation, home }) {
             <SmallTile icon="people-outline" title="Clients" sub={`${Number(home.clients_active) || 0} active`} onPress={() => go('People')} />
           ) : null}
         </View>
+      ) : null}
+
+      {/* Held up */}
+      {held ? (
+        <Tile onPress={() => go('Money', { tab: 'invoices' })} style={{ gap: 10, paddingVertical: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Label>Held up</Label>
+            <Text style={T.meta}>{held.length ? plural(held.length, 'item') : 'all clear'}</Text>
+          </View>
+          {held.length === 0 ? <Text style={T.sub}>Nothing is waiting on anyone. Tap to open Money.</Text> : null}
+          {held.slice(0, 5).map(item => (
+            <View key={`${item.kind}-${item.id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Dot color={item.severity === 'red' ? C.redDot : C.amberDot} />
+              <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                <Text numberOfLines={1} style={[T.body, { fontFamily: F.semi }]}>{item.title}</Text>
+                {item.sub ? <Text numberOfLines={1} style={T.sub}>{item.sub}</Text> : null}
+              </View>
+              <Button label="Nudge" small kind="white" onPress={() => nudge(item)} />
+            </View>
+          ))}
+          {held.length > 5 ? <Text style={T.meta}>{held.length - 5} more in Money</Text> : null}
+        </Tile>
       ) : null}
     </>
   );

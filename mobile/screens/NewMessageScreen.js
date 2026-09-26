@@ -1,14 +1,33 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getImsgDirectory, sendImsg, createClient, createContact, getMe } from '../lib/api';
+import { getImsgDirectory, sendImsg, createClient, createContact, getMe, uploadFile } from '../lib/api';
+import { openAppSettings } from '../lib/push';
 import { C, T, F } from '../lib/theme';
-import { Screen, HeaderBar, Avatar, Chip, Button, Label, KIND_COLOR } from '../components/ui';
+import { Screen, HeaderBar, Avatar, Chip, Button, Label, IconButton, KIND_COLOR } from '../components/ui';
 import { last10, fmtPhone, KIND } from '../lib/imsg';
 
 // Start a text: pick someone from the directory or type a number. A new
 // number gets added as a lead (or client / contact) before the first message.
+// One photo, video or file can ride along, the same 40 MB ceiling the
+// conversation composer uses.
+const MAX_ATTACH = 40 * 1024 * 1024;
+const kindOfMime = (mime) => {
+  const m = String(mime || '').toLowerCase();
+  if (m.startsWith('image/')) return 'image';
+  if (m.startsWith('video/')) return 'video';
+  if (m.startsWith('audio/')) return 'audio';
+  return 'file';
+};
+const fmtSize = (n) => {
+  if (!n) return '';
+  return n >= 1024 * 1024 ? `${(n / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+};
+const ICON_FOR = { image: 'image', video: 'videocam', audio: 'mic', file: 'document-outline' };
+
 export default function NewMessageScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [directory, setDirectory] = useState([]);
@@ -17,6 +36,8 @@ export default function NewMessageScreen({ navigation }) {
   const [addKind, setAddKind] = useState('lead');
   const [addName, setAddName] = useState('');
   const [body, setBody] = useState('');
+  const [attach, setAttach] = useState(null);   // { uri, name, mime, type, size, width, height, preview }
+  const [stage, setStage] = useState('');       // what the send is busy doing
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { getImsgDirectory().then(d => setDirectory(d || [])).catch(() => {}); }, []);
@@ -32,12 +53,65 @@ export default function NewMessageScreen({ navigation }) {
   const showQuickAdd = isNumber && !selected && !exact;
   const targetPhone = selected ? selected.phone : (isNumber ? pick : null);
 
+  // A photo or a video out of the library.
+  const pickMedia = async () => {
+    if (busy) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        // iOS asks for photo access once; after that the switch lives in Settings.
+        return Alert.alert('Photos access is off', 'Open Settings, tap Photos, and allow access so you can send photos and videos.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: openAppSettings },
+        ]);
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.85, allowsMultipleSelection: false });
+      if (res.canceled || !res.assets?.length) return;
+      const a = res.assets[0];
+      if (a.fileSize && a.fileSize > MAX_ATTACH) return Alert.alert('Too big', 'Keep photos and videos under 40 MB.');
+      const isVideo = a.type === 'video' || /^video\//.test(a.mimeType || '');
+      setAttach({
+        uri: a.uri,
+        name: a.fileName || `${isVideo ? 'video' : 'photo'}-${Date.now()}.${isVideo ? 'mov' : 'jpg'}`,
+        mime: a.mimeType || (isVideo ? 'video/quicktime' : 'image/jpeg'),
+        type: isVideo ? 'video' : 'image',
+        size: a.fileSize || null,
+        width: a.width || null,
+        height: a.height || null,
+        preview: isVideo ? null : a.uri,
+      });
+    } catch (e) { Alert.alert('Could not open your photos', e.message); }
+  };
+  // Anything else: a PDF, a contract, a spreadsheet.
+  const pickFile = async () => {
+    if (busy) return;
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple: false });
+      if (res.canceled || !res.assets?.length) return;
+      const f = res.assets[0];
+      if (f.size && f.size > MAX_ATTACH) return Alert.alert('Too big', 'Keep files under 40 MB.');
+      const type = kindOfMime(f.mimeType);
+      setAttach({
+        uri: f.uri,
+        name: f.name || `file-${Date.now()}`,
+        mime: f.mimeType || 'application/octet-stream',
+        type,
+        size: f.size || null,
+        width: null,
+        height: null,
+        preview: type === 'image' ? f.uri : null,
+      });
+    } catch (e) { Alert.alert('Could not open your files', e.message); }
+  };
+
   const send = async () => {
     if (!targetPhone) return Alert.alert('Pick a person or enter a valid number.');
-    if (!body.trim()) return Alert.alert('Enter a message.');
+    const text = body.trim();
+    if (!text && !attach) return Alert.alert('Add a message or an attachment.');
     setBusy(true);
     try {
       if (showQuickAdd) {
+        setStage('Adding them');
         const name = addName.trim() || fmtPhone(targetPhone);
         if (addKind === 'contact') {
           const me = await getMe();
@@ -47,13 +121,21 @@ export default function NewMessageScreen({ navigation }) {
           await createClient({ business_name: name, contact_phone: targetPhone, stage: addKind === 'lead' ? 'lead' : 'onboarding', lead_temperature: 'warm', source: 'mobile' });
         }
       }
-      await sendImsg(targetPhone, body.trim());
+      let attachments;
+      if (attach) {
+        setStage(`Uploading the ${attach.type === 'file' ? 'file' : attach.type}`);
+        const up = await uploadFile(attach.uri, attach.name, attach.mime);
+        attachments = [{ url: up.url, type: attach.type, name: attach.name, mime: up.mime || attach.mime, size: up.size || attach.size, width: attach.width, height: attach.height }];
+      }
+      setStage('Sending');
+      await sendImsg(targetPhone, text, attachments);
       navigation.replace('Conversation', { phone: targetPhone });
     } catch (e) { Alert.alert('Could not send', e.message); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setStage(''); }
   };
 
   const field = { minHeight: 48, borderRadius: 16, backgroundColor: C.tile, paddingHorizontal: 16, paddingVertical: 12, fontFamily: F.body, fontSize: 16, color: C.ink };
+  const canSend = !!targetPhone && (!!body.trim() || !!attach);
 
   return (
     <Screen>
@@ -106,10 +188,38 @@ export default function NewMessageScreen({ navigation }) {
 
           <View style={{ gap: 8 }}>
             <Label>Message</Label>
-            <TextInput style={[field, { minHeight: 110, textAlignVertical: 'top' }]} placeholder="Type your text" placeholderTextColor={C.slate} value={body} onChangeText={setBody} multiline />
+            <TextInput style={[field, { minHeight: 110, textAlignVertical: 'top' }]} placeholder={attach ? 'Add a note, or send the attachment on its own' : 'Type your text'} placeholderTextColor={C.slate} value={body} onChangeText={setBody} multiline />
           </View>
 
-          <Button label={busy ? 'Sending' : (showQuickAdd ? 'Add and send' : 'Send')} busy={busy} disabled={!targetPhone || !body.trim()} onPress={send} icon="arrow-up" />
+          {/* Attach: one photo, video or file, the same ceiling as the
+              conversation composer. */}
+          <View style={{ gap: 8 }}>
+            <Label right={attach ? (fmtSize(attach.size) || 'Attached') : '40 MB max'}>Attachment</Label>
+            {attach ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 18, backgroundColor: C.tile }}>
+                <View style={{ width: 56, height: 56, borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+                  {attach.preview
+                    ? <Image source={{ uri: attach.preview }} style={{ width: 56, height: 56 }} resizeMode="cover" />
+                    : <Ionicons name={ICON_FOR[attach.type] || 'document-outline'} size={22} color={C.ink} />}
+                </View>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Text numberOfLines={1} style={[T.body, { fontFamily: F.bold }]}>{attach.name}</Text>
+                  <Text numberOfLines={1} style={T.sub}>{busy ? (stage || 'Working') : 'Ready to send'}</Text>
+                </View>
+                {busy
+                  ? <ActivityIndicator color={C.ink} style={{ width: 36 }} />
+                  : <IconButton icon="close" size={36} white label="Remove the attachment" onPress={() => setAttach(null)} />}
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Chip label="Photo or video" icon="image-outline" onPress={pickMedia} />
+                <Chip label="File" icon="document-outline" onPress={pickFile} />
+              </View>
+            )}
+          </View>
+
+          <Button label={showQuickAdd ? 'Add and send' : 'Send'} busy={busy} disabled={!canSend} onPress={send} icon="arrow-up" />
+          {busy ? <Text style={[T.sub, { textAlign: 'center' }]}>{stage || 'Sending'}</Text> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

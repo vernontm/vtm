@@ -9,7 +9,8 @@ const { pushUser, pushAdmins } = require('../_lib/push.js');
 // (imessage-bridge/bridge.mjs) polls this endpoint, sends each one through
 // Messages, reports back, and forwards inbound replies.
 //
-//   User actions (CRM login):     GET (threads / one thread), POST ?action=send
+//   User actions (CRM login):     GET (threads / one thread), POST ?action=send,
+//                                  POST ?action=star, ?action=archive, ?action=delete
 //   Bridge actions (shared token): GET ?action=contacts, POST ?action=pending,
 //                                  POST ?action=mark, POST ?action=inbound
 //
@@ -45,11 +46,55 @@ function normalizePhone(raw) {
 // PostgREST error into something a person can act on.
 function needsMigration(e) {
   const m = String((e && e.message) || '');
-  return /(channel|imsg_guid|attachments|crm_imessage_threads|crm_imessage_notes|crm_imessage_events|crm_imessage_reads)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
+  return /(channel|imsg_guid|attachments|starred|archived_at|deleted_at|crm_imessage_threads|crm_imessage_notes|crm_imessage_events|crm_imessage_reads)/i.test(m) && /(does not exist|schema cache|could not find|relation)/i.test(m);
 }
 const MIGRATION_MSG = 'The iMessage inbox needs its one-time database update. Run the SQL from imessage-bridge/README.md.';
+// Starring, archiving and deleting are a later migration of their own.
+const BATCH2_MSG = 'Starring, archiving and deleting conversations need one more database update. Run docs/sql/app-batch-2.sql in Supabase.';
+const BATCH2_COLS = /(starred|archived_at|deleted_at)/i;
+const migrationBody = (e) => ({
+  error: BATCH2_COLS.test(String((e && e.message) || '')) ? BATCH2_MSG : MIGRATION_MSG,
+  needs_migration: true,
+});
 
 const first = (x) => (Array.isArray(x) ? x[0] : x);
+
+// Every read of the inbox skips soft-deleted messages. Before the migration
+// that column does not exist, so the same query runs again without the filter
+// and the inbox keeps working.
+async function readMessages(query) {
+  try {
+    return (await supaFetch(`${query}${query.includes('?') ? '&' : '?'}deleted_at=is.null`)) || [];
+  } catch (e) {
+    if (!/deleted_at/i.test(String((e && e.message) || ''))) throw e;
+    return (await supaFetch(query)) || [];
+  }
+}
+
+// One row per conversation: who it is assigned to, plus star and archive
+// state. Any of those columns can still be missing (each arrived in its own
+// migration), so this degrades to whatever the table actually has.
+async function readThreadRows() {
+  try {
+    return (await supaFetch('crm_imessage_threads?select=phone,assigned_to,assigned_to_name,starred,archived_at')) || [];
+  } catch (_) {
+    try {
+      return (await supaFetch('crm_imessage_threads?select=phone,assigned_to,assigned_to_name')) || [];
+    } catch (_) {
+      return [];
+    }
+  }
+}
+
+// Set a few columns on a conversation, creating the row when this is the
+// first thing ever recorded about that number.
+function patchThread(phone, patch) {
+  return supaFetch('crm_imessage_threads?on_conflict=phone', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ phone, ...patch, updated_at: new Date().toISOString() }),
+  });
+}
 
 // Thread a phone number to a client/lead by matching the last 10 digits.
 async function clientIdFor(phone) {
@@ -106,6 +151,113 @@ async function notifyInbound(phone, text) {
   } catch (_) { /* never break inbound on a push failure */ }
 }
 
+// ── Voice notes ──────────────────────────────────────────────────────────
+// A voice note is an attachment with type 'audio'. The server transcribes it
+// once with ElevenLabs (scribe_v1, the same key recordings.js uses) so the
+// words are searchable and readable without anyone playing the clip. One
+// attempt with tight timeouts, and any failure just means no transcript: a
+// text is never lost over a transcription.
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const STT_URL = 'https://api.elevenlabs.io/v1/speech-to-text';
+const STT_BUDGET_MS = 8000;              // the whole job, download included
+const STT_CALL_MS = 6000;                // any single call, so an inbound text
+                                         // never outruns the function's limit
+const STT_MAX_BYTES = 20 * 1024 * 1024;  // bigger than this, skip it
+const STT_MAX_CLIPS = 2;                 // more audio than this in one text stays untranscribed
+
+function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+// A multipart body with no dependency, the same shape recordings.js builds.
+function buildMultipart(fields, file) {
+  const boundary = '----VTMBoundary' + Date.now() + Math.random().toString(36).slice(2);
+  const parts = [];
+  for (const [name, value] of Object.entries(fields)) {
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
+  }
+  parts.push(
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${file.name}"; filename="${file.filename}"\r\nContent-Type: ${file.mimeType}\r\n\r\n`),
+    file.buffer,
+    Buffer.from(`\r\n--${boundary}--\r\n`)
+  );
+  return { body: Buffer.concat(parts), contentType: `multipart/form-data; boundary=${boundary}` };
+}
+
+// Pull the clip back out of storage and hand it to ElevenLabs. Throws on
+// anything that goes wrong; the caller reads that as "no transcript".
+async function speechToText(att, deadline) {
+  const left = () => Math.max(500, Math.min(STT_CALL_MS, deadline - Date.now()));
+  const dl = await fetchWithTimeout(att.url, {}, left());
+  if (!dl.ok) throw new Error(`download ${dl.status}`);
+  const buf = Buffer.from(await dl.arrayBuffer());
+  if (!buf.length) throw new Error('empty audio');
+  if (buf.length > STT_MAX_BYTES) throw new Error(`audio too large (${buf.length} bytes)`);
+  const { body, contentType } = buildMultipart(
+    { model_id: 'scribe_v1' },
+    { name: 'file', filename: att.name || 'voice-note.m4a', mimeType: att.mime || 'audio/m4a', buffer: buf }
+  );
+  const res = await fetchWithTimeout(STT_URL, {
+    method: 'POST',
+    headers: { 'xi-api-key': ELEVENLABS_API_KEY, 'Content-Type': contentType },
+    body,
+  }, left());
+  if (!res.ok) throw new Error(`speech to text ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return await res.json();
+}
+
+// cleanAttachments() keeps only what the app renders, so a voice note's two
+// extra fields are merged back on here from what the caller sent.
+function withVoiceFields(raw, cleaned) {
+  const byUrl = new Map();
+  for (const a of Array.isArray(raw) ? raw : []) {
+    const u = String((a && a.url) || '').slice(0, 600);
+    if (u && !byUrl.has(u)) byUrl.set(u, a);
+  }
+  return cleaned.map((a) => {
+    const src = byUrl.get(a.url) || {};
+    const out = { ...a };
+    const ms = Number(src.duration_ms);
+    if (Number.isFinite(ms) && ms > 0) out.duration_ms = Math.round(ms);
+    const t = typeof src.transcript === 'string' ? src.transcript.trim() : '';
+    if (t) out.transcript = t.slice(0, 5000);
+    return out;
+  });
+}
+
+// The attachments as they go into the row: cleaned, voice note fields kept,
+// audio transcribed. Never throws.
+async function prepareAttachments(raw, cleaned) {
+  const atts = withVoiceFields(raw, cleaned || cleanAttachments(raw));
+  if (!ELEVENLABS_API_KEY || !atts.length) return atts;
+  const deadline = Date.now() + STT_BUDGET_MS;
+  let tried = 0;
+  for (const a of atts) {
+    if (a.type !== 'audio' || a.transcript) continue;
+    if (tried >= STT_MAX_CLIPS || deadline - Date.now() < 1500) break;
+    tried++;
+    try {
+      const data = await speechToText(a, deadline);
+      const text = String((data && data.text) || '').trim();
+      if (text) a.transcript = text.slice(0, 5000);
+      if (!a.duration_ms) {
+        // scribe_v1 timestamps every word, so the last one is the length.
+        const words = Array.isArray(data && data.words) ? data.words : [];
+        const end = words.length ? Number(words[words.length - 1].end) : 0;
+        if (Number.isFinite(end) && end > 0) a.duration_ms = Math.round(end * 1000);
+      }
+    } catch (err) {
+      console.error('voice note transcription failed:', (err && err.message) || err);
+    }
+  }
+  return atts;
+}
+
+// A transcribed voice note reads better than "Voice memo" in a push.
+const firstTranscript = (atts) => (atts || []).find((a) => a.type === 'audio' && a.transcript)?.transcript || '';
+
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -126,11 +278,17 @@ module.exports = async function handler(req, res) {
         // even before that person is saved as a lead.
         const [clients, texted] = await Promise.all([
           supaFetch('crm_clients?select=contact_phone&contact_phone=not.is.null'),
-          supaFetch(`crm_sms_messages?channel=eq.${CHANNEL}&direction=eq.out&select=phone&limit=1000`),
+          readMessages(`crm_sms_messages?channel=eq.${CHANNEL}&direction=eq.out&select=phone&limit=1000`),
         ]);
+        // Numbers we have a conversation record for stay on the list even
+        // when every message in it was deleted, so a deleted conversation
+        // still comes back if that person writes again.
+        let known = [];
+        try { known = ((await supaFetch('crm_imessage_threads?select=phone')) || []).map((r) => r.phone); } catch (_) {}
         const numbers = [...new Set([
           ...(clients || []).map((r) => last10(r.contact_phone)),
           ...(texted || []).map((r) => last10(r.phone)),
+          ...known.map((p) => last10(p)),
         ].filter((n) => n.length === 10))];
         return res.json({ numbers });
       }
@@ -138,9 +296,9 @@ module.exports = async function handler(req, res) {
       // Hand queued outbound rows to the bridge, claiming each one so a restart
       // or a second poll cannot send the same text twice.
       if (action === 'pending' && req.method === 'POST') {
-        const rows = (await supaFetch(
+        const rows = await readMessages(
           `crm_sms_messages?channel=eq.${CHANNEL}&direction=eq.out&status=eq.queued&order=created_at.asc&limit=20`
-        )) || [];
+        );
         const claimed = [];
         for (const r of rows) {
           const upd = await supaFetch(`crm_sms_messages?id=eq.${r.id}&status=eq.queued`, {
@@ -179,7 +337,7 @@ module.exports = async function handler(req, res) {
         const { from, body, guid, ts } = req.body || {};
         const phone = normalizePhone(from);
         if (!phone) return res.status(400).json({ error: 'from required' });
-        const attachments = cleanAttachments((req.body || {}).attachments);
+        let attachments = cleanAttachments((req.body || {}).attachments);
         const text = String(body || '').trim().slice(0, 2000);
         if (!text && !attachments.length) return res.status(400).json({ error: 'body required' });
 
@@ -190,6 +348,9 @@ module.exports = async function handler(req, res) {
           );
           if (first(dup)) return res.json({ ok: true, duplicate: true });
         }
+
+        // A voice note gets its transcript before the row is written.
+        attachments = await prepareAttachments((req.body || {}).attachments, attachments);
 
         const when = ts ? new Date(Number(ts)) : new Date();
         const row = {
@@ -208,14 +369,17 @@ module.exports = async function handler(req, res) {
           headers: { Prefer: 'return=representation' },
           body: JSON.stringify(row),
         });
+        // A reply brings an archived conversation back: you put it away, they
+        // wrote again. Best effort, a missing column never breaks inbound.
+        try { await patchThread(phone, { archived_at: null }); } catch (_) {}
         // Alert the conversation's assignee (or admins if unassigned).
-        await notifyInbound(phone, text || mediaLabel(attachments));
+        await notifyInbound(phone, text || firstTranscript(attachments) || mediaLabel(attachments));
         return res.status(201).json(first(saved) || row);
       }
 
       return res.status(405).json({ error: 'Method not allowed' });
     } catch (e) {
-      if (needsMigration(e)) return res.status(503).json({ error: MIGRATION_MSG });
+      if (needsMigration(e)) return res.status(503).json(migrationBody(e));
       return res.status(500).json({ error: e.message || 'Server error' });
     }
   }
@@ -273,12 +437,12 @@ module.exports = async function handler(req, res) {
       // ?phone= returns one thread (chronological); otherwise thread summaries.
       const phone = req.query.phone ? normalizePhone(req.query.phone) : null;
       if (phone) {
-        const rows = await supaFetch(
+        const rows = await readMessages(
           `crm_sms_messages?channel=eq.${CHANNEL}&phone=eq.${encodeURIComponent(phone)}&order=created_at.asc`
         );
-        return res.json(rows || []);
+        return res.json(rows);
       }
-      const rows = await supaFetch(
+      const rows = await readMessages(
         `crm_sms_messages?channel=eq.${CHANNEL}&order=created_at.desc&limit=1000`
       );
 
@@ -303,18 +467,22 @@ module.exports = async function handler(req, res) {
         }
       }
       const list = Object.values(threads);
-      // Merge in each thread's employee assignment (best effort: the assignment
-      // table is a later migration; without it, threads are simply unassigned).
-      try {
-        const asg = (await supaFetch('crm_imessage_threads?select=phone,assigned_to,assigned_to_name')) || [];
-        const byPhone = {};
-        for (const a of asg) byPhone[a.phone] = a;
-        for (const t of list) {
-          const a = byPhone[t.phone];
-          if (a) { t.assigned_to = a.assigned_to; t.assigned_to_name = a.assigned_to_name; }
-        }
-      } catch (_) { /* assignment table not migrated yet */ }
-      return res.json(list);
+      // Merge in each thread's employee assignment plus its star and archive
+      // state (best effort: those are later migrations; without them a thread
+      // is simply unassigned, unstarred and not archived).
+      const byPhone = {};
+      for (const a of await readThreadRows()) byPhone[a.phone] = a;
+      for (const t of list) {
+        const a = byPhone[t.phone];
+        t.starred = !!(a && a.starred);
+        t.archived = !!(a && a.archived_at);
+        if (a) { t.assigned_to = a.assigned_to; t.assigned_to_name = a.assigned_to_name; }
+      }
+      // The inbox leaves archived conversations out; ?archived=1 is the
+      // archived shelf, which is only them. Each is a list the caller can
+      // render as it comes.
+      const shelf = String(req.query.archived || '') === '1';
+      return res.json(list.filter((t) => (shelf ? t.archived : !t.archived)));
     }
 
     // Queue an outbound iMessage. The Mac bridge picks it up within seconds.
@@ -342,7 +510,9 @@ module.exports = async function handler(req, res) {
         body,
         status: 'queued',
       };
-      if (attachments.length) row.attachments = attachments;
+      // A voice note recorded in the app is transcribed before it is queued.
+      const prepared = await prepareAttachments((req.body || {}).attachments, attachments);
+      if (prepared.length) row.attachments = prepared;
       const saved = await supaFetch('crm_sms_messages', {
         method: 'POST',
         headers: { Prefer: 'return=representation' },
@@ -371,14 +541,28 @@ module.exports = async function handler(req, res) {
       const contactRow = (contacts || []).find((c) => last10(c.phone) === d10);
       const nameGuess = clientRow?.business_name || clientRow?.owner_name || contactRow?.name || phone;
 
+      // A name may travel with the change. Without one a converted record
+      // keeps the phone number as its name and reads as blank in the client
+      // list, which is exactly how a real conversion got missed once.
+      const clean = (v) => String(v == null ? '' : v).trim().slice(0, 120);
+      const business = clean((req.body || {}).business_name);
+      const owner = clean((req.body || {}).owner_name);
+      // A name that is just the phone number is a placeholder, not a name.
+      const placeholder = (v) => !v || last10(v) === d10;
+
       if (kind === 'lead' || kind === 'client') {
         const stage = kind === 'lead' ? 'lead' : 'onboarding';
         if (clientRow) {
-          await supaFetch(`crm_clients?id=eq.${clientRow.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ stage, updated_at: new Date().toISOString() }) });
-        } else {
-          await supaFetch('crm_clients', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ business_name: nameGuess, contact_phone: phone, stage }) });
+          const patch = { stage, updated_at: new Date().toISOString() };
+          if (business) patch.business_name = business;
+          else if (placeholder(clientRow.business_name) && owner) patch.business_name = owner;
+          if (owner) patch.owner_name = owner;
+          await supaFetch(`crm_clients?id=eq.${clientRow.id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(patch) });
+          return res.json({ ok: true, kind, id: clientRow.id, business_name: patch.business_name || clientRow.business_name, owner_name: patch.owner_name || clientRow.owner_name, needs_name: placeholder(patch.business_name || clientRow.business_name) });
         }
-        return res.json({ ok: true, kind });
+        const row = { business_name: business || owner || nameGuess, owner_name: owner || '', contact_phone: phone, stage };
+        const saved = first(await supaFetch('crm_clients', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row) }));
+        return res.json({ ok: true, kind, id: saved?.id || null, business_name: row.business_name, owner_name: row.owner_name, needs_name: placeholder(row.business_name) });
       }
 
       // kind === 'contact'
@@ -451,6 +635,43 @@ module.exports = async function handler(req, res) {
       return res.json({ ok: true });
     }
 
+    // Star a conversation. Keyed by phone like every other thread flag.
+    if (req.method === 'POST' && action === 'star') {
+      const phone = normalizePhone((req.body || {}).phone);
+      if (!phone) return res.status(400).json({ error: 'phone required' });
+      const starred = !!(req.body || {}).starred;
+      await patchThread(phone, { starred });
+      return res.json({ ok: true, starred });
+    }
+
+    // Archive a conversation, or bring it back. An inbound reply un-archives
+    // it on its own, so an archived thread returns if the person writes again.
+    if (req.method === 'POST' && action === 'archive') {
+      const phone = normalizePhone((req.body || {}).phone);
+      if (!phone) return res.status(400).json({ error: 'phone required' });
+      const archived = !!(req.body || {}).archived;
+      await patchThread(phone, { archived_at: archived ? new Date().toISOString() : null });
+      return res.json({ ok: true, archived });
+    }
+
+    // Delete a conversation. Soft: the messages are stamped deleted_at and
+    // filtered out of every read, the thread is archived, and nothing ever
+    // leaves the table.
+    if (req.method === 'POST' && action === 'delete') {
+      const phone = normalizePhone((req.body || {}).phone);
+      if (!phone) return res.status(400).json({ error: 'phone required' });
+      const now = new Date().toISOString();
+      // Messages first: without the column this throws before the thread is
+      // touched, so a 503 never leaves a half deleted conversation behind.
+      await supaFetch(`crm_sms_messages?channel=eq.${CHANNEL}&phone=eq.${encodeURIComponent(phone)}&deleted_at=is.null`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ deleted_at: now }),
+      });
+      await patchThread(phone, { archived_at: now });
+      return res.json({ ok: true });
+    }
+
     // Add an internal note to a conversation, attributed to the current user.
     if (req.method === 'POST' && action === 'note') {
       const phone = normalizePhone((req.body || {}).phone);
@@ -473,7 +694,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {
-    if (needsMigration(e)) return res.status(503).json({ error: MIGRATION_MSG });
+    if (needsMigration(e)) return res.status(503).json(migrationBody(e));
     return res.status(500).json({ error: e.message || 'Server error' });
   }
 };

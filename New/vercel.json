@@ -2,126 +2,422 @@
   "headers": [
     {
       "source": "/academy/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/academy",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/admin/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/admin",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/academy/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/admin/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ],
   "functions": {
-    "api/crm/recordings.js": { "maxDuration": 300, "memory": 1024 },
-    "api/crm/bulk-upload.js": { "maxDuration": 300, "memory": 1024 },
-    "api/crm/carousel-generator.js": { "maxDuration": 300 },
-    "api/crm/bulk-agent.js": { "maxDuration": 300 },
-    "api/crm/email-agent.js": { "maxDuration": 60 },
-    "api/crm/global-agent.js": { "maxDuration": 60 },
-    "api/crm/content-ai.js": { "maxDuration": 60 },
-    "api/crm/process-brand-bible.js": { "maxDuration": 60 },
-    "api/academy/ai-generate.js": { "maxDuration": 60 },
-    "api/academy/transcribe.js": { "maxDuration": 300, "memory": 1024 },
-    "api/academy/billing.js": { "maxDuration": 30 },
-    "api/academy/stripe-webhook.js": { "maxDuration": 30 },
-    "api/crm/email-campaigns.js": { "maxDuration": 60 },
-    "api/crm/email-cron.js": { "maxDuration": 60 },
-    "api/mcp.js": { "maxDuration": 60 },
-    "api/crm/delivery-board.js": { "maxDuration": 60 },
-    "api/crm/email-queue-cron.js": { "maxDuration": 60 },
-    "api/crm/uploadpost.js": { "maxDuration": 60 },
-    "api/crm/publish-cron.js": { "maxDuration": 60 },
-    "api/crm/personalize-script.js": { "maxDuration": 30 },
-    "api/crm/email-template-ai.js": { "maxDuration": 60 },
-    "api/crm/email-edit-ai.js": { "maxDuration": 120 },
-    "api/crm/mailerlite-groups.js": { "maxDuration": 30 },
-    "api/funnel/checkout.js": { "maxDuration": 30 },
-    "api/funnel/oto.js": { "maxDuration": 30 },
-    "api/funnel/stripe-webhook.js": { "maxDuration": 30 },
-    "api/crm/client-revenue.js": { "maxDuration": 60 }
+    "api/crm/recordings.js": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "api/crm/bulk-upload.js": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "api/crm/carousel-generator.js": {
+      "maxDuration": 300
+    },
+    "api/crm/bulk-agent.js": {
+      "maxDuration": 300
+    },
+    "api/crm/email-agent.js": {
+      "maxDuration": 60
+    },
+    "api/crm/global-agent.js": {
+      "maxDuration": 60
+    },
+    "api/crm/content-ai.js": {
+      "maxDuration": 60
+    },
+    "api/crm/process-brand-bible.js": {
+      "maxDuration": 60
+    },
+    "api/academy/ai-generate.js": {
+      "maxDuration": 60
+    },
+    "api/academy/transcribe.js": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "api/academy/billing.js": {
+      "maxDuration": 30
+    },
+    "api/academy/stripe-webhook.js": {
+      "maxDuration": 30
+    },
+    "api/crm/email-campaigns.js": {
+      "maxDuration": 60
+    },
+    "api/crm/email-cron.js": {
+      "maxDuration": 60
+    },
+    "api/mcp.js": {
+      "maxDuration": 60
+    },
+    "api/crm/delivery-board.js": {
+      "maxDuration": 60
+    },
+    "api/crm/email-queue-cron.js": {
+      "maxDuration": 60
+    },
+    "api/crm/uploadpost.js": {
+      "maxDuration": 60
+    },
+    "api/crm/publish-cron.js": {
+      "maxDuration": 60
+    },
+    "api/crm/personalize-script.js": {
+      "maxDuration": 30
+    },
+    "api/crm/email-template-ai.js": {
+      "maxDuration": 60
+    },
+    "api/crm/email-edit-ai.js": {
+      "maxDuration": 120
+    },
+    "api/crm/mailerlite-groups.js": {
+      "maxDuration": 30
+    },
+    "api/funnel/checkout.js": {
+      "maxDuration": 30
+    },
+    "api/funnel/oto.js": {
+      "maxDuration": 30
+    },
+    "api/funnel/stripe-webhook.js": {
+      "maxDuration": 30
+    },
+    "api/crm/client-revenue.js": {
+      "maxDuration": 60
+    },
+    "api/crm/imessage.js": {
+      "maxDuration": 60
+    },
+    "api/transcribe.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
   },
   "crons": [
-    { "path": "/api/crm/email-cron", "schedule": "*/15 * * * *" },
-    { "path": "/api/crm/email-queue-cron", "schedule": "*/15 * * * *" },
-    { "path": "/api/crm/publish-cron", "schedule": "*/15 * * * *" },
-    { "path": "/api/crm/meeting-transcripts-cron", "schedule": "*/15 * * * *" },
-    { "path": "/api/crm/reminders-cron", "schedule": "*/5 * * * *" },
-    { "path": "/api/crm/followups-cron", "schedule": "*/5 * * * *" }
+    {
+      "path": "/api/crm/email-cron",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/crm/email-queue-cron",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/crm/publish-cron",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/crm/meeting-transcripts-cron",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/crm/reminders-cron",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/crm/followups-cron",
+      "schedule": "*/5 * * * *"
+    }
   ],
   "redirects": [
-    { "source": "/crm",        "destination": "/crm-blueprint?utm_source=tiktok&utm_medium=social&utm_campaign=crm-funnel", "permanent": false },
-    { "source": "/crm-ig",     "destination": "/crm-blueprint?utm_source=instagram&utm_medium=social&utm_campaign=crm-funnel", "permanent": false },
-    { "source": "/crm-yt",     "destination": "/crm-blueprint?utm_source=youtube&utm_medium=social&utm_campaign=crm-funnel", "permanent": false },
-    { "source": "/tiktok",     "destination": "/claude-guide?utm_source=tiktok&utm_medium=bio&utm_campaign=claude-guide", "permanent": false },
-    { "source": "/ig",         "destination": "/claude-guide?utm_source=instagram&utm_medium=bio&utm_campaign=claude-guide", "permanent": false },
-    { "source": "/yt",         "destination": "/claude-guide?utm_source=youtube&utm_medium=description&utm_campaign=claude-guide", "permanent": false },
-    { "source": "/threads",    "destination": "/claude-guide?utm_source=threads&utm_medium=bio&utm_campaign=claude-guide", "permanent": false },
-    { "source": "/email",      "destination": "/claude-guide?utm_source=email&utm_medium=newsletter&utm_campaign=claude-guide", "permanent": false },
-    { "source": "/workshop",   "destination": "/ai-meetup", "permanent": false },
-    { "source": "/AI-meetup",  "destination": "/ai-meetup", "permanent": false }
+    {
+      "source": "/crm",
+      "destination": "/crm-blueprint?utm_source=tiktok&utm_medium=social&utm_campaign=crm-funnel",
+      "permanent": false
+    },
+    {
+      "source": "/crm-ig",
+      "destination": "/crm-blueprint?utm_source=instagram&utm_medium=social&utm_campaign=crm-funnel",
+      "permanent": false
+    },
+    {
+      "source": "/crm-yt",
+      "destination": "/crm-blueprint?utm_source=youtube&utm_medium=social&utm_campaign=crm-funnel",
+      "permanent": false
+    },
+    {
+      "source": "/tiktok",
+      "destination": "/claude-guide?utm_source=tiktok&utm_medium=bio&utm_campaign=claude-guide",
+      "permanent": false
+    },
+    {
+      "source": "/ig",
+      "destination": "/claude-guide?utm_source=instagram&utm_medium=bio&utm_campaign=claude-guide",
+      "permanent": false
+    },
+    {
+      "source": "/yt",
+      "destination": "/claude-guide?utm_source=youtube&utm_medium=description&utm_campaign=claude-guide",
+      "permanent": false
+    },
+    {
+      "source": "/threads",
+      "destination": "/claude-guide?utm_source=threads&utm_medium=bio&utm_campaign=claude-guide",
+      "permanent": false
+    },
+    {
+      "source": "/email",
+      "destination": "/claude-guide?utm_source=email&utm_medium=newsletter&utm_campaign=claude-guide",
+      "permanent": false
+    },
+    {
+      "source": "/workshop",
+      "destination": "/ai-meetup",
+      "permanent": false
+    },
+    {
+      "source": "/AI-meetup",
+      "destination": "/ai-meetup",
+      "permanent": false
+    }
   ],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/academy/assets/:path*", "destination": "/academy/assets/:path*" },
-    { "source": "/academy/:path*", "destination": "/academy/index.html" },
-    { "source": "/academy", "destination": "/academy/index.html" },
-    { "source": "/admin/assets/:path*", "destination": "/admin/assets/:path*" },
-    { "source": "/admin/:path*", "destination": "/admin/index.html" },
-    { "source": "/admin", "destination": "/admin/index.html" },
-    { "source": "/tutorials/:slug", "destination": "/post.html" },
-    { "source": "/post", "destination": "/post.html" },
-    { "source": "/creators", "destination": "/creators.html" },
-    { "source": "/contact", "destination": "/contact.html" },
-    { "source": "/about", "destination": "/about.html" },
-    { "source": "/rayvaughn", "destination": "/rayvaughn.html" },
-    { "source": "/ai-agent-replay", "destination": "/ai-agent-replay.html" },
-    { "source": "/replay/ai-agent",  "destination": "/ai-agent-replay.html" },
-    { "source": "/portfolio/pickapaint", "destination": "/pickapaint.html" },
-    { "source": "/portfolio", "destination": "/portfolio.html" },
-    { "source": "/free-gift", "destination": "/free-gift.html" },
-    { "source": "/ai-quiz", "destination": "/ai-quiz.html" },
-    { "source": "/webinar", "destination": "/webinar.html" },
-    { "source": "/meetup", "destination": "/meetup.html" },
-    { "source": "/ai-meetup", "destination": "/ai-meetup.html" },
-    { "source": "/ai-meetup", "destination": "/ai-meetup.html" },
-    { "source": "/workshop-admin", "destination": "/workshop-admin.html" },
-    { "source": "/workshop-slides", "destination": "/workshop-slides.html" },
-    { "source": "/present", "destination": "/workshop-slides.html" },
-    { "source": "/in-person", "destination": "/meetup.html" },
-    { "source": "/book-call", "destination": "/book-call.html" },
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/terms", "destination": "/terms.html" },
-    { "source": "/terms-of-service", "destination": "/terms.html" },
-    { "source": "/sms-consent", "destination": "/sms-consent.html" },
-    { "source": "/privacy-policy", "destination": "/privacy.html" },
-    { "source": "/portal", "destination": "/portal.html" },
-    { "source": "/sign", "destination": "/sign.html" },
-    { "source": "/client", "destination": "/client.html" },
-    { "source": "/crm-blueprint", "destination": "/crm-blueprint.html" },
-    { "source": "/crm-build", "destination": "/crm-build.html" },
-    { "source": "/crm-lab", "destination": "/crm-lab.html" },
-    { "source": "/crm-welcome", "destination": "/crm-welcome.html" },
-    { "source": "/crm-blueprint-guide", "destination": "/crm-blueprint-guide.html" },
-    { "source": "/claude-guide", "destination": "/claude-guide.html" },
-    { "source": "/services", "destination": "/services.html" },
-    { "source": "/ai-automation-katy-tx", "destination": "/ai-automation-katy-tx.html" },
-    { "source": "/done-for-you-crm", "destination": "/done-for-you-crm.html" },
-    { "source": "/resources", "destination": "/resources/index.html" },
-    { "source": "/resources/:slug", "destination": "/resources/category.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    },
+    {
+      "source": "/academy/assets/:path*",
+      "destination": "/academy/assets/:path*"
+    },
+    {
+      "source": "/academy/:path*",
+      "destination": "/academy/index.html"
+    },
+    {
+      "source": "/academy",
+      "destination": "/academy/index.html"
+    },
+    {
+      "source": "/admin/assets/:path*",
+      "destination": "/admin/assets/:path*"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/tutorials/:slug",
+      "destination": "/post.html"
+    },
+    {
+      "source": "/post",
+      "destination": "/post.html"
+    },
+    {
+      "source": "/creators",
+      "destination": "/creators.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
+      "source": "/rayvaughn",
+      "destination": "/rayvaughn.html"
+    },
+    {
+      "source": "/ai-agent-replay",
+      "destination": "/ai-agent-replay.html"
+    },
+    {
+      "source": "/replay/ai-agent",
+      "destination": "/ai-agent-replay.html"
+    },
+    {
+      "source": "/portfolio/pickapaint",
+      "destination": "/pickapaint.html"
+    },
+    {
+      "source": "/portfolio",
+      "destination": "/portfolio.html"
+    },
+    {
+      "source": "/free-gift",
+      "destination": "/free-gift.html"
+    },
+    {
+      "source": "/ai-quiz",
+      "destination": "/ai-quiz.html"
+    },
+    {
+      "source": "/webinar",
+      "destination": "/webinar.html"
+    },
+    {
+      "source": "/meetup",
+      "destination": "/meetup.html"
+    },
+    {
+      "source": "/ai-meetup",
+      "destination": "/ai-meetup.html"
+    },
+    {
+      "source": "/ai-meetup",
+      "destination": "/ai-meetup.html"
+    },
+    {
+      "source": "/workshop-admin",
+      "destination": "/workshop-admin.html"
+    },
+    {
+      "source": "/workshop-slides",
+      "destination": "/workshop-slides.html"
+    },
+    {
+      "source": "/present",
+      "destination": "/workshop-slides.html"
+    },
+    {
+      "source": "/in-person",
+      "destination": "/meetup.html"
+    },
+    {
+      "source": "/book-call",
+      "destination": "/book-call.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/terms-of-service",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/sms-consent",
+      "destination": "/sms-consent.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/portal",
+      "destination": "/portal.html"
+    },
+    {
+      "source": "/sign",
+      "destination": "/sign.html"
+    },
+    {
+      "source": "/client",
+      "destination": "/client.html"
+    },
+    {
+      "source": "/crm-blueprint",
+      "destination": "/crm-blueprint.html"
+    },
+    {
+      "source": "/crm-build",
+      "destination": "/crm-build.html"
+    },
+    {
+      "source": "/crm-lab",
+      "destination": "/crm-lab.html"
+    },
+    {
+      "source": "/crm-welcome",
+      "destination": "/crm-welcome.html"
+    },
+    {
+      "source": "/crm-blueprint-guide",
+      "destination": "/crm-blueprint-guide.html"
+    },
+    {
+      "source": "/claude-guide",
+      "destination": "/claude-guide.html"
+    },
+    {
+      "source": "/services",
+      "destination": "/services.html"
+    },
+    {
+      "source": "/ai-automation-katy-tx",
+      "destination": "/ai-automation-katy-tx.html"
+    },
+    {
+      "source": "/done-for-you-crm",
+      "destination": "/done-for-you-crm.html"
+    },
+    {
+      "source": "/resources",
+      "destination": "/resources/index.html"
+    },
+    {
+      "source": "/resources/:slug",
+      "destination": "/resources/category.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

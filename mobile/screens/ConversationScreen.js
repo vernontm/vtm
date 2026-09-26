@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Linking, Image, Modal } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Linking, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Sheet, { SheetRow } from '../components/Sheet';
 import {
@@ -12,14 +13,45 @@ import {
 import { parseAutomations, fillTemplate } from '../lib/templates';
 import { openAppSettings } from '../lib/push';
 import { C, T, F } from '../lib/theme';
-import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, Button, TEMP, KIND_COLOR } from '../components/ui';
+import { Screen, IconButton, Avatar, Chip, Dot, GradientChip, Orb, Button, Label, TEMP, KIND_COLOR } from '../components/ui';
 import { last10, firstName, fmtPhone, fmtDateTime, KIND, TEMPS, colorForEmployee } from '../lib/imsg';
+import MediaViewer, { AttachmentPreview, fmtSize, kindOf } from '../components/MediaViewer';
+import VoiceNote from '../components/VoiceNote';
+import DictateButton, { Recorder, LevelBars, PulseDot, ensureMicPermission, fmtElapsed } from '../components/DictateButton';
 
 // Rough detector for "this conversation is about setting up a time".
 const SCHED_RE = /\b(meet|meeting|meet ?up|schedule|scheduling|availab|appointment|calendar|what time|when (are|can|could|is|works?|would)|free|book|sit ?down|come in|stop by|get together|reschedul)\b/i;
 // A reply that sounds like the customer just agreed to a time: worth asking
 // the assistant whether there is something to book.
 const CONFIRM_RE = /\b(\d{1,2}(:\d{2})?\s*(a\.?m\.?|p\.?m\.?)|works for me|that works|sounds good|let'?s do (it|that)|book it|perfect|see you (then|at)|confirm(ed)?|yes,? (that|the)|i'?ll take|either (one|works))\b/i;
+
+// The composer while a voice note is being recorded: bin it, watch the level
+// and the clock, or send it. It replaces the message row rather than
+// squeezing in beside it, so everything stays one thumb wide. Module level,
+// so recording never remounts the screen's text field.
+function VoiceBar({ onSend, onCancel }) {
+  return (
+    <Recorder maxMs={300000} onDone={onSend} onCancel={onCancel}>
+      {({ ms, levels, finish, drop }) => (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <IconButton icon="trash-outline" size={44} label="Throw the voice note away" color={C.red} onPress={drop} />
+          <View style={{ flex: 1, height: 50, borderRadius: 25, backgroundColor: C.tile, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16 }}>
+            <PulseDot />
+            <Text style={[T.title, { fontSize: 15, fontVariant: ['tabular-nums'] }]}>{fmtElapsed(ms)}</Text>
+            <View style={{ flex: 1 }}><LevelBars levels={levels} height={24} count={18} /></View>
+          </View>
+          <TouchableOpacity
+            onPress={finish}
+            accessibilityRole="button"
+            accessibilityLabel="Send the voice note"
+            style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="arrow-up" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+    </Recorder>
+  );
+}
 
 export default function ConversationScreen({ route, navigation }) {
   const phone = route.params?.phone;
@@ -32,12 +64,22 @@ export default function ConversationScreen({ route, navigation }) {
   const [assignees, setAssignees] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [pendingMedia, setPendingMedia] = useState(null);   // a picked photo or video, not sent yet
-  const [viewer, setViewer] = useState(null);               // full-screen image url
+  // A picked photo, video or file, not sent yet: { kind, uri, name, mime, size, width, height }
+  const [pending, setPending] = useState(null);
+  const [attachOpen, setAttachOpen] = useState(false);      // photo or file
+  const [recording, setRecording] = useState(false);        // a voice note is being recorded
+  const [viewer, setViewer] = useState(null);               // the attachment open full screen
   const [suggestSlots, setSuggestSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [assignOpen, setAssignOpen] = useState(false);
   const [kindOpen, setKindOpen] = useState(false);
+  // Naming step: turning a conversation into a lead or a client asks for a
+  // name, or the record stays called by its phone number and reads as blank
+  // in the People list.
+  const [nameFor, setNameFor] = useState(null);   // the kind being set
+  const [bizDraft, setBizDraft] = useState('');
+  const [ownerDraft, setOwnerDraft] = useState('');
+  const [nameBusy, setNameBusy] = useState(false);
   const [tempOpen, setTempOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -125,7 +167,9 @@ export default function ConversationScreen({ route, navigation }) {
 
   // Photos and videos: pick from the library, upload straight to storage, then
   // the message goes out with the media attached (the bridge sends the file).
-  const pickMedia = async () => {
+  const TOO_BIG = 40 * 1024 * 1024;
+  const pickPhoto = async () => {
+    setAttachOpen(false);
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -138,35 +182,81 @@ export default function ConversationScreen({ route, navigation }) {
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.85, allowsMultipleSelection: false });
       if (res.canceled || !res.assets?.length) return;
       const a = res.assets[0];
-      if (a.fileSize && a.fileSize > 40 * 1024 * 1024) return Alert.alert('Too big', 'Keep photos and videos under 40 MB.');
-      setPendingMedia(a);
+      if (a.fileSize && a.fileSize > TOO_BIG) return Alert.alert('Too big', 'Keep photos and videos under 40 MB.');
+      const isVideo = a.type === 'video' || /^video\//.test(a.mimeType || '');
+      setPending({
+        kind: isVideo ? 'video' : 'image',
+        uri: a.uri,
+        name: a.fileName || `${isVideo ? 'video' : 'photo'}-${Date.now()}.${isVideo ? 'mov' : 'jpg'}`,
+        mime: a.mimeType || (isVideo ? 'video/quicktime' : 'image/jpeg'),
+        size: a.fileSize || 0,
+        width: a.width || null,
+        height: a.height || null,
+      });
     } catch (e) { Alert.alert('Could not open your photos', e.message); }
+  };
+  // A PDF, a contract, a spreadsheet: anything the phone can hand over.
+  const pickDocument = async () => {
+    setAttachOpen(false);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
+      if (res.canceled || !res.assets?.length) return;
+      const a = res.assets[0];
+      if (a.size && a.size > TOO_BIG) return Alert.alert('Too big', 'Keep files under 40 MB.');
+      setPending({
+        kind: kindOf({ mime: a.mimeType, name: a.name }),
+        uri: a.uri,
+        name: a.name || `file-${Date.now()}`,
+        mime: a.mimeType || 'application/octet-stream',
+        size: a.size || 0,
+      });
+    } catch (e) { Alert.alert('Could not open your files', e.message); }
   };
   const send = async () => {
     const body = input.trim();
-    if (!body && !pendingMedia) return;
+    if (!body && !pending) return;
     setSending(true);
     try {
       let attachments;
-      if (pendingMedia) {
-        const a = pendingMedia;
-        const isVideo = a.type === 'video' || /^video\//.test(a.mimeType || '');
-        const name = a.fileName || `${isVideo ? 'video' : 'photo'}-${Date.now()}.${isVideo ? 'mov' : 'jpg'}`;
-        const up = await uploadFile(a.uri, name, a.mimeType || (isVideo ? 'video/quicktime' : 'image/jpeg'));
-        attachments = [{ url: up.url, type: isVideo ? 'video' : 'image', name, mime: up.mime, size: up.size, width: a.width || null, height: a.height || null }];
+      if (pending) {
+        const up = await uploadFile(pending.uri, pending.name, pending.mime);
+        attachments = [{
+          url: up.url, type: pending.kind, name: pending.name, mime: up.mime || pending.mime,
+          size: up.size || pending.size || 0, width: pending.width || null, height: pending.height || null,
+        }];
       }
       await sendImsg(phone, body, attachments);
-      setInput(''); setPendingMedia(null);
+      setInput(''); setPending(null);
       await loadMsgs();
     }
     catch (e) { Alert.alert('Could not send', e.message); }
     finally { setSending(false); }
   };
-  const mediaBox = (w, h, max = 220) => {
-    if (!w || !h) return { width: max, height: max * 0.75 };
-    const r = Math.min(max / w, max / h, 1);
-    return { width: Math.max(120, Math.round(w * r)), height: Math.max(90, Math.round(h * r)) };
+
+  // A voice note: record, upload, send as an audio attachment. The server
+  // transcribes it, so the transcript shows up under the player on the next
+  // refresh without the app doing anything.
+  const startVoiceNote = async () => {
+    if (recording || sending) return;
+    if (!(await ensureMicPermission())) return;
+    setRecording(true);
   };
+  const sendVoiceNote = async (uri, durationMs) => {
+    setRecording(false);
+    setSending(true);
+    try {
+      const name = `voice-note-${Date.now()}.m4a`;
+      const up = await uploadFile(uri, name, 'audio/mp4');
+      await sendImsg(phone, '', [{
+        url: up.url, type: 'audio', name, mime: up.mime || 'audio/mp4',
+        size: up.size || 0, duration_ms: Math.round(durationMs || 0),
+      }]);
+      await loadMsgs();
+    }
+    catch (e) { Alert.alert('Could not send the voice note', e.message); }
+    finally { setSending(false); }
+  };
+  const cancelVoiceNote = (why) => { setRecording(false); if (why) Alert.alert('Could not record', why); };
 
   const setTemp = async (key) => {
     setTempOpen(false);
@@ -191,8 +281,28 @@ export default function ConversationScreen({ route, navigation }) {
     }
     doKind(kind);
   };
+  // A name that is really the phone number is a placeholder, not a name.
+  const unnamed = (v) => !String(v || '').trim() || last10(v) === last10(phone);
   const doKind = async (kind) => {
+    if ((kind === 'lead' || kind === 'client') && unnamed(person?.name)) {
+      setBizDraft(unnamed(person?.name) ? '' : String(person?.name || ''));
+      setOwnerDraft('');
+      setNameFor(kind);
+      return;
+    }
     try { await setImsgKind(phone, kind); await loadPerson(); } catch (e) { Alert.alert('Could not change type', e.message); }
+  };
+  const saveKindWithName = async (skip) => {
+    const kind = nameFor;
+    const business = bizDraft.trim();
+    const owner = ownerDraft.trim();
+    setNameBusy(true);
+    try {
+      await setImsgKind(phone, kind, skip ? undefined : { business_name: business, owner_name: owner });
+      setNameFor(null); setBizDraft(''); setOwnerDraft('');
+      await loadPerson();
+    } catch (e) { Alert.alert('Could not change type', e.message); }
+    finally { setNameBusy(false); }
   };
   const addNote = async () => {
     const body = noteText.trim();
@@ -204,6 +314,8 @@ export default function ConversationScreen({ route, navigation }) {
   };
 
   const kind = person?.kind || null;
+  // With nothing typed the send button is the voice note mic instead.
+  const canSend = !!input.trim() || !!pending;
   const canTemp = !!person?.id && kind !== 'contact';
   const temp = person?.temperature ? TEMP[person.temperature] : null;
   const name = person?.name || fmtPhone(phone);
@@ -439,19 +551,12 @@ export default function ConversationScreen({ route, navigation }) {
               return (
                 <View key={it.key} style={{ alignSelf: out ? 'flex-end' : 'flex-start', maxWidth: '82%', gap: 3 }}>
                   {atts.map((a, ai) => (
-                    a.type === 'image' ? (
-                      <TouchableOpacity key={ai} onPress={() => setViewer(a.url)} activeOpacity={0.9} accessibilityLabel="Open photo"
-                        style={{ alignSelf: out ? 'flex-end' : 'flex-start', borderRadius: 20, overflow: 'hidden', backgroundColor: C.tile }}>
-                        <Image source={{ uri: a.url }} style={mediaBox(a.width, a.height)} resizeMode="cover" />
-                      </TouchableOpacity>
+                    kindOf(a) === 'audio' ? (
+                      <View key={ai} style={{ alignSelf: out ? 'flex-end' : 'flex-start', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 22, backgroundColor: out ? C.ink : C.tile }}>
+                        <VoiceNote attachment={a} out={out} />
+                      </View>
                     ) : (
-                      <TouchableOpacity key={ai} onPress={() => Linking.openURL(a.url)} activeOpacity={0.85} accessibilityLabel={a.type === 'video' ? 'Play video' : 'Open file'}
-                        style={{ alignSelf: out ? 'flex-end' : 'flex-start', width: 220, height: a.type === 'video' ? 140 : 56, borderRadius: 20, backgroundColor: out ? C.ink : C.tile, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10 }}>
-                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: out ? 'rgba(255,255,255,0.18)' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-                          <Ionicons name={a.type === 'video' ? 'play' : a.type === 'audio' ? 'mic' : 'document-outline'} size={20} color={out ? '#FFFFFF' : C.ink} />
-                        </View>
-                        <Text style={[T.meta, { color: out ? '#FFFFFF' : C.ink }]}>{a.type === 'video' ? 'Video' : a.type === 'audio' ? 'Voice memo' : (a.name || 'File')}</Text>
-                      </TouchableOpacity>
+                      <AttachmentPreview key={ai} a={a} out={out} onOpen={() => setViewer(a)} />
                     )
                   ))}
                   {m.body ? (
@@ -477,43 +582,59 @@ export default function ConversationScreen({ route, navigation }) {
               {suggestSlots.map(s => <GradientChip key={s.start} label={s.label} onPress={() => proposeTime(s)} />)}
             </ScrollView>
           )}
-          {pendingMedia ? (
+          {pending ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ width: 64, height: 64, borderRadius: 14, overflow: 'hidden', backgroundColor: C.tile, alignItems: 'center', justifyContent: 'center' }}>
-                {pendingMedia.type === 'video' ? <Ionicons name="videocam" size={22} color={C.ink} /> : <Image source={{ uri: pendingMedia.uri }} style={{ width: 64, height: 64 }} resizeMode="cover" />}
+                {pending.kind === 'image'
+                  ? <Image source={{ uri: pending.uri }} style={{ width: 64, height: 64 }} resizeMode="cover" />
+                  : <Ionicons name={pending.kind === 'video' ? 'videocam' : 'document-text'} size={22} color={C.ink} />}
               </View>
-              <Text style={[T.sub, { flex: 1 }]}>{pendingMedia.type === 'video' ? 'Video' : 'Photo'} ready to send{sending ? ', uploading' : ''}.</Text>
-              <IconButton icon="close" size={36} label="Remove attachment" onPress={() => setPendingMedia(null)} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={[T.body, { fontFamily: F.bold, fontSize: 14 }]}>{pending.name}</Text>
+                <Text style={T.sub}>{[fmtSize(pending.size), sending ? 'uploading' : 'ready to send'].filter(Boolean).join(' · ')}</Text>
+              </View>
+              <IconButton icon="close" size={36} label="Remove attachment" onPress={() => setPending(null)} />
             </View>
           ) : null}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 50, borderRadius: 25, backgroundColor: C.tile, paddingLeft: 8, paddingRight: 6, paddingVertical: 8 }}>
-              <Orb size={34} icon="sparkles" label="Draft with the assistant" onPress={openDrafts} style={{ shadowOpacity: 0 }} />
-              <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 16, color: C.ink, paddingHorizontal: 10, paddingVertical: 6, maxHeight: 120 }}
-                placeholder="Message" placeholderTextColor={C.slate} value={input} onChangeText={setInput} multiline />
-              <TouchableOpacity onPress={pickMedia} accessibilityLabel="Attach a photo or video" style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="image-outline" size={22} color={pendingMedia ? C.ink : C.slate} />
+          {recording ? (
+            <VoiceBar onSend={sendVoiceNote} onCancel={cancelVoiceNote} />
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 50, borderRadius: 25, backgroundColor: C.tile, paddingLeft: 8, paddingRight: 6, paddingVertical: 8 }}>
+                <Orb size={34} icon="sparkles" label="Draft with the assistant" onPress={openDrafts} style={{ shadowOpacity: 0 }} />
+                <TextInput style={{ flex: 1, fontFamily: F.body, fontSize: 16, color: C.ink, paddingHorizontal: 8, paddingVertical: 6, maxHeight: 120 }}
+                  placeholder="Message" placeholderTextColor={C.slate} value={input} onChangeText={setInput} multiline />
+                <TouchableOpacity onPress={() => setAttachOpen(true)} accessibilityRole="button" accessibilityLabel="Attach a photo, video or file"
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} style={{ width: 32, height: 34, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="add-circle-outline" size={23} color={pending ? C.ink : C.slate} />
+                </TouchableOpacity>
+                <DictateButton size={34} label="Dictate this message" onText={(t) => setInput(prev => (prev.trim() ? `${prev.trim()} ${t}` : t))} />
+              </View>
+              <TouchableOpacity
+                onPress={canSend ? send : startVoiceNote}
+                onLongPress={canSend ? undefined : startVoiceNote}
+                delayLongPress={250}
+                disabled={sending}
+                accessibilityRole="button"
+                accessibilityLabel={canSend ? 'Send' : 'Record a voice note'}
+                accessibilityHint={canSend ? undefined : 'Tap or hold to start, then send or throw it away'}
+                style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', opacity: sending ? 0.5 : 1 }}>
+                {sending ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Ionicons name={canSend ? 'arrow-up' : 'mic'} size={22} color="#FFFFFF" />}
               </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={send} disabled={sending || (!input.trim() && !pendingMedia)} accessibilityLabel="Send"
-              style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', opacity: (sending || (!input.trim() && !pendingMedia)) ? 0.5 : 1 }}>
-              {sending ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Ionicons name="arrow-up" size={22} color="#FFFFFF" />}
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
 
-        {/* Full-screen photo */}
-        <Modal visible={!!viewer} animationType="fade" transparent onRequestClose={() => setViewer(null)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.96)', justifyContent: 'center' }}>
-            {viewer ? <Image source={{ uri: viewer }} style={{ width: '100%', height: '80%' }} resizeMode="contain" /> : null}
-            <TouchableOpacity onPress={() => setViewer(null)} accessibilityLabel="Close photo" style={{ position: 'absolute', top: insets.top + 12, right: 18, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="close" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => viewer && Linking.openURL(viewer)} accessibilityLabel="Open in browser" style={{ position: 'absolute', bottom: insets.bottom + 24, alignSelf: 'center', height: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={[T.meta, { color: '#FFFFFF' }]}>Open full size</Text>
-            </TouchableOpacity>
-          </View>
-        </Modal>
+        {/* Photos, videos, voice notes and files, all inside the app */}
+        <MediaViewer attachment={viewer} onClose={() => setViewer(null)} />
+
+        {/* Attach sheet */}
+        <Sheet visible={attachOpen} title="Attach" onClose={() => setAttachOpen(false)}>
+          <SheetRow label="Photo or video" sub="From your library" onPress={pickPhoto}
+            left={<Ionicons name="image-outline" size={20} color={C.ink} />} />
+          <SheetRow label="File" sub="A PDF, a contract, a spreadsheet" onPress={pickDocument}
+            left={<Ionicons name="document-text-outline" size={20} color={C.ink} />} />
+        </Sheet>
 
         {/* Drafting sheet */}
         <Sheet visible={draftOpen} title="Draft with the assistant" onClose={() => setDraftOpen(false)}>
@@ -593,6 +714,33 @@ export default function ConversationScreen({ route, navigation }) {
             <TouchableOpacity onPress={sendDraftInstruction} disabled={draftBusy || !draftInput.trim()} accessibilityLabel="Ask the assistant"
               style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', opacity: (draftBusy || !draftInput.trim()) ? 0.5 : 1 }}>
               <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </Sheet>
+
+{/* Naming step: a converted conversation needs a real name, or it
+            lands in People called by its phone number. */}
+        <Sheet visible={!!nameFor} title={nameFor === 'client' ? 'Name this client' : 'Name this lead'} onClose={() => setNameFor(null)}>
+          <View style={{ gap: 12 }}>
+            <Text style={T.sub}>
+              {fmtPhone(phone)} has no name yet. Without one it shows as a phone number in People.
+            </Text>
+            <View style={{ gap: 6 }}>
+              <Label>Business</Label>
+              <TextInput value={bizDraft} onChangeText={setBizDraft} placeholder="Nair Family Dental" placeholderTextColor={C.slate}
+                autoFocus returnKeyType="next"
+                style={{ height: 48, borderRadius: 16, backgroundColor: C.tile, paddingHorizontal: 14, fontFamily: F.body, fontSize: 16, color: C.ink }} />
+            </View>
+            <View style={{ gap: 6 }}>
+              <Label>Who you deal with</Label>
+              <TextInput value={ownerDraft} onChangeText={setOwnerDraft} placeholder="Priya" placeholderTextColor={C.slate}
+                returnKeyType="done" onSubmitEditing={() => { if (bizDraft.trim() || ownerDraft.trim()) saveKindWithName(false); }}
+                style={{ height: 48, borderRadius: 16, backgroundColor: C.tile, paddingHorizontal: 14, fontFamily: F.body, fontSize: 16, color: C.ink }} />
+            </View>
+            <Button label={nameFor === 'client' ? 'Save as a client' : 'Save as a lead'} busy={nameBusy}
+              disabled={!bizDraft.trim() && !ownerDraft.trim()} onPress={() => saveKindWithName(false)} />
+            <TouchableOpacity onPress={() => saveKindWithName(true)} disabled={nameBusy} accessibilityLabel="Change the type without a name">
+              <Text style={[T.meta, { textAlign: 'center', color: C.slate }]}>Skip for now</Text>
             </TouchableOpacity>
           </View>
         </Sheet>

@@ -26,6 +26,29 @@ async function request(path, options = {}) {
   return body;
 }
 
+// PUT the bytes of a local file to a signed upload url. onProgress, when
+// given, is called with 0 to 100 (fetch cannot report upload progress in
+// React Native, so a progress upload goes through XHR).
+async function putBytes(uploadUrl, localUri, mime, onProgress) {
+  const blob = await (await fetch(localUri)).blob();
+  const type = mime || blob.type || 'application/octet-stream';
+  if (typeof onProgress === 'function') {
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadUrl);
+      xhr.setRequestHeader('Content-Type', type);
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
+      xhr.onerror = () => reject(new Error('Upload failed'));
+      xhr.send(blob);
+    });
+  } else {
+    const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': type }, body: blob });
+    if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+  }
+  return { size: blob.size, mime: type };
+}
+
 // ── Meetings / calendar ──
 export const getUpcomingMeetings = () => request('/meetings?action=upcoming');
 export const getPastMeetings = () => request('/meetings?action=past');
@@ -86,17 +109,22 @@ export const getAgreements = (clientId) => request(`/agreements?client_id=${clie
 // ── iMessage inbox (two-way texting from the business number) ──
 // Same endpoints the web CRM Inbox uses. Outbound is queued here and delivered
 // by the bridge on the Mac; replies are forwarded back.
-export const getImsgThreads   = () => request('/imessage');
+// Archived conversations are out of the inbox list; ask for them by name.
+export const getImsgThreads   = (opts) => request(`/imessage${opts && opts.archived ? '?archived=1' : ''}`);
+// Organizing a conversation: star it, shelve it, or hide it for the team.
+export const starThread    = logged('thread_starred', (phone, starred) => request('/imessage?action=star', { method: 'POST', body: JSON.stringify({ phone, starred: !!starred }) }));
+export const archiveThread = logged('thread_archived', (phone, archived) => request('/imessage?action=archive', { method: 'POST', body: JSON.stringify({ phone, archived: archived !== false }) }));
+export const deleteThread  = logged('thread_deleted', (phone) => request('/imessage?action=delete', { method: 'POST', body: JSON.stringify({ phone }) }));
 export const getImsgThread    = (phone) => request(`/imessage?phone=${encodeURIComponent(phone)}`);
 export const sendImsg         = logged('text_sent', (phone, body, attachments) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body, attachments: attachments || undefined }) }));
 // Media: ask for a signed upload spot, PUT the bytes there, then send with { url, type, name, mime, size, width, height }.
 export const getImsgUploadUrl = (name) => request('/imessage?action=upload-url', { method: 'POST', body: JSON.stringify({ name }) });
-export async function uploadFile(localUri, name, mime) {
+// onProgress, when given, is called with 0 to 100. fetch cannot report
+// upload progress in React Native, so a progress upload goes through XHR.
+export async function uploadFile(localUri, name, mime, onProgress) {
   const { uploadUrl, publicUrl } = await getImsgUploadUrl(name);
-  const blob = await (await fetch(localUri)).blob();
-  const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime || blob.type || 'application/octet-stream' }, body: blob });
-  if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-  return { url: publicUrl, size: blob.size, mime: mime || blob.type || '' };
+  const { size, mime: type } = await putBytes(uploadUrl, localUri, mime, onProgress);
+  return { url: publicUrl, size, mime: type };
 }
 export const getImsgDirectory = () => request('/imessage?action=directory');
 export const markImsgRead     = (phone) => request('/imessage?action=read', { method: 'POST', body: JSON.stringify({ phone }) });
@@ -104,7 +132,10 @@ export const getImsgNotes     = (phone) => request(`/imessage?action=notes&phone
 export const addImsgNote      = (phone, body) => request('/imessage?action=note', { method: 'POST', body: JSON.stringify({ phone, body }) });
 export const getImsgEvents    = (phone) => request(`/imessage?action=events&phone=${encodeURIComponent(phone)}`);
 export const assignImsgThread = (phone, assigned_to, assigned_to_name) => request('/imessage?action=assign', { method: 'POST', body: JSON.stringify({ phone, assigned_to, assigned_to_name }) });
-export const setImsgKind      = (phone, kind) => request('/imessage?action=set-kind', { method: 'POST', body: JSON.stringify({ phone, kind }) });
+// Changing a conversation to a lead or a client can carry the name at the
+// same time. The reply says needs_name when the record is still called by
+// its phone number, so the screen can ask.
+export const setImsgKind      = (phone, kind, names) => request('/imessage?action=set-kind', { method: 'POST', body: JSON.stringify({ phone, kind, ...(names || {}) }) });
 export const getAssignees     = () => request('/assignees');
 // Temperature lives on the linked lead (crm_clients.lead_temperature).
 export const setClientTemperature = (id, lead_temperature) => request(`/clients?id=${id}`, { method: 'PUT', body: JSON.stringify({ lead_temperature }) });
@@ -162,3 +193,25 @@ export const countRoutineItem = logged('routine_counted', (routine_id, item_id, 
 
 export const SIGN_BASE = 'https://vernontm.com/sign?token=';
 export const PAY_BASE = 'https://vernontm.com/api/crm/pay-deposit?token=';
+
+// ── Files on a client, and a signed copy on an agreement ──
+export const getClientFileUploadUrl = (clientId, name) => request('/client-files?action=upload-url', { method: 'POST', body: JSON.stringify({ client_id: clientId, name }) });
+export const getClientFileLink = (id) => request(`/client-files?action=link&id=${encodeURIComponent(id)}`);
+export const deleteClientFile = (id) => request('/client-files?action=delete', { method: 'POST', body: JSON.stringify({ id }) });
+export const uploadClientFile = logged('client_file_added', async (clientId, localUri, name, mime, onProgress) => {
+  const { uploadUrl, publicUrl } = await getClientFileUploadUrl(clientId, name);
+  const { size, mime: type } = await putBytes(uploadUrl, localUri, mime, onProgress);
+  return request('/client-files?action=create', { method: 'POST', body: JSON.stringify({ client_id: clientId, name, url: publicUrl, mime: type, size }) });
+});
+export const getAgreementFile = (id) => request(`/agreements?action=file&id=${encodeURIComponent(id)}`, { method: 'POST', body: '{}' });
+// A client who signed on paper or in another tool. opts: { signed_on, signer_name, note }.
+export const uploadSignedAgreement = logged('agreement_signed_upload', async (agreementId, localUri, name, mime, opts = {}) => {
+  const blob = await (await fetch(localUri)).blob();
+  const type = mime || blob.type || 'application/octet-stream';
+  const { uploadUrl, file_url } = await request(`/agreements?action=signed-upload-url&id=${encodeURIComponent(agreementId)}`, { method: 'POST', body: JSON.stringify({ name, size: blob.size }) });
+  await putBytes(uploadUrl, localUri, type);
+  return request(`/agreements?action=upload-signed&id=${encodeURIComponent(agreementId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ file_url, name, mime: type, size: blob.size, signed_on: opts.signed_on, signer_name: opts.signer_name, note: opts.note }),
+  });
+});
