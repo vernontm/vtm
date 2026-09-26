@@ -412,15 +412,18 @@ async function loadUnpaid(cal) {
   };
   const items = [];
   for (const inv of invoices) {
+    if (!clientFor(inv)) continue;   // not a CRM client: not our money
     items.push(item('invoice', inv.id, N.invoiceNumber(inv), inv.amount, clientFor(inv), { name: inv.customer_name || inv.bill_to_name, email: inv.email || inv.bill_to_email }, N.addDays(inv.created_at, 7), inv.stripe_invoice_url));
   }
   for (const m of manual) {
+    if (!clientFor(m)) continue;
     items.push(item('manual_invoice', m.id, m.invoice_number || `#${String(m.id).slice(0, 8)}`, m.total != null ? m.total : m.amount, clientFor(m), { name: m.bill_to_name, email: m.bill_to_email }, m.due_date || N.addDays(m.created_at, 14), null));
   }
   for (const p of payments) {
     const ag = agreements.get(p.agreement_id);
     // Only installments that are actually due: the agreement is signed and the trigger says "on signing".
     if (!ag || !(ag.signed_at || ag.status === 'signed') || !/sign/i.test(p.due_condition || '')) continue;
+    if (!clients.get(p.client_id)) continue;
     items.push(item('payment', p.id, p.label || 'Payment', p.amount, clients.get(p.client_id) || null, {}, ag.signed_at, p.stripe_invoice_url || (ag.sign_token ? N.PAY_BASE + ag.sign_token : null)));
   }
   return items.sort((a, b) => b.days_late - a.days_late);
