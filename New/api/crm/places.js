@@ -1,4 +1,4 @@
-const { setCors, requireAuth } = require('../_lib/supabase.js');
+const { setCors, requireStaff } = require('../_lib/supabase.js');
 
 // Places proxy behind the location pickers (web Schedule / Edit meeting, the
 // app's appointment sheet): type a business or address, pick the real one.
@@ -72,7 +72,7 @@ async function osmSearch(q) {
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const placeId = String(req.query.place_id || '').trim();

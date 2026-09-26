@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch, requireClientScope } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch, requireClientScope } = require('../_lib/supabase.js');
 
 const HEYGEN_BASE = 'https://api.heygen.com';
 const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY;
@@ -39,7 +39,7 @@ module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const auth = await requireAuth(req);
+  const auth = await requireStaff(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   if (!HEYGEN_API_KEY) {

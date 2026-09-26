@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch } from '../_lib/supabase.js';
 import { getGmailAuth, getOrCreateLabel, listLabels, listDisplayLabels, deleteLabel, modifyMessageLabels } from '../_lib/gmail.js';
 
 // Real Gmail label sync. Custom labels created here are created in Gmail
@@ -9,7 +9,7 @@ import { getGmailAuth, getOrCreateLabel, listLabels, listDisplayLabels, deleteLa
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   const { action, id } = req.query;
 

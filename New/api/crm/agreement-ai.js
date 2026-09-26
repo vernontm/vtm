@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5';
@@ -105,7 +105,7 @@ ${projects.length ? projects.map((p, i) => `${i + 1}. ${p.name}, value $${p.valu
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   const { action } = req.query;
 

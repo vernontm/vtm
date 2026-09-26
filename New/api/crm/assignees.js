@@ -4,13 +4,13 @@
 // contract status), this returns just the fields an assignee dropdown needs and
 // is readable by any signed-in CRM user. An appointment setter has to be able to
 // assign a lead to a teammate without being able to see payroll.
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const auth = await requireAuth(req);
+  const auth = await requireStaff(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   if (req.method === 'GET') {

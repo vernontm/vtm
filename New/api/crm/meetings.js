@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch } from '../_lib/supabase.js';
 import { getGmailAuth, getSetting, setSetting } from '../_lib/gmail.js';
 import { fetchTranscriptForMeeting } from '../_lib/meet.js';
 import { summarizeAndStore } from '../_lib/meeting-summary.js';
@@ -114,7 +114,7 @@ function normalize(m) {
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, action } = req.query;
 

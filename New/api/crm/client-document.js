@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
 
 // Client document upload + AI processing.
 // POST /api/crm/client-document
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const { client_id, filename, content_type, data_base64 } = req.body || {};

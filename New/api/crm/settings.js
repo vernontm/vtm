@@ -1,10 +1,18 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch } from '../_lib/supabase.js';
 import { disconnectGmail } from '../_lib/gmail.js';
 
+
+// Credentials stored alongside ordinary settings. The list hands back the
+// key so the UI can tell a value is set, never the value itself.
+const SECRET_KEYS = new Set(['gmail_access_token', 'gmail_refresh_token', 'nanobanana_api_key']);
+const redact = (rows) => (rows || []).map((r) => (SECRET_KEYS.has(r.key)
+  ? { ...r, value: r.value ? '__set__' : '', is_secret: true }
+  : r));
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireStaff(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const { key, action } = req.query;
 
@@ -21,10 +29,17 @@ export default async function handler(req, res) {
       });
     }
 
+    // GET /api/crm/settings?key=xxx - one setting
+    if (req.method === 'GET' && !action && key) {
+      if (SECRET_KEYS.has(key)) return res.status(403).json({ error: 'That setting cannot be read here.' });
+      const rows = await supaFetch(`crm_app_settings?key=eq.${encodeURIComponent(key)}&limit=1`);
+      return res.json(rows && rows[0] ? rows[0] : { key, value: '' });
+    }
+
     // GET /api/crm/settings - list all (no action, no key)
     if (req.method === 'GET' && !action && !key) {
       const rows = await supaFetch('crm_app_settings?order=key.asc');
-      return res.json(rows);
+      return res.json(redact(rows));
     }
 
     // PUT /api/crm/settings?key=xxx - update single setting

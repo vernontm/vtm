@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 const { normalizePhone } = require('../_lib/followups.js');
 const N = require('../_lib/nudges.js');
 
@@ -153,7 +153,7 @@ async function overview(clientId) {
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, client_id, type, view, action } = req.query;
 

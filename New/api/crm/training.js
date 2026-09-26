@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch, SUPABASE_URL, SERVICE_KEY } from '../_lib/supabase.js';
 
 const ANON_KEY = process.env.CRM_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
@@ -17,7 +17,7 @@ async function getUserEmail(req) {
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, action } = req.query;
 

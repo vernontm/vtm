@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 // Admin-side feed of client portal events (e.g. a client checked a task off).
 // Populated by portal.js. GET lists recent alerts (joined with client name);
@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const auth = await requireAuth(req);
+  const auth = await requireStaff(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, action, unread } = req.query;

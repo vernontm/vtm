@@ -78,7 +78,7 @@ async function removeByKeys(keys) {
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  // requireStaff (not requireAuth) so `uploaded_by` records the person who
+  // requireStaff (not requireStaff) so `uploaded_by` records the person who
   // actually sent the file instead of a flat "Team".
   const user = await requireStaff(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });

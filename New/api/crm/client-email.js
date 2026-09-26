@@ -1,4 +1,4 @@
-import { setCors, requireAuth } from '../_lib/supabase.js';
+import { setCors, requireStaff } from '../_lib/supabase.js';
 import { sendEmail, createDraft } from '../_lib/gmail.js';
 import { stripDashes } from '../_lib/text.js';
 
@@ -18,7 +18,7 @@ function bodyToHtml(text) {
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
   try {

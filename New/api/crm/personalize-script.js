@@ -1,4 +1,4 @@
-const { setCors, requireAuth } = require('../_lib/supabase.js');
+const { setCors, requireStaff } = require('../_lib/supabase.js');
 const { marketingSkillsPrompt } = require('../_lib/marketing-skills.js');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const auth = await requireAuth(req);
+  const auth = await requireStaff(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   const { script, lead } = req.body;

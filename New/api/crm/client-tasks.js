@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 // Client-facing onboarding / access checklist. These are the items a client
 // checks off in their portal (e.g. "Invite ray@vernontm.com to your Notion").
@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const auth = await requireAuth(req);
+  const auth = await requireStaff(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, client_id } = req.query;

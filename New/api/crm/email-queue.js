@@ -1,4 +1,4 @@
-import { setCors, requireAuth, supaFetch } from '../_lib/supabase.js';
+import { setCors, requireStaff, supaFetch } from '../_lib/supabase.js';
 import { sendEmail, createDraft } from '../_lib/gmail.js';
 import emailSend from '../_lib/email-send.js';
 
@@ -8,7 +8,7 @@ const { stripDashes, bodyToHtml, stripMarkdownLinks } = emailSend;
 export default async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, action, status, lead_id } = req.query;
 

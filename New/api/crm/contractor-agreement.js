@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 const { sendEmail } = require('../_lib/gmail.js');
 
 // Team contractor agreements (influencer, appointment setter, editor, and so on).
@@ -23,7 +23,7 @@ const SITE = 'https://vernontm.com';
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   const { id, action } = req.query;
 

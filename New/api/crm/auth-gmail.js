@@ -1,4 +1,4 @@
-import { setCors, requireAuth } from '../_lib/supabase.js';
+import { setCors, requireStaff } from '../_lib/supabase.js';
 import { getAuthUrl, exchangeCode, setSetting, disconnectGmail } from '../_lib/gmail.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://vernontm.com';
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
   // ── Disconnect (POST with action=disconnect) ────────────────────────────
   if (req.method === 'POST') {
-    if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
     await disconnectGmail();
     return res.json({ disconnected: true });
   }

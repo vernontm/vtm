@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('../_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('../_lib/supabase.js');
 
 // Availability finder for scheduling in-person meetups. Deterministic (no LLM):
 // takes the team's work hours + the synced calendar (crm_meetings) and returns
@@ -101,7 +101,7 @@ async function findAvailability({ durationMin = 60, days = 7, stepMin = 30, limi
 module.exports = async function handler(req, res) {
   setCors(res, req);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const durationMin = Math.min(480, Math.max(15, parseInt(req.query.duration, 10) || 60));

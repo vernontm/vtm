@@ -1,4 +1,4 @@
-const { setCors, requireAuth, supaFetch } = require('./_lib/supabase.js');
+const { setCors, requireStaff, supaFetch } = require('./_lib/supabase.js');
 
 // Event resources for the live-event pages (e.g. /workshop).
 //   GET  ?slug=katy-ai-workshop        -> public list (attendees see these)
@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Writes require an authenticated CRM user (admin).
-    if (!(await requireAuth(req))) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await requireStaff(req))) return res.status(401).json({ error: 'Unauthorized' });
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
 
     if (req.method === 'POST') {
