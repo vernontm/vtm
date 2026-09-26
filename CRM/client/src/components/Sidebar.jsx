@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   Users, LayoutDashboard,
   Mail, Calendar, Settings, LogOut,
-  Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock, BookOpen, CheckSquare, RotateCcw, Megaphone, Briefcase, MessageSquare, ListChecks, Sparkles,
+  Eye, EyeOff, Building2, UserCog, X, UserPlus, Clock, BookOpen, CheckSquare, RotateCcw, Megaphone, Briefcase, MessageSquare, ListChecks, Sparkles, Wallet,
 } from 'lucide-react';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,13 +13,14 @@ import { useMobile } from '../App';
 
 // ── Nav definitions ───────────────────────────────────────────────────────────
 // Naming rewrite (audit item #9): trimmed to a mental model that reads as a
-// customer journey — Home → People → Pipeline → Inbox → Calendar → Marketing
+// customer journey: Home → People → Pipeline → Inbox → Calendar → Marketing
 // → Work → Team → Workspace. Old paths kept intact so no route breaks.
 const nav = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Home',         slug: 'dashboard' },
   { to: '/leads',        icon: UserPlus,        label: 'Leads',        slug: 'leads' },
   { to: '/clients',      icon: Building2,       label: 'Clients',      slug: 'clients' },
   { to: '/projects',     icon: Briefcase,       label: 'Projects',     slug: 'projects' },
+  { to: '/money',        icon: Wallet,          label: 'Money',        slug: 'money' },
   { to: '/inbox',        icon: MessageSquare,   label: 'Inbox',        slug: 'inbox' },
   { to: '/assistant',    icon: Sparkles,        label: 'Assistant',    slug: 'assistant' },
   { to: '/appointments', icon: Calendar,        label: 'Calendar',     slug: 'appointments' },

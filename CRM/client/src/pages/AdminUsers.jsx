@@ -34,6 +34,7 @@ const PAGE_GROUPS = [
     { slug: 'leads',        name: 'Leads' },
     { slug: 'clients',      name: 'Clients' },
     { slug: 'projects',     name: 'Projects' },
+    { slug: 'money',        name: 'Money' },
     { slug: 'appointments', name: 'Appointments' },
     { slug: 'assistant',    name: 'Assistant' },
     { slug: 'tasks',        name: 'Tasks' },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   Plus, Search, Trash2, ArrowLeft, Building2, Calendar,
   KeyRound, CheckCircle2, Circle, Clock, ShieldCheck, ListChecks,
@@ -8,7 +8,7 @@ import {
   StickyNote, Phone, CheckSquare, PhoneIncoming, PhoneOutgoing, Flag, Activity, X, Mail,
   ChevronLeft, ChevronRight, ChevronDown, Loader, FolderOpen,
   Folder, FolderPlus, Upload, File as FileIcon, MoreHorizontal, CornerLeftUp,
-  Send as SendIcon, Smartphone,
+  Send as SendIcon, Smartphone, LayoutDashboard, Video, Navigation,
 } from 'lucide-react';
 import { usePageActions } from '../context/UiContext';
 import {
@@ -23,7 +23,7 @@ import {
   agreementChat, analyzeDeal, generateAgreement, saveAgreementDoc, suggestProjects, generateAccessInstructions, draftClientEmail, sendClientEmail, approveAgreement, approveAgreementRow, previewAgreementToken, setAgreementPlans, setupCustomAgreement, markAgreementSent, startMaintenance,
   listClientFiles, listClientFolders, createClientFolder, renameClientFile,
   moveClientFile, deleteClientFile, uploadClientFile,
-  getAssignees, textSignLink,
+  getAssignees, textSignLink, getClientOverview,
 } from '../api';
 import { useClient } from '../context/ClientContext';
 import Modal from '../components/Modal';
@@ -880,7 +880,8 @@ export default function Clients({ kind = 'client' }) {
 
 // ── Client detail ──────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'overview', label: 'Overview', icon: Building2 },
+  { key: 'snapshot', label: 'Overview', icon: LayoutDashboard },
+  { key: 'overview', label: 'Profile',  icon: Building2 },
   { key: 'work',     label: 'Work',     icon: Briefcase },
   { key: 'money',    label: 'Money',    icon: DollarSign },
   { key: 'vault',    label: 'Vault',    icon: Lock },
@@ -902,7 +903,7 @@ function Section({ title, icon: Icon, children, first }) {
 }
 
 function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('snapshot');
 
   const saveField = async (field, value) => {
     onPatch({ [field]: value });
@@ -912,6 +913,11 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
 
   const stage = stageOf(client.stage);
   const initials = (client.business_name || client.owner_name || '?').trim().slice(0, 2).toUpperCase();
+  const phone = client.contact_phone || client.phone || '';
+  const email = client.contact_email || client.email || '';
+  // The agreement builder already lives on the Money tab, so Draft agreement
+  // just takes them there.
+  const draftAgreement = () => setTab('money');
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
@@ -942,9 +948,17 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
         </div>
       </div>
 
+      {/* Reach them, or start an agreement */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '0 28px 18px' }}>
+        <QuickAction icon={MessageSquare} label="Message" to={phone ? `/inbox?phone=${encodeURIComponent(phone)}` : null} disabled={!phone} title={phone ? 'Open the conversation in the inbox' : 'No phone number on file'} />
+        <QuickAction icon={Phone} label="Call" href={phone ? `tel:${phone}` : null} disabled={!phone} title={phone || 'No phone number on file'} />
+        <QuickAction icon={Mail} label="Email" href={email ? `mailto:${email}` : null} disabled={!email} title={email || 'No email on file'} />
+        <QuickAction icon={FileSignature} label="Draft agreement" onClick={draftAgreement} primary title="Opens the agreement builder on the Money tab" />
+      </div>
+
       {/* Two-column: vertical sidebar + content */}
       <div style={{ padding: '0 28px 40px' }}>
-        {/* Horizontal tabs: four groups, not eight flat items */}
+        {/* Horizontal tabs: the Overview snapshot, then four grouped panels */}
         <nav style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--border)', marginBottom: 20, overflowX: 'auto' }}>
           {TABS.map(t => {
             const on = tab === t.key;
@@ -964,6 +978,9 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
 
         {/* Content panel */}
         <div style={{ minWidth: 0 }}>
+          {tab === 'snapshot' && (
+            <ClientOverviewTab client={client} onDraftAgreement={draftAgreement} />
+          )}
           {tab === 'overview' && (<>
             <OverviewTab client={client} saveField={saveField} />
             <Section title="Activity" icon={Activity}><ActivityTab clientId={client.id} /></Section>
@@ -983,6 +1000,282 @@ function ClientDetail({ client, onBack, onDelete, onPatch, children }) {
         </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+// One of the reach-them buttons at the top of the client page: an internal
+// route (`to`), an external or protocol link (`href`), or a plain handler.
+function QuickAction({ icon: Icon, label, to, href, onClick, disabled, primary, title }) {
+  const base = {
+    display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+    padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+    fontFamily: 'var(--font-display)', textDecoration: 'none',
+    cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.45 : 1,
+    background: primary ? 'linear-gradient(135deg, var(--orange), var(--orange-dark))' : 'var(--surface)',
+    border: primary ? 'none' : '1px solid var(--border)',
+    color: primary ? '#fff' : 'var(--text)',
+  };
+  const inner = <>{Icon && <Icon size={14} />} {label}</>;
+  if (disabled) return <span style={base} title={title}>{inner}</span>;
+  if (to) return <Link to={to} style={base} title={title}>{inner}</Link>;
+  if (href) return <a href={href} style={base} title={title}>{inner}</a>;
+  return <button type="button" onClick={onClick} style={base} title={title}>{inner}</button>;
+}
+
+// ── Client Overview tab ───────────────────────────────────────────────────────
+// The merged snapshot the iPhone app's client page opens on: what is next, the
+// balance, the plan, the latest files, and one activity stream with a colored
+// dot per kind. Fed by getClientOverview (GET /client-activity?view=overview),
+// which is a separate call from the raw Activity list below the Profile tab.
+const OV_KIND_DOT = { text: 'var(--text)', meeting: '#7c3aed', payment: '#16a34a', nudge: '#64748b' };
+const ovDot = (a) => {
+  // An agreement is amber (or red) while it is still unsigned, green once signed.
+  if (a.kind === 'agreement') return a.severity === 'red' ? '#ef4444' : a.severity === 'amber' ? '#f59e0b' : '#16a34a';
+  return OV_KIND_DOT[a.kind] || '#64748b';
+};
+const ovIsUnsignedAgreement = (a) => a.kind === 'agreement'
+  && (a.severity === 'amber' || a.severity === 'red' || /unsigned|waiting|not signed/i.test(`${a.title || ''} ${a.sub || ''}`));
+const OV_PLAN_TONE = {
+  unsigned:  { label: 'Unsigned',  color: '#f59e0b' },
+  draft:     { label: 'Draft',     color: '#64748b' },
+  active:    { label: 'Active',    color: '#16a34a' },
+  signed:    { label: 'Signed',    color: '#16a34a' },
+  past_due:  { label: 'Past due',  color: '#ef4444' },
+  paused:    { label: 'Paused',    color: '#64748b' },
+  cancelled: { label: 'Cancelled', color: '#64748b' },
+};
+const ovPlanTone = (s) => OV_PLAN_TONE[s]
+  || { label: String(s || '').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()) || 'Plan', color: '#64748b' };
+// A date-only string ("2026-10-15") is a local calendar day, not UTC midnight.
+const ovParse = (s) => {
+  if (!s) return null;
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(s)) ? `${s}T12:00:00` : s);
+  return isNaN(d) ? null : d;
+};
+const ovDay = (s) => { const d = ovParse(s); return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
+const ovWhen = (s) => { const d = ovParse(s); return d ? d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; };
+// An older deploy answers with the bare activity rows; fold that into the bundle
+// so the tab still renders something useful.
+const ovNormalize = (r) => {
+  if (Array.isArray(r)) {
+    return {
+      activity: r.map(x => ({
+        id: x.id,
+        kind: x.type || 'note',
+        at: x.created_at,
+        title: x.title || x.tag || String(x.type || 'note').replace(/^./, c => c.toUpperCase()),
+        sub: x.body ? String(x.body).slice(0, 160) : null,
+      })),
+    };
+  }
+  return r && typeof r === 'object' ? r : {};
+};
+
+const ovTile = {
+  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,
+  padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0,
+};
+const ovLabel = {
+  fontSize: 10.5, fontWeight: 800, color: 'var(--muted)',
+  textTransform: 'uppercase', letterSpacing: '0.08em',
+};
+const ovRow = {
+  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
+  borderTop: '1px solid var(--border)',
+};
+const ovRowTitle = { fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const ovRowSub = { fontSize: 11.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const ovPanel = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 18px 4px' };
+const ovNote = { fontSize: 12.5, color: 'var(--muted)', padding: '8px 0 14px' };
+
+function OvDot({ color }) {
+  const halo = String(color).startsWith('#') ? `0 0 0 3px ${color}22` : 'none';
+  return <span style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: color, boxShadow: halo }} />;
+}
+
+function OvSmallButton({ icon: Icon, label, onClick, href }) {
+  const style = {
+    display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+    fontSize: 12, fontWeight: 600, color: 'var(--orange)', textDecoration: 'none',
+    background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.3)',
+    borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+    fontFamily: 'var(--font-display)',
+  };
+  if (href) return <a href={href} target="_blank" rel="noreferrer" style={style}>{Icon && <Icon size={12} />} {label}</a>;
+  return <button type="button" onClick={onClick} style={style}>{Icon && <Icon size={12} />} {label}</button>;
+}
+
+function ClientOverviewTab({ client, onDraftAgreement }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);   // 503 needs_migration: stay quiet
+  const [error, setError] = useState('');
+  const [nudge, setNudge] = useState(null);        // { kind: 'agreement', id }
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    setLoading(true); setError(''); setPending(false);
+    getClientOverview(client.id)
+      .then(r => { if (live) setData(ovNormalize(r)); })
+      .catch(e => {
+        if (!live) return;
+        setData(null);
+        if (e.needs_migration || e.status === 503) setPending(true);
+        else setError(e.message || 'Could not load the overview');
+      })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
+  }, [client.id, reloadKey]);
+
+  if (loading) return <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading overview...</div>;
+  if (pending) return <div style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.6, maxWidth: 520 }}>The overview is not switched on yet. The Profile, Work, Money and Vault tabs still work.</div>;
+  if (error) {
+    return (
+      <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 520 }}>
+        Could not load the overview: {error}
+      </div>
+    );
+  }
+
+  const files = data?.files || [];
+  const activity = data?.activity || [];
+  const nextUp = data?.next_up || null;
+  const bal = data?.balance || {};
+  const plan = data?.plan || null;
+  const total = Number(bal.total) || 0;
+  const paid = Number(bal.paid) || 0;
+  const due = Number(bal.due) || 0;
+  const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((paid / total) * 100))) : 0;
+  const tone = plan ? ovPlanTone(plan.status) : null;
+  const directions = nextUp?.maps_url
+    || (nextUp?.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextUp.location)}` : null);
+
+  // The agreement row carries the agreement's own id on newer replies; fall
+  // back to the row id so the nudge still has a target.
+  const nudgeAgreement = (a) => {
+    const id = a.agreement_id || a.target_id || a.id;
+    if (!id) { toast('error', 'No unsigned agreement is on file for this client.'); return; }
+    setNudge({ kind: 'agreement', id });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* Next: the next meeting, with a way to get there */}
+      <div style={{ ...ovTile, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={ovLabel}>Next</span>
+          {nextUp ? (
+            <>
+              <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{nextUp.title || 'Meeting'}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+                {[ovWhen(nextUp.start_time), nextUp.location || (nextUp.meet_link ? 'Google Meet' : null)].filter(Boolean).join(' · ')}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>Nothing scheduled</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Book the next meeting from the calendar.</div>
+            </>
+          )}
+        </div>
+        {nextUp?.meet_link
+          ? <OvSmallButton icon={Video} label="Join" href={nextUp.meet_link} />
+          : directions ? <OvSmallButton icon={Navigation} label="Directions" href={directions} /> : null}
+      </div>
+
+      {/* Balance + plan */}
+      <div className="rgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
+        <div style={ovTile}>
+          <span style={ovLabel}>Balance</span>
+          <div className="private-value" style={{ fontSize: 26, fontWeight: 800, color: due > 0 ? 'var(--text)' : '#16a34a', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>{money(due)}</div>
+          <div className="private-value" style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+            {due > 0 ? (bal.due_on ? `due ${ovDay(bal.due_on)}` : 'due') : 'nothing due'}
+          </div>
+          <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-2)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+            <div style={{ width: `${pct}%`, height: '100%', background: '#16a34a' }} />
+          </div>
+          <div className="private-value" style={{ fontSize: 11.5, color: 'var(--muted)' }}>{money(paid)} of {money(total)} paid</div>
+        </div>
+        <div style={ovTile}>
+          <span style={ovLabel}>Plan</span>
+          {plan ? (
+            <>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>{plan.label || 'Plan'}</div>
+              <div className="private-value" style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                {[plan.monthly ? `${money(plan.monthly)}/mo` : null, plan.starts ? `starts ${ovDay(plan.starts)}` : null].filter(Boolean).join(' · ') || 'One-time'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <OvDot color={tone.color} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: tone.color }}>{tone.label}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', lineHeight: 1.2 }}>No plan yet</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Draft an agreement to set one.</div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Files */}
+      <div style={ovPanel}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 6 }}>
+          <span style={{ ...ovLabel, letterSpacing: '0.09em' }}>Files</span>
+          <div style={{ flex: 1 }} />
+          {files.length > 0 && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{files.length} {files.length === 1 ? 'file' : 'files'}</span>}
+        </div>
+        {files.length === 0 ? <div style={ovNote}>No files yet.</div> : files.slice(0, 6).map((f, i) => (
+          <div key={f.id || `${f.name}-${i}`} style={ovRow}>
+            <FileIcon size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={ovRowTitle}>{f.name || 'File'}</div>
+              <div style={ovRowSub}>{[f.by_name, ovDay(f.at)].filter(Boolean).join(' · ') || 'File'}</div>
+            </div>
+            {f.url && <OvSmallButton icon={ExternalLink} label="Open" href={f.url} />}
+          </div>
+        ))}
+      </div>
+
+      {/* Recent activity: texts, agreements, meetings, payments and nudges in one list */}
+      <div style={ovPanel}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 6 }}>
+          <span style={{ ...ovLabel, letterSpacing: '0.09em' }}>Recent activity</span>
+          <div style={{ flex: 1 }} />
+          {activity.length > 10 && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>latest 10 of {activity.length}</span>}
+        </div>
+        {activity.length === 0 ? <div style={ovNote}>Nothing yet. Texts, meetings, payments, agreements and nudges land here.</div> : activity.slice(0, 10).map((a, i) => (
+          <div key={a.id || `${a.kind}-${a.at}-${i}`} style={ovRow}>
+            <OvDot color={ovDot(a)} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="private-value" style={ovRowTitle}>{a.title || String(a.kind || 'activity').replace(/^./, c => c.toUpperCase())}</div>
+              <div className="private-value" style={ovRowSub}>{[a.sub, ovWhen(a.at)].filter(Boolean).join(' · ')}</div>
+            </div>
+            {ovIsUnsignedAgreement(a)
+              ? <OvSmallButton icon={SendIcon} label="Nudge" onClick={() => nudgeAgreement(a)} />
+              : a.link ? <OvSmallButton icon={ExternalLink} label="Open" href={a.link} /> : null}
+          </div>
+        ))}
+      </div>
+
+      {!plan && (
+        <div>
+          <button type="button" className="btn-primary" onClick={onDraftAgreement}>
+            <FileSignature size={14} /> Draft agreement
+          </button>
+        </div>
+      )}
+
+      {nudge && (
+        <NudgeModal
+          kind={nudge.kind}
+          id={nudge.id}
+          onClose={() => setNudge(null)}
+          onSent={() => setReloadKey(k => k + 1)}
+        />
+      )}
     </div>
   );
 }

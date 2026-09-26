@@ -1,19 +1,26 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, StickyNote, ChevronDown, Sparkles } from 'lucide-react';
+import { MessageSquare, Send, Search, Plus, X, ArrowLeft, UserPlus, Check, StickyNote, ChevronDown, Sparkles, Users, Paperclip, Film } from 'lucide-react';
 import { toast } from '../components/Toast';
 import {
   getImsgThreads, getImsgThread, sendImsg, getImsgDirectory, assignImsgThread,
   getImsgNotes, addImsgNote, getImsgEvents, markImsgRead, createClient, createContact, updateClient, setImsgKind, getAssignees,
-  getAvailability,
+  getAvailability, getChatRooms, uploadImsgFile,
 } from '../api';
 import { useClient } from '../context/ClientContext';
 import AssistantChat from '../components/AssistantChat';
+import TeamChatPanel from '../components/TeamChatPanel';
+import NewChatModal from '../components/NewChatModal';
+import MessageAttachments, { Lightbox, mediaLabel } from '../components/MessageAttachments';
 
 // Two-way iMessage inbox for the business number. Threads group by phone. Sends
 // are queued and delivered by the bridge on the Mac signed into the business
 // Apple ID (imessage-bridge/); it also forwards replies. Each conversation can
 // be assigned to an employee (colored pill), tagged cold/warm/hot when it maps
 // to a lead, and carries internal notes attributed to the employee who wrote them.
+//
+// Two tabs. Clients is that iMessage list. Team is internal chat (direct
+// messages and group chats) and opens in the same reading pane. Photos and
+// videos ride along on a client message as attachments.
 
 const last10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
 const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
@@ -53,6 +60,9 @@ const tempOf = (k) => TEMPS.find(t => t.key === k);
 // Rough detector for "this conversation is about setting up a time" so the
 // Inbox can offer availability suggestions.
 const SCHED_RE = /\b(meet|meeting|meet ?up|schedule|scheduling|availab|appointment|calendar|what time|when (are|can|could|is|works?|would)|free|book|sit ?down|come in|stop by|get together|reschedul)\b/i;
+
+// The Team tab's badge color, the violet the phone app uses for team chat.
+const TEAM_COLOR = '#7c5cff';
 
 // A stable, distinct color per employee (same id always maps to the same hue).
 const EMP_COLORS = ['#2563eb', '#7c3aed', '#c026d3', '#db2777', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#0891b2', '#4f46e5'];
@@ -107,7 +117,19 @@ export default function Inbox() {
   const [noteBusy, setNoteBusy] = useState(false);
   const [assistOpen, setAssistOpen] = useState(false);   // assistant popup
   const [suggestSlots, setSuggestSlots] = useState([]);  // scheduling suggestions
+  // Clients or Team. Team is internal chat; it reuses the reading pane.
+  const [tab, setTab] = useState('clients');
+  const [rooms, setRooms] = useState([]);
+  const [chatMissing, setChatMissing] = useState(false); // tables not migrated yet
+  const [activeRoom, setActiveRoom] = useState(null);    // active team room id
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  // A photo or video picked for the open conversation, not sent yet.
+  const [pending, setPending] = useState(null);
+  const [uploadPct, setUploadPct] = useState(null);
+  const [viewer, setViewer] = useState(null);            // full size photo url
   const scrollRef = useRef(null);
+  const fileRef = useRef(null);
+  const activeRoomRef = useRef(null);   // the open room, readable from the poll
 
   const byPhone = useMemo(() => {
     const m = {};
@@ -144,9 +166,24 @@ export default function Inbox() {
   };
   const loadNotes = async (phone) => { try { setNotes(await getImsgNotes(phone) || []); } catch (_) {} };
   const loadEvents = async (phone) => { try { setEvents(await getImsgEvents(phone) || []); } catch (_) {} };
+  // Team chat rooms. Before the tables exist the endpoint answers with
+  // needs_migration (200 on a read, 503 on a write), so say so quietly
+  // instead of showing an error.
+  const loadRooms = async () => {
+    try {
+      const r = await getChatRooms();
+      // The room you have open counts as read, so the poll never flashes a
+      // badge on it while the room view is catching up server side.
+      const open = activeRoomRef.current;
+      setRooms((r?.rooms || []).map(x => x.id === open ? { ...x, unread: 0 } : x));
+      setChatMissing(!!r?.needs_migration);
+    } catch (e) {
+      if (e?.needs_migration || e?.status === 503) { setRooms([]); setChatMissing(true); }
+    }
+  };
   useEffect(() => {
-    loadThreads(); loadDirectory(); loadAssignees();
-    const t = setInterval(loadThreads, 20000);
+    loadThreads(); loadDirectory(); loadAssignees(); loadRooms();
+    const t = setInterval(() => { loadThreads(); loadRooms(); }, 20000);
     return () => clearInterval(t);
   }, []);
 
@@ -158,17 +195,31 @@ export default function Inbox() {
     try { setMessages(await getImsgThread(phone) || []); } catch (e) { toast('error', e.message); }
     loadNotes(phone); loadEvents(phone);
   };
+  // Opening /inbox?phone=... from a client page lands straight in that
+  // conversation. Waits for the threads so the row is there to select.
+  const deepLinked = useRef(false);
   useEffect(() => {
-    if (!active) return;
+    if (deepLinked.current || !threads.length) return;
+    const wanted = new URLSearchParams(window.location.search).get('phone');
+    if (!wanted) { deepLinked.current = true; return; }
+    const match = threads.find(t => last10(t.phone) === last10(wanted));
+    deepLinked.current = true;
+    setTab('clients');
+    if (match) openThread(match.phone);
+    else toast('info', 'No conversation with that number yet.');
+  }, [threads]);
+
+  useEffect(() => {
+    if (!active || tab !== 'clients') return;   // no polling while Team is showing
     const t = setInterval(async () => {
       try { setMessages(await getImsgThread(active) || []); } catch (_) {}
       getImsgEvents(active).then(r => setEvents(r || [])).catch(() => {});
       markImsgRead(active).catch(() => {}); // keep it read while you're looking at it
     }, 6000);
     return () => clearInterval(t);
-  }, [active]);
+  }, [active, tab]);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
-  useEffect(() => { setAddOpen(false); setAddKind('lead'); setAddName(''); setNoteText(''); }, [active]);
+  useEffect(() => { setAddOpen(false); setAddKind('lead'); setAddName(''); setNoteText(''); clearPending(); }, [active]);
 
   // Scheduling suggestions: when the open conversation is about setting up a
   // time, surface the next open slots on two upcoming days as one-tap chips.
@@ -198,17 +249,43 @@ export default function Inbox() {
     setReply(prev => { const b = (prev || '').trim(); return b ? `${b} Or ${s.label}?` : `Would ${s.label} work for you?`; });
   };
 
+  // Photos and videos: hold the picked file next to the composer, upload it to
+  // storage when you send, then the message goes out with the media attached.
+  const clearPending = () => setPending(p => { if (p?.preview) URL.revokeObjectURL(p.preview); return null; });
+  const onPickFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 40 * 1024 * 1024) { toast('error', 'Keep photos and videos under 40 MB.'); return; }
+    const isVideo = /^video\//.test(file.type || '');
+    const preview = URL.createObjectURL(file);
+    clearPending();
+    setPending({ file, preview, type: isVideo ? 'video' : 'image', width: null, height: null });
+    if (!isVideo) {
+      // Natural size, so the bubble can show the photo in its real shape.
+      const probe = new Image();
+      probe.onload = () => setPending(p => (p && p.file === file) ? { ...p, width: probe.naturalWidth, height: probe.naturalHeight } : p);
+      probe.src = preview;
+    }
+  };
+
   const doSend = async () => {
     const body = reply.trim();
-    if (!body || !active) return;
+    if ((!body && !pending) || !active) return;
     setSending(true);
     try {
-      await sendImsg(active, body);
-      setReply('');
+      let attachments;
+      if (pending) {
+        setUploadPct(0);
+        const up = await uploadImsgFile(pending.file, setUploadPct);
+        attachments = [{ ...up, width: pending.width || null, height: pending.height || null }];
+      }
+      await sendImsg(active, body, attachments);
+      setReply(''); clearPending();
       setMessages(await getImsgThread(active) || []);
       loadThreads();
     } catch (e) { toast('error', e.message); }
-    finally { setSending(false); }
+    finally { setSending(false); setUploadPct(null); }
   };
 
   const addActivePerson = async () => {
@@ -292,6 +369,36 @@ export default function Inbox() {
     );
   }, [threads, search, byPhone]);
 
+  // Team rooms: newest first, searchable, titled by whoever else is in them.
+  const roomTitle = (r) => {
+    const others = (r.members || []).filter(m => m.user_id !== user?.id);
+    if (r.kind === 'group' || others.length > 1) return r.name || others.map(m => firstName(m.user_name)).join(', ') || 'Group chat';
+    return others[0]?.user_name || r.name || 'Chat';
+  };
+  const visibleRooms = useMemo(() => {
+    const list = (rooms || []).slice().sort(
+      (a, b) => new Date(b.last_message_at || b.created_at || 0) - new Date(a.last_message_at || a.created_at || 0)
+    );
+    const q = search.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(r =>
+      roomTitle(r).toLowerCase().includes(q) ||
+      (r.last_message_preview || '').toLowerCase().includes(q) ||
+      (r.members || []).some(m => (m.user_name || '').toLowerCase().includes(q))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rooms, search, user?.id]);
+  const clientUnread = useMemo(() => (threads || []).filter(t => (t.unread || 0) > 0).length, [threads]);
+  const teamUnread = useMemo(() => (rooms || []).filter(r => (r.unread || 0) > 0).length, [rooms]);
+  const activeRoomObj = activeRoom ? (rooms || []).find(r => r.id === activeRoom) || null : null;
+
+  const openRoom = (id) => {
+    setActiveRoom(id);
+    activeRoomRef.current = id;
+    // Clear its badge for me right away; the room view marks it read server side.
+    setRooms(rs => rs.map(r => r.id === id ? { ...r, unread: 0 } : r));
+  };
+
   const activeThread = active ? threadFor(active) : null;
   const activePerson = active ? personFor(active) : null;
   const isUnknown = active ? !displayKind(active) : false;
@@ -322,7 +429,9 @@ export default function Inbox() {
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Inbox</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-            Text your clients over iMessage from your business number. Replies land here.
+            {tab === 'team'
+              ? 'Message your team. Direct messages and group chats, internal only.'
+              : 'Text your clients over iMessage from your business number. Replies land here.'}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -330,21 +439,80 @@ export default function Inbox() {
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--border)', background: assistOpen ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)', fontSize: 13, fontWeight: 700 }}>
             <Sparkles size={15} style={{ color: 'var(--orange)' }} /> Assistant
           </button>
-          <button className="btn-primary" onClick={() => setComposing(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Plus size={15} /> New message
-          </button>
+          {tab === 'team' ? (
+            <button className="btn-primary" onClick={() => setNewChatOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={15} /> New chat
+            </button>
+          ) : (
+            <button className="btn-primary" onClick={() => setComposing(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={15} /> New message
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Clients (customers over iMessage) or Team (internal chat) */}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, alignSelf: 'flex-start', marginTop: 14, padding: 3, borderRadius: 999, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+        {[{ key: 'clients', label: 'Clients', count: clientUnread, color: 'var(--text)' },
+          { key: 'team', label: 'Team', count: teamUnread, color: TEAM_COLOR }].map(t => {
+          const on = tab === t.key;
+          return (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 15px', borderRadius: 999, cursor: 'pointer', border: 'none',
+                fontSize: 13, fontWeight: on ? 800 : 700, fontFamily: 'var(--font-display)',
+                background: on ? 'var(--surface)' : 'transparent', color: on ? 'var(--text)' : 'var(--muted)', boxShadow: on ? 'var(--shadow-sm)' : 'none' }}>
+              {t.label}
+              {t.count > 0 && (
+                <span style={{ minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: t.color, color: '#fff', fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{t.count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, marginTop: 12 }}>
-        {/* Threads */}
+        {/* Conversations (Clients) or rooms (Team) */}
         <div style={{ width: 320, flexShrink: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ position: 'relative', padding: 12, borderBottom: '1px solid var(--border)' }}>
             <Search size={15} style={{ position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input placeholder="Search conversations…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...INPUT, paddingLeft: 32 }} />
+            <input placeholder={tab === 'team' ? 'Search team chats…' : 'Search conversations…'} value={search} onChange={e => setSearch(e.target.value)} style={{ ...INPUT, paddingLeft: 32 }} />
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {loading ? (
+            {tab === 'team' ? (
+              chatMissing ? (
+                <div style={{ color: 'var(--muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>Team chat is not set up yet.</div>
+              ) : visibleRooms.length === 0 ? (
+                <div style={{ color: 'var(--muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>
+                  No team chats yet. Use New chat to message a teammate or start a group.
+                </div>
+              ) : visibleRooms.map(r => {
+                const unread = (r.unread || 0) > 0;
+                const group = r.kind === 'group' || (r.members || []).length > 2;
+                const title = roomTitle(r);
+                const preview = r.last_message_preview
+                  ? `${r.last_sender_name ? `${firstName(r.last_sender_name)}: ` : ''}${r.last_message_preview}`
+                  : (group ? `${(r.members || []).length} people` : 'Say hello');
+                return (
+                  <div key={r.id} onClick={() => openRoom(r.id)}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: activeRoom === r.id ? 'var(--surface-2)' : 'transparent' }}>
+                    {/* Unread: a blue dot at the left of the row. */}
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, marginTop: 6, background: unread ? 'var(--blue)' : 'transparent' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                          {group && <Users size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
+                          <span style={{ fontSize: 13.5, fontWeight: unread ? 800 : 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{fmtTime(r.last_message_at)}</span>
+                      </div>
+                      <div style={{ fontSize: 12.5, marginTop: 3, color: unread ? 'var(--text)' : 'var(--muted)', fontWeight: unread ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {preview}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : loading ? (
               <div style={{ color: 'var(--muted)', fontSize: 13, padding: 16 }}>Loading…</div>
             ) : visibleThreads.length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>No conversations yet.</div>
@@ -352,21 +520,25 @@ export default function Inbox() {
               const unread = (t.unread || 0) > 0;
               return (
               <div key={t.phone} onClick={() => openThread(t.phone)}
-                style={{ padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: last10(active) === last10(t.phone) ? 'var(--surface-2)' : 'transparent' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    {unread && <span style={{ minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 999, background: 'var(--orange)', color: '#fff', fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{t.unread}</span>}
-                    <TempDot temp={displayTemp(t.phone)} />
-                    <span style={{ fontSize: 13.5, fontWeight: unread ? 800 : 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(t.phone)}</span>
-                    <KindBadge kind={displayKind(t.phone)} />
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{fmtTime(t.last?.created_at)}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                  <div style={{ flex: 1, fontSize: 12.5, color: unread ? 'var(--text)' : 'var(--muted)', fontWeight: unread ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || ''}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '12px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: last10(active) === last10(t.phone) ? 'var(--surface-2)' : 'transparent' }}>
+                {/* Unread: a blue dot at the left of the row. The assignee is a
+                    solid colored pill, so the two never read as the same thing. */}
+                <span style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, marginTop: 6, background: unread ? 'var(--blue)' : 'transparent' }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <TempDot temp={displayTemp(t.phone)} />
+                      <span style={{ fontSize: 13.5, fontWeight: unread ? 800 : 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(t.phone)}</span>
+                      <KindBadge kind={displayKind(t.phone)} />
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{fmtTime(t.last?.created_at)}</span>
                   </div>
-                  <AssigneePill assignedTo={t.assigned_to} name={t.assigned_to_name} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: unread ? 'var(--text)' : 'var(--muted)', fontWeight: unread ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.last?.direction === 'out' ? 'You: ' : ''}{t.last?.body || mediaLabel(t.last?.attachments)}
+                    </div>
+                    <AssigneePill assignedTo={t.assigned_to} name={t.assigned_to_name} />
+                  </div>
                 </div>
               </div>
               );
@@ -374,9 +546,22 @@ export default function Inbox() {
           </div>
         </div>
 
-        {/* Conversation */}
+        {/* Reading pane: a customer conversation, or a team room */}
         <div style={{ flex: 1, minWidth: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {!active ? (
+          {tab === 'team' ? (
+            activeRoomObj ? (
+              <TeamChatPanel room={activeRoomObj} me={user} onRoomsChanged={loadRooms}
+                onClose={() => { setActiveRoom(null); activeRoomRef.current = null; }} />
+            ) : (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
+                <Users size={34} style={{ marginBottom: 12, opacity: 0.6 }} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Select a team chat</div>
+                <div style={{ fontSize: 13, marginTop: 4 }}>
+                  {chatMissing ? 'Team chat is not set up yet.' : 'Or start a new one with New chat.'}
+                </div>
+              </div>
+            )
+          ) : !active ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
               <MessageSquare size={34} style={{ marginBottom: 12, opacity: 0.6 }} />
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Select a conversation</div>
@@ -444,11 +629,14 @@ export default function Inbox() {
                   const failed = out && m.status === 'failed';
                   return (
                     <div key={it.key} style={{ alignSelf: out ? 'flex-end' : 'flex-start', maxWidth: '76%' }}>
+                      <MessageAttachments items={m.attachments} out={out} onOpenImage={setViewer} />
+                      {m.body ? (
                       <div style={{
                         padding: '9px 13px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                         background: out ? (failed ? '#b91c1c' : 'var(--orange)') : 'var(--surface-2)',
                         color: out ? '#fff' : 'var(--text)', border: out ? 'none' : '1px solid var(--border)',
                       }}>{m.body}</div>
+                      ) : null}
                       <div style={{ fontSize: 10.5, color: failed ? '#b91c1c' : 'var(--muted)', marginTop: 3, textAlign: out ? 'right' : 'left' }}>
                         {fmtTime(m.created_at)}{out && m.status ? ` · ${STATUS_LABEL[m.status] || m.status}` : ''}{failed && m.error ? ` (${m.error})` : ''}
                       </div>
@@ -468,13 +656,45 @@ export default function Inbox() {
                     ))}
                   </div>
                 )}
-                <div style={{ padding: 12, display: 'flex', gap: 8 }}>
+                {pending && (
+                  <div style={{ padding: '10px 12px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 54, height: 54, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {pending.type === 'image'
+                        ? <img src={pending.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <Film size={20} style={{ color: 'var(--muted)' }} />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>
+                        {pending.type === 'video' ? 'Video' : 'Photo'} ready to send
+                        {uploadPct != null ? ` · uploading ${uploadPct}%` : ''}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {pending.file.name} · {Math.max(1, Math.round((pending.file.size || 0) / 1024))} KB
+                      </div>
+                      {uploadPct != null && (
+                        <div style={{ height: 3, borderRadius: 999, background: 'var(--surface-3)', marginTop: 5, overflow: 'hidden' }}>
+                          <div style={{ width: `${uploadPct}%`, height: '100%', background: 'var(--orange)', transition: 'width 0.2s' }} />
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={clearPending} disabled={sending} title="Remove attachment"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+                <div style={{ padding: 12, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <input ref={fileRef} type="file" accept="image/*,video/*" onChange={onPickFile} style={{ display: 'none' }} />
+                  <button onClick={() => fileRef.current && fileRef.current.click()} disabled={sending} title="Attach a photo or video"
+                    style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 10, cursor: 'pointer', border: '1px solid var(--border)', background: pending ? 'var(--surface-2)' : 'var(--surface)', color: pending ? 'var(--orange)' : 'var(--muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Paperclip size={16} />
+                  </button>
                   <textarea value={reply} onChange={e => setReply(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } }}
-                    placeholder="Type a message…" rows={1} style={{ ...INPUT, resize: 'none', minHeight: 40, maxHeight: 120 }} />
-                  <button className="btn-primary" onClick={doSend} disabled={sending || !reply.trim()}
+                    placeholder={pending ? 'Add a caption, or send it on its own…' : 'Type a message…'} rows={1} style={{ ...INPUT, resize: 'none', minHeight: 40, maxHeight: 120 }} />
+                  <button className="btn-primary" onClick={doSend} disabled={sending || (!reply.trim() && !pending)}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <Send size={14} /> {sending ? 'Sending…' : 'Send'}
+                    <Send size={14} /> {sending ? (uploadPct != null ? 'Uploading…' : 'Sending…') : 'Send'}
                   </button>
                 </div>
               </div>
@@ -482,8 +702,8 @@ export default function Inbox() {
           )}
         </div>
 
-        {/* Activity / notes */}
-        {active && (
+        {/* Activity / notes (client conversations only) */}
+        {tab === 'clients' && active && (
           <div style={{ width: 300, flexShrink: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <StickyNote size={15} style={{ color: 'var(--muted)' }} />
@@ -557,6 +777,13 @@ export default function Inbox() {
       {composing && (
         <Composer directory={directory} onClose={() => setComposing(false)} onSent={afterCompose} />
       )}
+
+      {newChatOpen && (
+        <NewChatModal me={user} onClose={() => setNewChatOpen(false)}
+          onCreated={async (id) => { setNewChatOpen(false); await loadRooms(); setTab('team'); if (id) openRoom(id); }} />
+      )}
+
+      <Lightbox url={viewer} onClose={() => setViewer(null)} />
 
       {assistOpen && (
         <div style={{ position: 'fixed', bottom: 20, right: 20, width: 380, height: 520, maxWidth: '92vw', maxHeight: '80vh', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: '0 18px 50px rgba(0,0,0,0.35)', zIndex: 1200, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

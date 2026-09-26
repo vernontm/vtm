@@ -53,7 +53,9 @@ export const sendSms       = (phone, body) => request('/sms?action=send', { meth
 // the Mac signed into the business Apple ID (see imessage-bridge/).
 export const getImsgThreads = () => request('/imessage');
 export const getImsgThread  = (phone) => request(`/imessage?phone=${encodeURIComponent(phone)}`);
-export const sendImsg       = (phone, body) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body }) });
+// attachments is optional: [{ url, type, name, mime, size, width, height }].
+// With at least one attachment the body may be empty.
+export const sendImsg       = (phone, body, attachments) => request('/imessage?action=send', { method: 'POST', body: JSON.stringify({ phone, body, attachments: attachments && attachments.length ? attachments : undefined }) });
 // People you can text (leads + clients + contacts), for the Inbox To picker.
 export const getImsgDirectory = () => request('/imessage?action=directory');
 // Assign a conversation (by phone) to an employee, or unassign with nulls.
@@ -974,6 +976,12 @@ export const getNudges = (kind, id) => request(`/nudges?kind=${encodeURIComponen
 // getClientActivity(client_id) is defined above (Client activity section) and
 // already calls GET /client-activity?client_id=, the same URL the contract uses.
 
+// Same endpoint, merged view for the client page's Overview tab:
+// { client, files[], activity[], next_up, balance, plan }. Kept separate from
+// getClientActivity so the raw Activity list keeps its own call and shape.
+export const getClientOverview = (client_id) =>
+  request(`/client-activity?client_id=${encodeURIComponent(client_id)}&view=overview`);
+
 // Count-to-target routine items: upserts crm_routine_checks.done_count (read back as count) for the
 // period; the row counts as done once count >= item.target.
 export const countRoutineItem = ({ routine_id, item_id, period_key, count }) =>
@@ -998,3 +1006,63 @@ export const getHomeRoles = () => getSettings().then(rows => {
   } catch (_) { return {}; }
 });
 export const setHomeRoles = (map) => bulkUpdateSettings([{ key: 'home_roles', value: JSON.stringify(map || {}) }]);
+
+// ── Team chat (internal: direct messages and group chats) ──────────────────
+// Lives beside the customer inbox and never touches it. When the tables are
+// not migrated yet the GETs answer with needs_migration instead of data, and
+// the POSTs answer 503 with needs_migration on the thrown error.
+// rooms: { rooms: [{ id, kind, name, members:[{user_id,user_name,role}], unread,
+//          last_message_at, last_message_preview, last_sender_name }], needs_migration? }
+export const getChatRooms      = () => request('/chat?action=rooms');
+// people: { people: [{ id, name, email, is_admin, on_app }] }. on_app means
+// they are signed into the phone app, so they can actually get the messages.
+export const getChatPeople     = () => request('/chat?action=people');
+// after is an ISO timestamp: only messages newer than it come back.
+export const getChatMessages   = (room, after) =>
+  request(`/chat?action=messages&room=${encodeURIComponent(room)}${after ? `&after=${encodeURIComponent(after)}` : ''}`);
+// data: { kind: 'dm' | 'group', name?, member_ids: [] }. Reply: { room, existing }.
+export const createChat        = (data) => request('/chat?action=create', { method: 'POST', body: JSON.stringify(data) });
+export const sendChat          = (room, body) => request('/chat?action=send', { method: 'POST', body: JSON.stringify({ room, body }) });
+export const renameChat        = (room, name) => request('/chat?action=rename', { method: 'POST', body: JSON.stringify({ room, name }) });
+export const changeChatMembers = (room, add, remove) =>
+  request('/chat?action=members', { method: 'POST', body: JSON.stringify({ room, add: add || [], remove: remove || [] }) });
+export const markChatRead      = (room) => request('/chat?action=read', { method: 'POST', body: JSON.stringify({ room }) });
+export const leaveChat         = (room) => request('/chat?action=leave', { method: 'POST', body: JSON.stringify({ room }) });
+
+// ── iMessage media ─────────────────────────────────────────────────────────
+// Ask for a signed spot in storage, PUT the bytes there, then send the message
+// with attachments: [{ url, type, name, mime, size, width, height }].
+export const getImsgUploadUrl = (name) => request('/imessage?action=upload-url', { method: 'POST', body: JSON.stringify({ name }) });
+
+// Uploads one browser File to the signed URL. onProgress gets 0 to 100 while
+// the bytes go up (XHR, because fetch cannot report upload progress).
+export function putUpload(uploadUrl, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl, true);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    }
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300)
+      ? resolve(true)
+      : reject(new Error(`Upload failed (${xhr.status})`));
+    xhr.onerror = () => reject(new Error('Upload failed. Check your connection.'));
+    xhr.send(file);
+  });
+}
+
+// One call from a picked File to the attachment record the send takes.
+export async function uploadImsgFile(file, onProgress) {
+  const name = file.name || `upload-${Date.now()}`;
+  const { uploadUrl, publicUrl } = await getImsgUploadUrl(name);
+  await putUpload(uploadUrl, file, onProgress);
+  const mime = file.type || '';
+  return {
+    url: publicUrl,
+    type: /^video\//.test(mime) ? 'video' : /^image\//.test(mime) ? 'image' : /^audio\//.test(mime) ? 'audio' : 'file',
+    name,
+    mime,
+    size: file.size || null,
+  };
+}

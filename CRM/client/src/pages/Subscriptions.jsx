@@ -19,16 +19,18 @@ const CATEGORY_COLORS = {
 };
 
 function fmtDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   try { return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); } catch { return iso; }
 }
 
 function fmtAmount(amt) {
-  if (!amt && amt !== 0) return '—';
+  if (!amt && amt !== 0) return '-';
   return `$${Number(amt).toFixed(2)}`;
 }
 
-export default function SubscriptionsPage() {
+// `embedded` is set when the Money page hosts this inside its Subscriptions
+// tab: the page keeps its own controls but drops the duplicate title.
+export default function SubscriptionsPage({ embedded = false }) {
   const [subs, setSubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -128,12 +130,16 @@ export default function SubscriptionsPage() {
   const yearlyTotal = monthlyTotal * 12;
 
   return (
-    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'var(--bg)', fontFamily:'var(--font-display)' }}>
+    <div style={{ height: embedded ? 'auto' : '100%', minHeight: embedded ? '100%' : undefined, display:'flex', flexDirection:'column', background:'var(--bg)', fontFamily:'var(--font-display)' }}>
       {/* Header */}
       <div style={{ padding:'20px 28px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <CreditCard size={22} color="var(--orange)" />
-          <h1 style={{ fontSize:20, fontWeight:700, color:'var(--text)', margin:0, flex:1 }}>Subscriptions</h1>
+          {embedded ? <div style={{ flex:1 }} /> : (
+            <>
+              <CreditCard size={22} color="var(--orange)" />
+              <h1 style={{ fontSize:20, fontWeight:700, color:'var(--text)', margin:0, flex:1 }}>Subscriptions</h1>
+            </>
+          )}
           <button onClick={handleScan} disabled={scanning}
             style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, cursor:scanning?'wait':'pointer', background:'var(--surface-2)', border:'1px solid var(--border)', color:scanning?'var(--muted)':'var(--orange)', fontSize:12, fontWeight:600 }}>
             <Scan size={13} style={{ animation:scanning?'spin 1s linear infinite':'none' }} /> {scanning ? 'Scanning emails...' : 'Scan Gmail'}
@@ -226,7 +232,7 @@ export default function SubscriptionsPage() {
                     {sub.notes && <div style={{ fontSize:11, color:'var(--muted)', fontWeight:400 }}>{sub.notes}</div>}
                   </td>
                   <td className="private-value" style={{ padding:'12px', fontSize:13, fontWeight:600, color:'var(--orange)' }}>{fmtAmount(sub.amount)}</td>
-                  <td style={{ padding:'12px', fontSize:12, color:'#5a5a6e', textTransform:'capitalize' }}>{sub.billing_cycle || '—'}</td>
+                  <td style={{ padding:'12px', fontSize:12, color:'#5a5a6e', textTransform:'capitalize' }}>{sub.billing_cycle || '-'}</td>
                   <td style={{ padding:'12px', fontSize:12, color:'#5a5a6e' }}>{fmtDate(sub.next_renewal)}</td>
                   <td style={{ padding:'12px' }}>
                     <span style={{ fontSize:10, padding:'3px 8px', borderRadius:4, fontWeight:600,

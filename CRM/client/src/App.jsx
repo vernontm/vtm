@@ -23,7 +23,7 @@ function Gated({ slug, adminOnly = false, children }) {
 // Appointments, etc. instead of bouncing to a no-access screen.)
 const LANDING_ORDER = [
   ['dashboard', '/dashboard'], ['leads', '/leads'], ['clients', '/clients'],
-  ['projects', '/projects'], ['appointments', '/appointments'], ['todos', '/todos'],
+  ['projects', '/projects'], ['money', '/money'], ['appointments', '/appointments'], ['todos', '/todos'],
   ['routines', '/routines'], ['tasks', '/tasks'], ['inbox', '/inbox'], ['email', '/email'], ['time', '/time'],
   ['employee-resources', '/employee-resources'], ['contacts', '/contacts'], ['marketing', '/marketing'], ['settings', '/settings'],
 ];
@@ -89,10 +89,13 @@ import Subscribers from './pages/Subscribers';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 
-// Heavy routes — code-split so they don't ship on first paint.
+// Heavy routes, code-split so they don't ship on first paint.
 const ContentScheduler = lazy(() => import('./pages/ContentScheduler'));
 const Avatars = lazy(() => import('./pages/Avatars'));
 const EmailMarketing = lazy(() => import('./pages/EmailMarketing'));
+// Money hosts the Invoices and Subscriptions pages in its tabs, so it is a
+// heavy chunk of its own.
+const Money = lazy(() => import('./pages/Money'));
 
 // Academy Admin Pages (admin-only, never loaded for non-admins)
 const AcademyDashboard = lazy(() => import('./pages/AcademyDashboard'));
@@ -154,6 +157,7 @@ function AppLayout() {
               <Route path="/leads" element={<Gated slug="leads"><Clients kind="lead" /></Gated>} />
               <Route path="/clients" element={<Gated slug="clients"><Clients kind="client" /></Gated>} />
               <Route path="/projects" element={<Gated slug="projects"><Projects /></Gated>} />
+              <Route path="/money" element={<Gated slug="money" adminOnly><Money /></Gated>} />
               <Route path="/appointments" element={<Gated slug="appointments"><Meetings /></Gated>} />
               <Route path="/appointments/:eventId" element={<Gated slug="appointments"><MeetingDetail /></Gated>} />
               <Route path="/inbox" element={<Gated slug="inbox"><Inbox /></Gated>} />
@@ -190,7 +194,7 @@ function AppLayout() {
               <Route path="/academy/community" element={<Gated slug="academy-community" adminOnly><AcademyCommunity /></Gated>} />
               <Route path="/academy/recommendations" element={<Gated slug="academy-recommendations" adminOnly><AcademyRecommendations /></Gated>} />
               <Route path="/academy/settings" element={<Gated slug="academy-settings" adminOnly><AcademySettings /></Gated>} />
-              {/* /team retired — redirect any bookmarks to the new Users & Access page */}
+              {/* /team retired, redirect any bookmarks to the new Users & Access page */}
               <Route path="/team" element={<Navigate to="/admin-users" replace />} />
               <Route path="/admin-users" element={<Gated slug="admin-users" adminOnly><AdminUsers /></Gated>} />
               <Route path="/training" element={<Gated slug="training"><Training /></Gated>} />

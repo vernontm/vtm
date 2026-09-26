@@ -10,10 +10,11 @@ import GlobalSearch from './GlobalSearch';
 /* ── Page metadata map ────────────────────────────────────────────────────── */
 const PAGE_META = {
   '/dashboard':                   { title: 'Dashboard',           sub: 'Overview of your business' },
-  '/leads':                       { title: 'Leads',               sub: 'Still converting — not yet paid & started' },
+  '/leads':                       { title: 'Leads',               sub: 'Still converting, not yet paid & started' },
   '/clients':                     { title: 'Clients',             sub: 'Paid & started with VTM' },
   '/contacts':                    { title: 'Contacts',            sub: 'Your MailerLite marketing audience' },
   '/projects':                    { title: 'Projects',            sub: 'Active work & deliverables' },
+  '/money':                       { title: 'Money',               sub: 'Collected, outstanding, plans & tools' },
   '/appointments':                { title: 'Appointments',        sub: 'Schedule & recordings' },
   '/todos':                       { title: 'To-Do',               sub: 'Shared team task list' },
   '/routines':                    { title: 'Routines',            sub: 'Recurring daily & weekly checklists' },
@@ -146,7 +147,7 @@ export default function Header() {
         </div>
 
         {/* ── Right: page actions · search · bell · refresh ── */}
-        {/* Single-account CRM — the multi-client workspace switcher was removed. */}
+        {/* Single-account CRM, the multi-client workspace switcher was removed. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
 
           {/* Page-specific action buttons injected by current route */}
